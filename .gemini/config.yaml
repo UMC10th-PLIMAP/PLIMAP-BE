@@ -1,0 +1,39 @@
+# PR 요약에 시나 장난스러운 문구를 추가하지 않습니다.
+have_fun: false
+
+# Gemini 코드 리뷰 동작을 설정합니다.
+code_review:
+  # false이면 Gemini의 PR 코드 리뷰 기능을 활성화합니다.
+  disable: false
+
+  # MEDIUM 이상의 중요도를 가진 문제만 리뷰 코멘트로 작성합니다.
+  comment_severity_threshold: MEDIUM
+
+  # PR 하나에 작성할 리뷰 코멘트를 최대 10개로 제한합니다.
+  max_review_comments: 10
+
+  # Pull Request가 생성될 때 실행할 작업을 설정합니다.
+  pull_request_opened:
+    # PR 생성 시 Gemini 사용법 안내 코멘트를 작성하지 않습니다.
+    help: false
+
+    # PR 변경 사항에 대한 자동 요약을 작성합니다.
+    summary: true
+
+    # PR이 생성되면 자동으로 코드 리뷰를 실행합니다.
+    code_review: true
+
+    # 작업 중인 Draft PR은 자동 리뷰 대상에서 제외합니다.
+    include_drafts: false
+
+# 생성 파일, 캐시, 문서 등 코드 리뷰가 필요하지 않은 경로를 제외합니다.
+ignore_patterns:
+  - "build/**"                         # Gradle 빌드 결과물
+  - ".gradle/**"                       # 로컬 Gradle 캐시
+  - ".vscode/**"                       # VS Code 개인 설정
+  - ".github/**"                       # Issue, PR 템플릿과 GitHub 설정
+  - ".gemini/**"                       # Gemini 자체 설정과 스타일 가이드
+  - "docs/**"                          # 프로젝트 문서
+  - "**/*.md"                          # 모든 Markdown 문서
+  - "gradle/wrapper/gradle-wrapper.jar" # Gradle Wrapper 바이너리
+  - "**/generated/**"                  # QueryDSL Q클래스 등 자동 생성 코드
