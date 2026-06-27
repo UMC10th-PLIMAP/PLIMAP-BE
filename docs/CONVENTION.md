@@ -38,13 +38,13 @@
 ```text
 main                        # 운영 브랜치
 develop                     # 개발 브랜치
-<type>/<설명>-#<issue>      # 작업 브랜치
+<type>/#<issue>-<설명>      # 작업 브랜치
 ```
 
 ### 형식
 
 ```text
-<type>/<간단한_설명>-#<issue_number>
+<type>/#<issue_number>-<간단한_설명>
 ```
 
 | 구성요소 | 설명 | 예시 |
@@ -68,11 +68,11 @@ develop                     # 개발 브랜치
 ### 예시
 
 ```bash
-feat/signup-api-#14          # 회원가입 API 기능 추가
-fix/image-upload-#23         # 이미지 업로드 버그 수정
-chore/docker-setup-#5        # Docker 환경 설정
-docs/api-guide-#12           # API 문서 작성
-refactor/token-logic-#8      # 토큰 검증 로직 리팩터링
+feat/#14-signup-api          # 회원가입 API 기능 추가
+fix/#23-image-upload         # 이미지 업로드 버그 수정
+chore/#5-docker-setup        # Docker 환경 설정
+docs/#12-api-guide           # API 문서 작성
+refactor/#8-token-logic      # 토큰 검증 로직 리팩터링
 ```
 
 ### 규칙
