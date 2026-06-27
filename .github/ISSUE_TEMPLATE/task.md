@@ -2,7 +2,6 @@
 name: "✅ Task"
 about: "기능 외 일반 작업이나 유지보수 작업을 등록합니다."
 title: "[Task] "
-labels: task
 assignees: ''
 ---
 
