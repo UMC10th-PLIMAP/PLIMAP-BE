@@ -2,7 +2,6 @@
 name: "🐛 Bug"
 about: "오류 또는 예상과 다르게 동작하는 문제를 제보합니다."
 title: "[Bug] "
-labels: bug
 assignees: ''
 ---
 

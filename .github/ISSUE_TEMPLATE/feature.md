@@ -2,7 +2,6 @@
 name: "✨ Feature"
 about: "새로운 기능을 제안하거나 구현 작업을 등록합니다."
 title: "[Feature] "
-labels: enhancement
 assignees: ''
 ---
 

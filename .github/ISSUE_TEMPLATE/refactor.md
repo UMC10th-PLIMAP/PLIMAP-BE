@@ -2,7 +2,6 @@
 name: "♻️ Refactor"
 about: "기능 변경 없이 코드 구조와 품질을 개선하는 작업을 등록합니다."
 title: "[Refactor] "
-labels: refactor
 assignees: ''
 ---
 
@@ -23,10 +22,11 @@ assignees: ''
 - [ ] 작업 1
 - [ ] 작업 2
 
-## 영향 범위
+## 관련 이슈
 
-<!-- 영향을 받는 기능, 모듈 또는 테스트 항목을 작성해 주세요. -->
-
+<!-- 영향을 받는 이슈 작성해 주세요. -->
+- Related to #
+- Depends on #
 
 ## 추가 정보
 

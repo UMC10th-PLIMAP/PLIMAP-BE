@@ -2,7 +2,6 @@
 name: "📝 Document"
 about: "문서 작성, 수정 또는 보완 작업을 등록합니다."
 title: "[Document] "
-labels: documentation
 assignees: ''
 ---
 
