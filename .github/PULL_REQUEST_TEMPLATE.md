@@ -15,11 +15,9 @@
 <!-- 해당하는 작업 도메인을 모두 선택해 주세요. -->
 
 - [ ] `auth`
-- [ ] `user`
+- [ ] `member`
 - [ ] `place`
-- [ ] `map`
-- [ ] `route`
-- [ ] `review`
+- [ ] `track`
 - [ ] `infra`
 - [ ] `db`
 
