@@ -2,7 +2,7 @@
 
 > 위치 기반 음악 공유 서비스 데이터베이스 설계서
 >
-> v0.3.0 | 2026-07-02
+> v0.3.1 | 2026-07-02
 
 ---
 
@@ -84,15 +84,18 @@ PinRegistrationStatus: CREATABLE_NEW_PLACE, CREATABLE_EXISTING_PLACE,
 
 ## 공통 엔티티 정책
 
-모든 JPA 엔티티는 `BaseEntity`를 상속하며 `created_at`, `updated_at`, `deleted_at` 컬럼을 공통으로 사용한다.
+모든 JPA 엔티티는 `BaseEntity`를 상속하며 `created_at`, `updated_at` 컬럼을 공통으로 사용한다. 삭제 이력 보존이 필요한 `member`, `place`, `place_track`, `pin`만 `SoftDeleteEntity`를 상속하고 `deleted_at` 컬럼을 사용한다.
 
 - `created_at`, `updated_at`: JPA Auditing으로 자동 기록한다.
-- `deleted_at`: 삭제 시각을 기록하며, `NULL`이면 활성 데이터로 본다.
-- 삭제 유스케이스에서는 물리 삭제를 사용하지 않고 엔티티의 `delete()`를 호출한다.
-- 일반 조회와 인덱스는 활성 데이터인 `deleted_at IS NULL`을 기준으로 한다.
+- `deleted_at`: Soft Delete 대상의 삭제 시각을 기록하며, `NULL`이면 활성 데이터로 본다.
+- Soft Delete 대상의 삭제 유스케이스에서는 물리 삭제를 사용하지 않고 엔티티의 `delete()`를 호출한다.
+- Soft Delete 대상의 일반 조회와 인덱스는 활성 데이터인 `deleted_at IS NULL`을 기준으로 한다.
 - 삭제된 동일 식별 관계를 다시 활성화할 때는 새 row를 삽입하지 않고 기존 row를 `restore()`한다.
+- 이력·매핑 테이블은 별도의 보존 요구사항이 없다면 물리 삭제한다.
 
 시간 컬럼은 PostgreSQL `TIMESTAMPTZ`, Java `Instant`로 통일한다.
+
+PLIMAP 백엔드가 유일한 DB 쓰기 주체인 동안 `updated_at`은 JPA Auditing으로 관리한다. AWS RDS 연결 여부와 무관하게 이 정책을 유지하며, 외부 배치·Lambda·관리자 SQL·다른 서비스가 DB를 직접 수정하게 될 때 DB Trigger 도입을 재검토한다.
 
 ---
 
@@ -143,7 +146,6 @@ CREATE TABLE social_account
     email            VARCHAR(320),
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at       TIMESTAMPTZ,
     CONSTRAINT pk_social_account PRIMARY KEY (id),
     CONSTRAINT uk_social_account_provider_subject
         UNIQUE (provider, provider_subject),
@@ -156,8 +158,7 @@ CREATE TABLE social_account
 );
 
 CREATE INDEX idx_social_account_member
-    ON social_account (member_id)
-    WHERE deleted_at IS NULL;
+    ON social_account (member_id);
 
 CREATE TABLE terms
 (
@@ -171,15 +172,13 @@ CREATE TABLE terms
     effective_at TIMESTAMPTZ  NOT NULL,
     created_at   TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at   TIMESTAMPTZ,
     CONSTRAINT pk_terms PRIMARY KEY (id),
     CONSTRAINT uk_terms_type_version UNIQUE (type, version),
     CONSTRAINT chk_terms_type CHECK (type IN ('SERVICE', 'PRIVACY'))
 );
 
 CREATE INDEX idx_terms_active
-    ON terms (type, is_active, effective_at DESC)
-    WHERE deleted_at IS NULL;
+    ON terms (type, is_active, effective_at DESC);
 
 CREATE TABLE member_terms_agreement
 (
@@ -190,7 +189,6 @@ CREATE TABLE member_terms_agreement
     withdrawn_at TIMESTAMPTZ,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at   TIMESTAMPTZ,
     CONSTRAINT pk_member_terms_agreement PRIMARY KEY (member_id, terms_id),
     CONSTRAINT fk_member_terms_agreement_member
         FOREIGN KEY (member_id) REFERENCES member (id) ON DELETE CASCADE,
@@ -201,8 +199,7 @@ CREATE TABLE member_terms_agreement
 );
 
 CREATE INDEX idx_member_terms_agreement_terms
-    ON member_terms_agreement (terms_id)
-    WHERE deleted_at IS NULL;
+    ON member_terms_agreement (terms_id);
 
 -- ============================================
 -- 2. PLACE
@@ -269,7 +266,6 @@ CREATE TABLE place_search_history
     selected_at       TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at        TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at        TIMESTAMPTZ,
     CONSTRAINT pk_place_search_history PRIMARY KEY (id),
     CONSTRAINT fk_place_search_history_member
         FOREIGN KEY (member_id) REFERENCES member (id) ON DELETE CASCADE,
@@ -296,19 +292,16 @@ CREATE TABLE place_search_history
 );
 
 CREATE INDEX idx_place_search_history_member_recent
-    ON place_search_history (member_id, selected_at DESC)
-    WHERE deleted_at IS NULL;
+    ON place_search_history (member_id, selected_at DESC);
 
 CREATE UNIQUE INDEX uk_place_search_history_member_place
     ON place_search_history (member_id, place_id)
-    WHERE place_id IS NOT NULL
-      AND deleted_at IS NULL;
+    WHERE place_id IS NOT NULL;
 
 CREATE UNIQUE INDEX uk_place_search_history_member_provider
     ON place_search_history (member_id, place_provider, provider_place_id)
     WHERE place_provider IS NOT NULL
-      AND provider_place_id IS NOT NULL
-      AND deleted_at IS NULL;
+      AND provider_place_id IS NOT NULL;
 
 -- ============================================
 -- 3. TRACK
@@ -327,7 +320,6 @@ CREATE TABLE track
     duration_ms       INTEGER,
     created_at        TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at        TIMESTAMPTZ,
     CONSTRAINT pk_track PRIMARY KEY (id),
     CONSTRAINT uk_track_provider_id UNIQUE (provider, provider_track_id),
     CONSTRAINT chk_track_duration
@@ -335,12 +327,10 @@ CREATE TABLE track
 );
 
 CREATE INDEX idx_track_title_ci
-    ON track (lower(title))
-    WHERE deleted_at IS NULL;
+    ON track (lower(title));
 
 CREATE INDEX idx_track_artist_ci
-    ON track (lower(artist_name))
-    WHERE deleted_at IS NULL;
+    ON track (lower(artist_name));
 
 CREATE TABLE place_track
 (
@@ -389,7 +379,6 @@ CREATE TABLE place_track_like
     member_id      BIGINT      NOT NULL,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at     TIMESTAMPTZ,
     CONSTRAINT pk_place_track_like PRIMARY KEY (place_track_id, member_id),
     CONSTRAINT fk_place_track_like_place_track
         FOREIGN KEY (place_track_id) REFERENCES place_track (id) ON DELETE CASCADE,
@@ -398,8 +387,7 @@ CREATE TABLE place_track_like
 );
 
 CREATE INDEX idx_place_track_like_member
-    ON place_track_like (member_id, created_at DESC)
-    WHERE deleted_at IS NULL;
+    ON place_track_like (member_id, created_at DESC);
 
 CREATE TABLE place_track_bookmark
 (
@@ -407,7 +395,6 @@ CREATE TABLE place_track_bookmark
     member_id      BIGINT      NOT NULL,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at     TIMESTAMPTZ,
     CONSTRAINT pk_place_track_bookmark PRIMARY KEY (place_track_id, member_id),
     CONSTRAINT fk_place_track_bookmark_place_track
         FOREIGN KEY (place_track_id) REFERENCES place_track (id) ON DELETE CASCADE,
@@ -416,8 +403,7 @@ CREATE TABLE place_track_bookmark
 );
 
 CREATE INDEX idx_place_track_bookmark_member
-    ON place_track_bookmark (member_id, created_at DESC)
-    WHERE deleted_at IS NULL;
+    ON place_track_bookmark (member_id, created_at DESC);
 
 -- ============================================
 -- 4. PIN
@@ -480,7 +466,6 @@ CREATE TABLE tag
     is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at    TIMESTAMPTZ,
     CONSTRAINT pk_tag PRIMARY KEY (id),
     CONSTRAINT uk_tag_display_order UNIQUE (display_order),
     CONSTRAINT chk_tag_name_not_blank
@@ -494,8 +479,7 @@ CREATE TABLE tag
 );
 
 CREATE UNIQUE INDEX uk_tag_name_ci
-    ON tag (lower(name))
-    WHERE deleted_at IS NULL;
+    ON tag (lower(name));
 
 INSERT INTO tag (name, display_order)
 VALUES ('감성', 0),
@@ -516,7 +500,6 @@ CREATE TABLE pin_tag
     display_order SMALLINT    NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at    TIMESTAMPTZ,
     CONSTRAINT pk_pin_tag PRIMARY KEY (pin_id, tag_id),
     CONSTRAINT uk_pin_tag_order UNIQUE (pin_id, display_order),
     CONSTRAINT fk_pin_tag_pin
@@ -528,8 +511,7 @@ CREATE TABLE pin_tag
 );
 
 CREATE INDEX idx_pin_tag_tag
-    ON pin_tag (tag_id)
-    WHERE deleted_at IS NULL;
+    ON pin_tag (tag_id);
 
 -- ============================================
 -- 4-2. PIN INTERACTION
@@ -541,7 +523,6 @@ CREATE TABLE pin_like
     member_id  BIGINT      NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMPTZ,
     CONSTRAINT pk_pin_like PRIMARY KEY (pin_id, member_id),
     CONSTRAINT fk_pin_like_pin
         FOREIGN KEY (pin_id) REFERENCES pin (id) ON DELETE CASCADE,
@@ -550,8 +531,7 @@ CREATE TABLE pin_like
 );
 
 CREATE INDEX idx_pin_like_member
-    ON pin_like (member_id, created_at DESC)
-    WHERE deleted_at IS NULL;
+    ON pin_like (member_id, created_at DESC);
 ~~~
 
 ---
@@ -572,3 +552,4 @@ CREATE INDEX idx_pin_like_member
 | 0.1.1 | 2026-06-28 | 매핑 테이블을 원본으로 유지하면서 place_track에 PIN·하트·북마크 수, pin에 따봉 수를 조회용 카운트 컬럼으로 추가 |
 | 0.2.0 | 2026-06-28 | 위치를 PostGIS geography와 GiST 인덱스로 전환하고 화면 정렬 인덱스·고정 태그 카탈로그·API용 PIN Enum을 반영 |
 | 0.3.0 | 2026-07-02 | 모든 JPA 엔티티에 BaseEntity 공통 시간 컬럼과 소프트 삭제 정책을 적용하고, updated_at 관리를 JPA Auditing으로 통일 |
+| 0.3.1 | 2026-07-02 | Soft Delete를 member·place·place_track·pin에만 선택 적용하고, AWS RDS에서도 단일 애플리케이션 쓰기 구조인 동안 JPA Auditing을 유지하도록 정책 명확화 |

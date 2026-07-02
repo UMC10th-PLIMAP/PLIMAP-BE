@@ -242,7 +242,7 @@ Entity에는 필요한 Lombok만 제한적으로 사용합니다.
 @Table(name = "pin")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Pin extends BaseEntity {
+public class Pin extends SoftDeleteEntity {
 }
 ```
 
@@ -318,19 +318,26 @@ private PinStatus status;
 
 ### Base Entity
 
-모든 Entity는 공통 `BaseEntity`를 상속하며 다음 필드를 공통으로 관리합니다.
+모든 Entity는 공통 `BaseEntity`를 상속하며 다음 필드를 관리합니다.
 
 - `createdAt`
 - `updatedAt`
-- `deletedAt`
 
-시간 필드는 PostgreSQL의 `TIMESTAMPTZ`와 일관되도록 `Instant`를 사용합니다. 생성일과 수정일은 JPA Auditing으로 기록하고, 삭제일은 `BaseEntity.delete()`에서 기록합니다.
+시간 필드는 PostgreSQL의 `TIMESTAMPTZ`와 일관되도록 `Instant`를 사용하며, 생성일과 수정일은 JPA Auditing으로 기록합니다.
+
+삭제 이력 보존이 필요한 Entity만 `SoftDeleteEntity`를 상속합니다.
+
+- 적용 대상: `Member`, `Place`, `PlaceTrack`, `Pin`
+- 공통 필드: `deletedAt`
+- 상태 변경: `delete()`, `restore()`
 
 ```java
 pin.delete();
 ```
 
-`repository.delete()`와 `repository.deleteById()`는 물리 삭제를 실행하므로 사용하지 않습니다. 일반 조회에는 `deletedAt IS NULL` 조건을 적용하고, 복구 유스케이스에서만 삭제된 엔티티를 별도로 조회하여 `restore()`를 호출합니다.
+Soft Delete 대상에는 `repository.delete()`와 `repository.deleteById()`를 사용하지 않습니다. 일반 조회에는 `deletedAt IS NULL` 조건을 적용하고, 복구 유스케이스에서만 삭제된 엔티티를 별도로 조회하여 `restore()`를 호출합니다.
+
+Soft Delete 대상이 아닌 이력·매핑 Entity는 도메인별 보존 요구사항에 따라 물리 삭제할 수 있습니다.
 
 ## Repository Layer
 
