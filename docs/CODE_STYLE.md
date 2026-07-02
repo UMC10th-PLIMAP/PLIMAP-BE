@@ -358,6 +358,8 @@ public interface PinRepository extends JpaRepository<Pin, Long> {
 repository/
 └── query/
     ├── PinQueryRepository.java
+    ├── projection/
+    │   └── PinSearchRow.java
     └── impl/
         └── PinQueryRepositoryImpl.java
 ```
@@ -365,9 +367,11 @@ repository/
 ```java
 public interface PinQueryRepository {
 
-    List<PinResponse.Item> searchPins(PinSearchCondition condition);
+    List<PinSearchRow> searchPins(PinSearchCondition condition);
 }
 ```
+
+Query Repository는 API 응답 DTO에 의존하지 않습니다. 복잡한 조회 결과는 `projection` 패키지의 조회 전용 모델로 반환하고, Query Service 또는 Converter에서 `PinResponse`로 변환합니다.
 
 JPQL, QueryDSL, Native Query 선택 기준은 다음과 같습니다.
 
