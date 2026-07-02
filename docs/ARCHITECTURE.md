@@ -76,6 +76,7 @@ com.example.plimap/
 │
 ├── global/                         # 전역 공통 모듈
 │   ├── config/                     # 설정 클래스
+│   ├── entity/                     # BaseEntity 등 공통 엔티티
 │   ├── security/                   # 인증/인가 보안 설정
 │   ├── swagger/                    # Swagger/OpenAPI 설정
 │   ├── exception/                  # 전역 예외 처리
@@ -168,14 +169,14 @@ Query Service는 조회 목적에 맞는 DTO를 반환할 수 있으며, 복잡�
 
 ### Base Entity
 
-모든 JPA 엔티티는 공통 필드를 관리하기 위해 공통 Base Entity 계층을 상속하는 것을 기본 원칙으로 합니다.
+모든 JPA 엔티티는 공통 필드와 소프트 삭제 상태를 관리하기 위해 `BaseEntity`를 상속하는 것을 기본 원칙으로 합니다.
 
 ```java
-public class SomeEntity extends BaseTimeEntity {
+public class SomeEntity extends BaseEntity {
 }
 ```
 
-생성일, 수정일처럼 대부분의 엔티티에 공통으로 필요한 필드는 개별 엔티티마다 중복해서 선언하지 않고 공통 부모 클래스로 관리합니다.
+`createdAt`, `updatedAt`, `deletedAt`은 개별 엔티티마다 중복해서 선언하지 않고 공통 부모 클래스에서 관리합니다. PostgreSQL의 `TIMESTAMPTZ`와 일관된 시점 표현을 위해 Java 타입은 `Instant`를 사용합니다.
 
 ### Auditing
 
@@ -186,17 +187,22 @@ public class SomeEntity extends BaseTimeEntity {
 
 이를 통해 생성일과 수정일을 직접 설정하는 중복 로직을 줄이고, 모든 엔티티의 시간 관리 방식을 통일합니다.
 
+JPA Auditing은 `global.config.JpaAuditingConfig`의 `@EnableJpaAuditing`으로 활성화합니다. `BaseEntity`의 `@CreatedDate`, `@LastModifiedDate`는 이 설정이 등록되어 있을 때 엔티티 저장 이벤트에 맞춰 동작합니다.
+
 ### Soft Delete
 
-물리 삭제보다 이력 보존이 필요한 데이터는 Soft Delete 적용을 고려합니다.
+모든 엔티티 삭제는 이력 보존을 위해 Soft Delete를 기본 정책으로 사용합니다.
 
 - `deletedAt`: 삭제 처리 시점
 
-Soft Delete가 적용된 엔티티는 실제 row를 삭제하지 않고 삭제 시점을 기록합니다. 조회 로직에서는 삭제된 데이터를 기본적으로 제외하도록 처리합니다.
+삭제 유스케이스는 `repository.delete()` 또는 `repository.deleteById()`를 호출하지 않고 `BaseEntity.delete()`로 삭제 시점을 기록합니다. 일반 조회는 `deletedAt IS NULL` 조건으로 삭제된 데이터를 제외합니다. 삭제된 데이터가 필요한 관리·복구 기능만 이 조건을 명시적으로 해제합니다.
+
+같은 식별 관계를 다시 생성해야 하는 경우에는 삭제된 row를 중복 삽입하지 않고 조회한 뒤 `BaseEntity.restore()`로 복구합니다.
 
 ### Entity Design Rule
 
 - Entity는 DB 테이블과 매핑되는 도메인 모델입니다.
 - Entity에는 도메인 상태를 변경하는 최소한의 비즈니스 메서드를 둘 수 있습니다.
+- Entity 삭제와 복구는 `BaseEntity`의 `delete()`, `restore()`를 사용합니다.
 - API 요청/응답 DTO를 Entity 내부에 직접 의존시키지 않습니다.
 - Entity 생성과 변경은 Service 계층에서 유스케이스 흐름에 맞게 제어합니다.
