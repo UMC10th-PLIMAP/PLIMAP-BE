@@ -39,53 +39,50 @@ com.example.plimap
 
 ## 로컬 DB 연결
 
-로컬 개발에서는 각 팀원이 PC에 설치한 PostgreSQL/PostGIS를 사용합니다. pgAdmin Desktop에서 생성한 데이터베이스의
-접속 정보를 `.env`에 작성하면 Spring Boot가 같은 데이터베이스에 연결됩니다.
+로컬 개발에서는 Docker Compose로 PostgreSQL/PostGIS를 실행합니다. 모든 팀원이 동일한 DB 버전과 접속 정보를 사용하지만,
+데이터는 각자의 Docker 볼륨에 저장되므로 다른 팀원의 로컬 DB와 공유되지 않습니다. Spring Boot는 IntelliJ에서 실행하고
+Docker의 PostgreSQL에 `localhost:5432`로 연결합니다.
 
 ### 사전 준비
 
-- PostgreSQL 18 및 PostGIS
-- pgAdmin Desktop
+- Docker Desktop
+- pgAdmin Desktop(선택, DB 조회 및 쿼리 실행용)
 - Java 21
 
-### 1. 접속 정보 확인
+기존에 설치한 PostgreSQL이 `5432` 포트를 사용 중이라면 Docker 컨테이너와 충돌합니다. Docker DB를 실행하기 전에
+기존 PostgreSQL 서비스를 중지해야 합니다.
 
-pgAdmin에서 등록한 PostgreSQL 서버의 `Properties > Connection`에서 host와 port를 확인합니다.
-데이터베이스 이름과 로그인에 사용하는 PostgreSQL 사용자(role)의 이름 및 비밀번호도 확인합니다.
+### 1. PostgreSQL 실행
 
-### 2. 환경변수 작성
-
-저장소 루트의 `.env.example`을 `.env`로 복사한 뒤 `{}`를 자신의 로컬 설정값으로 교체합니다.
+저장소 루트에서 다음 명령을 실행합니다.
 
 ```powershell
-Copy-Item .env.example .env
+docker compose up -d
+docker compose ps
 ```
 
-```bash
-cp .env.example .env
+`plimap-postgres`의 상태가 `healthy`이면 로컬 DB가 준비된 것입니다. 로컬 접속 정보는 다음과 같이 고정되어 있으므로
+별도의 `.env` 설정은 필요하지 않습니다.
+
+```text
+Host: localhost
+Port: 5432
+Database: plimap_local_db
+Username: plimap
+Password: plimap1234
 ```
 
-```env
-DB_URL=jdbc:postgresql://localhost:5432/plimap_local_db
-DB_USERNAME=PostgreSQL 사용자명
-DB_PASSWORD=PostgreSQL 사용자 비밀번호
-```
+### 2. pgAdmin 연결
 
-`.env`에는 개인 로컬 설정이 들어가며 Git에 포함되지 않습니다. 데이터베이스가 기본 포트가 아닌 다른 포트를 사용하면
-`DB_URL`의 `5432`를 실제 포트로 변경합니다.
-
-### 3. PostGIS 확인
-
-pgAdmin의 Query Tool에서 다음 쿼리를 실행합니다.
+pgAdmin에서 `Register > Server`를 선택하고 위 접속 정보를 입력합니다. Docker 컨테이너가 실행 중일 때만 접속할 수 있습니다.
+Query Tool에서 다음 쿼리로 DB와 PostGIS 연결을 확인합니다.
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS postgis;
+SELECT current_database(), current_user;
 SELECT PostGIS_Version();
 ```
 
-버전 정보가 반환되면 PostGIS를 사용할 수 있습니다.
-
-### 4. Spring Boot 실행
+### 3. Spring Boot 실행
 
 IntelliJ 실행 구성에서 Active profiles를 `local`로 지정하거나 다음 명령을 사용합니다.
 
@@ -98,6 +95,18 @@ IntelliJ 실행 구성에서 Active profiles를 `local`로 지정하거나 다�
 ```
 
 실행 로그에 `HikariPool-1 - Start completed`가 표시되면 로컬 PostgreSQL 연결에 성공한 것입니다.
+
+컨테이너를 중지해도 DB 데이터는 유지됩니다.
+
+```powershell
+docker compose down
+```
+
+다음 명령은 컨테이너와 로컬 DB 데이터를 함께 삭제하므로 초기화가 필요할 때만 사용합니다.
+
+```powershell
+docker compose down -v
+```
 
 ## GitHub 협업 전략 및 컨벤션
 
