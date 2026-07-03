@@ -1,18 +1,3 @@
 spring:
   application:
     name: "PLIMAP"
-
-  datasource:
-    url: jdbc:postgresql://localhost:5432/plimap
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
-
-  jpa:
-    database: postgresql
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    show-sql: true
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        format_sql: true

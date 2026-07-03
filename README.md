@@ -37,6 +37,94 @@ com.example.plimap
 각 도메인은 `controller`, `service`, `repository`, `entity`, `dto` 등으로 구성하며,
 서비스는 상태 변경을 담당하는 `command`와 조회를 담당하는 `query`로 분리합니다.
 
+## 로컬 DB 실행
+
+로컬 개발에서는 PostgreSQL/PostGIS만 Docker로 실행합니다. Spring Boot는 IDE 또는 Gradle로 실행하고,
+pgAdmin Desktop은 Docker에 실행된 로컬 DB에 접속합니다. 각 팀원의 DB와 데이터는 각자의 PC에 독립적으로 저장됩니다.
+
+### 사전 준비
+
+- Docker Desktop
+- pgAdmin Desktop
+- Java 21
+
+### 1. 환경변수 작성
+
+저장소 루트의 `.env.example`을 `.env`로 복사한 뒤 `{}`를 자신의 로컬 설정값으로 교체합니다.
+
+```powershell
+Copy-Item .env.example .env
+```
+
+```bash
+cp .env.example .env
+```
+
+| 환경변수 | 설명 |
+| --- | --- |
+| `DB_URL` | Spring Boot JDBC URL. 예: `jdbc:postgresql://localhost:5432/plimap` |
+| `DB_PORT` | 호스트에 공개할 PostgreSQL 포트. 기본 포트는 `5432` |
+| `DB_NAME` | 생성할 로컬 데이터베이스 이름 |
+| `DB_USERNAME` | 로컬 데이터베이스 사용자 이름 |
+| `DB_PASSWORD` | 로컬 데이터베이스 비밀번호 |
+
+`.env`에는 개인 로컬 설정이 들어가며 Git에 포함되지 않습니다.
+
+### 2. PostgreSQL/PostGIS 실행
+
+Docker Desktop을 실행한 상태에서 다음 명령을 사용합니다.
+
+```bash
+docker compose up -d
+docker compose ps
+```
+
+`plimap-postgres` 컨테이너의 상태가 `healthy`가 되면 DB를 사용할 수 있습니다.
+
+### 3. Spring Boot 실행
+
+IntelliJ 실행 구성에서 Active profiles를 `local`로 지정하거나 다음 명령을 사용합니다.
+
+```powershell
+.\gradlew.bat bootRun --args='--spring.profiles.active=local'
+```
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=local'
+```
+
+### 4. pgAdmin Desktop 연결
+
+pgAdmin에서 서버를 등록하고 `.env`에 작성한 값을 입력합니다.
+
+| pgAdmin 항목 | 입력값 |
+| --- | --- |
+| Host name/address | `localhost` |
+| Port | `DB_PORT` 값 |
+| Maintenance database | `DB_NAME` 값 |
+| Username | `DB_USERNAME` 값 |
+| Password | `DB_PASSWORD` 값 |
+
+연결 후 Query Tool에서 다음 쿼리로 PostGIS 활성화를 확인합니다.
+
+```sql
+SELECT PostGIS_Version();
+```
+
+### 종료 및 초기화
+
+컨테이너만 종료할 때는 다음 명령을 사용합니다. 데이터는 Docker volume에 유지됩니다.
+
+```bash
+docker compose down
+```
+
+로컬 DB 데이터를 모두 삭제하고 처음부터 다시 만들 때만 다음 명령을 사용합니다.
+
+```bash
+docker compose down -v
+```
+
 ## GitHub 협업 전략 및 컨벤션
 
 ### 브랜치 전략
