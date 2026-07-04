@@ -18,6 +18,7 @@
 - [ ] `member`
 - [ ] `place`
 - [ ] `track`
+- [ ] `pin`
 - [ ] `infra`
 - [ ] `db`
 
