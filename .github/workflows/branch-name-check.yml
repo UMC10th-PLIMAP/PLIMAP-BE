@@ -7,6 +7,10 @@ on:
       - reopened
       - synchronize
 
+concurrency:
+  group: branch-name-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
