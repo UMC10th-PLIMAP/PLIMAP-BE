@@ -1,0 +1,46 @@
+name: Branch Name Check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  branch-name-check:
+    name: Branch Name Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate branch name format
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
+        run: |
+          pattern='^[a-z][a-z0-9-]*/#[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$'
+
+          if [[ "$BRANCH_NAME" == dependabot/* || "$BRANCH_NAME" == renovate/* ]]; then
+            echo "Automated dependency branch detected: $BRANCH_NAME"
+            exit 0
+          fi
+
+          if [[ "$BRANCH_NAME" =~ $pattern ]]; then
+            echo "Valid branch name: $BRANCH_NAME"
+            exit 0
+          fi
+
+          echo "::error title=Invalid branch name::Use <type>/#<issue-number>-<description> with lowercase letters, numbers, and hyphens. Current branch: $BRANCH_NAME"
+          {
+            echo "### Branch name check failed"
+            echo
+            echo "Current branch: \`$BRANCH_NAME\`"
+            echo
+            echo "Required format: \`<type>/#<issue-number>-<description>\`"
+            echo
+            echo "Examples: \`chore/#15-ci-setting\`, \`infra/#18-aws-setting\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
