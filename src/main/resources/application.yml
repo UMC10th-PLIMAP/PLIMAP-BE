@@ -1,5 +1,13 @@
 # PLIMAP 공통 환경 설정
 # local, dev, prod 등 모든 실행 환경에서 공통으로 사용하는 값만 작성합니다.
+
 spring:
   application:
     name: "PLIMAP"
+
+# Swagger 설정
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

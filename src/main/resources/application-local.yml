@@ -1,12 +1,11 @@
 # Local 환경 설정
 # IntelliJ 실행 설정의 Active profiles에 local을 지정해야 이 파일이 적용됩니다.
+
 spring:
-  # Docker Compose로 실행한 로컬 PostgreSQL 접속 정보
   datasource:
     url: jdbc:postgresql://localhost:5432/plimap_local_db
     username: plimap
     password: plimap1234
-
   # Local JPA/Hibernate 설정
   jpa:
     database: postgresql
@@ -17,3 +16,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+# Swagger 설정
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

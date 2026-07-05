@@ -1,0 +1,8 @@
+# Dev 환경 Swagger 설정
+
+# Swagger 설정
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
