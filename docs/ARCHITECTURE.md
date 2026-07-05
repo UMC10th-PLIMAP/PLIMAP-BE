@@ -75,11 +75,14 @@ com.example.plimap/
 │               └── impl/
 │
 ├── global/                         # 전역 공통 모듈
+│   ├── apiPayload/                 # 공통 API 응답, 코드 및 예외 처리
+│   │   ├── ApiResponse.java
+│   │   ├── code/                   # 성공·에러 코드
+│   │   └── exception/              # 비즈니스 예외 및 전역 예외 처리
 │   ├── config/                     # 설정 클래스
 │   ├── entity/                     # BaseEntity, SoftDeleteEntity 등 공통 엔티티
 │   ├── security/                   # 인증/인가 보안 설정
 │   ├── swagger/                    # Swagger/OpenAPI 설정
-│   ├── exception/                  # 전역 예외 처리
 │   └── external/                   # 외부 시스템 연동 공통 영역
 │
 └── PlimapApplication

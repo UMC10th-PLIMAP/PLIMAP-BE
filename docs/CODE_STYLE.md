@@ -77,11 +77,15 @@ public class PinController implements PinControllerDocs {
 ApiResponse<T>
 ```
 
+응답 본문은 `isSuccess`, `code`, `message`, `result` 필드로 구성하며, 반환 데이터가 없을 때도 `result`는 `null`로 명시합니다. 실제 HTTP 상태는 코드의 `HttpStatus`를 사용해 `ResponseEntity`에 설정합니다.
+
 데이터가 없는 성공 응답은 `ApiResponse<Void>`를 사용합니다.
 
 ```java
 pinCommandService.deletePin(pinId);
-return ApiResponse.success(SuccessCode.PIN_DELETED, null);
+return ResponseEntity
+        .status(PinSuccessCode.PIN_DELETED.getStatus())
+        .body(ApiResponse.success(PinSuccessCode.PIN_DELETED, null));
 ```
 
 HTTP 상태 코드는 의미에 맞게 사용합니다.
@@ -386,38 +390,52 @@ Native Query를 사용할 때는 코드 리뷰에서 사용 이유를 설명합�
 
 ## Exception Layer
 
-공통 에러는 `global.exception`에서 관리하고, 도메인 에러는 각 도메인의 `exception` 패키지에서 관리합니다.
+공통 응답 코드와 전역 예외 처리는 `global.apiPayload`에서 관리하고, 도메인 에러 코드와 예외는 각 도메인의 `exception` 패키지에서 관리합니다.
 
 ```text
-global/exception/
-└── GlobalErrorCode.java
+global/apiPayload/
+├── ApiResponse.java
+├── code/
+│   ├── BaseErrorCode.java
+│   ├── BaseSuccessCode.java
+│   ├── GeneralErrorCode.java
+│   └── GeneralSuccessCode.java
+└── exception/
+    ├── BusinessException.java
+    └── GlobalExceptionHandler.java
 
 domain/pin/exception/
-└── PinErrorCode.java
+├── PinErrorCode.java
+└── PinException.java
 ```
 
 ErrorCode 이름은 대문자와 언더스코어를 사용합니다.
 
+공통 응답 코드는 `COMMON_{HTTP 상태}_{의미}` 형식을 사용하고, 도메인 응답 코드는 도메인 접두사와 의미를 조합합니다.
+
 ```java
+COMMON_400_BAD_REQUEST
 PIN_NOT_FOUND
 PIN_ALREADY_DELETED
 INVALID_PIN_OWNER
 ```
 
-비즈니스 예외는 기본적으로 공통 `BusinessException`을 사용하고 ErrorCode로 구분합니다.
+도메인 예외는 공통 `BusinessException`을 상속하고, 해당 도메인의 ErrorCode를 전달합니다.
 
 ```java
-throw new BusinessException(PinErrorCode.PIN_NOT_FOUND);
+throw new PinException(PinErrorCode.PIN_NOT_FOUND);
 ```
 
 예외 응답은 `GlobalExceptionHandler`에서 처리합니다.
+
+Bean Validation 메시지는 한글로 작성하며, 검증 실패 시 첫 번째 필드 오류 메시지를 공통 응답에 사용합니다.
 
 Controller에서 try-catch로 비즈니스 예외를 직접 처리하지 않습니다.
 
 외부 API 예외는 내부 예외로 변환해서 던집니다.
 
 ```java
-throw new ExternalApiException(GlobalErrorCode.EXTERNAL_API_ERROR);
+throw new PlaceException(PlaceErrorCode.EXTERNAL_API_ERROR);
 ```
 
 ## SQL Rules
