@@ -61,7 +61,7 @@ pin ─── N:N ─ tag (via pin_tag)
 ~~~java
 MemberStatus: ACTIVE, SUSPENDED, WITHDRAWN
 AuthProvider: KAKAO, GOOGLE, APPLE
-TermsType: SERVICE, PRIVACY
+TermsType: SERVICE, PRIVACY, LOCATION, MARKETING
 PlaceSource: PLACE_SEARCH, MAP_SELECTION
 PinSortType: POPULAR, LATEST
 PinRegistrationStatus: CREATABLE_NEW_PLACE, CREATABLE_EXISTING_PLACE,
@@ -184,7 +184,7 @@ CREATE TABLE terms
     updated_at   TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_terms PRIMARY KEY (id),
     CONSTRAINT uk_terms_type_version UNIQUE (type, version),
-    CONSTRAINT chk_terms_type CHECK (type IN ('SERVICE', 'PRIVACY'))
+    CONSTRAINT chk_terms_type CHECK (type IN ('SERVICE', 'PRIVACY', 'LOCATION', 'MARKETING'))
 );
 
 CREATE INDEX idx_terms_active
