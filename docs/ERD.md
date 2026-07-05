@@ -11,6 +11,7 @@
 | 도메인 | 테이블 | 설명 |
 |---|---|---|
 | **member** | member | 회원 프로필, 닉네임, 이름, 소개, 온보딩 상태 |
+|  | member_follow | 회원 간 팔로우 관계 |
 |  | social_account | 카카오, 구글, 애플 소셜 계정 |
 |  | terms | 이용약관 및 개인정보 처리방침 버전 |
 |  | member_terms_agreement | 회원별 약관 동의 이력 |
@@ -152,6 +153,22 @@ CREATE TABLE member
 CREATE UNIQUE INDEX uk_member_nickname_ci
     ON member (lower(nickname))
     WHERE nickname IS NOT NULL AND deleted_at IS NULL;
+
+CREATE TABLE member_follow
+(
+    follower_id  BIGINT      NOT NULL,
+    following_id BIGINT      NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_member_follow PRIMARY KEY (follower_id, following_id),
+    CONSTRAINT fk_member_follow_follower
+        FOREIGN KEY (follower_id) REFERENCES member (id) ON DELETE CASCADE,
+    CONSTRAINT fk_member_follow_following
+        FOREIGN KEY (following_id) REFERENCES member (id) ON DELETE CASCADE,
+    CONSTRAINT chk_member_follow_self
+        CHECK (follower_id <> following_id)
+);
+
+CREATE INDEX idx_member_follow_following_id ON member_follow (following_id);
 
 CREATE TABLE social_account
 (
