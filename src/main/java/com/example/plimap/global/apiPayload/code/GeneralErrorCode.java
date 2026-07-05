@@ -8,16 +8,36 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum GeneralErrorCode implements BaseErrorCode {
 
-    BAD_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_BAD_REQUEST", "잘못된 요청입니다."),
-    VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "COMMON_VALIDATION_FAILED", "요청 값이 올바르지 않습니다."),
-    MISSING_PARAMETER(HttpStatus.BAD_REQUEST, "COMMON_MISSING_PARAMETER", "필수 요청 파라미터가 누락되었습니다."),
-    TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "COMMON_TYPE_MISMATCH", "요청 값의 타입이 올바르지 않습니다."),
-    MALFORMED_JSON(HttpStatus.BAD_REQUEST, "COMMON_MALFORMED_JSON", "요청 본문의 형식이 올바르지 않습니다."),
-    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "COMMON_UNAUTHORIZED", "인증이 필요합니다."),
-    FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON_FORBIDDEN", "접근 권한이 없습니다."),
-    NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_NOT_FOUND", "요청한 리소스를 찾을 수 없습니다."),
-    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "COMMON_METHOD_NOT_ALLOWED", "지원하지 않는 HTTP 메서드입니다."),
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다.");
+    BAD_REQUEST(HttpStatus.BAD_REQUEST,
+            "COMMON_400_BAD_REQUEST",
+            "잘못된 요청입니다."),
+    VALIDATION_FAILED(HttpStatus.BAD_REQUEST,
+            "COMMON_400_VALIDATION_FAILED",
+            "요청 값이 올바르지 않습니다."),
+    MISSING_PARAMETER(HttpStatus.BAD_REQUEST,
+            "COMMON_400_MISSING_PARAMETER",
+            "필수 요청 파라미터가 누락되었습니다."),
+    TYPE_MISMATCH(HttpStatus.BAD_REQUEST,
+            "COMMON_400_TYPE_MISMATCH",
+            "요청 값의 타입이 올바르지 않습니다."),
+    MALFORMED_JSON(HttpStatus.BAD_REQUEST,
+            "COMMON_400_MALFORMED_JSON",
+            "요청 본문의 형식이 올바르지 않습니다."),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED,
+            "COMMON_401_UNAUTHORIZED",
+            "인증이 필요합니다."),
+    FORBIDDEN(HttpStatus.FORBIDDEN,
+            "COMMON_403_FORBIDDEN",
+            "접근 권한이 없습니다."),
+    NOT_FOUND(HttpStatus.NOT_FOUND,
+            "COMMON_404_NOT_FOUND",
+            "요청한 리소스를 찾을 수 없습니다."),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED,
+            "COMMON_405_METHOD_NOT_ALLOWED",
+            "지원하지 않는 HTTP 메서드입니다."),
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
+            "COMMON_500_INTERNAL_SERVER_ERROR",
+            "서버 내부 오류가 발생했습니다.");
 
     private final HttpStatus status;
     private final String code;

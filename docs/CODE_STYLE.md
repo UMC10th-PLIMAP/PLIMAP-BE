@@ -411,7 +411,10 @@ domain/pin/exception/
 
 ErrorCode 이름은 대문자와 언더스코어를 사용합니다.
 
+공통 응답 코드는 `COMMON_{HTTP 상태}_{의미}` 형식을 사용하고, 도메인 응답 코드는 도메인 접두사와 의미를 조합합니다.
+
 ```java
+COMMON_400_BAD_REQUEST
 PIN_NOT_FOUND
 PIN_ALREADY_DELETED
 INVALID_PIN_OWNER

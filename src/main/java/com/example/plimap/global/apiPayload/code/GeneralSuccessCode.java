@@ -8,8 +8,12 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum GeneralSuccessCode implements BaseSuccessCode {
 
-    OK(HttpStatus.OK, "COMMON_OK", "요청에 성공했습니다."),
-    CREATED(HttpStatus.CREATED, "COMMON_CREATED", "리소스 생성에 성공했습니다.");
+    OK(HttpStatus.OK,
+            "COMMON_200_OK",
+            "요청에 성공했습니다."),
+    CREATED(HttpStatus.CREATED,
+            "COMMON_201_CREATED",
+            "리소스 생성에 성공했습니다.");
 
     private final HttpStatus status;
     private final String code;
