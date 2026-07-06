@@ -1,23 +1,22 @@
-# PLIMAP-BE
+# 📍PLIMAP-BE
 
 음악과 장소를 연결해 지도 위에 기록하고 공유하는 **PLIMAP**의 백엔드 API입니다.
 
 ## 팀원 및 역할
 
-| 팀원 | 담당 영역 |
-| --- | --- |
-| 주보경 | 인프라 및 클라우드 |
-| 이예림 | Member·Auth 도메인, 회원 및 소셜 로그인 |
-| 김민주 | Place 도메인 |
-| 이서윤 | Pin 관련 API 설계 |
-| 김예원 | Track 도메인 |
+| 팀원 | 담당 영역                           |
+| --- |---------------------------------|
+| 주보경 | 🐘 인프라 및 클라우드                   |
+| 이예림 | 👥 Member·Auth 도메인, 회원 및 소셜 로그인 |
+| 김민주 | 🗺️ Place 도메인                   |
+| 이서윤 | 📍 Pin 관련 API 설계                |
+| 김예원 | 🎶 Track 도메인                    |
 
 ## 기술 스택
 
 - Java 21, Spring Boot 4.1
 - Spring MVC, Spring Data JPA, Hibernate Spatial
-- PostgreSQL 18.4
-- Gradle, Lombok
+- PostgreSQL 18.4, PostGIS
 
 ## 도메인 구조
 
@@ -35,18 +34,53 @@ com.example.plimap
 ```
 
 각 도메인은 `controller`, `service`, `repository`, `entity`, `dto` 등으로 구성하며,
-서비스는 상태 변경을 담당하는 `command`와 조회를 담당하는 `query`로 분리합니다.
+서비스는 상태 변경을 담당하는 `command`와 조회를 담당하는 `query`로 분리하여 부분적으로 CQRS 아키텍져 전략을 취합니다.
+
+## Local Setup
+
+### 사전 준비
+
+- Java 21
+- Docker 및 Docker Compose
+
+### 실행 방법
+
+1. Docker Compose로 로컬 PostGIS 데이터베이스를 실행.
+
+   ```bash
+   docker compose up -d
+   ```
+
+2. `local` 프로필로 Spring Boot 애플리케이션을 실행.
+
+   ```bash
+   # macOS/Linux
+   ./gradlew bootRun --args='--spring.profiles.active=local'
+
+   # Windows
+   .\gradlew.bat bootRun --args="--spring.profiles.active=local"
+   ```
+
+   IntelliJ **Active profiles**에 `local`을 지정.
+
+3. 애플리케이션 실행 후 Swagger UI 동작 확인.
+
+   ```text
+   http://localhost:8080/swagger-ui/index.html
+   ```
+
+### 종료 방법
+
+```bash
+docker compose down
+```
+
+데이터까지 초기화하려면 `docker compose down -v`를 실행.
 
 ## GitHub 협업 전략 및 컨벤션
 
-### 브랜치 전략
-
-- `main`: 배포 가능한 안정 버전
-- `develop`: 기능 통합 및 개발 기준 브랜치
-- 작업 브랜치: `develop`에서 생성하고 작업 완료 후 `develop`으로 PR을 요청합니다.
-- `main`과 `develop`에는 직접 push하지 않습니다.
-
-### 협업 흐름
+<details>
+<summary><strong>협업 흐름</strong></summary>
 
 1. 작업 시작 전 GitHub Issue를 생성하고 담당자와 라벨을 지정합니다.
 2. 하나의 Issue에는 하나의 작업 목적만 포함합니다.
@@ -55,7 +89,20 @@ com.example.plimap
 5. PR에 변경 내용과 테스트 결과를 작성하고 `Closes #이슈번호`로 Issue를 연결합니다.
 6. 최소 1명의 승인을 받은 뒤 병합하고 작업 브랜치를 삭제합니다.
 
-### 네이밍 컨벤션
+</details>
+
+<details>
+<summary><strong>브랜치 전략</strong></summary>
+
+- `main`: 배포 가능한 안정 버전
+- `develop`: 기능 통합 및 개발 기준 브랜치
+- 작업 브랜치: `develop`에서 생성하고 작업 완료 후 `develop`으로 PR을 요청합니다.
+- `main`과 `develop`에는 직접 push하지 않습니다.
+
+</details>
+
+<details>
+<summary><strong>네이밍 컨벤션</strong></summary>
 
 - Issue: `[Type] 작업 내용` (예: `[Feature] 회원가입 API 구현`)
 - Branch: `<type>/#<issue-number>-<description>` (예: `feat/#14-signup-api`)
@@ -63,5 +110,7 @@ com.example.plimap
 - PR: `[Type] 변경 내용` (예: `[Feature] 회원가입 API 구현`)
 - Issue·PR Type: `Feature`, `Bug`, `Task`, `Document`, `Refactor`
 - Branch·Commit type: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
+
+</details>
 
 자세한 내용은 [아키텍처](docs/ARCHITECTURE.md), [협업 컨벤션](docs/CONVENTION.md), [코드 스타일](docs/CODE_STYLE.md)을 참고합니다.
