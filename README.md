@@ -36,7 +36,7 @@ com.example.plimap
 각 도메인은 `controller`, `service`, `repository`, `entity`, `dto` 등으로 구성하며,
 서비스는 상태 변경을 담당하는 `command`와 조회를 담당하는 `query`로 분리하여 부분적으로 CQRS 아키텍져 전략을 취합니다.
 
-## Local Setup
+## 로컬 실행 방법
 
 ### 사전 준비
 
