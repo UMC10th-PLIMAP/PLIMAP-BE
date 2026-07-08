@@ -45,13 +45,23 @@ com.example.plimap
 
 ### 실행 방법
 
-1. Docker Compose로 로컬 PostGIS 데이터베이스를 실행.
+1. 필요하면 환경 변수 예시 파일을 복사해 로컬 값을 변경합니다. 기본값을 그대로 사용하면 생략할 수 있습니다.
+
+   ```bash
+   # macOS/Linux
+   cp .env.example .env
+
+   # Windows PowerShell
+   Copy-Item .env.example .env
+   ```
+
+2. Docker Compose로 로컬 PostGIS 데이터베이스를 실행합니다.
 
    ```bash
    docker compose up -d
    ```
 
-2. `local` 프로필로 Spring Boot 애플리케이션을 실행.
+3. `local` 프로필로 Spring Boot 애플리케이션을 실행합니다. 최초 실행 시 Flyway가 PostGIS 확장과 전체 스키마를 생성합니다.
 
    ```bash
    # macOS/Linux
@@ -63,7 +73,7 @@ com.example.plimap
 
    IntelliJ **Active profiles**에 `local`을 지정.
 
-3. 애플리케이션 실행 후 Swagger UI 동작 확인.
+4. 애플리케이션 실행 후 Swagger UI 동작을 확인합니다.
 
    ```text
    http://localhost:8080/swagger-ui/index.html
@@ -76,6 +86,8 @@ docker compose down
 ```
 
 데이터까지 초기화하려면 `docker compose down -v`를 실행.
+
+데이터베이스 Migration, QueryDSL 및 테스트 규칙은 [데이터베이스 개발 가이드](docs/DATABASE.md)를 참고합니다.
 
 ## GitHub 협업 전략 및 컨벤션
 
@@ -113,4 +125,4 @@ docker compose down
 
 </details>
 
-자세한 내용은 [아키텍처](docs/ARCHITECTURE.md), [협업 컨벤션](docs/CONVENTION.md), [코드 스타일](docs/CODE_STYLE.md)을 참고합니다.
+자세한 내용은 [아키텍처](docs/ARCHITECTURE.md), [협업 컨벤션](docs/CONVENTION.md), [코드 스타일](docs/CODE_STYLE.md), [데이터베이스 개발 가이드](docs/DATABASE.md)를 참고합니다.

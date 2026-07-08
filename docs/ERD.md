@@ -112,39 +112,9 @@ PLIMAP 백엔드가 유일한 DB 쓰기 주체인 동안 `updated_at`은 JPA Aud
 
 ## 로컬 DB 마이그레이션
 
-이미 로컬 DB가 세팅된 경우 아래 SQL을 실행하여 스키마를 반영한다.
-`application-local.yml`의 `ddl-auto: update` 설정 시 앱 재시작으로 자동 반영되나, 명시적으로 실행해도 무방하다.
-
-~~~sql
--- member 테이블 컬럼 추가
-ALTER TABLE member ADD COLUMN IF NOT EXISTS name VARCHAR(7);
-ALTER TABLE member ADD COLUMN IF NOT EXISTS introduction VARCHAR(100);
-
-ALTER TABLE member DROP CONSTRAINT IF EXISTS chk_member_name_length;
-ALTER TABLE member ADD CONSTRAINT chk_member_name_length
-    CHECK (name IS NULL OR char_length(name) BETWEEN 1 AND 7);
-
-ALTER TABLE member DROP CONSTRAINT IF EXISTS chk_member_name_format;
-ALTER TABLE member ADD CONSTRAINT chk_member_name_format
-    CHECK (name IS NULL OR name ~ '^[가-힣A-Za-z0-9]+$');
-
--- member_follow 테이블 생성
-CREATE TABLE IF NOT EXISTS member_follow
-(
-    follower_id  BIGINT      NOT NULL,
-    following_id BIGINT      NOT NULL,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT pk_member_follow PRIMARY KEY (follower_id, following_id),
-    CONSTRAINT fk_member_follow_follower
-        FOREIGN KEY (follower_id) REFERENCES member (id) ON DELETE CASCADE,
-    CONSTRAINT fk_member_follow_following
-        FOREIGN KEY (following_id) REFERENCES member (id) ON DELETE CASCADE,
-    CONSTRAINT chk_member_follow_self
-        CHECK (follower_id <> following_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_member_follow_following_id ON member_follow (following_id);
-~~~
+데이터베이스 스키마는 Hibernate `ddl-auto`가 아니라 Flyway Migration으로 관리한다.
+빈 로컬 DB는 애플리케이션 최초 실행 시 `V1__init_schema.sql`로 초기화된다.
+실행 및 변경 절차는 [데이터베이스 개발 가이드](DATABASE.md)를 따른다.
 
 ---
 

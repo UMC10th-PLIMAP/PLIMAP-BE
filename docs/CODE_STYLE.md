@@ -362,8 +362,6 @@ public interface PinRepository extends JpaRepository<Pin, Long> {
 repository/
 └── query/
     ├── PinQueryRepository.java
-    ├── projection/
-    │   └── PinSearchRow.java
     └── impl/
         └── PinQueryRepositoryImpl.java
 ```
@@ -371,11 +369,27 @@ repository/
 ```java
 public interface PinQueryRepository {
 
-    List<PinSearchRow> searchPins(PinSearchCondition condition);
+    List<Pin> searchPins(PinSearchCondition condition);
 }
 ```
 
-Query Repository는 API 응답 DTO에 의존하지 않습니다. 복잡한 조회 결과는 `projection` 패키지의 조회 전용 모델로 반환하고, Query Service 또는 Converter에서 `PinResponse`로 변환합니다.
+QueryDSL 구현체는 공통 `JPAQueryFactory`를 생성하지 않고 생성자 주입으로 사용합니다.
+
+```java
+@Repository
+@RequiredArgsConstructor
+public class PinQueryRepositoryImpl implements PinQueryRepository {
+
+    private final JPAQueryFactory queryFactory;
+}
+```
+
+- 조회 인터페이스는 `{Domain}QueryRepository`, 구현체는 `{Domain}QueryRepositoryImpl`로 작성합니다.
+- 동적 조건은 의미가 드러나는 private 메서드로 분리하고 조건이 없으면 `null`을 반환합니다.
+- 목록 조회의 정렬 순서는 명시하며, 동일 값일 때 사용할 보조 정렬 키까지 지정합니다.
+- Query Repository 안에서 트랜잭션을 시작하거나 비즈니스 상태를 변경하지 않습니다.
+
+Query Repository는 API 응답 DTO에 의존하지 않습니다. 조회 결과를 API 응답으로 변환하는 책임은 Query Service 또는 Converter가 담당합니다.
 
 JPQL, QueryDSL, Native Query 선택 기준은 다음과 같습니다.
 
