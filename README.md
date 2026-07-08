@@ -120,9 +120,7 @@ docker compose down
 - Branch: `<type>/#<issue-number>-<description>` (예: `feat/#14-signup-api`)
 - Commit: `<type>: <subject>` (예: `feat: 회원가입 API 구현`)
 - PR: `[Type] 변경 내용` (예: `[Feature] 회원가입 API 구현`)
-- Issue·PR Type: `Feature`, `Bug`, `Task`, `Document`, `Refactor`
-- Branch·Commit type: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
 
 </details>
 
-자세한 내용은 [아키텍처](docs/ARCHITECTURE.md), [협업 컨벤션](docs/CONVENTION.md), [코드 스타일](docs/CODE_STYLE.md), [데이터베이스 개발 가이드](docs/DATABASE.md)를 참고합니다.
+자세한 내용은 [docs](./docs)를 참고합니다.
