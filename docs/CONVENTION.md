@@ -134,14 +134,7 @@ git commit -m "docs: API 사용 방법 추가"
 [Type] 변경 내용
 ```
 
-| Type | 설명 | 제목 예시 |
-|------|------|-----------|
-| `Feature` | 새로운 기능 추가 | `[Feature] 회원가입 API 구현` |
-| `Bug` | 버그 수정 | `[Bug] 이미지 업로드 오류 수정` |
-| `Task` | 설정, 유지보수 등 일반 작업 | `[Task] Docker 환경 설정` |
-| `Document` | 문서 작성 및 수정 | `[Document] API 명세 추가` |
-| `Refactor` | 코드 리팩터링 | `[Refactor] 토큰 검증 로직 분리` |
-
+- PR 타입 예시: Feature, Fix, Documents, Refactor, Test, Chore, CI, Build, Perf...
 ### 규칙
 
 1. 작업 브랜치에서 `develop` 브랜치로 PR을 생성합니다.
@@ -149,6 +142,7 @@ git commit -m "docs: API 사용 방법 추가"
 3. 관련 이슈는 `Closes #14` 로 연결합니다.
 4. PR에는 하나의 이슈에 해당하는 변경만 포함합니다.
 5. 리뷰 반영 후 해결된 리뷰 스레드를 정리합니다.
+6. 네이밍 [타입] 첫글자는 대문자를 사용합니다.
 
 ---
 
