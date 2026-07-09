@@ -1,4 +1,8 @@
 -- PLIMAP initial schema (PostgreSQL/PostGIS)
+-- SQLFluff PG01 is intentionally disabled for this initial migration.
+-- V1 creates indexes on empty tables inside Flyway's default transaction.
+-- PostgreSQL CREATE INDEX CONCURRENTLY cannot run inside a transaction block.
+-- noqa: disable=PG01
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 
@@ -385,3 +389,5 @@ CREATE TABLE pin_like
 );
 
 CREATE INDEX idx_pin_like_member ON pin_like (member_id, created_at DESC);
+
+-- noqa: enable=PG01
