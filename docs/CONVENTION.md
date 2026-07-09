@@ -135,6 +135,7 @@ git commit -m "docs: API 사용 방법 추가"
 ```
 
 - PR 타입 예시: Feature, Fix, Documents, Refactor, Test, Chore, CI, Build, Perf...
+
 ### 규칙
 
 1. 작업 브랜치에서 `develop` 브랜치로 PR을 생성합니다.

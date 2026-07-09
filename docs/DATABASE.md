@@ -6,7 +6,7 @@
 - 테스트 DB: 동일한 이미지의 Testcontainers
 - 스키마 관리: Flyway
 - ORM 검증: Hibernate `ddl-auto: validate`
-- 동적 조회: OpenFeign QueryDSL 7.4.0
+- 동적 조회: QueryDSL 7.4.0
 
 Hibernate는 테이블을 생성하거나 변경하지 않는다. Flyway가 스키마를 변경하고 Hibernate는 엔티티 매핑이 적용된 스키마와 일치하는지만 검증한다.
 
