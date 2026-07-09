@@ -6,15 +6,15 @@ services:
     container_name: plimap-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: plimap_local_db
-      POSTGRES_USER: plimap
-      POSTGRES_PASSWORD: plimap1234
+      POSTGRES_DB: ${DB_NAME:-plimap_local_db}
+      POSTGRES_USER: ${DB_USERNAME:-plimap}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-plimap1234}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U plimap -d plimap_local_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-plimap} -d ${DB_NAME:-plimap_local_db}"]
       interval: 5s
       timeout: 5s
       retries: 10

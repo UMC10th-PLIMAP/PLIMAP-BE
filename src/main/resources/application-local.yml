@@ -3,16 +3,13 @@
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/plimap_local_db
-    username: plimap
-    password: plimap1234
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:plimap_local_db}
+    username: ${DB_USERNAME:plimap}
+    password: ${DB_PASSWORD:plimap1234}
   # Local JPA/Hibernate 설정
   jpa:
     database: postgresql
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
-    hibernate:
-      ddl-auto: update
     properties:
       hibernate:
         format_sql: true

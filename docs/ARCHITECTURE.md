@@ -168,6 +168,17 @@ Query Service는 조회 목적에 맞는 DTO를 반환할 수 있으며, 복잡�
 - `repository/query`: 커스텀 조회 인터페이스
 - `repository/query/impl`: QueryDSL 등 커스텀 조회 구현체
 
+```text
+domain/{domain}/repository/
+├── {Entity}Repository.java
+└── query/
+    ├── {Entity}QueryRepository.java
+    └── impl/
+        └── {Entity}QueryRepositoryImpl.java
+```
+
+기본 CRUD와 단순 조건 조회는 Spring Data JPA Repository가 담당합니다. 동적 조건 조립, 복잡한 검색과 페이징은 Query Repository가 담당합니다. Query Repository는 데이터 접근에만 집중하고 비즈니스 판단과 트랜잭션 흐름은 Query Service에서 처리합니다.
+
 ## Database Design
 
 ### Base Entity
