@@ -14,7 +14,6 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor
@@ -43,7 +42,7 @@ public class OAuthSuccessHandler implements AuthenticationSuccessHandler {
                 .secure(cookieSecure)
                 .sameSite(cookieSameSite)
                 .path("/")
-                .maxAge(Duration.ofDays(1))
+                .maxAge(jwtUtil.getAccessTokenExpiry())
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 

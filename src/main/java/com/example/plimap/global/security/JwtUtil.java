@@ -9,12 +9,13 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
-    private static final long ACCESS_TOKEN_EXPIRY = 1000L * 60 * 60 * 24; // 24시간
+    private static final Duration ACCESS_TOKEN_EXPIRY = Duration.ofDays(1);
 
     private final SecretKey secretKey;
 
@@ -26,9 +27,13 @@ public class JwtUtil {
         return Jwts.builder()
                 .subject(authMember.getUsername())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRY))
+                .expiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRY.toMillis()))
                 .signWith(secretKey)
                 .compact();
+    }
+
+    public Duration getAccessTokenExpiry() {
+        return ACCESS_TOKEN_EXPIRY;
     }
 
     public Claims parseToken(String token) {
