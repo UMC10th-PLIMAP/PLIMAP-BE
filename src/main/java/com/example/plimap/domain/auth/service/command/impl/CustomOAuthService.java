@@ -44,11 +44,19 @@ public class CustomOAuthService extends DefaultOAuth2UserService {
 
         OAuthDTO dto = switch (provider) {
             case KAKAO -> {
+                if (!(oAuthUser.getAttribute("id") instanceof Long id)) {
+                    throw new MemberException(MemberErrorCode.INVALID_SOCIAL_PROFILE);
+                }
                 Map<String, Object> kakaoAccount = oAuthUser.getAttribute("kakao_account");
+                if (kakaoAccount == null) {
+                    throw new MemberException(MemberErrorCode.INVALID_SOCIAL_PROFILE);
+                }
                 Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-                String providerSubject = String.valueOf((Long) oAuthUser.getAttribute("id"));
+                if (!(profile != null && profile.get("nickname") instanceof String nickname)) {
+                    throw new MemberException(MemberErrorCode.INVALID_SOCIAL_PROFILE);
+                }
+                String providerSubject = String.valueOf(id);
                 String email = (String) kakaoAccount.get("email");
-                String nickname = (String) profile.get("nickname");
                 yield new KakaoDTO(providerSubject, email, nickname);
             }
             default -> throw new MemberException(MemberErrorCode.NOT_SUPPORT_SOCIAL_PROVIDER);
