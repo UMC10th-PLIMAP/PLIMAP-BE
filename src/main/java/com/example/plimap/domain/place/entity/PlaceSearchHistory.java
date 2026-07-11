@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.locationtech.jts.geom.Point;
@@ -56,4 +57,27 @@ public class PlaceSearchHistory extends BaseEntity {
 
     @Column(name = "selected_at", nullable = false)
     private Instant selectedAt;
+
+    @Builder
+    private PlaceSearchHistory(
+            Long memberId,
+            Place place,
+            String placeProvider,
+            String providerPlaceId,
+            String placeName,
+            String category,
+            String address,
+            Point location,
+            Instant selectedAt) {
+        this.memberId = memberId;
+        this.place = place;
+        this.placeProvider = placeProvider;
+        this.providerPlaceId = providerPlaceId;
+        this.placeName = placeName;
+        this.category = category;
+        this.address = address;
+        this.location = location;
+        this.selectedAt = selectedAt;
+    }
+
 }

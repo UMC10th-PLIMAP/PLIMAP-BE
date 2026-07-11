@@ -10,6 +10,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -29,4 +30,11 @@ public class PlaceBookmark extends BaseEntity {
             nullable = false,
             foreignKey = @ForeignKey(name = "fk_place_bookmark_place"))
     private Place place;
+
+    @Builder
+    private PlaceBookmark(Place place, Long memberId) {
+        this.place = place;
+        this.id = new PlaceBookmarkId(place.getId(), memberId);
+    }
+
 }

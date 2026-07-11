@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -45,4 +46,13 @@ public class PlaceTrack extends SoftDeleteEntity {
 
     @Column(name = "like_count", nullable = false)
     private int likeCount;
+
+    @Builder
+    private PlaceTrack(Place place, Track track) {
+        this.place = place;
+        this.track = track;
+        this.publicPinCount = 0;
+        this.likeCount = 0;
+    }
+
 }

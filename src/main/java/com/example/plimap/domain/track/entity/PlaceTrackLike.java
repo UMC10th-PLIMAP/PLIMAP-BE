@@ -10,6 +10,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -29,4 +30,11 @@ public class PlaceTrackLike extends BaseEntity {
             nullable = false,
             foreignKey = @ForeignKey(name = "fk_place_track_like_place_track"))
     private PlaceTrack placeTrack;
+
+    @Builder
+    private PlaceTrackLike(PlaceTrack placeTrack, Long memberId) {
+        this.placeTrack = placeTrack;
+        this.id = new PlaceTrackLikeId(placeTrack.getId(), memberId);
+    }
+
 }

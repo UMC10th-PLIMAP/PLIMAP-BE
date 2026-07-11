@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.locationtech.jts.geom.Point;
@@ -45,4 +46,23 @@ public class Place extends SoftDeleteEntity {
 
     @Column(name = "location", nullable = false, columnDefinition = "geography(Point,4326)")
     private Point location;
+
+    @Builder
+    private Place(
+            String name,
+            String address,
+            String roadAddress,
+            String placeProvider,
+            String providerPlaceId,
+            PlaceSource source,
+            Point location) {
+        this.name = name;
+        this.address = address;
+        this.roadAddress = roadAddress;
+        this.placeProvider = placeProvider;
+        this.providerPlaceId = providerPlaceId;
+        this.source = source;
+        this.location = location;
+    }
+
 }

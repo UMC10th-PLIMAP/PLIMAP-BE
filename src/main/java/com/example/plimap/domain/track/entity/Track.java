@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -50,4 +51,25 @@ public class Track extends BaseEntity {
 
     @Column(name = "duration_ms")
     private Integer durationMs;
+
+    @Builder
+    private Track(
+            String provider,
+            String providerTrackId,
+            String title,
+            String artistName,
+            String albumTitle,
+            String albumImageUrl,
+            String previewUrl,
+            Integer durationMs) {
+        this.provider = provider;
+        this.providerTrackId = providerTrackId;
+        this.title = title;
+        this.artistName = artistName;
+        this.albumTitle = albumTitle;
+        this.albumImageUrl = albumImageUrl;
+        this.previewUrl = previewUrl;
+        this.durationMs = durationMs;
+    }
+
 }
