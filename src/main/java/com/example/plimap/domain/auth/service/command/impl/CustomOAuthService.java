@@ -60,12 +60,8 @@ public class CustomOAuthService extends DefaultOAuth2UserService {
                 .orElseGet(() -> {
                     Member newMember = MemberConverter.toMember(dto);
                     memberRepository.save(newMember);
-                    SocialAccount socialAccount = SocialAccount.builder()
-                            .member(newMember)
-                            .provider(dto.getProvider())
-                            .providerSubject(dto.getProviderSubject())
-                            .email(dto.getEmail())
-                            .build();
+                    SocialAccount socialAccount = SocialAccount.create(
+                            newMember, dto.getProvider(), dto.getProviderSubject(), dto.getEmail());
                     socialAccountRepository.save(socialAccount);
                     return newMember;
                 });

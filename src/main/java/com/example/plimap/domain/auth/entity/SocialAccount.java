@@ -34,10 +34,19 @@ public class SocialAccount extends BaseEntity {
     private String email;
 
     @Builder
-    public SocialAccount(Member member, AuthProvider provider, String providerSubject, String email) {
+    private SocialAccount(Member member, AuthProvider provider, String providerSubject, String email) {
         this.member = member;
         this.provider = provider;
         this.providerSubject = providerSubject;
         this.email = email;
+    }
+
+    public static SocialAccount create(Member member, AuthProvider provider, String providerSubject, String email) {
+        return SocialAccount.builder()
+                .member(member)
+                .provider(provider)
+                .providerSubject(providerSubject)
+                .email(email)
+                .build();
     }
 }
