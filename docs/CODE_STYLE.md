@@ -274,6 +274,14 @@ private Pin(Member member, Place place, Track track, String content) {
     this.content = content;
 }
 
+public static Pin create(Member member, Place place, Track track, String content) {
+    return Pin.builder()
+            .member(member)
+            .place(place)
+            .track(track)
+            .content(content)
+            .build();
+}
 ```
 
 ### State Change
