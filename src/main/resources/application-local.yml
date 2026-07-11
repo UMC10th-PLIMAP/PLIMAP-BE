@@ -6,6 +6,14 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:plimap_local_db}
     username: ${DB_USERNAME:plimap}
     password: ${DB_PASSWORD:plimap1234}
+  flyway:
+    baseline-on-migrate: true
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            redirect-uri: "http://localhost:8080/oauth/callback/kakao"
   # Local JPA/Hibernate 설정
   jpa:
     database: postgresql
@@ -13,6 +21,14 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+oauth:
+  redirect-uri: "http://localhost:3000/login"
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: TRACE
 
 # Swagger 설정
 springdoc:
