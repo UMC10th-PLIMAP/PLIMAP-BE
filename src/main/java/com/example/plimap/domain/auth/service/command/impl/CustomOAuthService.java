@@ -49,9 +49,10 @@ public class CustomOAuthService extends DefaultOAuth2UserService {
 
         OAuthDTO dto = switch (provider) {
             case KAKAO -> {
-                if (!(oAuthUser.getAttribute("id") instanceof Long id)) {
+                if (!(oAuthUser.getAttribute("id") instanceof Number idNumber)) {
                     throw new MemberException(MemberErrorCode.INVALID_SOCIAL_PROFILE);
                 }
+                long id = idNumber.longValue();
                 Map<String, Object> kakaoAccount = oAuthUser.getAttribute("kakao_account");
                 if (kakaoAccount == null) {
                     throw new MemberException(MemberErrorCode.INVALID_SOCIAL_PROFILE);
