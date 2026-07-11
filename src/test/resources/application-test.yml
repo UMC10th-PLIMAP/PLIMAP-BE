@@ -17,3 +17,7 @@ jwt:
 
 oauth:
   redirect-uri: "http://localhost:3000/home"
+
+cookie:
+  secure: false
+  same-site: Lax

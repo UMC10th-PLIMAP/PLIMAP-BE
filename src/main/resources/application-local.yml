@@ -25,6 +25,12 @@ spring:
 oauth:
   redirect-uri: "http://localhost:3000/home"
 
+# local은 http(비-HTTPS)라 Secure=true면 쿠키가 아예 전송되지 않음.
+# localhost:3000 <-> localhost:8080은 포트만 다른 same-site라 Lax로도 충분
+cookie:
+  secure: false
+  same-site: Lax
+
 logging:
   level:
     org.springframework.security: DEBUG

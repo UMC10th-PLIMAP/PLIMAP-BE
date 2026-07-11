@@ -37,6 +37,12 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
+# 프론트/백엔드가 서로 다른 도메인이므로 cross-site 쿠키 전송을 위해 SameSite=None + Secure=true가 기본값
+# (local만 http://localhost 간 same-site 통신이라 application-local.yml에서 재정의)
+cookie:
+  secure: true
+  same-site: None
+
 # Swagger 설정
 springdoc:
   api-docs:
