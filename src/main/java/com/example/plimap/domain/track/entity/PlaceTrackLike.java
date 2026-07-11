@@ -33,6 +33,13 @@ public class PlaceTrackLike extends BaseEntity {
 
     @Builder
     private PlaceTrackLike(PlaceTrack placeTrack, Long memberId) {
+        if (placeTrack == null || placeTrack.getId() == null) {
+            throw new IllegalArgumentException("placeTrack must be persisted before creating a like");
+        }
+        if (memberId == null) {
+            throw new IllegalArgumentException("memberId must not be null");
+        }
+
         this.placeTrack = placeTrack;
         this.id = new PlaceTrackLikeId(placeTrack.getId(), memberId);
     }

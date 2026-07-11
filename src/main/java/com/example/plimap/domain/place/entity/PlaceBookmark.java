@@ -33,6 +33,13 @@ public class PlaceBookmark extends BaseEntity {
 
     @Builder
     private PlaceBookmark(Place place, Long memberId) {
+        if (place == null || place.getId() == null) {
+            throw new IllegalArgumentException("place must be persisted before creating a bookmark");
+        }
+        if (memberId == null) {
+            throw new IllegalArgumentException("memberId must not be null");
+        }
+
         this.place = place;
         this.id = new PlaceBookmarkId(place.getId(), memberId);
     }
