@@ -3,6 +3,7 @@ package com.example.plimap.domain.auth.service.command.impl;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.auth.entity.OAuthMember;
 import com.example.plimap.global.security.JwtUtil;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,8 +13,6 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @Component
 @RequiredArgsConstructor
@@ -31,7 +30,12 @@ public class OAuthSuccessHandler implements AuthenticationSuccessHandler {
         OAuthMember oAuthMember = (OAuthMember) authentication.getPrincipal();
         String accessToken = jwtUtil.createAccessToken(new AuthMember(oAuthMember.getMember()));
 
-        String encodedToken = URLEncoder.encode(accessToken, StandardCharsets.UTF_8);
-        response.sendRedirect(redirectUri + "?token=" + encodedToken);
+        Cookie cookie = new Cookie("accessToken", accessToken);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(60 * 60 * 24); // 24시간
+        response.addCookie(cookie);
+
+        response.sendRedirect(redirectUri);
     }
 }
