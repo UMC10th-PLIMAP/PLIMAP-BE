@@ -39,7 +39,7 @@ public class CustomOAuthService extends DefaultOAuth2UserService {
                     userRequest.getClientRegistration().getRegistrationId().toUpperCase()
             );
         } catch (IllegalArgumentException e) {
-            throw new MemberException(MemberErrorCode.NOT_SUPPORT_SOCIAL_PROVIDER);
+            throw new MemberException(MemberErrorCode.NOT_SUPPORT_SOCIAL_PROVIDER, e);
         }
 
         OAuthDTO dto = switch (provider) {
