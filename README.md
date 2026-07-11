@@ -79,6 +79,21 @@ com.example.plimap
    http://localhost:8080/swagger-ui/index.html
    ```
 
+### CORS 환경 변수
+
+프론트엔드 Origin은 백엔드가 실행되는 환경의 `CORS_ALLOWED_ORIGINS`에 쉼표로 구분하여 설정합니다.
+
+```env
+CORS_ALLOWED_ORIGINS=http://localhost:5173,https://frontend.example.com
+```
+
+- Origin은 `프로토콜://호스트:포트` 형식으로 작성하며 경로와 마지막 슬래시는 포함하지 않습니다.
+- 프로토콜, 호스트 또는 포트가 다르면 서로 다른 Origin입니다. `localhost`와 `127.0.0.1`도 별도로 등록해야 합니다.
+- 로컬 주소는 프론트엔드 개발 서버에 표시되는 실제 주소를 사용합니다. Vite의 기본 주소는 `http://localhost:5173`입니다.
+- Vercel 운영 주소는 고정된 운영 도메인을 등록합니다. 배포마다 바뀌는 Preview 주소가 필요하면 해당 Origin을 명시적으로 추가하거나 고정된 Preview 도메인을 사용합니다.
+- 환경 변수가 비어 있으면 모든 교차 출처 요청을 차단하며, 모든 Origin을 허용하는 `*`는 사용할 수 없습니다.
+- `.env`는 Docker Compose가 자동으로 읽지만 Spring Boot는 직접 읽지 않습니다. IDE, 셸 또는 백엔드 배포 환경에 같은 변수를 설정한 후 애플리케이션을 재시작하거나 다시 배포해야 합니다.
+
 ### 종료 방법
 
 ```bash
