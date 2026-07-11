@@ -261,7 +261,7 @@ public class Pin extends SoftDeleteEntity {
 
 ### Creation
 
-Entity 생성은 정적 팩토리 메서드 또는 private 생성자와 Builder를 사용합니다.
+Entity 생성은 private 생성자에 선언한 Builder를 사용합니다.
 
 클래스 레벨 `@Builder`는 사용하지 않습니다.
 
@@ -274,14 +274,6 @@ private Pin(Member member, Place place, Track track, String content) {
     this.content = content;
 }
 
-public static Pin create(Member member, Place place, Track track, String content) {
-    return Pin.builder()
-            .member(member)
-            .place(place)
-            .track(track)
-            .content(content)
-            .build();
-}
 ```
 
 ### State Change
