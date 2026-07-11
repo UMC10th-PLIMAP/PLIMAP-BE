@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum MemberSuccessCode implements BaseSuccessCode {
 
-    LOGIN(HttpStatus.OK, "MEMBER_200_0", "로그인에 성공했습니다.");
+    LOGIN(HttpStatus.OK, "MEMBER_200_LOGIN", "로그인에 성공했습니다.");
 
     private final HttpStatus status;
     private final String code;
