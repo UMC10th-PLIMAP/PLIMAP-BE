@@ -72,4 +72,25 @@ public class Track extends BaseEntity {
         this.durationMs = durationMs;
     }
 
+    public static Track create(
+            String provider,
+            String providerTrackId,
+            String title,
+            String artistName,
+            String albumTitle,
+            String albumImageUrl,
+            String previewUrl,
+            Integer durationMs) {
+        return Track.builder()
+                .provider(provider)
+                .providerTrackId(providerTrackId)
+                .title(title)
+                .artistName(artistName)
+                .albumTitle(albumTitle)
+                .albumImageUrl(albumImageUrl)
+                .previewUrl(previewUrl)
+                .durationMs(durationMs)
+                .build();
+    }
+
 }

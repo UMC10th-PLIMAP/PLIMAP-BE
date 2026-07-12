@@ -27,6 +27,15 @@ spring:
             scope:
               - profile_nickname
               - account_email
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            # openid scope를 넣으면 OIDC 플로우로 전환되어 CustomOAuthService가 아닌
+            # 별도의 OidcUserService가 필요해지므로, 카카오와 동일하게 일반 OAuth2 플로우로 맞추기 위해 제외
+            scope:
+              - profile
+              - email
         provider:
           kakao:
             authorization-uri: "https://kauth.kakao.com/oauth/authorize"

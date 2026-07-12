@@ -28,6 +28,9 @@ public class Place extends SoftDeleteEntity {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    @Column(name = "category", length = 100)
+    private String category;
+
     @Column(name = "address", nullable = false, length = 255)
     private String address;
 
@@ -50,6 +53,7 @@ public class Place extends SoftDeleteEntity {
     @Builder
     private Place(
             String name,
+            String category,
             String address,
             String roadAddress,
             String placeProvider,
@@ -57,6 +61,7 @@ public class Place extends SoftDeleteEntity {
             PlaceSource source,
             Point location) {
         this.name = name;
+        this.category = category;
         this.address = address;
         this.roadAddress = roadAddress;
         this.placeProvider = placeProvider;

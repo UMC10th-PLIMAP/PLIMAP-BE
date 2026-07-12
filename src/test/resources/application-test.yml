@@ -11,6 +11,10 @@ spring:
             client-id: test-kakao-client-id
             client-secret: test-kakao-client-secret
             redirect-uri: "http://localhost:8080/oauth/callback/kakao"
+          google:
+            client-id: test-google-client-id
+            client-secret: test-google-client-secret
+            redirect-uri: "http://localhost:8080/oauth/callback/google"
 
 jwt:
   secret: test-only-jwt-secret-key-do-not-use-in-production-0123456789

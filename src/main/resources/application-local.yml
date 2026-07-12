@@ -14,6 +14,8 @@ spring:
         registration:
           kakao:
             redirect-uri: "http://localhost:8080/oauth/callback/kakao"
+          google:
+            redirect-uri: "http://localhost:8080/oauth/callback/google"
   # Local JPA/Hibernate 설정
   jpa:
     database: postgresql

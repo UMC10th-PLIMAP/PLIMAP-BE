@@ -1,5 +1,6 @@
 package com.example.plimap.domain.auth.service.command.impl;
 
+import com.example.plimap.domain.auth.dto.GoogleDTO;
 import com.example.plimap.domain.auth.dto.KakaoDTO;
 import com.example.plimap.domain.auth.dto.OAuthDTO;
 import com.example.plimap.domain.auth.entity.OAuthMember;
@@ -64,6 +65,16 @@ public class CustomOAuthService extends DefaultOAuth2UserService {
                 String providerSubject = String.valueOf(id);
                 String email = (String) kakaoAccount.get("email");
                 yield new KakaoDTO(providerSubject, email, nickname);
+            }
+            case GOOGLE -> {
+                if (!(oAuthUser.getAttribute("sub") instanceof String providerSubject)) {
+                    throw new MemberException(MemberErrorCode.INVALID_SOCIAL_PROFILE);
+                }
+                if (!(oAuthUser.getAttribute("email") instanceof String email)) {
+                    throw new MemberException(MemberErrorCode.INVALID_SOCIAL_PROFILE);
+                }
+                String nickname = oAuthUser.getAttribute("name");
+                yield new GoogleDTO(providerSubject, email, nickname);
             }
             default -> throw new MemberException(MemberErrorCode.NOT_SUPPORT_SOCIAL_PROVIDER);
         };
