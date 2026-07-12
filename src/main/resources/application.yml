@@ -58,3 +58,8 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+# CORS 설정
+plimap:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
