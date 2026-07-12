@@ -55,4 +55,11 @@ public class PlaceTrack extends SoftDeleteEntity {
         this.likeCount = 0;
     }
 
+    public static PlaceTrack create(Place place, Track track) {
+        return PlaceTrack.builder()
+                .place(place)
+                .track(track)
+                .build();
+    }
+
 }
