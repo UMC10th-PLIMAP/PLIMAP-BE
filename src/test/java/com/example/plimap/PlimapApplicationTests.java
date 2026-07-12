@@ -1,7 +1,6 @@
 package com.example.plimap;
 
 import com.example.plimap.support.PostgisContainerConfiguration;
-import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -37,9 +36,6 @@ class PlimapApplicationTests {
     );
 
     @Autowired
-    private Flyway flyway;
-
-    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Test
@@ -47,8 +43,13 @@ class PlimapApplicationTests {
     }
 
     @Test
-    void appliesInitialMigrationToEmptyDatabase() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
+    void appliesMigrationsToEmptyDatabase() {
+        Integer appliedMigrationCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM flyway_schema_history
+                WHERE version = '202607120752'
+                  AND success = TRUE
+                """, Integer.class);
 
         List<String> tables = jdbcTemplate.queryForList("""
                 SELECT table_name
@@ -57,7 +58,37 @@ class PlimapApplicationTests {
                   AND table_type = 'BASE TABLE'
                 """, String.class);
 
+        assertThat(appliedMigrationCount).isEqualTo(1);
         assertThat(tables).containsAll(DOMAIN_TABLES);
+    }
+
+    @Test
+    void addsNullablePlaceCategoryColumn() {
+        String dataType = jdbcTemplate.queryForObject("""
+                SELECT data_type
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'place'
+                  AND column_name = 'category'
+                """, String.class);
+        Integer maxLength = jdbcTemplate.queryForObject("""
+                SELECT character_maximum_length
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'place'
+                  AND column_name = 'category'
+                """, Integer.class);
+        String isNullable = jdbcTemplate.queryForObject("""
+                SELECT is_nullable
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'place'
+                  AND column_name = 'category'
+                """, String.class);
+
+        assertThat(dataType).isEqualTo("character varying");
+        assertThat(maxLength).isEqualTo(100);
+        assertThat(isNullable).isEqualTo("YES");
     }
 
     @Test
