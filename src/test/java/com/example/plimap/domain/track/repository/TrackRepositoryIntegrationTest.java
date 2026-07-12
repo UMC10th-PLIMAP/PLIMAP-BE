@@ -38,21 +38,21 @@ class TrackRepositoryIntegrationTest {
 
     @Test
     void Track을_식별키로_조회하고_중복_저장을_방지한다() {
-        Track savedTrack = trackRepository.saveAndFlush(track("video-id"));
+        Track savedTrack = trackRepository.saveAndFlush(track("youtube-video-id"));
 
         Track foundTrack = trackRepository
-                .findByProviderAndProviderTrackId("YOUTUBE", "video-id")
+                .findByProviderAndProviderTrackId("YOUTUBE", "youtube-video-id")
                 .orElseThrow();
 
         assertThat(foundTrack.getId()).isEqualTo(savedTrack.getId());
-        assertThatThrownBy(() -> trackRepository.saveAndFlush(track("video-id")))
+        assertThatThrownBy(() -> trackRepository.saveAndFlush(track("youtube-video-id")))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
     void 활성_PlaceTrack을_장소와_트랙으로_조회한다() {
         Place place = savePlace();
-        Track track = trackRepository.save(track("active-video-id"));
+        Track track = trackRepository.save(track("active-youtube-video-id"));
         PlaceTrack savedPlaceTrack = placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
 
         PlaceTrack foundPlaceTrack = placeTrackRepository
@@ -66,7 +66,7 @@ class TrackRepositoryIntegrationTest {
     @Test
     void 삭제된_PlaceTrack을_조회하고_복구하면_활성_조회가_가능하다() {
         Place place = savePlace();
-        Track track = trackRepository.save(track("deleted-video-id"));
+        Track track = trackRepository.save(track("deleted-youtube-video-id"));
         PlaceTrack placeTrack = placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
 
         placeTrack.delete();
