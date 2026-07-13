@@ -108,5 +108,6 @@ Service 계층은 **command**(상태 변경)와 **query**(조회)로 분리합�
 - 브랜치: `<type>/#<issue-number>-<kebab-설명>` (예: `feat/#14-signup-api`). `develop`에서 분기하고 `develop`으로 PR. `main`/`develop`에 직접 push 금지.
 - 커밋: `<type>: <subject>` (subject 한/영 50자 이내, 마침표 없음). type: `feat` `fix` `docs` `refactor` `test` `chore` `rename` `remove`.
 - PR 제목: `[Type] 변경 내용` (첫 글자 대문자), 본문에 변경 내용·테스트 결과 작성, `Closes #14`로 이슈 연결. 작업 전 이슈 먼저 생성.
+- 이슈와 PR 작성 전 `.github/ISSUE_TEMPLATE/`의 해당 이슈 템플릿과 `.github/PULL_REQUEST_TEMPLATE.md`를 확인하고, 기존 섹션·체크리스트·필수 항목을 유지한 채 실제 작업 내용으로 작성합니다.
 
 자세한 규칙은 `docs/`(ARCHITECTURE.md, CODE_STYLE.md, DATABASE.md, CONVENTION.md)를 참고합니다.

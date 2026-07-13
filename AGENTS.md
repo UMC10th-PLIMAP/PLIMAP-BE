@@ -166,6 +166,7 @@ macOS/Linux에서는 `./gradlew`를 사용합니다. DB 통합 테스트는 Post
 - 주요 type은 `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `rename`, `remove`입니다.
 - 브랜치는 `develop`에서 만들고 `<type>/#<issue-number>-<kebab-case-description>` 형식을 사용합니다.
 - PR은 `develop`을 대상으로 하며 변경 내용, 테스트 결과, `Closes #이슈번호`를 포함합니다.
+- 이슈와 PR을 작성하기 전에 `.github/ISSUE_TEMPLATE/`의 해당 이슈 템플릿과 `.github/PULL_REQUEST_TEMPLATE.md`를 확인하고, 기존 섹션·체크리스트·필수 항목을 유지한 채 실제 작업 내용으로 작성합니다.
 - 에이전트는 사용자의 명시적 요청 없이 브랜치 생성, 커밋, push, PR 생성 또는 기존 이력 변경을 수행하지 않습니다.
 
 ## 13. 완료 체크리스트
