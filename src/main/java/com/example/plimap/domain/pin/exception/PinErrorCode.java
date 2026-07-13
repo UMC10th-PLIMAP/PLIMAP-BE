@@ -13,6 +13,12 @@ public enum PinErrorCode implements BaseErrorCode {
             HttpStatus.NOT_FOUND,
             "PIN_NOT_FOUND",
                     "핀을 찾을 수 없습니다."
+    ),
+
+    LOCATION_DISTANCE_INVALID(
+            HttpStatus.BAD_REQUEST,
+            "LOCATION_DISTANCE_INVALID",
+                    "사용자가 장소 반경이 500m 이상에 있어 PIN을 등록할 수 없습니다.ㄴ"
     );
 
     private final HttpStatus status;

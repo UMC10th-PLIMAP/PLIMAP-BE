@@ -13,6 +13,7 @@ import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.repository.TagRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
+import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
@@ -37,6 +38,7 @@ public class PinCommandServiceImpl implements PinCommandService {
     private final PinRepository pinRepository;
     private final TagRepository tagRepository;
     private final PinTagRepository pinTagRepository;
+    private final PinLocationValidator pinLocationValidator;
 
     @Override
     @Transactional
@@ -45,6 +47,9 @@ public class PinCommandServiceImpl implements PinCommandService {
         // 장소 조회
         Place place = placeRepository.findById(request.placeId())
                 .orElseThrow(() -> new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND));
+
+        // 현위치와 장소 사이 거리가 500m 이하인지 검증
+        pinLocationValidator.validateWithin500m(request.userLatitude(), request.userLongitude(), place);
 
         // 노래 등록/조회
         PlaceTrack placeTrack = trackCommandService.getOrCreatePlaceTrack(place, TrackCommand.Create.builder().itunesTrackId(request.itunesTrackId()).build());
