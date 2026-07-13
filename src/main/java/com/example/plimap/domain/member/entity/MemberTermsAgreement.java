@@ -77,9 +77,14 @@ public class MemberTermsAgreement extends BaseEntity {
     public void updateAgreement(boolean agreed) {
         this.agreed = agreed;
         this.agreedAt = agreed ? Instant.now() : null;
+        if (agreed) {
+            this.withdrawnAt = null;
+        }
     }
 
     public void withdraw() {
+        this.agreed = false;
+        this.agreedAt = null;
         this.withdrawnAt = Instant.now();
     }
 }
