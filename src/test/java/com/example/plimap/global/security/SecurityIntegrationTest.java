@@ -82,6 +82,16 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void OAuth와_Swagger_OpenAPI_경로는_인증_없이_접근할_수_있다() throws Exception {
+        mockMvc.perform(get("/oauth/authorization/kakao"))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
+    }
+
+    @Test
     void 최초_GET_응답에서_읽을_수_있는_CSRF_쿠키를_발급한다() throws Exception {
         MvcResult result = mockMvc.perform(get(PROTECTED_PATH)
                         .cookie(new Cookie("accessToken", ACCESS_TOKEN)))
