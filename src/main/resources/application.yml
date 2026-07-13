@@ -31,8 +31,6 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
             authorization-grant-type: authorization_code
-            # openid scope를 넣으면 OIDC 플로우로 전환되어 CustomOAuthService가 아닌
-            # 별도의 OidcUserService가 필요해지므로, 카카오와 동일하게 일반 OAuth2 플로우로 맞추기 위해 제외
             scope:
               - profile
               - email
@@ -46,8 +44,6 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
-# dev/prod는 동일 Origin 프록시 구성을 사용하므로 SameSite=Lax + Secure=true가 기본값
-# local은 HTTP 통신을 위해 application-local.yml에서 Secure=false로 재정의
 cookie:
   secure: true
   same-site: Lax
