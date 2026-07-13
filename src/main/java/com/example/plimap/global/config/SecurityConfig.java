@@ -3,20 +3,27 @@ package com.example.plimap.global.config;
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.global.security.BearerTokenRequestMatcher;
 import com.example.plimap.global.security.CsrfCookieFilter;
 import com.example.plimap.global.security.JwtAuthFilter;
 import com.example.plimap.global.security.JwtUtil;
+import com.example.plimap.global.security.SecurityErrorResponseHandler;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -27,19 +34,42 @@ public class SecurityConfig {
     private final OAuthSuccessHandler oAuthSuccessHandler;
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
+    private final SecurityErrorResponseHandler securityErrorResponseHandler;
+
+    @Value("${cookie.secure}")
+    private boolean cookieSecure;
+
+    @Value("${cookie.same-site}")
+    private String cookieSameSite;
+
+    @Bean
+    public CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        repository.setCookieCustomizer(cookie -> cookie
+                .secure(cookieSecure)
+                .sameSite(cookieSameSite)
+                .path("/"));
+        return repository;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .spa()
+                        .csrfTokenRepository(csrfTokenRepository())
+                        // Swagger/Postman은 Bearer 인증을 사용하므로 CSRF 검증에서 제외
+                        .ignoringRequestMatchers(new BearerTokenRequestMatcher())
                         // Swagger UI에서 바로 테스트하는 local/dev 전용 임시 API라 CSRF 토큰 없이도 허용
                         .ignoringRequestMatchers("/api/v1/auth/token/test")
                 )
+                .cors(withDefaults())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/oauth/**",
                                 "/swagger-ui/**",
@@ -48,6 +78,12 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(securityErrorResponseHandler)
+                        .accessDeniedHandler(securityErrorResponseHandler)
+                )
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
                 .oauth2Login(oauth -> oauth
                         .authorizationEndpoint(endpoint ->
                                 endpoint.baseUri("/oauth/authorization"))

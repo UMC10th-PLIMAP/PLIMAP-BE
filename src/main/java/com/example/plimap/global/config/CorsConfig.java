@@ -12,7 +12,9 @@ public class CorsConfig implements WebMvcConfigurer {
     private static final String[] ALLOWED_METHODS = {
         "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
     };
-    private static final String[] ALLOWED_HEADERS = {"Authorization", "Content-Type"};
+    private static final String[] ALLOWED_HEADERS = {
+        "Authorization", "Content-Type", "X-XSRF-TOKEN"
+    };
 
     private final CorsProperties corsProperties;
 
@@ -26,6 +28,6 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedOrigins(corsProperties.allowedOrigins().toArray(String[]::new))
                 .allowedMethods(ALLOWED_METHODS)
                 .allowedHeaders(ALLOWED_HEADERS)
-                .allowCredentials(false);
+                .allowCredentials(true);
     }
 }
