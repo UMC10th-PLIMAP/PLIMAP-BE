@@ -9,10 +9,19 @@ import java.time.Instant;
 public class TermsResDTO {
 
     public record Item(
+            @Schema(example = "SERVICE")
             TermsType type,
+
+            @Schema(example = "v1")
             String version,
+
+            @Schema(description = "약관 제목")
             String title,
+
+            @Schema(description = "약관 본문 내용")
             String content,
+
+            @Schema(example = "true")
             boolean required
     ) {
         public static Item from(Terms terms) {
