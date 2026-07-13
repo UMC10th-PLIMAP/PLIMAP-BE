@@ -36,6 +36,7 @@ Swagger UI: `http://localhost:8080/swagger-ui/index.html` (기본적으로 `api-
 **테스트에는 Docker가 반드시 실행 중이어야 합니다.** DB가 필요한 테스트는 H2가 아니라 PostGIS Testcontainers를 사용하고, 운영 코드와 동일한 Flyway Migration을 컨테이너에 적용해 검증합니다. CI(`.github/workflows/ci.yml`)도 `./gradlew build`로 동일하게 검증합니다.
 
 ## Commit Message Rules
+
 절대로 커밋 메시지에 다음을 포함하지 마세요:
 
 🤖 Generated with Claude Code

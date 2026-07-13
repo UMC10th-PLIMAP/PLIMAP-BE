@@ -8,7 +8,7 @@
 - Java 21과 Spring Boot 4.1을 사용합니다.
 - 주요 기술은 Spring MVC, Spring Data JPA, Spring Security, OAuth2, JWT, QueryDSL, PostgreSQL/PostGIS, Flyway입니다.
 - 패키지 루트는 `com.example.plimap`입니다.
-- 도메인은 현재 `auth`, `member`, `place`, `track`을 중심으로 구성되며, 공통 기능은 `global`에 둡니다.
+- 도메인은 현재 `auth`, `member`, `place`, `track`, `pin`을 중심으로 구성되며, 공통 기능은 `global`에 둡니다.
 
 ## 2. 먼저 확인할 문서
 
@@ -58,7 +58,7 @@ docs/                       # 개발 문서
 6. 동작이나 개발 절차가 달라지면 관련 `docs/` 문서와 예시 설정도 함께 갱신합니다.
 7. 에러를 숨기기 위한 임시 우회, 빈 예외 처리, 과도한 기본값을 추가하지 않습니다.
 
-## 4. Prohibited Commit Message Content
+## 5. Prohibited Commit Message Content
 커밋 메시지에는 다음 내용을 절대 포함하지 않습니다.
 
 Generated with Codex
@@ -67,7 +67,7 @@ Co-Authored-By: Codex
 Co-Authored-By: Claude
 AI가 생성했다는 어떤 표시
 
-## 5. 아키텍처 규칙
+## 6. 아키텍처 규칙
 
 - 기본 의존 방향은 `Controller -> Service -> Repository -> Entity`입니다.
 - Controller는 요청 바인딩, 검증, Service 호출, 공통 응답 반환만 담당합니다.
@@ -79,7 +79,7 @@ AI가 생성했다는 어떤 표시
 - 단순 조회는 Spring Data JPA, 동적 조건·복잡한 검색·페이징은 QueryDSL을 우선합니다.
 - Query Repository는 데이터 접근에만 집중하고 API 응답 DTO나 비즈니스 상태 변경에 의존하지 않습니다.
 
-## 6. API와 DTO 규칙
+## 7. API와 DTO 규칙
 
 - 모든 API 응답은 `ApiResponse<T>`와 의미에 맞는 HTTP 상태를 사용합니다.
 - 반환 데이터가 없는 성공 응답은 `ApiResponse<Void>`로 표현합니다.
@@ -90,7 +90,7 @@ AI가 생성했다는 어떤 표시
 - 도메인 예외는 `BusinessException`을 상속한 도메인 예외로 변환해 던지며, Controller에서 직접 try-catch 하지 않습니다.
 - Bean Validation 메시지는 한글로 작성합니다.
 
-## 7. Entity와 영속성 규칙
+## 8. Entity와 영속성 규칙
 
 - Entity는 필요한 Lombok만 제한적으로 사용합니다.
 - `@Getter`와 `@NoArgsConstructor(access = AccessLevel.PROTECTED)`를 기본으로 하며 `@Setter`, `@Data`는 사용하지 않습니다.
@@ -102,7 +102,7 @@ AI가 생성했다는 어떤 표시
 - Soft Delete 대상에는 `repository.delete()`나 `deleteById()`를 사용하지 않습니다. `delete()`/`restore()`를 호출하고 일반 조회에는 `deletedAt IS NULL` 조건을 적용합니다.
 - 현재 Soft Delete 대상은 `Member`, `Place`, `PlaceTrack`, `Pin`입니다. 대상 변경 시 문서와 Migration을 함께 검토합니다.
 
-## 8. 데이터베이스와 Migration
+## 9. 데이터베이스와 Migration
 
 - 스키마 변경은 Hibernate 자동 생성이 아니라 Flyway Migration으로만 수행합니다.
 - 후속 파일명은 `VyyyyMMddHHmm__snake_case_description.sql` 형식을 사용합니다.
@@ -113,7 +113,7 @@ AI가 생성했다는 어떤 표시
 - 공유 DB에서 `flyway clean`을 실행하지 않습니다.
 - Migration과 관련 Entity 변경 및 테스트는 같은 작업에서 함께 검증합니다.
 
-## 9. 보안과 설정
+## 10. 보안과 설정
 
 - `.env`와 실제 인증 정보, JWT secret, OAuth client secret, DB 비밀번호를 읽어서 출력하거나 커밋하지 않습니다.
 - 예시는 `.env.example`에 가짜 값과 변수 설명만 추가합니다.
@@ -121,7 +121,7 @@ AI가 생성했다는 어떤 표시
 - 인증·인가, CORS, 쿠키, CSRF 변경은 기존 보안 테스트와 운영 환경 영향을 함께 검토합니다.
 - 테스트에는 실제 외부 서비스 키 대신 `application-test.yml`의 테스트 전용 값을 사용합니다.
 
-## 10. 빌드와 실행 명령
+## 11. 빌드와 실행 명령
 
 Windows PowerShell 기준:
 
@@ -147,7 +147,7 @@ docker compose down
 
 macOS/Linux에서는 `./gradlew`를 사용합니다. DB 통합 테스트는 PostGIS Testcontainers를 사용하므로 Docker가 실행 중이어야 합니다. `docker compose down -v`는 로컬 데이터를 삭제하므로 사용자가 명시적으로 요청하거나 초기화가 반드시 필요한 경우에만 실행합니다.
 
-## 11. 테스트 기준
+## 12. 테스트 기준
 
 - 버그 수정은 가능하면 실패를 재현하는 테스트를 먼저 추가합니다.
 - 테스트 메서드는 `핀_생성에_성공한다`와 같은 한글 문장형으로 작성합니다.
@@ -159,7 +159,7 @@ macOS/Linux에서는 `./gradlew`를 사용합니다. DB 통합 테스트는 Post
 - 작업 완료 전 최소한 관련 테스트를 실행하고, 가능하면 `clean build`까지 수행합니다.
 - Docker나 외부 환경 문제로 검증하지 못한 항목은 완료 보고에 명확히 남깁니다.
 
-## 12. 네이밍과 Git 규칙
+## 13. 네이밍과 Git 규칙
 
 - 클래스와 메서드 이름은 `docs/CODE_STYLE.md`의 역할별 접미사와 동사 규칙을 따릅니다.
 - 커밋 형식은 `<type>: <subject>`이며 subject는 50자 이내, 마침표 없이 작성합니다.
@@ -169,7 +169,7 @@ macOS/Linux에서는 `./gradlew`를 사용합니다. DB 통합 테스트는 Post
 - 이슈와 PR을 작성하기 전에 `.github/ISSUE_TEMPLATE/`의 해당 이슈 템플릿과 `.github/PULL_REQUEST_TEMPLATE.md`를 확인하고, 기존 섹션·체크리스트·필수 항목을 유지한 채 실제 작업 내용으로 작성합니다.
 - 에이전트는 사용자의 명시적 요청 없이 브랜치 생성, 커밋, push, PR 생성 또는 기존 이력 변경을 수행하지 않습니다.
 
-## 13. 완료 체크리스트
+## 14. 완료 체크리스트
 
 작업을 마치기 전에 다음을 확인합니다.
 
