@@ -25,3 +25,7 @@ oauth:
 cookie:
   secure: false
   same-site: Lax
+
+plimap:
+  cors:
+    allowed-origins: http://localhost:3000

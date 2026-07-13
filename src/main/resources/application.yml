@@ -31,8 +31,6 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
             authorization-grant-type: authorization_code
-            # openid scope를 넣으면 OIDC 플로우로 전환되어 CustomOAuthService가 아닌
-            # 별도의 OidcUserService가 필요해지므로, 카카오와 동일하게 일반 OAuth2 플로우로 맞추기 위해 제외
             scope:
               - profile
               - email
@@ -46,11 +44,9 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
-# 프론트/백엔드가 서로 다른 도메인이므로 cross-site 쿠키 전송을 위해 SameSite=None + Secure=true가 기본값
-# (local만 http://localhost 간 same-site 통신이라 application-local.yml에서 재정의)
 cookie:
   secure: true
-  same-site: None
+  same-site: Lax
 
 # Swagger 설정
 springdoc:
