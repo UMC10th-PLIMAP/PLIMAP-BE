@@ -16,6 +16,7 @@ public class MemberReqDTO {
         @Schema(description = "닉네임 (2~7자, 한글/영문/숫자)", example = "플리맵")
         private String nickname;
 
+        @Size(max = 500)
         @Schema(description = "프로필 이미지 객체 키", example = "profile/1/abc123.jpg")
         private String profileImageObjectKey;
     }
