@@ -16,4 +16,19 @@ public class MemberConverter {
                 .accessToken(accessToken)
                 .build();
     }
+
+    public static MemberResDTO.Onboarding toOnboarding(Member member) {
+        return MemberResDTO.Onboarding.builder()
+                .nickname(member.getNickname())
+                .profileImageObjectKey(member.getProfileImageObjectKey())
+                .onboardingCompletedAt(member.getOnboardingCompletedAt())
+                .build();
+    }
+
+    public static MemberResDTO.NicknameCheck toNicknameCheck(String nickname, boolean available) {
+        return MemberResDTO.NicknameCheck.builder()
+                .nickname(nickname)
+                .available(available)
+                .build();
+    }
 }
