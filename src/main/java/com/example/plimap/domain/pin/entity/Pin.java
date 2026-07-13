@@ -1,5 +1,10 @@
 package com.example.plimap.domain.pin.entity;
 
+import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.pin.dto.request.PinRequest;
+import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.track.entity.PlaceTrack;
+import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -32,31 +37,44 @@ public class Pin extends BaseEntity {
     @Column(name = "is_feed_public", nullable = false)
     private boolean isFeedPublic;
 
-    // member 연관관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id")
+    private Member member;
 
-    // place_track 연관관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "place_id")
+    private Place place;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "place_track_id")
+    private PlaceTrack placeTrack;
 
     @OneToMany(mappedBy = "pin", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PinTag> pinTagList = new ArrayList<>();
 
-//    @Builder
-//    private Pin(Member member, Place place, Track track, String introduction, Integer clipStartMs, boolean isFeedPublic) {
-//        this.member = member;
-//        this.place = place;
-//        this.track = track;
-//        this.introduction = introduction;
-//        this.clipStartMs = clipStartMs;
-//        this.isFeedPublic = isFeedPublic;
-//    }
-//
-//    public static Pin create(Member member, Place place, Track track, String introduction, Integer clipStartMs, boolean isFeedPublic) {
-//        return Pin.builder()
-//                .member(member)
-//                .place(place)
-//                .track(track)
-//                .introduction(introduction)
-//                .clipStartMs(clipStartMs)
-//                .isFeedPublic(isFeedPublic)
-//                .build();
-//    }
+    @Builder
+    private Pin(Member member, Place place, PlaceTrack placeTrack, String introduction, Integer clipStartMs, boolean isFeedPublic) {
+        this.member = member;
+        this.place = place;
+        this.placeTrack = placeTrack;
+        this.introduction = introduction;
+        this.clipStartMs = clipStartMs;
+        this.isFeedPublic = isFeedPublic;
+    }
+
+    public static Pin create(
+            Member member,
+            Place place,
+            PlaceTrack placeTrack,
+            PinRequest.Create request
+    ) {
+        return Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .introduction(request.introduction())
+                .clipStartMs(request.clipStartMs())
+                .isFeedPublic(request.feedOpen())
+                .build();
+    }
 }
