@@ -95,6 +95,27 @@ class TermsCommandServiceImplTest {
     }
 
     @Test
+    void 같은_유형의_구버전_활성_약관이_남아있어도_최신_버전_동의로_검증을_통과한다() {
+        Member member = member(MEMBER_ID);
+        Terms staleServiceTerms = terms(1L, true, TermsType.SERVICE);
+        Terms latestServiceTerms = terms(3L, true, TermsType.SERVICE);
+        MemberTermsAgreement existingAgreement = agreement(latestServiceTerms, true);
+
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(termsQueryService.getActiveTermsByType(TermsType.SERVICE)).thenReturn(latestServiceTerms);
+        when(memberTermsAgreementRepository.findByMember_IdAndTerms_Id(MEMBER_ID, 3L))
+                .thenReturn(Optional.of(existingAgreement));
+        // 구버전(id=1)이 비활성화되지 않은 채 활성 목록에 남아있는 상황을 재현
+        when(termsQueryService.getActiveTerms()).thenReturn(List.of(staleServiceTerms, latestServiceTerms));
+
+        List<TermsResDTO.Result> result = termsCommandService.agreeToTerms(MEMBER_ID, agree(TermsType.SERVICE, true));
+
+        assertThat(result).extracting(TermsResDTO.Result::type, TermsResDTO.Result::agreed)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(TermsType.SERVICE, true));
+        verify(memberTermsAgreementRepository, never()).findByMember_IdAndTerms_Id(MEMBER_ID, 1L);
+    }
+
+    @Test
     void 필수_약관에_동의하지_않으면_예외가_발생한다() {
         Member member = member(MEMBER_ID);
         Terms serviceTerms = terms(1L, true, TermsType.SERVICE);

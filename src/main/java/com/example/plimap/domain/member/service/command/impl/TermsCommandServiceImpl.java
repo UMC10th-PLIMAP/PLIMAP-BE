@@ -58,6 +58,9 @@ public class TermsCommandServiceImpl implements TermsCommandService {
     private void validateRequiredTermsAgreed(Member member) {
         boolean allRequiredAgreed = termsQueryService.getActiveTerms().stream()
                 .filter(Terms::isRequired)
+                .map(Terms::getType)
+                .distinct()
+                .map(termsQueryService::getActiveTermsByType)
                 .allMatch(terms -> memberTermsAgreementRepository
                         .findByMember_IdAndTerms_Id(member.getId(), terms.getId())
                         .map(MemberTermsAgreement::isAgreed)
