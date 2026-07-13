@@ -1,6 +1,7 @@
 package com.example.plimap.domain.member.service.command.impl;
 
 import com.example.plimap.domain.member.dto.request.TermsReqDTO;
+import com.example.plimap.domain.member.dto.response.TermsResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberTermsAgreement;
 import com.example.plimap.domain.member.entity.Terms;
@@ -27,7 +28,7 @@ public class TermsCommandServiceImpl implements TermsCommandService {
     private final TermsQueryService termsQueryService;
 
     @Override
-    public List<MemberTermsAgreement> agreeToTerms(Long memberId, TermsReqDTO.Agree request) {
+    public List<TermsResDTO.Result> agreeToTerms(Long memberId, TermsReqDTO.Agree request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
@@ -37,7 +38,9 @@ public class TermsCommandServiceImpl implements TermsCommandService {
 
         validateRequiredTermsAgreed(member);
 
-        return agreements;
+        return agreements.stream()
+                .map(TermsResDTO.Result::from)
+                .toList();
     }
 
     private MemberTermsAgreement upsertAgreement(Member member, TermsReqDTO.Agree.Item item) {

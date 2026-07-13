@@ -58,10 +58,7 @@ public class AuthController implements AuthControllerDocs {
             @AuthenticationPrincipal AuthMember authMember,
             @Valid @RequestBody TermsReqDTO.Agree request
     ) {
-        List<TermsResDTO.Result> result = termsCommandService
-                .agreeToTerms(authMember.getMember().getId(), request).stream()
-                .map(TermsResDTO.Result::from)
-                .toList();
+        List<TermsResDTO.Result> result = termsCommandService.agreeToTerms(authMember.getMember().getId(), request);
         return ApiResponse.success(TermsSuccessCode.TERMS_AGREED, result);
     }
 }
