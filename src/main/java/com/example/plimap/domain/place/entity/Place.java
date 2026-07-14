@@ -70,4 +70,18 @@ public class Place extends SoftDeleteEntity {
         this.location = location;
     }
 
+    public static Place createMapSelection(
+            String name,
+            String address,
+            String roadAddress,
+            Point location) {
+        return Place.builder()
+                .name(name)
+                .address(address)
+                .roadAddress(roadAddress)
+                .source(PlaceSource.MAP_SELECTION)
+                .location(location)
+                .build();
+    }
+
 }
