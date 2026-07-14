@@ -6,6 +6,10 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:plimap_local_db}
     username: ${DB_USERNAME:plimap}
     password: ${DB_PASSWORD:plimap1234}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   flyway:
     baseline-on-migrate: true
   security:
