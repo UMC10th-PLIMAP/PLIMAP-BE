@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 
 @Tag(name = "Auth", description = "인증 API")
@@ -81,4 +83,10 @@ public interface AuthControllerDocs {
                     """))
     )
     ApiResponse<List<TermsResDTO.Result>> agreeToTerms(AuthMember authMember, TermsReqDTO.Agree request);
+
+    @Operation(
+            summary = "로그아웃",
+            description = "현재 액세스 토큰을 서버 측에서 무효화(블랙리스트 등록)하고, accessToken 쿠키를 삭제합니다."
+    )
+    ApiResponse<Void> logout(HttpServletRequest request, HttpServletResponse response);
 }

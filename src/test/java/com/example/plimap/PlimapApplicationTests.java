@@ -1,6 +1,7 @@
 package com.example.plimap;
 
 import com.example.plimap.support.PostgisContainerConfiguration;
+import com.example.plimap.support.RedisContainerConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(PostgisContainerConfiguration.class)
+@Import({PostgisContainerConfiguration.class, RedisContainerConfiguration.class})
 class PlimapApplicationTests {
 
     private static final List<String> DOMAIN_TABLES = List.of(

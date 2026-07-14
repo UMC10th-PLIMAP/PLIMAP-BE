@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -25,6 +27,7 @@ public class JwtUtil {
 
     public String createAccessToken(AuthMember authMember) {
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(authMember.getUsername())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRY.toMillis()))
@@ -55,5 +58,15 @@ public class JwtUtil {
 
     public Long getMemberId(String token) {
         return Long.parseLong(parseToken(token).getSubject());
+    }
+
+    public String getJti(String token) {
+        return parseToken(token).getId();
+    }
+
+    public Duration getRemainingExpiry(String token) {
+        Instant expiration = parseToken(token).getExpiration().toInstant();
+        Duration remaining = Duration.between(Instant.now(), expiration);
+        return remaining.isPositive() ? remaining : Duration.ofMillis(1);
     }
 }
