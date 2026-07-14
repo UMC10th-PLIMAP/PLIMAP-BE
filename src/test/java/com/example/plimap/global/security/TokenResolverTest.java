@@ -20,6 +20,14 @@ class TokenResolverTest {
     }
 
     @Test
+    void Bearer_스킴은_대소문자를_구분하지_않는다() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn("bearer header-token");
+
+        assertThat(TokenResolver.resolve(request)).isEqualTo("header-token");
+    }
+
+    @Test
     void 헤더가_없으면_accessToken_쿠키를_사용한다() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getHeader("Authorization")).thenReturn(null);
