@@ -66,6 +66,7 @@ public class JwtUtil {
 
     public Duration getRemainingExpiry(String token) {
         Instant expiration = parseToken(token).getExpiration().toInstant();
-        return Duration.between(Instant.now(), expiration);
+        Duration remaining = Duration.between(Instant.now(), expiration);
+        return remaining.isPositive() ? remaining : Duration.ofMillis(1);
     }
 }
