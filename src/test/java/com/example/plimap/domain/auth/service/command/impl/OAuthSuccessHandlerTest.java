@@ -2,7 +2,9 @@ package com.example.plimap.domain.auth.service.command.impl;
 
 import com.example.plimap.domain.auth.entity.OAuthMember;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.JwtUtil;
+import com.example.plimap.global.security.RefreshTokenService;
 import java.time.Duration;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
@@ -21,13 +23,17 @@ import static org.mockito.Mockito.when;
 class OAuthSuccessHandlerTest {
 
     private final JwtUtil jwtUtil = mock(JwtUtil.class);
-    private final OAuthSuccessHandler handler = new OAuthSuccessHandler(jwtUtil);
+    private final RefreshTokenService refreshTokenService = mock(RefreshTokenService.class);
+    private final AuthCookieUtil authCookieUtil = new AuthCookieUtil();
+    private final OAuthSuccessHandler handler = new OAuthSuccessHandler(jwtUtil, refreshTokenService, authCookieUtil);
 
     @Test
     void 로그인_응답에서_지연_로딩된_CSRF_토큰을_강제로_로드한다() throws Exception {
         setUpHandler();
         when(jwtUtil.createAccessToken(any())).thenReturn("access-token-value");
+        when(jwtUtil.createRefreshToken(any())).thenReturn("refresh-token-value");
         when(jwtUtil.getAccessTokenExpiry()).thenReturn(Duration.ofDays(1));
+        when(jwtUtil.getRefreshTokenExpiry()).thenReturn(Duration.ofDays(14));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         CsrfToken csrfToken = mock(CsrfToken.class);
@@ -39,6 +45,8 @@ class OAuthSuccessHandlerTest {
         verify(csrfToken).getToken();
         assertThat(response.getHeaders("Set-Cookie"))
                 .anyMatch(header -> header.startsWith("accessToken=access-token-value"));
+        assertThat(response.getHeaders("Set-Cookie"))
+                .anyMatch(header -> header.startsWith("refreshToken=refresh-token-value"));
         assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/home");
     }
 
@@ -46,7 +54,9 @@ class OAuthSuccessHandlerTest {
     void CSRF_토큰_속성이_없어도_예외없이_로그인_응답을_내려준다() throws Exception {
         setUpHandler();
         when(jwtUtil.createAccessToken(any())).thenReturn("access-token-value");
+        when(jwtUtil.createRefreshToken(any())).thenReturn("refresh-token-value");
         when(jwtUtil.getAccessTokenExpiry()).thenReturn(Duration.ofDays(1));
+        when(jwtUtil.getRefreshTokenExpiry()).thenReturn(Duration.ofDays(14));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -58,8 +68,8 @@ class OAuthSuccessHandlerTest {
 
     private void setUpHandler() {
         ReflectionTestUtils.setField(handler, "redirectUri", "http://localhost:3000/home");
-        ReflectionTestUtils.setField(handler, "cookieSecure", false);
-        ReflectionTestUtils.setField(handler, "cookieSameSite", "Lax");
+        ReflectionTestUtils.setField(authCookieUtil, "cookieSecure", false);
+        ReflectionTestUtils.setField(authCookieUtil, "cookieSameSite", "Lax");
     }
 
     private Authentication authentication() {

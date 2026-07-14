@@ -35,6 +35,10 @@ cookie:
   secure: false
   same-site: Lax
 
+plimap:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
 logging:
   level:
     org.springframework.security: DEBUG

@@ -76,7 +76,8 @@ public class SecurityConfig {
                                 "/oauth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/v1/auth/token/test"
+                                "/api/v1/auth/token/test",
+                                "/api/v1/auth/reissue"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

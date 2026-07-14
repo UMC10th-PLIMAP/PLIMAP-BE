@@ -18,6 +18,7 @@ import java.util.UUID;
 public class JwtUtil {
 
     private static final Duration ACCESS_TOKEN_EXPIRY = Duration.ofDays(1);
+    private static final Duration REFRESH_TOKEN_EXPIRY = Duration.ofDays(14);
 
     private final SecretKey secretKey;
 
@@ -35,8 +36,22 @@ public class JwtUtil {
                 .compact();
     }
 
+    public String createRefreshToken(AuthMember authMember) {
+        return Jwts.builder()
+                .id(UUID.randomUUID().toString())
+                .subject(authMember.getUsername())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRY.toMillis()))
+                .signWith(secretKey)
+                .compact();
+    }
+
     public Duration getAccessTokenExpiry() {
         return ACCESS_TOKEN_EXPIRY;
+    }
+
+    public Duration getRefreshTokenExpiry() {
+        return REFRESH_TOKEN_EXPIRY;
     }
 
     public Claims parseToken(String token) {

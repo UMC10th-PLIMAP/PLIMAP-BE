@@ -2,19 +2,27 @@ package com.example.plimap.domain.auth.controller;
 
 import com.example.plimap.domain.auth.controller.docs.AuthControllerDocs;
 import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.auth.exception.AuthErrorCode;
+import com.example.plimap.domain.auth.exception.AuthException;
+import com.example.plimap.domain.auth.exception.AuthSuccessCode;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.request.TermsReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.dto.response.TermsResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.exception.MemberErrorCode;
+import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.exception.MemberSuccessCode;
 import com.example.plimap.domain.member.exception.TermsSuccessCode;
+import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.command.TermsCommandService;
 import com.example.plimap.domain.member.service.query.TermsQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.JwtUtil;
+import com.example.plimap.global.security.RefreshTokenService;
 import com.example.plimap.global.security.TokenBlacklistService;
 import com.example.plimap.global.security.TokenResolver;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,9 +30,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,14 +46,11 @@ public class AuthController implements AuthControllerDocs {
     private final MemberCommandService memberCommandService;
     private final TermsQueryService termsQueryService;
     private final TermsCommandService termsCommandService;
+    private final MemberRepository memberRepository;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
-
-    @Value("${cookie.secure}")
-    private boolean cookieSecure;
-
-    @Value("${cookie.same-site}")
-    private String cookieSameSite;
+    private final RefreshTokenService refreshTokenService;
+    private final AuthCookieUtil authCookieUtil;
 
     @Override
     @PostMapping("/onboarding")
@@ -85,17 +87,39 @@ public class AuthController implements AuthControllerDocs {
         String token = TokenResolver.resolve(request);
         if (token != null && jwtUtil.isValid(token)) {
             tokenBlacklistService.blacklist(jwtUtil.getJti(token), jwtUtil.getRemainingExpiry(token));
+            refreshTokenService.delete(jwtUtil.getMemberId(token));
         }
 
-        ResponseCookie cookie = ResponseCookie.from("accessToken", "")
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .sameSite(cookieSameSite)
-                .path("/")
-                .maxAge(0)
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        authCookieUtil.clearCookie(response, "accessToken");
+        authCookieUtil.clearCookie(response, "refreshToken");
 
         return ApiResponse.success(MemberSuccessCode.LOGOUT, null);
+    }
+
+    @Override
+    @PostMapping("/reissue")
+    public ApiResponse<Void> reissue(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = TokenResolver.resolveRefreshToken(request);
+        if (refreshToken == null || !jwtUtil.isValid(refreshToken)) {
+            throw new AuthException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        Long memberId = jwtUtil.getMemberId(refreshToken);
+        if (!refreshTokenService.matches(memberId, refreshToken)) {
+            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_MISMATCH);
+        }
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        AuthMember authMember = new AuthMember(member);
+
+        String newAccessToken = jwtUtil.createAccessToken(authMember);
+        String newRefreshToken = jwtUtil.createRefreshToken(authMember);
+        refreshTokenService.save(memberId, newRefreshToken, jwtUtil.getRefreshTokenExpiry());
+
+        authCookieUtil.setCookie(response, "accessToken", newAccessToken, jwtUtil.getAccessTokenExpiry());
+        authCookieUtil.setCookie(response, "refreshToken", newRefreshToken, jwtUtil.getRefreshTokenExpiry());
+
+        return ApiResponse.success(AuthSuccessCode.TOKEN_REISSUED, null);
     }
 }
