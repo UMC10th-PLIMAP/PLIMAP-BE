@@ -5,6 +5,7 @@ import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.support.PostgisContainerConfiguration;
+import com.example.plimap.support.RedisContainerConfiguration;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
@@ -23,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(PostgisContainerConfiguration.class)
+@Import({PostgisContainerConfiguration.class, RedisContainerConfiguration.class})
 @Transactional
 class TrackRepositoryIntegrationTest {
 

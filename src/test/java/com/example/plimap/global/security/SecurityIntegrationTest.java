@@ -65,12 +65,17 @@ class SecurityIntegrationTest {
     @MockitoBean
     private MemberRepository memberRepository;
 
+    @MockitoBean
+    private TokenBlacklistService tokenBlacklistService;
+
     @BeforeEach
     void setUp() {
         Member member = Member.builder().build();
         when(jwtUtil.isValid(ACCESS_TOKEN)).thenReturn(true);
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
+        when(jwtUtil.getJti(ACCESS_TOKEN)).thenReturn("test-jti");
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(tokenBlacklistService.isBlacklisted("test-jti")).thenReturn(false);
     }
 
     @Test

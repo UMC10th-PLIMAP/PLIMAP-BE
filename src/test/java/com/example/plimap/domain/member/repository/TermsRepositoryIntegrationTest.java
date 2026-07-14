@@ -3,6 +3,7 @@ package com.example.plimap.domain.member.repository;
 import com.example.plimap.domain.member.entity.Terms;
 import com.example.plimap.domain.member.enums.TermsType;
 import com.example.plimap.support.PostgisContainerConfiguration;
+import com.example.plimap.support.RedisContainerConfiguration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(PostgisContainerConfiguration.class)
+@Import({PostgisContainerConfiguration.class, RedisContainerConfiguration.class})
 @Transactional
 class TermsRepositoryIntegrationTest {
 
