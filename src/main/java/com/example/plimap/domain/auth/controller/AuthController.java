@@ -100,7 +100,7 @@ public class AuthController implements AuthControllerDocs {
     @PostMapping("/reissue")
     public ApiResponse<Void> reissue(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = TokenResolver.resolveRefreshToken(request);
-        if (refreshToken == null || !jwtUtil.isValid(refreshToken)) {
+        if (refreshToken == null || !jwtUtil.isValid(refreshToken) || !jwtUtil.isRefreshToken(refreshToken)) {
             throw new AuthException(AuthErrorCode.INVALID_REFRESH_TOKEN);
         }
 

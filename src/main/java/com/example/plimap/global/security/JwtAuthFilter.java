@@ -27,7 +27,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = TokenResolver.resolve(request);
 
-        if (token != null && jwtUtil.isValid(token) && !tokenBlacklistService.isBlacklisted(jwtUtil.getJti(token))) {
+        if (token != null && jwtUtil.isValid(token) && jwtUtil.isAccessToken(token)
+                && !tokenBlacklistService.isBlacklisted(jwtUtil.getJti(token))) {
             Long memberId = jwtUtil.getMemberId(token);
             Member member = memberRepository.findById(memberId).orElse(null);
 

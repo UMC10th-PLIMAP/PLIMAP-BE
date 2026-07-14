@@ -38,6 +38,7 @@ class JwtAuthFilterTest {
     void 유효하고_블랙리스트에_없는_토큰이면_인증에_성공한다() throws Exception {
         Member member = mock(Member.class);
         when(jwtUtil.isValid(TOKEN)).thenReturn(true);
+        when(jwtUtil.isAccessToken(TOKEN)).thenReturn(true);
         when(jwtUtil.getJti(TOKEN)).thenReturn(JTI);
         when(tokenBlacklistService.isBlacklisted(JTI)).thenReturn(false);
         when(jwtUtil.getMemberId(TOKEN)).thenReturn(MEMBER_ID);
@@ -51,6 +52,7 @@ class JwtAuthFilterTest {
     @Test
     void 블랙리스트에_등록된_토큰이면_인증하지_않는다() throws Exception {
         when(jwtUtil.isValid(TOKEN)).thenReturn(true);
+        when(jwtUtil.isAccessToken(TOKEN)).thenReturn(true);
         when(jwtUtil.getJti(TOKEN)).thenReturn(JTI);
         when(tokenBlacklistService.isBlacklisted(JTI)).thenReturn(true);
 
@@ -63,6 +65,17 @@ class JwtAuthFilterTest {
     @Test
     void 서명이_유효하지_않은_토큰이면_인증하지_않는다() throws Exception {
         when(jwtUtil.isValid(TOKEN)).thenReturn(false);
+
+        jwtAuthFilter.doFilter(request(TOKEN), mock(HttpServletResponse.class), mock(FilterChain.class));
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(tokenBlacklistService, never()).isBlacklisted(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void Refresh_Token을_Access_Token으로_사용하면_인증하지_않는다() throws Exception {
+        when(jwtUtil.isValid(TOKEN)).thenReturn(true);
+        when(jwtUtil.isAccessToken(TOKEN)).thenReturn(false);
 
         jwtAuthFilter.doFilter(request(TOKEN), mock(HttpServletResponse.class), mock(FilterChain.class));
 
