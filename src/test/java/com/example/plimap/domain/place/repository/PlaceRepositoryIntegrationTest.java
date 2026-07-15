@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.support.PostgisContainerConfiguration;
+import com.example.plimap.support.RedisContainerConfiguration;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
@@ -19,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(PostgisContainerConfiguration.class)
+@Import({PostgisContainerConfiguration.class, RedisContainerConfiguration.class})
 @Transactional
 class PlaceRepositoryIntegrationTest {
 

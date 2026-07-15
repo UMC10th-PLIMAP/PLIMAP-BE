@@ -48,4 +48,14 @@ public class Member extends SoftDeleteEntity {
         this.profileImageObjectKey = profileImageObjectKey;
         this.status = status != null ? status : MemberStatus.ACTIVE;
     }
+
+    public boolean isOnboarded() {
+        return onboardingCompletedAt != null;
+    }
+
+    public void completeOnboarding(String nickname, String profileImageObjectKey) {
+        this.nickname = nickname;
+        this.profileImageObjectKey = profileImageObjectKey;
+        this.onboardingCompletedAt = Instant.now();
+    }
 }

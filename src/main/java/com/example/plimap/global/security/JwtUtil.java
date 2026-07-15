@@ -10,12 +10,19 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
 
     private static final Duration ACCESS_TOKEN_EXPIRY = Duration.ofDays(1);
+    private static final Duration REFRESH_TOKEN_EXPIRY = Duration.ofDays(14);
+
+    private static final String CLAIM_TOKEN_TYPE = "tokenType";
+    private static final String TOKEN_TYPE_ACCESS = "access";
+    private static final String TOKEN_TYPE_REFRESH = "refresh";
 
     private final SecretKey secretKey;
 
@@ -25,15 +32,32 @@ public class JwtUtil {
 
     public String createAccessToken(AuthMember authMember) {
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(authMember.getUsername())
+                .claim(CLAIM_TOKEN_TYPE, TOKEN_TYPE_ACCESS)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRY.toMillis()))
                 .signWith(secretKey)
                 .compact();
     }
 
+    public String createRefreshToken(AuthMember authMember) {
+        return Jwts.builder()
+                .id(UUID.randomUUID().toString())
+                .subject(authMember.getUsername())
+                .claim(CLAIM_TOKEN_TYPE, TOKEN_TYPE_REFRESH)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRY.toMillis()))
+                .signWith(secretKey)
+                .compact();
+    }
+
     public Duration getAccessTokenExpiry() {
         return ACCESS_TOKEN_EXPIRY;
+    }
+
+    public Duration getRefreshTokenExpiry() {
+        return REFRESH_TOKEN_EXPIRY;
     }
 
     public Claims parseToken(String token) {
@@ -55,5 +79,23 @@ public class JwtUtil {
 
     public Long getMemberId(String token) {
         return Long.parseLong(parseToken(token).getSubject());
+    }
+
+    public String getJti(String token) {
+        return parseToken(token).getId();
+    }
+
+    public boolean isAccessToken(String token) {
+        return TOKEN_TYPE_ACCESS.equals(parseToken(token).get(CLAIM_TOKEN_TYPE, String.class));
+    }
+
+    public boolean isRefreshToken(String token) {
+        return TOKEN_TYPE_REFRESH.equals(parseToken(token).get(CLAIM_TOKEN_TYPE, String.class));
+    }
+
+    public Duration getRemainingExpiry(String token) {
+        Instant expiration = parseToken(token).getExpiration().toInstant();
+        Duration remaining = Duration.between(Instant.now(), expiration);
+        return remaining.isPositive() ? remaining : Duration.ofMillis(1);
     }
 }

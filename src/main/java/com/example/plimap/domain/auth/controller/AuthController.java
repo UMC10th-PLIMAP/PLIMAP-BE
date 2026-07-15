@@ -1,50 +1,125 @@
 package com.example.plimap.domain.auth.controller;
 
-import com.example.plimap.domain.auth.dto.request.AuthReqDTO;
+import com.example.plimap.domain.auth.controller.docs.AuthControllerDocs;
 import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.auth.exception.AuthErrorCode;
+import com.example.plimap.domain.auth.exception.AuthException;
+import com.example.plimap.domain.auth.exception.AuthSuccessCode;
 import com.example.plimap.domain.member.converter.MemberConverter;
+import com.example.plimap.domain.member.dto.request.MemberReqDTO;
+import com.example.plimap.domain.member.dto.request.TermsReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.TermsResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.exception.MemberSuccessCode;
+import com.example.plimap.domain.member.exception.TermsSuccessCode;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
+import com.example.plimap.domain.member.service.command.TermsCommandService;
+import com.example.plimap.domain.member.service.query.TermsQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.JwtUtil;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.example.plimap.global.security.RefreshTokenService;
+import com.example.plimap.global.security.TokenBlacklistService;
+import com.example.plimap.global.security.TokenResolver;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Auth", description = "인증 API")
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Profile({"local", "dev"})
-public class AuthController {
+public class AuthController implements AuthControllerDocs {
 
+    private final MemberCommandService memberCommandService;
+    private final TermsQueryService termsQueryService;
+    private final TermsCommandService termsCommandService;
     private final MemberRepository memberRepository;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
+    private final RefreshTokenService refreshTokenService;
+    private final AuthCookieUtil authCookieUtil;
 
-    @Operation(
-            summary = "[임시] Swagger 테스트용 토큰 발급",
-            description = "멤버 ID로 JWT 액세스 토큰을 발급합니다. **local/dev 환경에서만 동작합니다.**"
-    )
-    @SecurityRequirements
-    @PostMapping("/token/test")
-    public ApiResponse<MemberResDTO.Login> issueTestToken(
-            @Valid @RequestBody AuthReqDTO.TempToken request
+    @Override
+    @PostMapping("/onboarding")
+    public ApiResponse<MemberResDTO.Onboarding> onboarding(
+            @AuthenticationPrincipal AuthMember authMember,
+            @Valid @RequestBody MemberReqDTO.Onboarding request
     ) {
-        Member member = memberRepository.findById(request.getMemberId())
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Member member = memberCommandService.completeOnboarding(authMember.getMember().getId(), request);
+        return ApiResponse.success(MemberSuccessCode.ONBOARDING_COMPLETED, MemberConverter.toOnboarding(member));
+    }
 
-        String accessToken = jwtUtil.createAccessToken(new AuthMember(member));
-        return ApiResponse.success(MemberSuccessCode.LOGIN, MemberConverter.toLogin(accessToken));
+    @Override
+    @GetMapping("/terms")
+    public ApiResponse<List<TermsResDTO.Item>> getActiveTerms() {
+        List<TermsResDTO.Item> result = termsQueryService.getActiveTerms().stream()
+                .map(TermsResDTO.Item::from)
+                .toList();
+        return ApiResponse.success(TermsSuccessCode.ACTIVE_TERMS_RETRIEVED, result);
+    }
+
+    @Override
+    @PostMapping("/terms")
+    public ApiResponse<List<TermsResDTO.Result>> agreeToTerms(
+            @AuthenticationPrincipal AuthMember authMember,
+            @Valid @RequestBody TermsReqDTO.Agree request
+    ) {
+        List<TermsResDTO.Result> result = termsCommandService.agreeToTerms(authMember.getMember().getId(), request);
+        return ApiResponse.success(TermsSuccessCode.TERMS_AGREED, result);
+    }
+
+    @Override
+    @DeleteMapping("/logout")
+    public ApiResponse<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+        String token = TokenResolver.resolve(request);
+        if (token != null && jwtUtil.isValid(token)) {
+            tokenBlacklistService.blacklist(jwtUtil.getJti(token), jwtUtil.getRemainingExpiry(token));
+            refreshTokenService.delete(jwtUtil.getMemberId(token));
+        }
+
+        authCookieUtil.clearCookie(response, "accessToken");
+        authCookieUtil.clearCookie(response, "refreshToken");
+
+        return ApiResponse.success(MemberSuccessCode.LOGOUT, null);
+    }
+
+    @Override
+    @PostMapping("/reissue")
+    public ApiResponse<Void> reissue(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = TokenResolver.resolveRefreshToken(request);
+        if (refreshToken == null || !jwtUtil.isValid(refreshToken) || !jwtUtil.isRefreshToken(refreshToken)) {
+            throw new AuthException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        Long memberId = jwtUtil.getMemberId(refreshToken);
+        if (!refreshTokenService.matches(memberId, refreshToken)) {
+            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_MISMATCH);
+        }
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        AuthMember authMember = new AuthMember(member);
+
+        String newAccessToken = jwtUtil.createAccessToken(authMember);
+        String newRefreshToken = jwtUtil.createRefreshToken(authMember);
+        refreshTokenService.save(memberId, newRefreshToken, jwtUtil.getRefreshTokenExpiry());
+
+        authCookieUtil.setCookie(response, "accessToken", newAccessToken, jwtUtil.getAccessTokenExpiry());
+        authCookieUtil.setCookie(response, "refreshToken", newRefreshToken, jwtUtil.getRefreshTokenExpiry());
+
+        return ApiResponse.success(AuthSuccessCode.TOKEN_REISSUED, null);
     }
 }

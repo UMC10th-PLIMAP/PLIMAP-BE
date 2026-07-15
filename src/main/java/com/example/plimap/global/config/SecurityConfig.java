@@ -8,6 +8,7 @@ import com.example.plimap.global.security.CsrfCookieFilter;
 import com.example.plimap.global.security.JwtAuthFilter;
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
+import com.example.plimap.global.security.TokenBlacklistService;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,7 @@ public class SecurityConfig {
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
     private final SecurityErrorResponseHandler securityErrorResponseHandler;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${cookie.secure}")
     private boolean cookieSecure;
@@ -74,7 +76,8 @@ public class SecurityConfig {
                                 "/oauth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/v1/auth/token/test"
+                                "/api/v1/auth/token/test",
+                                "/api/v1/auth/reissue"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -95,7 +98,7 @@ public class SecurityConfig {
                 )
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                 .addFilterBefore(
-                        new JwtAuthFilter(jwtUtil, memberRepository),
+                        new JwtAuthFilter(jwtUtil, memberRepository, tokenBlacklistService),
                         UsernamePasswordAuthenticationFilter.class
                 );
 
