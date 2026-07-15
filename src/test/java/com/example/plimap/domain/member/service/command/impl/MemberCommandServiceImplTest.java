@@ -175,6 +175,20 @@ class MemberCommandServiceImplTest {
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
     }
 
+    @Test
+    void 닉네임을_바꾸지_않았는데_다른_이유로_제약_위반이_나면_원본_예외를_그대로_던진다() {
+        Member member = mock(Member.class);
+        when(member.getNickname()).thenReturn("기존닉네임");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        DataIntegrityViolationException original = new DataIntegrityViolationException("unexpected constraint violation");
+        doThrow(original).when(memberRepository).flush();
+
+        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile(null, "새이름", null, null)))
+                .isSameAs(original);
+
+        verify(memberQueryService, never()).isNicknameAvailable(any());
+    }
+
     private MemberReqDTO.Onboarding onboarding(String nickname) {
         MemberReqDTO.Onboarding request = new MemberReqDTO.Onboarding();
         ReflectionTestUtils.setField(request, "nickname", nickname);
