@@ -8,7 +8,6 @@ import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -21,6 +20,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
     ) {
         return failure(
                 GeneralErrorCode.VALIDATION_FAILED,
-                getFirstFieldErrorMessage(exception.getBindingResult())
+                getFirstErrorMessage(exception.getBindingResult().getFieldErrors())
         );
     }
 
@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBindException(BindException exception) {
         return failure(
                 GeneralErrorCode.VALIDATION_FAILED,
-                getFirstFieldErrorMessage(exception.getBindingResult())
+                getFirstErrorMessage(exception.getBindingResult().getFieldErrors())
         );
     }
 
@@ -54,13 +54,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleHandlerMethodValidationException(
             HandlerMethodValidationException exception
     ) {
-        String message = exception.getAllErrors().stream()
-                .map(MessageSourceResolvable::getDefaultMessage)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(GeneralErrorCode.VALIDATION_FAILED.getMessage());
-
-        return failure(GeneralErrorCode.VALIDATION_FAILED, message);
+        return failure(
+                GeneralErrorCode.VALIDATION_FAILED,
+                getFirstErrorMessage(exception.getAllErrors())
+        );
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
@@ -119,8 +116,8 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.failure(errorCode, message));
     }
 
-    private String getFirstFieldErrorMessage(BindingResult bindingResult) {
-        return bindingResult.getFieldErrors().stream()
+    private String getFirstErrorMessage(List<? extends MessageSourceResolvable> errors) {
+        return errors.stream()
                 .map(MessageSourceResolvable::getDefaultMessage)
                 .filter(Objects::nonNull)
                 .findFirst()

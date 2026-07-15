@@ -6,6 +6,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -43,6 +44,14 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.message").value("요청 값이 올바르지 않습니다."));
+    }
+
+    @Test
+    void BindException은_클래스_오류보다_필드_오류_메시지를_우선한다() throws Exception {
+        mockMvc.perform(get("/exception-test/bind-with-global-error"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("필드 오류입니다."));
     }
 
     @Test
@@ -94,6 +103,14 @@ class GlobalExceptionHandlerTest {
                     null,
                     null
             ));
+            throw exception;
+        }
+
+        @GetMapping("/exception-test/bind-with-global-error")
+        void bindWithGlobalError() throws BindException {
+            BindException exception = new BindException(new Object(), "request");
+            exception.addError(new ObjectError("request", "클래스 오류입니다."));
+            exception.addError(new FieldError("request", "field", "필드 오류입니다."));
             throw exception;
         }
 
