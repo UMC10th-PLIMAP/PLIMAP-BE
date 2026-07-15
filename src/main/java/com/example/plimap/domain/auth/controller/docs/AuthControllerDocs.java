@@ -86,7 +86,13 @@ public interface AuthControllerDocs {
 
     @Operation(
             summary = "로그아웃",
-            description = "현재 액세스 토큰을 서버 측에서 무효화(블랙리스트 등록)하고, accessToken 쿠키를 삭제합니다."
+            description = "현재 액세스 토큰을 서버 측에서 무효화(블랙리스트 등록)하고, 저장된 리프레시 토큰과 accessToken/refreshToken 쿠키를 삭제합니다."
     )
     ApiResponse<Void> logout(HttpServletRequest request, HttpServletResponse response);
+
+    @Operation(
+            summary = "토큰 재발급",
+            description = "refreshToken 쿠키를 검증하여 새로운 Access/Refresh Token을 발급하고 쿠키를 갱신합니다(Refresh Token Rotation)."
+    )
+    ApiResponse<Void> reissue(HttpServletRequest request, HttpServletResponse response);
 }

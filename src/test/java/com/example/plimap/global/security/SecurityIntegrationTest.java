@@ -72,6 +72,7 @@ class SecurityIntegrationTest {
     void setUp() {
         Member member = Member.builder().build();
         when(jwtUtil.isValid(ACCESS_TOKEN)).thenReturn(true);
+        when(jwtUtil.isAccessToken(ACCESS_TOKEN)).thenReturn(true);
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
         when(jwtUtil.getJti(ACCESS_TOKEN)).thenReturn("test-jti");
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));

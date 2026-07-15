@@ -51,6 +51,18 @@ class JwtUtilTest {
         assertThat(otherJwtUtil.isValid(token)).isFalse();
     }
 
+    @Test
+    void Access_Token과_Refresh_Token은_타입_클레임으로_서로_구분된다() {
+        String accessToken = jwtUtil.createAccessToken(authMember(1L));
+        String refreshToken = jwtUtil.createRefreshToken(authMember(1L));
+
+        assertThat(jwtUtil.isAccessToken(accessToken)).isTrue();
+        assertThat(jwtUtil.isRefreshToken(accessToken)).isFalse();
+
+        assertThat(jwtUtil.isAccessToken(refreshToken)).isFalse();
+        assertThat(jwtUtil.isRefreshToken(refreshToken)).isTrue();
+    }
+
     private AuthMember authMember(Long memberId) {
         Member member = mock(Member.class);
         when(member.getId()).thenReturn(memberId);
