@@ -13,7 +13,8 @@ public interface PlaceControllerDocs {
 
     @Operation(
             summary = "지도 선택 장소 확정",
-            description = "지도에서 선택한 위치를 기존 MAP_SELECTION Place와 매핑하거나 새 Place로 생성합니다."
+            description = "지도에서 선택한 위치를 기존 MAP_SELECTION Place와 매핑하거나 새 Place로 생성합니다. "
+                    + "(Figma 기준 화면: PN-02-03)"
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
