@@ -19,9 +19,9 @@ public interface MemberControllerDocs {
             description = "온보딩/프로필 수정 전에 닉네임 사용 가능 여부를 확인합니다."
     )
     ApiResponse<MemberResDTO.NicknameCheck> checkNickname(
-            @NotBlank
-            @Size(min = 2, max = 10)
-            @Pattern(regexp = "^[가-힣A-Za-z0-9]+$")
+            @NotBlank(message = "닉네임을 입력해주세요.")
+            @Size(min = 2, max = 10, message = "닉네임은 2~10자여야 합니다.")
+            @Pattern(regexp = "^[가-힣A-Za-z0-9]+$", message = "닉네임은 한글, 영문, 숫자만 사용할 수 있습니다.")
             String nickname
     );
 
