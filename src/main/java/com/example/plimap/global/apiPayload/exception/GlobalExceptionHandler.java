@@ -7,8 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,6 +20,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -33,31 +36,41 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException exception
     ) {
-        String message = exception.getBindingResult().getFieldErrors().stream()
-                .map(MessageSourceResolvable::getDefaultMessage)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(GeneralErrorCode.VALIDATION_FAILED.getMessage());
+        return failure(
+                GeneralErrorCode.VALIDATION_FAILED,
+                getFirstErrorMessage(exception.getBindingResult().getFieldErrors())
+        );
+    }
 
-        return failure(GeneralErrorCode.VALIDATION_FAILED, message);
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBindException(BindException exception) {
+        return failure(
+                GeneralErrorCode.VALIDATION_FAILED,
+                getFirstErrorMessage(exception.getBindingResult().getFieldErrors())
+        );
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<ApiResponse<Void>> handleHandlerMethodValidationException(
             HandlerMethodValidationException exception
     ) {
-        String message = exception.getAllErrors().stream()
-                .map(MessageSourceResolvable::getDefaultMessage)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(GeneralErrorCode.VALIDATION_FAILED.getMessage());
-
-        return failure(GeneralErrorCode.VALIDATION_FAILED, message);
+        return failure(
+                GeneralErrorCode.VALIDATION_FAILED,
+                getFirstErrorMessage(exception.getAllErrors())
+        );
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameterException() {
         return failure(GeneralErrorCode.MISSING_PARAMETER);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingRequestHeaderException(
+            MissingRequestHeaderException exception
+    ) {
+        String message = "필수 요청 헤더 '%s'가 누락되었습니다.".formatted(exception.getHeaderName());
+        return failure(GeneralErrorCode.MISSING_HEADER, message);
     }
 
     @ExceptionHandler(ServletRequestBindingException.class)
@@ -101,5 +114,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ApiResponse.failure(errorCode, message));
+    }
+
+    private String getFirstErrorMessage(List<? extends MessageSourceResolvable> errors) {
+        return errors.stream()
+                .map(MessageSourceResolvable::getDefaultMessage)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(GeneralErrorCode.VALIDATION_FAILED.getMessage());
     }
 }
