@@ -1,8 +1,11 @@
 package com.example.plimap.domain.member.controller;
 
+import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.member.controller.docs.MemberControllerDocs;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.exception.MemberSuccessCode;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,8 +14,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,9 +28,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
 @Validated
-public class MemberController {
+public class MemberController implements MemberControllerDocs {
 
     private final MemberQueryService memberQueryService;
+    private final MemberCommandService memberCommandService;
 
     @Operation(
             summary = "닉네임 중복 확인",
@@ -40,5 +47,15 @@ public class MemberController {
     ) {
         boolean available = memberQueryService.isNicknameAvailable(nickname);
         return ApiResponse.success(MemberSuccessCode.NICKNAME_CHECKED, MemberConverter.toNicknameCheck(nickname, available));
+    }
+
+    @Override
+    @PostMapping("/{memberId}/follow")
+    public ApiResponse<Void> follow(
+            @AuthenticationPrincipal AuthMember authMember,
+            @PathVariable Long memberId
+    ) {
+        memberCommandService.follow(authMember.getMember().getId(), memberId);
+        return ApiResponse.success(MemberSuccessCode.FOLLOWED, null);
     }
 }
