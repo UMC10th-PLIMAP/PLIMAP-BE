@@ -31,4 +31,15 @@ public class MemberConverter {
                 .available(available)
                 .build();
     }
+
+    public static MemberResDTO.Profile toProfile(Member member) {
+        return new MemberResDTO.Profile(
+                member.getId(),
+                member.getNickname(),
+                member.getName(),
+                member.getIntroduction(),
+                member.getProfileImageObjectKey(),
+                member.getUpdatedAt()
+        );
+    }
 }

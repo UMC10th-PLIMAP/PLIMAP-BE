@@ -20,7 +20,7 @@ public class Member extends SoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nickname", length = 7)
+    @Column(name = "nickname", length = 10)
     private String nickname;
 
     @Column(name = "name", length = 7)
@@ -57,5 +57,20 @@ public class Member extends SoftDeleteEntity {
         this.nickname = nickname;
         this.profileImageObjectKey = profileImageObjectKey;
         this.onboardingCompletedAt = Instant.now();
+    }
+
+    public void updateProfile(String nickname, String name, String introduction, String profileImageObjectKey) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (name != null) {
+            this.name = name;
+        }
+        if (introduction != null) {
+            this.introduction = introduction;
+        }
+        if (profileImageObjectKey != null) {
+            this.profileImageObjectKey = profileImageObjectKey;
+        }
     }
 }

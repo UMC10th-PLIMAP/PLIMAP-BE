@@ -6,4 +6,6 @@ import com.example.plimap.domain.member.entity.Member;
 public interface MemberCommandService {
 
     Member completeOnboarding(Long memberId, MemberReqDTO.Onboarding request);
+
+    Member updateProfile(Long memberId, MemberReqDTO.UpdateProfile request);
 }
