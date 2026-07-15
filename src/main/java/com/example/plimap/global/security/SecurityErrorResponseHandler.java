@@ -2,6 +2,7 @@ package com.example.plimap.global.security;
 
 import com.example.plimap.global.apiPayload.ApiResponse;
 import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
+import com.example.plimap.global.logging.HttpErrorLogger;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class SecurityErrorResponseHandler implements AuthenticationEntryPoint, A
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authenticationException) throws IOException {
+        HttpErrorLogger.info(request, GeneralErrorCode.UNAUTHORIZED, authenticationException);
         writeErrorResponse(response, GeneralErrorCode.UNAUTHORIZED);
     }
 
@@ -33,6 +35,7 @@ public class SecurityErrorResponseHandler implements AuthenticationEntryPoint, A
     public void handle(HttpServletRequest request,
                        HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException {
+        HttpErrorLogger.warn(request, GeneralErrorCode.FORBIDDEN, accessDeniedException);
         writeErrorResponse(response, GeneralErrorCode.FORBIDDEN);
     }
 
