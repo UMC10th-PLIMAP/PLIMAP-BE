@@ -7,9 +7,23 @@ import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 @Tag(name = "Member", description = "회원 API")
 public interface MemberControllerDocs {
+
+    @Operation(
+            summary = "닉네임 중복 확인",
+            description = "온보딩/프로필 수정 전에 닉네임 사용 가능 여부를 확인합니다."
+    )
+    ApiResponse<MemberResDTO.NicknameCheck> checkNickname(
+            @NotBlank
+            @Size(min = 2, max = 10)
+            @Pattern(regexp = "^[가-힣A-Za-z0-9]+$")
+            String nickname
+    );
 
     @Operation(
             summary = "내 프로필 수정",

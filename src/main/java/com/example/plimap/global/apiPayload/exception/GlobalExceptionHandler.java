@@ -3,6 +3,8 @@ package com.example.plimap.global.apiPayload.exception;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import com.example.plimap.global.apiPayload.code.BaseErrorCode;
 import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.ResponseEntity;
@@ -49,6 +51,18 @@ public class GlobalExceptionHandler {
         String message = exception.getAllErrors().stream()
                 .map(MessageSourceResolvable::getDefaultMessage)
                 .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(GeneralErrorCode.VALIDATION_FAILED.getMessage());
+
+        return failure(GeneralErrorCode.VALIDATION_FAILED, message);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(
+            ConstraintViolationException exception
+    ) {
+        String message = exception.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
                 .findFirst()
                 .orElse(GeneralErrorCode.VALIDATION_FAILED.getMessage());
 
