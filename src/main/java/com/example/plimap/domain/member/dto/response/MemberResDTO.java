@@ -27,4 +27,14 @@ public class MemberResDTO {
         private String nickname;
         private boolean available;
     }
+
+    public record Profile(
+            Long id,
+            String nickname,
+            String name,
+            String introduction,
+            String profileImageObjectKey,
+            Instant updatedAt
+    ) {
+    }
 }

@@ -7,5 +7,7 @@ public interface MemberCommandService {
 
     Member completeOnboarding(Long memberId, MemberReqDTO.Onboarding request);
 
+    Member updateProfile(Long memberId, MemberReqDTO.UpdateProfile request);
+
     void follow(Long followerId, Long followingId);
 }
