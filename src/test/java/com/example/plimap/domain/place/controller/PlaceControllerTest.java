@@ -68,6 +68,9 @@ class PlaceControllerTest {
     @BeforeEach
     void setUp() {
         when(jwtUtil.isValid(ACCESS_TOKEN)).thenReturn(true);
+        when(jwtUtil.isAccessToken(ACCESS_TOKEN)).thenReturn(true);
+        when(jwtUtil.getJti(ACCESS_TOKEN)).thenReturn("test-jti");
+        when(tokenBlacklistService.isBlacklisted("test-jti")).thenReturn(false);
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
         when(memberRepository.findById(1L)).thenReturn(Optional.of(Member.builder().build()));
     }
