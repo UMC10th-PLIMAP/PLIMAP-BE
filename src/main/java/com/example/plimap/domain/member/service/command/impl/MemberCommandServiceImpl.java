@@ -44,4 +44,31 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
         return member;
     }
+
+    @Override
+    @Transactional
+    public Member updateProfile(Long memberId, MemberReqDTO.UpdateProfile request) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        boolean nicknameChanged = request.nickname() != null
+                && !request.nickname().equalsIgnoreCase(member.getNickname());
+        if (nicknameChanged && !memberQueryService.isNicknameAvailable(request.nickname())) {
+            throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE);
+        }
+
+        try {
+            member.updateProfile(request.nickname(), request.name(), request.introduction(), request.profileImageObjectKey());
+            memberRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            if (!nicknameChanged) {
+                throw e;
+            }
+            // 동시에 같은 닉네임으로 변경하는 경우 사전 체크를 통과했더라도
+            // DB의 대소문자 무시 유니크 인덱스(uk_member_nickname_ci)에서 최종적으로 걸러진다.
+            throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE, e);
+        }
+
+        return member;
+    }
 }
