@@ -81,6 +81,7 @@ com.example.plimap/
 │   │   └── exception/              # 비즈니스 예외 및 전역 예외 처리
 │   ├── config/                     # 설정 클래스
 │   ├── entity/                     # BaseEntity, SoftDeleteEntity 등 공통 엔티티
+│   ├── logging/                    # 공통 HTTP 오류 로그
 │   ├── security/                   # 인증/인가 보안 설정
 │   ├── swagger/                    # Swagger/OpenAPI 설정
 │   └── external/                   # 외부 시스템 연동 공통 영역
