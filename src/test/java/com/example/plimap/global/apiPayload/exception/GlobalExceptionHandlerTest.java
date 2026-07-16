@@ -2,6 +2,7 @@ package com.example.plimap.global.apiPayload.exception;
 
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
+import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.NoHandlerFoundException;
+
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -107,6 +110,27 @@ class GlobalExceptionHandlerTest {
                         "cookie-secret",
                         "BindException:"
                 );
+    }
+
+    @Test
+    void ConstraintViolationException은_공통_필드와_함께_INFO로_기록한다(
+            CapturedOutput output
+    ) {
+        MockHttpServletRequest request = new MockHttpServletRequest("PATCH", "/api/v1/members/me");
+        ConstraintViolationException exception = new ConstraintViolationException(Set.of());
+
+        int status = exceptionHandler
+                .handleConstraintViolationException(exception, request)
+                .getStatusCode()
+                .value();
+
+        assertThat(status).isEqualTo(400);
+        assertThat(output.getAll()).contains(
+                "INFO",
+                "status=400 code=COMMON_400_VALIDATION_FAILED "
+                        + "method=PATCH uri=/api/v1/members/me "
+                        + "exception=ConstraintViolationException"
+        );
     }
 
     @Test

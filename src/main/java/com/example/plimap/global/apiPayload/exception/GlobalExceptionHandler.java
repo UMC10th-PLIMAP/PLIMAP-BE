@@ -7,7 +7,6 @@ import com.example.plimap.global.logging.HttpErrorLogger;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -79,14 +78,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(
-            ConstraintViolationException exception
+            ConstraintViolationException exception,
+            HttpServletRequest request
     ) {
         String message = exception.getConstraintViolations().stream()
                 .map(ConstraintViolation::getMessage)
                 .findFirst()
                 .orElse(GeneralErrorCode.VALIDATION_FAILED.getMessage());
 
-        return failure(GeneralErrorCode.VALIDATION_FAILED, message);
+        return failure(
+                GeneralErrorCode.VALIDATION_FAILED,
+                message,
+                request,
+                exception
+        );
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
