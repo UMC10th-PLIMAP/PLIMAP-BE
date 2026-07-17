@@ -200,13 +200,25 @@ class MemberCommandServiceImplTest {
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.CANNOT_FOLLOW_SELF));
 
-        verify(memberRepository, never()).findById(any());
+        verify(memberRepository, never()).findByIdAndDeletedAtIsNull(any());
+    }
+
+    @Test
+    void 팔로우를_요청한_회원이_탈퇴한_회원이면_예외가_발생한다() {
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberCommandService.follow(MEMBER_ID, OTHER_MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        verify(memberRepository, never()).findByIdAndDeletedAtIsNull(OTHER_MEMBER_ID);
+        verify(memberFollowRepository, never()).existsById(any());
     }
 
     @Test
     void 팔로우_대상_회원이_존재하지_않으면_예외가_발생한다() {
         Member follower = mock(Member.class);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(follower));
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(follower));
         when(memberRepository.findByIdAndDeletedAtIsNull(OTHER_MEMBER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> memberCommandService.follow(MEMBER_ID, OTHER_MEMBER_ID))
@@ -220,7 +232,7 @@ class MemberCommandServiceImplTest {
     void 이미_팔로우_중이면_예외가_발생한다() {
         Member follower = mock(Member.class);
         Member following = mock(Member.class);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(follower));
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(follower));
         when(memberRepository.findByIdAndDeletedAtIsNull(OTHER_MEMBER_ID)).thenReturn(Optional.of(following));
         when(memberFollowRepository.existsById(new MemberFollowId(MEMBER_ID, OTHER_MEMBER_ID))).thenReturn(true);
 
@@ -237,7 +249,7 @@ class MemberCommandServiceImplTest {
         when(follower.getId()).thenReturn(MEMBER_ID);
         Member following = mock(Member.class);
         when(following.getId()).thenReturn(OTHER_MEMBER_ID);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(follower));
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(follower));
         when(memberRepository.findByIdAndDeletedAtIsNull(OTHER_MEMBER_ID)).thenReturn(Optional.of(following));
         when(memberFollowRepository.existsById(new MemberFollowId(MEMBER_ID, OTHER_MEMBER_ID))).thenReturn(false);
 
@@ -252,7 +264,7 @@ class MemberCommandServiceImplTest {
         when(follower.getId()).thenReturn(MEMBER_ID);
         Member following = mock(Member.class);
         when(following.getId()).thenReturn(OTHER_MEMBER_ID);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(follower));
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(follower));
         when(memberRepository.findByIdAndDeletedAtIsNull(OTHER_MEMBER_ID)).thenReturn(Optional.of(following));
         when(memberFollowRepository.existsById(new MemberFollowId(MEMBER_ID, OTHER_MEMBER_ID))).thenReturn(false);
         doThrow(new DataIntegrityViolationException("duplicate")).when(memberFollowRepository).saveAndFlush(any(MemberFollow.class));

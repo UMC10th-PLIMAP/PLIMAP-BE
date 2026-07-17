@@ -83,7 +83,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
             throw new MemberException(MemberErrorCode.CANNOT_FOLLOW_SELF);
         }
 
-        Member follower = memberRepository.findById(followerId)
+        Member follower = memberRepository.findByIdAndDeletedAtIsNull(followerId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
         Member following = memberRepository.findByIdAndDeletedAtIsNull(followingId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
