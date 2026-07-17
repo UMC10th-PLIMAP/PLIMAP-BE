@@ -1,4 +1,27 @@
-# Dev 환경
+# Dev 환경 설정
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      data-source-properties:
+        prepareThreshold: 0
+  data:
+    redis:
+      url: ${REDIS_URL}
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            redirect-uri: ${KAKAO_REDIRECT_URI}
+          google:
+            redirect-uri: ${GOOGLE_REDIRECT_URI}
+
+oauth:
+  redirect-uri: ${OAUTH_REDIRECT_URI}
 
 # Swagger 설정
 springdoc:

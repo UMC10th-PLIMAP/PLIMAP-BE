@@ -4,6 +4,8 @@
 spring:
   application:
     name: "PLIMAP"
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
   # flyway 설정
   flyway:
     enabled: true
@@ -40,6 +42,22 @@ spring:
             token-uri: "https://kauth.kakao.com/oauth/token"
             user-info-uri: "https://kapi.kakao.com/v2/user/me"
             user-name-attribute: id
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
 
 jwt:
   secret: ${JWT_SECRET}
