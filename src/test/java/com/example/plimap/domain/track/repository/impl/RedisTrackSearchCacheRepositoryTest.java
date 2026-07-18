@@ -1,6 +1,8 @@
 package com.example.plimap.domain.track.repository.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -8,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.plimap.domain.track.dto.TrackMetadataCache;
 import com.example.plimap.domain.track.dto.TrackSearchCache;
+import com.example.plimap.domain.track.repository.exception.CacheSerializationException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
 
 class RedisTrackSearchCacheRepositoryTest {
 
@@ -64,6 +68,36 @@ class RedisTrackSearchCacheRepositoryTest {
         Optional<TrackSearchCache> result = repository.find("taylor swift", 20);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void 검색_캐시_역직렬화_오류를_DataAccessException으로_변환한다() {
+        ObjectMapper failingObjectMapper = mock(ObjectMapper.class);
+        JacksonException jacksonException = mock(JacksonException.class);
+        RedisTrackSearchCacheRepository failingRepository =
+                new RedisTrackSearchCacheRepository(redisTemplate, failingObjectMapper);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(KEY)).thenReturn("invalid-json");
+        when(failingObjectMapper.readValue("invalid-json", TrackSearchCache.class))
+                .thenThrow(jacksonException);
+
+        assertThatThrownBy(() -> failingRepository.find("taylor swift", 20))
+                .isInstanceOf(CacheSerializationException.class)
+                .hasCause(jacksonException);
+    }
+
+    @Test
+    void 검색_캐시_직렬화_오류를_DataAccessException으로_변환한다() {
+        ObjectMapper failingObjectMapper = mock(ObjectMapper.class);
+        JacksonException jacksonException = mock(JacksonException.class);
+        RedisTrackSearchCacheRepository failingRepository =
+                new RedisTrackSearchCacheRepository(redisTemplate, failingObjectMapper);
+        when(failingObjectMapper.writeValueAsString(any(TrackSearchCache.class)))
+                .thenThrow(jacksonException);
+
+        assertThatThrownBy(() -> failingRepository.save("taylor swift", 20, searchCache()))
+                .isInstanceOf(CacheSerializationException.class)
+                .hasCause(jacksonException);
     }
 
     private TrackSearchCache searchCache() {

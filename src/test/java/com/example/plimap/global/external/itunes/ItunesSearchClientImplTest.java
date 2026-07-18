@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClientException;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriUtils;
@@ -87,7 +88,9 @@ class ItunesSearchClientImplTest {
         server.expect(once(), request -> { })
                 .andRespond(withSuccess("not-json", MediaType.APPLICATION_JSON));
 
-        assertExternalApiError(() -> client.search("아이유", 20));
+        assertThatThrownBy(() -> client.search("아이유", 20))
+                .isInstanceOfSatisfying(ItunesClientException.class, exception ->
+                        assertThat(exception.getCause()).isInstanceOf(RestClientException.class));
         server.verify();
     }
 

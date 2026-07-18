@@ -10,13 +10,17 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 @EnableConfigurationProperties(ItunesProperties.class)
 public class ItunesClientConfig {
 
     @Bean
-    public RestClient itunesRestClient(ItunesProperties properties) {
+    public RestClient itunesRestClient(
+            ItunesProperties properties,
+            JsonMapper jsonMapper
+    ) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(properties.connectTimeout())
                 .build();
@@ -26,7 +30,7 @@ public class ItunesClientConfig {
         requestFactory.setReadTimeout(properties.readTimeout());
 
         JacksonJsonHttpMessageConverter jacksonConverter =
-                new JacksonJsonHttpMessageConverter();
+                new JacksonJsonHttpMessageConverter(jsonMapper);
 
         List<MediaType> supportedMediaTypes =
                 new ArrayList<>(jacksonConverter.getSupportedMediaTypes());

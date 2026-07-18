@@ -20,6 +20,7 @@ import com.example.plimap.domain.track.repository.PlaceTrackRepository;
 import com.example.plimap.domain.track.repository.TrackMetadataCacheRepository;
 import com.example.plimap.domain.track.repository.TrackRepository;
 import com.example.plimap.domain.track.repository.TrackSearchCacheRepository;
+import com.example.plimap.domain.track.repository.exception.CacheSerializationException;
 import com.example.plimap.global.external.itunes.ItunesClientException;
 import com.example.plimap.global.external.itunes.ItunesSearchClient;
 import com.example.plimap.global.external.itunes.dto.ItunesSearchResponse;
@@ -127,14 +128,29 @@ class TrackQueryServiceImplTest {
     }
 
     @Test
-    void 캐시_JSON_매핑_오류는_숨기지_않는다() {
-        IllegalStateException mappingError = new IllegalStateException("invalid cache json");
-        when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenThrow(mappingError);
+    void 오염된_검색_캐시는_iTunes_API로_fallback한다() {
+        CacheSerializationException serializationException =
+                new CacheSerializationException("invalid cache json", new RuntimeException());
+        when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenThrow(serializationException);
+        when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(itunesResponse());
 
-        assertThatThrownBy(() -> trackQueryService.searchTracks(request()))
-                .isSameAs(mappingError);
+        TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
 
-        verifyNoInteractions(itunesSearchClient, trackMetadataCacheRepository);
+        assertThat(result).isEqualTo(searchResult());
+        verify(itunesSearchClient).search(KEYWORD, LIMIT);
+    }
+
+    @Test
+    void 검색_캐시_직렬화_실패가_발생해도_검색_결과를_반환한다() {
+        when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenReturn(Optional.empty());
+        when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(itunesResponse());
+        doThrow(new CacheSerializationException("serialization failed", new RuntimeException()))
+                .when(trackSearchCacheRepository)
+                .save(KEYWORD, LIMIT, new TrackSearchCache(List.of(metadata())));
+
+        TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
+
+        assertThat(result).isEqualTo(searchResult());
     }
 
     @Test

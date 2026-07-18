@@ -3,6 +3,7 @@ package com.example.plimap.global.external.itunes;
 import com.example.plimap.global.external.itunes.dto.ItunesSearchResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -31,7 +32,7 @@ public class ItunesSearchClientImpl implements ItunesSearchClient {
                 throw new ItunesClientException("iTunes Search API returned an empty response");
             }
             return response;
-        } catch (RestClientException exception) {
+        } catch (RestClientException | HttpMessageConversionException exception) {
             throw new ItunesClientException("iTunes Search API request failed", exception);
         }
     }
