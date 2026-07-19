@@ -29,3 +29,7 @@ cookie:
 plimap:
   cors:
     allowed-origins: http://localhost:3000
+
+youtube:
+  api:
+    key: test-youtube-api-key

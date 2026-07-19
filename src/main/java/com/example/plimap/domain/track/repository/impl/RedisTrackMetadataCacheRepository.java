@@ -4,6 +4,7 @@ import com.example.plimap.domain.track.dto.TrackMetadataCache;
 import com.example.plimap.domain.track.repository.TrackMetadataCacheRepository;
 import com.example.plimap.domain.track.repository.exception.CacheSerializationException;
 import java.time.Duration;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
@@ -19,6 +20,22 @@ public class RedisTrackMetadataCacheRepository implements TrackMetadataCacheRepo
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+
+    @Override
+    public Optional<TrackMetadataCache> findByItunesTrackId(Long itunesTrackId) {
+        String value = redisTemplate.opsForValue().get(KEY_PREFIX + itunesTrackId);
+        if (value == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(objectMapper.readValue(value, TrackMetadataCache.class));
+        } catch (JacksonException exception) {
+            throw new CacheSerializationException(
+                    "트랙 메타데이터 캐시 역직렬화에 실패했습니다.",
+                    exception
+            );
+        }
+    }
 
     @Override
     public void save(TrackMetadataCache metadata) {

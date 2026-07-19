@@ -1,11 +1,13 @@
 package com.example.plimap.domain.track.controller.docs;
 
+import com.example.plimap.domain.track.dto.request.TrackRequest;
 import com.example.plimap.domain.track.dto.response.TrackResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -40,5 +42,30 @@ public interface TrackControllerDocs {
             @Min(value = 1, message = "검색 결과 개수는 1개 이상이어야 합니다.")
             @Max(value = 200, message = "검색 결과 개수는 200개 이하여야 합니다.")
             int limit
+    );
+
+    @Operation(
+            summary = "구간 재생 준비",
+            description = "iTunes 곡 메타데이터를 기반으로 YouTube 영상을 매칭합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "구간 재생 준비 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "iTunes 트랙 ID 검증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "메타데이터 만료 또는 YouTube 매칭 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "YouTube 외부 API 또는 캐시 처리 실패")
+    })
+    ResponseEntity<ApiResponse<TrackResponse.PlaybackPreparation>> preparePlayback(
+            @Valid TrackRequest.PlaybackPreparation request
     );
 }
