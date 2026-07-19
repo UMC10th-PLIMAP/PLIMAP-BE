@@ -45,6 +45,11 @@ public enum TrackErrorCode implements BaseErrorCode {
             "TRACK_404_SELECTED_TRACK_CACHE_NOT_FOUND",
             "선택한 곡 정보가 만료되었거나 존재하지 않습니다."
     ),
+    SELECTED_TRACK_CACHE_INVALID(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "TRACK_500_SELECTED_TRACK_CACHE_INVALID",
+            "선택 곡 캐시 데이터가 올바르지 않습니다."
+    ),
     YOUTUBE_VIDEO_ID_NOT_FOUND(
             HttpStatus.BAD_REQUEST,
             "TRACK_400_YOUTUBE_VIDEO_ID_NOT_FOUND",
