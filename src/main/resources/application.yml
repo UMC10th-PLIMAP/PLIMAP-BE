@@ -65,3 +65,11 @@ itunes:
   base-url: https://itunes.apple.com
   connect-timeout: 2s
   read-timeout: 5s
+
+# YouTube Data API v3 설정
+youtube:
+  api:
+    base-url: https://www.googleapis.com/youtube/v3
+    key: ${YOUTUBE_API_KEY}
+    connect-timeout: 2s
+    read-timeout: 5s

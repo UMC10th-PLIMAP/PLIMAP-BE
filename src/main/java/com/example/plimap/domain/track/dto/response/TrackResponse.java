@@ -1,5 +1,6 @@
 package com.example.plimap.domain.track.dto.response;
 
+import com.example.plimap.domain.track.dto.SelectedTrackCache;
 import com.example.plimap.global.external.itunes.dto.ItunesSearchResponse;
 import java.util.List;
 
@@ -40,6 +41,31 @@ public final class TrackResponse {
                     item.artworkUrl100(),
                     item.previewUrl(),
                     item.trackTimeMillis()
+            );
+        }
+    }
+
+    public record PlaybackPreparation(
+            Long itunesTrackId,
+            String youtubeVideoId,
+            String title,
+            String artistName,
+            String albumTitle,
+            String albumImageUrl,
+            String previewUrl,
+            Integer durationMs
+    ) {
+
+        public static PlaybackPreparation from(SelectedTrackCache selectedTrack) {
+            return new PlaybackPreparation(
+                    selectedTrack.itunesTrackId(),
+                    selectedTrack.youtubeVideoId(),
+                    selectedTrack.title(),
+                    selectedTrack.artistName(),
+                    selectedTrack.albumTitle(),
+                    selectedTrack.albumImageUrl(),
+                    selectedTrack.previewUrl(),
+                    selectedTrack.durationMs()
             );
         }
     }
