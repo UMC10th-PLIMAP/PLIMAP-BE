@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,6 +17,7 @@ import com.example.plimap.domain.track.dto.request.TrackRequest;
 import com.example.plimap.domain.track.dto.response.TrackResponse;
 import com.example.plimap.domain.track.exception.TrackErrorCode;
 import com.example.plimap.domain.track.exception.TrackException;
+import com.example.plimap.domain.track.service.command.TrackPlaybackPreparationService;
 import com.example.plimap.domain.track.service.query.TrackQueryService;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
@@ -31,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,6 +49,8 @@ import org.springframework.test.web.servlet.MockMvc;
 class TrackControllerTest {
 
     private static final String ENDPOINT = "/api/v1/tracks/search";
+    private static final String PLAYBACK_ENDPOINT =
+            "/api/v1/tracks/playback-preparations";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -53,6 +58,9 @@ class TrackControllerTest {
 
     @MockitoBean
     private TrackQueryService trackQueryService;
+
+    @MockitoBean
+    private TrackPlaybackPreparationService trackPlaybackPreparationService;
 
     @MockitoBean
     private CustomOAuthService customOAuthService;
@@ -198,10 +206,118 @@ class TrackControllerTest {
                 .andExpect(jsonPath("$.result").isEmpty());
     }
 
+    @Test
+    void 인증된_구간_재생_준비_요청은_성공_응답을_반환한다() throws Exception {
+        when(trackPlaybackPreparationService.prepare(any()))
+                .thenReturn(playbackResponse());
+
+        mockMvc.perform(authenticatedPlayback("{\"itunesTrackId\":123}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code")
+                        .value("TRACK_PLAYBACK_PREPARATION_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("구간 재생 준비에 성공했습니다."))
+                .andExpect(jsonPath("$.result.itunesTrackId").value(123))
+                .andExpect(jsonPath("$.result.youtubeVideoId").value("abcdefghijk"))
+                .andExpect(jsonPath("$.result.albumImageUrl")
+                        .value("https://image.example/cover.jpg"));
+
+        verify(trackPlaybackPreparationService)
+                .prepare(new TrackRequest.PlaybackPreparation(123L));
+    }
+
+    @Test
+    void itunesTrackId가_null이면_validation_실패를_반환한다() throws Exception {
+        assertPlaybackValidation("{\"itunesTrackId\":null}", "iTunes 트랙 ID를 입력해주세요.");
+    }
+
+    @Test
+    void itunesTrackId가_0이면_validation_실패를_반환한다() throws Exception {
+        assertPlaybackValidation("{\"itunesTrackId\":0}", "iTunes 트랙 ID는 양수여야 합니다.");
+    }
+
+    @Test
+    void itunesTrackId가_음수이면_validation_실패를_반환한다() throws Exception {
+        assertPlaybackValidation("{\"itunesTrackId\":-1}", "iTunes 트랙 ID는 양수여야 합니다.");
+    }
+
+    @Test
+    void metadata_만료는_Track_도메인_오류_응답을_반환한다() throws Exception {
+        assertPlaybackError(
+                TrackErrorCode.TRACK_METADATA_CACHE_NOT_FOUND,
+                "TRACK_404_METADATA_CACHE_NOT_FOUND",
+                404
+        );
+    }
+
+    @Test
+    void YouTube_매칭_실패는_Track_도메인_오류_응답을_반환한다() throws Exception {
+        assertPlaybackError(
+                TrackErrorCode.YOUTUBE_MATCH_NOT_FOUND,
+                "TRACK_404_YOUTUBE_MATCH_NOT_FOUND",
+                404
+        );
+    }
+
+    @Test
+    void YouTube_외부_API_오류는_Track_도메인_오류_응답을_반환한다() throws Exception {
+        assertPlaybackError(
+                TrackErrorCode.YOUTUBE_EXTERNAL_API_ERROR,
+                "TRACK_500_YOUTUBE_EXTERNAL_API_ERROR",
+                500
+        );
+    }
+
+    @Test
+    void 미인증_구간_재생_준비_요청은_401을_반환한다() throws Exception {
+        mockMvc.perform(post(PLAYBACK_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"itunesTrackId\":123}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("COMMON_401_UNAUTHORIZED"));
+
+        verifyNoInteractions(trackPlaybackPreparationService);
+    }
+
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             authenticatedSearch() {
         return get(ENDPOINT)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN);
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            authenticatedPlayback(String body) {
+        return post(PLAYBACK_ENDPOINT)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body);
+    }
+
+    private void assertPlaybackValidation(String body, String message) throws Exception {
+        mockMvc.perform(authenticatedPlayback(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value(message))
+                .andExpect(jsonPath("$.result").isEmpty());
+
+        verifyNoInteractions(trackPlaybackPreparationService);
+    }
+
+    private void assertPlaybackError(
+            TrackErrorCode errorCode,
+            String expectedCode,
+            int expectedStatus
+    ) throws Exception {
+        when(trackPlaybackPreparationService.prepare(any()))
+                .thenThrow(new TrackException(errorCode));
+
+        mockMvc.perform(authenticatedPlayback("{\"itunesTrackId\":123}"))
+                .andExpect(status().is(expectedStatus))
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value(expectedCode))
+                .andExpect(jsonPath("$.result").isEmpty());
     }
 
     private TrackResponse.SearchResult searchResult() {
@@ -214,5 +330,18 @@ class TrackControllerTest {
                 "https://audio.example/preview.m4a",
                 253000
         )));
+    }
+
+    private TrackResponse.PlaybackPreparation playbackResponse() {
+        return new TrackResponse.PlaybackPreparation(
+                123L,
+                "abcdefghijk",
+                "밤편지",
+                "아이유",
+                "Palette",
+                "https://image.example/cover.jpg",
+                "https://audio.example/preview.m4a",
+                253000
+        );
     }
 }

@@ -1,5 +1,7 @@
 package com.example.plimap.domain.track.dto.request;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.util.Locale;
 
 public final class TrackRequest {
@@ -23,5 +25,12 @@ public final class TrackRequest {
                     .replaceAll(CONSECUTIVE_WHITESPACE, " ")
                     .toLowerCase(Locale.ROOT);
         }
+    }
+
+    public record PlaybackPreparation(
+            @NotNull(message = "iTunes 트랙 ID를 입력해주세요.")
+            @Positive(message = "iTunes 트랙 ID는 양수여야 합니다.")
+            Long itunesTrackId
+    ) {
     }
 }
