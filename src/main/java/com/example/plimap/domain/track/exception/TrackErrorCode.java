@@ -9,6 +9,12 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum TrackErrorCode implements BaseErrorCode {
 
+    TRACK_EXTERNAL_API_ERROR(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "TRACK_EXTERNAL_API_ERROR",
+            "음악 검색 중 오류가 발생했습니다."
+    ),
+
     SELECTED_TRACK_CACHE_READER_NOT_AVAILABLE(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "TRACK_500_SELECTED_TRACK_CACHE_READER_NOT_AVAILABLE",

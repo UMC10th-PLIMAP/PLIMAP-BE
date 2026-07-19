@@ -1,0 +1,89 @@
+package com.example.plimap.domain.track.service.query.impl;
+
+import com.example.plimap.domain.track.dto.TrackMetadataCache;
+import com.example.plimap.domain.track.dto.TrackSearchCache;
+import com.example.plimap.domain.track.dto.request.TrackRequest;
+import com.example.plimap.domain.track.dto.response.TrackResponse;
+import com.example.plimap.domain.track.exception.TrackErrorCode;
+import com.example.plimap.domain.track.exception.TrackException;
+import com.example.plimap.domain.track.repository.TrackMetadataCacheRepository;
+import com.example.plimap.domain.track.repository.TrackSearchCacheRepository;
+import com.example.plimap.domain.track.service.query.TrackQueryService;
+import com.example.plimap.global.external.itunes.ItunesSearchClient;
+import com.example.plimap.global.external.itunes.ItunesClientException;
+import com.example.plimap.global.external.itunes.dto.ItunesSearchResponse;
+import java.util.Objects;
+import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class TrackQueryServiceImpl implements TrackQueryService {
+
+    private final ItunesSearchClient itunesSearchClient;
+    private final TrackMetadataCacheRepository trackMetadataCacheRepository;
+    private final TrackSearchCacheRepository trackSearchCacheRepository;
+
+    @Override
+    public TrackResponse.SearchResult searchTracks(TrackRequest.Search request) {
+        Objects.requireNonNull(request, "request must not be null");
+
+        Optional<TrackSearchCache> cachedResult = findCachedResult(request);
+        if (cachedResult.isPresent()) {
+            return cachedResult.get().toResponse();
+        }
+
+        ItunesSearchResponse itunesResponse;
+        try {
+            itunesResponse = itunesSearchClient.search(request.keyword(), request.limit());
+        } catch (ItunesClientException exception) {
+            throw new TrackException(TrackErrorCode.TRACK_EXTERNAL_API_ERROR, exception);
+        }
+        TrackResponse.SearchResult result = TrackResponse.SearchResult.from(itunesResponse);
+
+        saveMetadata(result);
+        saveSearchResult(request, result);
+
+        return result;
+    }
+
+    private Optional<TrackSearchCache> findCachedResult(TrackRequest.Search request) {
+        try {
+            return trackSearchCacheRepository.find(request.keyword(), request.limit());
+        } catch (DataAccessException exception) {
+            log.warn("트랙 검색 Redis 캐시 조회에 실패해 iTunes 검색을 수행합니다.", exception);
+            return Optional.empty();
+        }
+    }
+
+    private void saveMetadata(TrackResponse.SearchResult result) {
+        try {
+            result.tracks().stream()
+                    .map(TrackMetadataCache::from)
+                    .forEach(trackMetadataCacheRepository::save);
+        } catch (DataAccessException exception) {
+            log.warn("트랙 메타데이터 Redis 캐시 저장에 실패했습니다.", exception);
+        }
+    }
+
+    private void saveSearchResult(
+            TrackRequest.Search request,
+            TrackResponse.SearchResult result
+    ) {
+        try {
+            trackSearchCacheRepository.save(
+                    request.keyword(),
+                    request.limit(),
+                    TrackSearchCache.from(result)
+            );
+        } catch (DataAccessException exception) {
+            log.warn("트랙 검색 Redis 캐시 저장에 실패했습니다.", exception);
+        }
+    }
+}

@@ -59,3 +59,9 @@ springdoc:
 plimap:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+
+# iTunes Search API 설정
+itunes:
+  base-url: https://itunes.apple.com
+  connect-timeout: 2s
+  read-timeout: 5s
