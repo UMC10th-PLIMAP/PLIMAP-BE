@@ -14,7 +14,7 @@ public interface PinControllerDocs {
 
     @Operation(
             summary = "PIN 등록",
-            description = "해당 pin, 장소, 노래 정보를을 저장합니다.(Figma 기준 화면: PN-03-02)"
+            description = "해당 pin, 장소, 노래 정보를 저장합니다.(Figma 기준 화면: PN-03-02)"
     )
     public ResponseEntity<ApiResponse<PinResponse.Summary>> createPin(
             @AuthenticationPrincipal AuthMember currentMember,
