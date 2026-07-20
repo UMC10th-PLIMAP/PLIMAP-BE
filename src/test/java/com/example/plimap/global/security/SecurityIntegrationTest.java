@@ -41,6 +41,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         SecurityConfig.class,
         CorsConfig.class,
         SecurityErrorResponseHandler.class,
+        AuthCookieUtil.class,
+        HttpCookieOAuth2AuthorizationRequestRepository.class,
         SecurityIntegrationTest.TestController.class
 })
 @ActiveProfiles("test")
