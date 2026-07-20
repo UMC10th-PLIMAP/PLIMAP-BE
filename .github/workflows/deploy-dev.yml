@@ -10,10 +10,6 @@ on:
       - develop
   workflow_dispatch:
 
-permissions:
-  contents: read
-  id-token: write
-
 concurrency:
   group: deploy-dev
   cancel-in-progress: true
@@ -21,6 +17,9 @@ concurrency:
 jobs:
   deploy:
     name: Build and Deploy Dev
+    permissions:
+      contents: read
+      id-token: write
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&

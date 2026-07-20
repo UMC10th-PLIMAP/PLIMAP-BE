@@ -42,7 +42,9 @@ function ConvertTo-YamlSingleQuoted {
 function Write-EnvironmentFile {
     param(
         [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][string]$CallbackBaseUrl
+        [Parameter(Mandatory)][string]$CallbackBaseUrl,
+        [Parameter(Mandatory)][string]$FrontendOrigin,
+        [Parameter(Mandatory)][string]$FrontendRedirectUri
     )
 
     $lines = @(
@@ -93,7 +95,11 @@ if ($serviceDescribeExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($serviceUrl)
 
 $environmentFile = New-TemporaryFile
 try {
-    Write-EnvironmentFile -Path $environmentFile.FullName -CallbackBaseUrl $callbackBaseUrl
+    Write-EnvironmentFile `
+        -Path $environmentFile.FullName `
+        -CallbackBaseUrl $callbackBaseUrl `
+        -FrontendOrigin $FrontendOrigin `
+        -FrontendRedirectUri $FrontendRedirectUri
 
     $secretBindings = ($secretMap.GetEnumerator() | ForEach-Object {
         "$($_.Key)=$($_.Value):latest"
@@ -135,7 +141,11 @@ try {
     }
 
     if ($callbackBaseUrl -ne $deployedUrl) {
-        Write-EnvironmentFile -Path $environmentFile.FullName -CallbackBaseUrl $deployedUrl
+        Write-EnvironmentFile `
+            -Path $environmentFile.FullName `
+            -CallbackBaseUrl $deployedUrl `
+            -FrontendOrigin $FrontendOrigin `
+            -FrontendRedirectUri $FrontendRedirectUri
         Invoke-Gcloud -Arguments @(
             "run", "services", "update", $ServiceName,
             "--project=$ProjectId",
