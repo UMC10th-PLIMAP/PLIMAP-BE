@@ -1,11 +1,13 @@
 package com.example.plimap.global.security;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.WebUtils;
 
 @Component
 public class AuthCookieUtil {
@@ -18,6 +20,11 @@ public class AuthCookieUtil {
 
     public void setCookie(HttpServletResponse response, String name, String value, Duration maxAge) {
         response.addHeader(HttpHeaders.SET_COOKIE, build(name, value, maxAge).toString());
+    }
+
+    public String getCookieValue(HttpServletRequest request, String name) {
+        var cookie = WebUtils.getCookie(request, name);
+        return cookie != null ? cookie.getValue() : null;
     }
 
     public void clearCookie(HttpServletResponse response, String name) {

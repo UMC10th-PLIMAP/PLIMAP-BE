@@ -5,6 +5,7 @@ import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.global.security.BearerTokenRequestMatcher;
 import com.example.plimap.global.security.CsrfCookieFilter;
+import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.example.plimap.global.security.JwtAuthFilter;
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
@@ -37,6 +38,7 @@ public class SecurityConfig {
     private final MemberRepository memberRepository;
     private final SecurityErrorResponseHandler securityErrorResponseHandler;
     private final TokenBlacklistService tokenBlacklistService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     @Value("${cookie.secure}")
     private boolean cookieSecure;
@@ -89,8 +91,9 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .oauth2Login(oauth -> oauth
-                        .authorizationEndpoint(endpoint ->
-                                endpoint.baseUri("/oauth/authorization"))
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .baseUri("/oauth/authorization")
+                                .authorizationRequestRepository(authorizationRequestRepository))
                         .redirectionEndpoint(endpoint ->
                                 endpoint.baseUri("/oauth/callback/*"))
                         .userInfoEndpoint(userInfo ->

@@ -16,6 +16,8 @@ import com.example.plimap.domain.place.service.command.PlaceCommandService;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
+import com.example.plimap.global.security.AuthCookieUtil;
+import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
 import com.example.plimap.global.security.TokenBlacklistService;
@@ -36,6 +38,8 @@ import org.springframework.test.web.servlet.MockMvc;
         SecurityConfig.class,
         CorsConfig.class,
         SecurityErrorResponseHandler.class,
+        AuthCookieUtil.class,
+        HttpCookieOAuth2AuthorizationRequestRepository.class,
         GlobalExceptionHandler.class
 })
 @ActiveProfiles("test")
