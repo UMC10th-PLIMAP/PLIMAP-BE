@@ -60,6 +60,9 @@ public class PinCommandServiceImpl implements PinCommandService {
         pinRepository.save(pin);
 
         // 핀 태그 등록
+        if (request.tags().size() > 4) {
+            throw new TagException(TagErrorCode.TAG_SIZE_OVER_RANGE);
+        }
         List<Tag> tags = tagRepository.findAllByNameIn(request.tags());
         if (tags.size() != request.tags().size()) {
             throw new TagException(TagErrorCode.TAG_NOT_FOUND);
@@ -69,7 +72,7 @@ public class PinCommandServiceImpl implements PinCommandService {
         List<PinTag> pinTags = new ArrayList<>();
 
         for (int i = 0; i < tags.size(); i++) {
-            PinTag pinTag = PinTag.create(pin, tags.get(i), (short) (i + 1));
+            PinTag pinTag = PinTag.create(pin, tags.get(i), (short) (i));
             pinTags.add(pinTag);
         }
 

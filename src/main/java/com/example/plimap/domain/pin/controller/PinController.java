@@ -10,6 +10,8 @@ import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,11 +27,13 @@ public class PinController implements PinControllerDocs {
     private final PinCommandServiceImpl pinCommandService;
 
     @PostMapping("/pins")
-    public ApiResponse<PinResponse.Summary> createPin(
+    public ResponseEntity<ApiResponse<PinResponse.Summary>> createPin(
             @AuthenticationPrincipal AuthMember currentMember,
             @RequestBody @Valid PinRequest.Create request
     ) {
         PinResponse.Summary response = pinCommandService.createPin(currentMember.getMember(), request);
-        return ApiResponse.success(PinSuccessCode.PIN_CREATE_SUCCESS, response);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(PinSuccessCode.PIN_CREATE_SUCCESS, response));
     }
 }

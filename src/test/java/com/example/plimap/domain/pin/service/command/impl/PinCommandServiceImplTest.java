@@ -7,6 +7,7 @@ import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.repository.TagRepository;
@@ -70,7 +71,7 @@ class PinCommandServiceImplTest {
 
     Member member;
     Place place;
-    Tag tag1, tag2;
+    Tag tag1, tag2, tag3, tag4, tag5;
     PlaceTrack placeTrack;
 
     @BeforeEach
@@ -101,6 +102,21 @@ class PinCommandServiceImplTest {
 
         tag2 = Tag.builder()
                 .name("설렘")
+                .displayOrder((short) 2)
+                .build();
+
+        tag3 = Tag.builder()
+                .name("청량")
+                .displayOrder((short) 2)
+                .build();
+
+        tag4 = Tag.builder()
+                .name("신남")
+                .displayOrder((short) 2)
+                .build();
+
+        tag5 = Tag.builder()
+                .name("힙함")
                 .displayOrder((short) 2)
                 .build();
 
@@ -163,6 +179,52 @@ class PinCommandServiceImplTest {
             pinLocationValidator2.validateWithin500m(37.626144976334544, 127.09302024107471, place);})
                 .isInstanceOf(PinException.class)
                 .hasMessageContaining("사용자가 장소 반경이 500m 이상에 있어 PIN을 등록할 수 없습니다.");
+    }
+
+    @Test
+    void 존재하지_않는_태그면_예외가_발생한다() {
+        PinRequest.Create request = new PinRequest.Create(
+                37.5267894104045,
+                127.021265055462,
+                1L,
+                1L,
+                70000,
+                "한강 야경을 보면서 듣기 좋은 분위기의 노래예요.",
+                List.of("최고", "몽환"),
+                true
+        );
+
+        when(placeQueryService.getActivePlace(1L))
+                .thenReturn(place);
+        when(tagRepository.findAllByNameIn(anyList()))
+                .thenReturn(new ArrayList<>(List.of(tag1)));
+        when(trackCommandService.getOrCreatePlaceTrack(any(), any()))
+                .thenReturn(placeTrack);
+
+        assertThatThrownBy(() -> pinCommandService.createPin(member, request))
+                .isInstanceOf(TagException.class)
+                .hasMessageContaining("태그를 찾을 수 없습니다.");
+    }
+
+    @Test
+    void 태그가_5개_이상이면_예외가_발생한다() {
+        PinRequest.Create request = new PinRequest.Create(
+                37.5267894104045,
+                127.021265055462,
+                1L,
+                1L,
+                70000,
+                "한강 야경을 보면서 듣기 좋은 분위기의 노래예요.",
+                List.of( "몽환", "청량", "설렘", "신남", "힙함"),
+                true
+        );
+
+        when(placeQueryService.getActivePlace(1L))
+                .thenReturn(place);
+
+        assertThatThrownBy(() -> pinCommandService.createPin(member, request))
+                .isInstanceOf(TagException.class)
+                .hasMessageContaining("태그는 최대 4개만 등록 가능합니다.");
     }
 
 }

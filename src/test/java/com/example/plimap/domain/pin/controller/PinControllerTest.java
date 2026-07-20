@@ -80,7 +80,7 @@ class PinControllerTest {
     }
 
     @Test
-    void 핀_등록에_성공하면_200을_반환한다() throws Exception {
+    void 핀_등록에_성공하면_201을_반환한다() throws Exception {
         when(pinCommandService.createPin(
                 any(Member.class),
                 any(PinRequest.Create.class)
@@ -97,7 +97,7 @@ class PinControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validCreateRequest()))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_CREATED_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("핀이 생성되었습니다."))
