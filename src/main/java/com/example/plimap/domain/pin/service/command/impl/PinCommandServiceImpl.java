@@ -7,6 +7,7 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
+import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.exception.TagErrorCode;
@@ -14,6 +15,7 @@ import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.repository.TagRepository;
+import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
@@ -40,6 +42,7 @@ public class PinCommandServiceImpl implements PinCommandService {
     private final TagRepository tagRepository;
     private final PinTagRepository pinTagRepository;
     private final PinLocationValidator pinLocationValidator;
+    private final PinQueryRepository pinQueryRepository;
 
     @Override
     @Transactional
@@ -82,5 +85,23 @@ public class PinCommandServiceImpl implements PinCommandService {
         if (pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place)) {
             throw new PinException(PinErrorCode.MEMBER_PIN_ALREADY_EXISTS);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PinResponse.PinAvailability validatePinAvailability(PinRequest.PinAvailability request) {
+        // 현위치와 장소 사이 거리가 500m 이하인지 검증
+        double distanceFromUserMeters = pinLocationValidator.calculateDistance(request.userLatitude(), request.userLongitude(), request.latitude(), request.longitude());
+        if (distanceFromUserMeters > 500) {
+            return PinConverter.toPinAvailability(AvailabilityStatus.OUT_OF_RANGE, false, distanceFromUserMeters, null);
+        }
+
+        // 20m 이내에 PIN 존재하는지 검증
+        Double nearestPinDistanceMeters = pinQueryRepository.findNearestActivePinWithin20m(request.latitude(), request.longitude()).orElse(null);
+        if (nearestPinDistanceMeters != null) {
+            return PinConverter.toPinAvailability(AvailabilityStatus.TOO_CLOSE_TO_PIN, false, distanceFromUserMeters, nearestPinDistanceMeters);
+        }
+
+        return PinConverter.toPinAvailability(AvailabilityStatus.CREATABLE_NEW_PLACE, true, distanceFromUserMeters, null);
     }
 }

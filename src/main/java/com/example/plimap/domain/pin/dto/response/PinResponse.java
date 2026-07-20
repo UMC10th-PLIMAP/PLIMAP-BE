@@ -1,5 +1,6 @@
 package com.example.plimap.domain.pin.dto.response;
 
+import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import lombok.Builder;
 
 public class PinResponse {
@@ -18,5 +19,16 @@ public class PinResponse {
             String previewUrl,
 
             Integer clipStartMs
+    ) {}
+
+    @Builder
+    public record PinAvailability(
+            AvailabilityStatus status,
+
+            boolean registrable,
+
+            Double distanceFromUserMeters,
+
+            Double nearestPinDistanceMeters
     ) {}
 }

@@ -32,4 +32,12 @@ public class PinController implements PinControllerDocs {
         PinResponse.Summary response = pinCommandService.createPin(currentMember.getMember(), request);
         return ApiResponse.success(PinSuccessCode.PIN_CREATE_SUCCESS, response);
     }
+
+    @PostMapping("/pins/availability")
+    public ApiResponse<PinResponse.PinAvailability> validatePinAvailability(
+            @RequestBody @Valid PinRequest.PinAvailability request
+    ) {
+        PinResponse.PinAvailability response = pinCommandService.validatePinAvailability(request);
+        return ApiResponse.success(PinSuccessCode.PIN_AVAILABILITY_CHECK_SUCCESS, response);
+    }
 }

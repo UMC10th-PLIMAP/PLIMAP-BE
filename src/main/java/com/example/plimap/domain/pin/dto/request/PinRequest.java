@@ -43,4 +43,22 @@ public class PinRequest {
             Boolean feedOpen
     ) {
     }
+
+    public record PinAvailability(
+            @NotNull(message = "latitude는 널이어서는 안 됩니다.")
+            @Schema(description = "선택한 위치의 위도", example = "37.629000")
+            Double latitude,
+
+            @NotNull(message = "longitude는 널이어서는 안 됩니다.")
+            @Schema(description = "선택한 위치의 경도", example = "127.094000")
+            Double longitude,
+
+            @NotNull(message = "userLatitude는 널이어서는 안 됩니다.")
+            @Schema(description = "현재 사용자 위치의 위도", example = "37.626144976334544")
+            Double userLatitude,
+
+            @NotNull(message = "userLongitude는 널이어서는 안 됩니다.")
+            @Schema(description = "현재 사용자 위치의 경도", example = "127.09302024107471")
+            Double userLongitude
+    ) {}
 }
