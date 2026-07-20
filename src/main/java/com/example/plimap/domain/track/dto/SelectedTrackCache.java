@@ -10,4 +10,20 @@ public record SelectedTrackCache(
         String previewUrl,
         Integer durationMs
 ) {
+
+    public static SelectedTrackCache from(
+            TrackMetadataCache metadata,
+            String youtubeVideoId
+    ) {
+        return new SelectedTrackCache(
+                metadata.itunesTrackId(),
+                youtubeVideoId,
+                metadata.title(),
+                metadata.artistName(),
+                metadata.albumTitle(),
+                metadata.albumImageUrl(),
+                metadata.previewUrl(),
+                metadata.durationMs()
+        );
+    }
 }
