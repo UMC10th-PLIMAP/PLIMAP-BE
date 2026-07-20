@@ -7,6 +7,8 @@ public class PinResponse {
     public record Summary(
             Long pinId,
 
+            Long placeId,
+
             String writerNickname,
 
             String writerProfileImage,

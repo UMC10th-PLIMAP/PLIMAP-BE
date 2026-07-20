@@ -11,10 +11,12 @@ public class PinConverter {
     public static PinResponse.Summary toSummary(
             Member member,
             Pin pin,
-            Track track
+            Track track,
+            Long placeId
     ) {
         return PinResponse.Summary.builder()
                 .pinId(pin.getId())
+                .placeId(placeId)
                 .writerNickname(member.getNickname())
                 .writerProfileImage(member.getProfileImageObjectKey())
                 .introduction(pin.getIntroduction())

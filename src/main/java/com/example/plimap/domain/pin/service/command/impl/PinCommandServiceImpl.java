@@ -74,6 +74,6 @@ public class PinCommandServiceImpl implements PinCommandService {
 
         pinTagRepository.saveAll(pinTags);
 
-        return PinConverter.toSummary(currentMember, pin, placeTrack.getTrack());
+        return PinConverter.toSummary(currentMember, pin, placeTrack.getTrack(), place.getId());
     }
 }
