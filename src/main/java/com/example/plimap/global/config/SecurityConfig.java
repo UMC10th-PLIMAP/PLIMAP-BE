@@ -1,6 +1,7 @@
 package com.example.plimap.global.config;
 
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
+import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.global.security.BearerTokenRequestMatcher;
@@ -34,6 +35,7 @@ public class SecurityConfig {
 
     private final CustomOAuthService customOAuthService;
     private final OAuthSuccessHandler oAuthSuccessHandler;
+    private final OAuthFailureHandler oAuthFailureHandler;
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
     private final SecurityErrorResponseHandler securityErrorResponseHandler;
@@ -99,6 +101,7 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo ->
                                 userInfo.userService(customOAuthService))
                         .successHandler(oAuthSuccessHandler)
+                        .failureHandler(oAuthFailureHandler)
                 )
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                 .addFilterBefore(

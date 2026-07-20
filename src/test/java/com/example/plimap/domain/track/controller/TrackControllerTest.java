@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
+import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.repository.MemberRepository;
@@ -71,6 +72,9 @@ class TrackControllerTest {
 
     @MockitoBean
     private OAuthSuccessHandler oAuthSuccessHandler;
+
+    @MockitoBean
+    private OAuthFailureHandler oAuthFailureHandler;
 
     @MockitoBean
     private JwtUtil jwtUtil;
