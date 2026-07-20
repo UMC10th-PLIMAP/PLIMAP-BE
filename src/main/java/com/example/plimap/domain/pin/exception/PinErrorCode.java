@@ -19,6 +19,12 @@ public enum PinErrorCode implements BaseErrorCode {
             HttpStatus.BAD_REQUEST,
             "LOCATION_DISTANCE_INVALID",
                     "사용자가 장소 반경이 500m 이상에 있어 PIN을 등록할 수 없습니다."
+    ),
+
+    MEMBER_PIN_ALREADY_EXISTS(
+            HttpStatus.BAD_REQUEST,
+            "MEMBER_PIN_ALREADY_EXISTS",
+            "이미 해당 장소에 등록한 핀이 있습니다."
     );
 
     private final HttpStatus status;

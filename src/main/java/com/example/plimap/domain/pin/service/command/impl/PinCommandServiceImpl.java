@@ -7,6 +7,8 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
+import com.example.plimap.domain.pin.exception.PinErrorCode;
+import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.exception.TagErrorCode;
 import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinRepository;
@@ -56,6 +58,7 @@ public class PinCommandServiceImpl implements PinCommandService {
 
         // 핀 등록
         Pin pin = Pin.create(currentMember, place, placeTrack, request);
+        validatePinExistsByMemberAndPlace(currentMember, place);
         pinRepository.save(pin);
 
         // 핀 태그 등록
@@ -75,5 +78,11 @@ public class PinCommandServiceImpl implements PinCommandService {
         pinTagRepository.saveAll(pinTags);
 
         return PinConverter.toSummary(currentMember, pin, placeTrack.getTrack(), place.getId());
+    }
+
+    private void validatePinExistsByMemberAndPlace(Member member, Place place) {
+        if (pinRepository.existsByMemberAndPlace(member, place)) {
+            throw new PinException(PinErrorCode.MEMBER_PIN_ALREADY_EXISTS);
+        }
     }
 }
