@@ -13,7 +13,8 @@ public enum MemberSuccessCode implements BaseSuccessCode {
     ONBOARDING_COMPLETED(HttpStatus.OK, "MEMBER_200_ONBOARDING_COMPLETED", "온보딩이 완료되었습니다."),
     NICKNAME_CHECKED(HttpStatus.OK, "MEMBER_200_NICKNAME_CHECKED", "닉네임 사용 가능 여부를 조회했습니다."),
     LOGOUT(HttpStatus.OK, "MEMBER_200_LOGOUT", "로그아웃되었습니다."),
-    PROFILE_UPDATED(HttpStatus.OK, "MEMBER_200_PROFILE_UPDATED", "프로필이 수정되었습니다.");
+    PROFILE_UPDATED(HttpStatus.OK, "MEMBER_200_PROFILE_UPDATED", "프로필이 수정되었습니다."),
+    FOLLOWED(HttpStatus.OK, "MEMBER_200_FOLLOWED", "팔로우했습니다.");
 
     private final HttpStatus status;
     private final String code;
