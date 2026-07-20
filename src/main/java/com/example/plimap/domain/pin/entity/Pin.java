@@ -4,8 +4,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.track.entity.PlaceTrack;
-import com.example.plimap.domain.track.entity.Track;
-import com.example.plimap.global.entity.BaseEntity;
+import com.example.plimap.global.entity.SoftDeleteEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -19,7 +18,7 @@ import java.util.List;
 @Getter
 @Table(name = "pin")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Pin extends BaseEntity {
+public class Pin extends SoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

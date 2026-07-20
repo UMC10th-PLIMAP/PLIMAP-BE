@@ -6,5 +6,5 @@ import com.example.plimap.domain.place.entity.Place;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PinRepository extends JpaRepository<Pin, Long> {
-    Boolean existsByMemberAndPlace(Member member, Place place);
+    Boolean existsByMemberAndPlaceAndDeletedAtIsNull(Member member, Place place);
 }

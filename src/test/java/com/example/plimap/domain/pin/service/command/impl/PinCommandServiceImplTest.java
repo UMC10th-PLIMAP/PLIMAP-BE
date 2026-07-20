@@ -14,6 +14,7 @@ import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.repository.PlaceRepository;
+import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
@@ -50,9 +51,6 @@ class PinCommandServiceImplTest {
     private final PinLocationValidator pinLocationValidator2 = new PinLocationValidator();
 
     @Mock
-    private PlaceRepository placeRepository;
-
-    @Mock
     private TrackCommandServiceImpl trackCommandService;
 
     @Mock
@@ -63,6 +61,9 @@ class PinCommandServiceImplTest {
 
     @Mock
     private PinTagRepository pinTagRepository;
+
+    @Mock
+    private PlaceQueryService placeQueryService;
 
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
@@ -128,8 +129,8 @@ class PinCommandServiceImplTest {
                 true
         );
 
-        when(placeRepository.findById(1L))
-                .thenReturn(Optional.of(place));
+        when(placeQueryService.getActivePlace(1L))
+                .thenReturn(place);
         when(tagRepository.findAllByNameIn(anyList()))
                 .thenReturn(new ArrayList<>(List.of(tag1, tag2)));
         when(trackCommandService.getOrCreatePlaceTrack(any(), any()))
