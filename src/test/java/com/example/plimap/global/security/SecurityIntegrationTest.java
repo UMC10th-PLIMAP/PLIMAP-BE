@@ -1,6 +1,7 @@
 package com.example.plimap.global.security;
 
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
+import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.repository.MemberRepository;
@@ -60,6 +61,9 @@ class SecurityIntegrationTest {
 
     @MockitoBean
     private OAuthSuccessHandler oAuthSuccessHandler;
+
+    @MockitoBean
+    private OAuthFailureHandler oAuthFailureHandler;
 
     @MockitoBean
     private JwtUtil jwtUtil;
