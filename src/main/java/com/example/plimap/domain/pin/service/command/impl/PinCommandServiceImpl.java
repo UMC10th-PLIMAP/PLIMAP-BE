@@ -17,9 +17,8 @@ import com.example.plimap.domain.pin.repository.TagRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
-import com.example.plimap.domain.place.exception.PlaceErrorCode;
-import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceRepository;
+import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.dto.request.TrackCommand;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.service.command.TrackCommandService;
@@ -35,7 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PinCommandServiceImpl implements PinCommandService {
 
-    private final PlaceRepository placeRepository;
+    private final PlaceQueryService placeQueryService;
     private final TrackCommandService trackCommandService;
     private final PinRepository pinRepository;
     private final TagRepository tagRepository;
@@ -47,8 +46,7 @@ public class PinCommandServiceImpl implements PinCommandService {
     public PinResponse.Summary createPin(Member currentMember, PinRequest.Create request) {
 
         // 장소 조회
-        Place place = placeRepository.findById(request.placeId())
-                .orElseThrow(() -> new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND));
+        Place place = placeQueryService.getActivePlace(request.placeId());
 
         // 현위치와 장소 사이 거리가 500m 이하인지 검증
         pinLocationValidator.validateWithin500m(request.userLatitude(), request.userLongitude(), place);
@@ -81,7 +79,7 @@ public class PinCommandServiceImpl implements PinCommandService {
     }
 
     private void validatePinExistsByMemberAndPlace(Member member, Place place) {
-        if (pinRepository.existsByMemberAndPlace(member, place)) {
+        if (pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place)) {
             throw new PinException(PinErrorCode.MEMBER_PIN_ALREADY_EXISTS);
         }
     }
