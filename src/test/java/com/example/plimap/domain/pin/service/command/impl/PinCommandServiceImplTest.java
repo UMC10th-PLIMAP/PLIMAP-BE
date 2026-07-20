@@ -28,6 +28,7 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
@@ -62,6 +63,9 @@ class PinCommandServiceImplTest {
 
     @Mock
     private PinTagRepository pinTagRepository;
+
+    @Spy
+    private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
     Member member;
     Place place;
