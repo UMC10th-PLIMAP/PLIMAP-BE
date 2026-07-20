@@ -148,6 +148,7 @@ try {
     foreach ($path in @(
         "/actuator/health/liveness",
         "/actuator/health/readiness",
+        "/actuator/health",
         "/swagger-ui/index.html",
         "/v3/api-docs"
     )) {
