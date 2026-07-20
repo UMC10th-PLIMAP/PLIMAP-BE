@@ -45,6 +45,15 @@ class HttpCookieOAuth2AuthorizationRequestRepositoryTest {
     }
 
     @Test
+    void 손상된_쿠키_값은_예외없이_null을_반환한다() {
+        setUpAuthCookieUtil();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie(COOKIE_NAME, "not-a-valid-base64-or-json!!"));
+
+        assertThat(repository.loadAuthorizationRequest(request)).isNull();
+    }
+
+    @Test
     void 인가_요청이_null이면_쿠키를_즉시_만료시킨다() {
         setUpAuthCookieUtil();
         MockHttpServletRequest request = new MockHttpServletRequest();

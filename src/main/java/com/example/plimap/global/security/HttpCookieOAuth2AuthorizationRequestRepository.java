@@ -29,8 +29,14 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         if (cookieValue == null) {
             return null;
         }
-        byte[] bytes = Base64.getUrlDecoder().decode(cookieValue);
-        return objectMapper.readValue(bytes, CookiePayload.class).toAuthorizationRequest();
+        // 클라이언트가 조작하거나 손상시킨 쿠키 값은 조용히 무시하고 인증 실패로 자연스럽게
+        // 이어지도록 한다. 그대로 던지면 AuthenticationException이 아니라서 500으로 새어나간다.
+        try {
+            byte[] bytes = Base64.getUrlDecoder().decode(cookieValue);
+            return objectMapper.readValue(bytes, CookiePayload.class).toAuthorizationRequest();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override
