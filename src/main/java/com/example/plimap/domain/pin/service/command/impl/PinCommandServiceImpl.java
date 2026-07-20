@@ -22,7 +22,7 @@ import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.track.dto.request.TrackCommand;
 import com.example.plimap.domain.track.entity.PlaceTrack;
-import com.example.plimap.domain.track.service.command.impl.TrackCommandServiceImpl;
+import com.example.plimap.domain.track.service.command.TrackCommandService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +36,7 @@ import java.util.List;
 public class PinCommandServiceImpl implements PinCommandService {
 
     private final PlaceRepository placeRepository;
-    private final TrackCommandServiceImpl trackCommandService;
+    private final TrackCommandService trackCommandService;
     private final PinRepository pinRepository;
     private final TagRepository tagRepository;
     private final PinTagRepository pinTagRepository;
