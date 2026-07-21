@@ -2,7 +2,7 @@
 
 > 위치 기반 음악 공유 서비스 데이터베이스 설계서
 >
-> v0.5.1 | 2026-07-12
+> v0.6.0 | 2026-07-19
 
 ---
 
@@ -455,7 +455,6 @@ CREATE TABLE pin
     place_id       BIGINT       NOT NULL,
     place_track_id BIGINT       NOT NULL,
     clip_start_ms  INTEGER      NOT NULL,
-    clip_end_ms    INTEGER      NOT NULL,
     introduction   VARCHAR(100) NOT NULL DEFAULT '',
     is_feed_public BOOLEAN      NOT NULL DEFAULT TRUE,
     like_count     INTEGER      NOT NULL DEFAULT 0,
@@ -586,15 +585,16 @@ CREATE INDEX idx_pin_like_member
 
 ## 변경 이력
 
-| 버전 | 날짜 | 변경 내용 |
-|---|---|---|
-| 0.1.0 | 2026-06-28 | Figma 화면 분석을 기반으로 PostgreSQL 14개 테이블을 설계하고 member·place·track·pin 도메인으로 구분, tag를 pin 도메인에 포함 |
-| 0.1.1 | 2026-06-28 | 매핑 테이블을 원본으로 유지하면서 place_track에 PIN·하트·북마크 수, pin에 따봉 수를 조회용 카운트 컬럼으로 추가 |
-| 0.2.0 | 2026-06-28 | 위치를 PostGIS geography와 GiST 인덱스로 전환하고 화면 정렬 인덱스·고정 태그 카탈로그·API용 PIN Enum을 반영 |
-| 0.3.0 | 2026-07-02 | 모든 JPA 엔티티에 BaseEntity 공통 시간 컬럼과 소프트 삭제 정책을 적용하고, updated_at 관리를 JPA Auditing으로 통일 |
-| 0.3.1 | 2026-07-02 | Soft Delete를 member·place·place_track·pin에만 선택 적용하고, AWS RDS에서도 단일 애플리케이션 쓰기 구조인 동안 JPA Auditing을 유지하도록 정책 명확화 |
-| 0.4.0 | 2026-07-04 | PIN 피드 공개 여부를 `is_feed_public` Boolean 컬럼으로 추가하고, 공개 PIN 조회 인덱스와 `place_track.public_pin_count` 집계 정책을 반영 |
-| 0.4.1 | 2026-07-04 | 장소별 곡 북마크인 `place_track_bookmark`와 `place_track.bookmark_count`를 제거하고, 장소 자체를 저장하는 `place_bookmark`로 변경 |
-| 0.5.0 | 2026-07-05 | member 테이블에 `name`(이름)·`introduction`(소개) 컬럼 및 CHECK 제약 추가, 팔로우 관계 관리를 위한 `member_follow` 테이블 추가, 로컬 DB 마이그레이션 섹션 추가 |
-| 0.5.1 | 2026-07-12 | `place` 테이블에 nullable `category VARCHAR(100)` 컬럼 추가 |
+| 버전 | 날짜         | 변경 내용                                                                                                                 |
+|---|------------|-----------------------------------------------------------------------------------------------------------------------|
+| 0.1.0 | 2026-06-28 | Figma 화면 분석을 기반으로 PostgreSQL 14개 테이블을 설계하고 member·place·track·pin 도메인으로 구분, tag를 pin 도메인에 포함                          |
+| 0.1.1 | 2026-06-28 | 매핑 테이블을 원본으로 유지하면서 place_track에 PIN·하트·북마크 수, pin에 따봉 수를 조회용 카운트 컬럼으로 추가                                              |
+| 0.2.0 | 2026-06-28 | 위치를 PostGIS geography와 GiST 인덱스로 전환하고 화면 정렬 인덱스·고정 태그 카탈로그·API용 PIN Enum을 반영                                          |
+| 0.3.0 | 2026-07-02 | 모든 JPA 엔티티에 BaseEntity 공통 시간 컬럼과 소프트 삭제 정책을 적용하고, updated_at 관리를 JPA Auditing으로 통일                                    |
+| 0.3.1 | 2026-07-02 | Soft Delete를 member·place·place_track·pin에만 선택 적용하고, AWS RDS에서도 단일 애플리케이션 쓰기 구조인 동안 JPA Auditing을 유지하도록 정책 명확화        |
+| 0.4.0 | 2026-07-04 | PIN 피드 공개 여부를 `is_feed_public` Boolean 컬럼으로 추가하고, 공개 PIN 조회 인덱스와 `place_track.public_pin_count` 집계 정책을 반영             |
+| 0.4.1 | 2026-07-04 | 장소별 곡 북마크인 `place_track_bookmark`와 `place_track.bookmark_count`를 제거하고, 장소 자체를 저장하는 `place_bookmark`로 변경               |
+| 0.5.0 | 2026-07-05 | member 테이블에 `name`(이름)·`introduction`(소개) 컬럼 및 CHECK 제약 추가, 팔로우 관계 관리를 위한 `member_follow` 테이블 추가, 로컬 DB 마이그레이션 섹션 추가  |
+| 0.5.1 | 2026-07-12 | `place` 테이블에 nullable `category VARCHAR(100)` 컬럼 추가                                                                   |
 | 0.5.2 | 2026-07-15 | 닉네임 최대 길이를 7자에서 10자로 확장(`VARCHAR(10)`, `chk_member_nickname_length`), 이름 최소 길이를 1자에서 2자로 강화(`chk_member_name_length`) |
+| 0.6.0 | 2026-07-19 | pin에서 clip_end_ms를 삭제                                                                                                 |

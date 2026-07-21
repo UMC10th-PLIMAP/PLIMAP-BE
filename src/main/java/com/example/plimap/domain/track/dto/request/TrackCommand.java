@@ -1,10 +1,13 @@
 package com.example.plimap.domain.track.dto.request;
 
+import lombok.Builder;
+
 public final class TrackCommand {
 
     private TrackCommand() {
     }
 
+    @Builder
     public record Create(
             Long itunesTrackId
     ) {
