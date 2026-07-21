@@ -34,6 +34,7 @@ Cloud Run은 컨테이너에 `PORT` 환경변수를 주입합니다. 애플리�
 | `KAKAO_REST_API_SECRET` | Secret Manager | 카카오 OAuth Client Secret |
 | `GOOGLE_CLIENT_ID` | Secret Manager | Google OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | Secret Manager | Google OAuth Client Secret |
+| `YOUTUBE_API_KEY` | Secret Manager | YouTube Data API 키 |
 | `KAKAO_REDIRECT_URI` | 환경변수 | dev API의 카카오 콜백 URL |
 | `GOOGLE_REDIRECT_URI` | 환경변수 | dev API의 Google 콜백 URL |
 | `OAUTH_REDIRECT_URI` | 환경변수 | 로그인 완료 후 dev 프론트엔드 URL |

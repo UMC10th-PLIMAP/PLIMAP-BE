@@ -22,6 +22,7 @@ $secretMap = [ordered]@{
     KAKAO_REST_API_SECRET      = "plimap-dev-kakao-rest-api-secret"
     GOOGLE_CLIENT_ID           = "plimap-dev-google-client-id"
     GOOGLE_CLIENT_SECRET       = "plimap-dev-google-client-secret"
+    YOUTUBE_API_KEY            = "plimap-dev-youtube-api-key"
 }
 
 function Invoke-Gcloud {

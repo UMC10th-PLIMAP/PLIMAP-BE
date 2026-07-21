@@ -19,6 +19,7 @@
 | `KAKAO_REST_API_SECRET` | `plimap-dev-kakao-rest-api-secret` |
 | `GOOGLE_CLIENT_ID` | `plimap-dev-google-client-id` |
 | `GOOGLE_CLIENT_SECRET` | `plimap-dev-google-client-secret` |
+| `YOUTUBE_API_KEY` | `plimap-dev-youtube-api-key` |
 
 비밀값은 명령행 인자, 저장소 파일 또는 채팅에 입력하지 않습니다. GCP Console의 Secret Manager에서 각 Secret에 새 버전으로 추가합니다. 구체적인 입력과 교체 절차는 [SECRETS.md](SECRETS.md)를 참고합니다.
 
