@@ -20,4 +20,12 @@ public interface PinControllerDocs {
             @AuthenticationPrincipal AuthMember currentMember,
             @RequestBody @Valid PinRequest.Create request
     );
+
+    @Operation(
+            summary = "지도 선택 위치 검증",
+            description = "해당 위치에 핀을 등록할 수 있는지 검증합니다. (Figma 기준 화면: PN-02-02)"
+    )
+    public ResponseEntity<ApiResponse<PinResponse.PinAvailability>> validatePinAvailability(
+            @RequestBody @Valid PinRequest.PinAvailability request
+    ) ;
 }
