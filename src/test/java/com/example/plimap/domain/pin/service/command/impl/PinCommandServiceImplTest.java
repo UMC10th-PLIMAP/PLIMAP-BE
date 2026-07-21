@@ -6,6 +6,7 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
+import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinRepository;
@@ -14,12 +15,9 @@ import com.example.plimap.domain.pin.repository.TagRepository;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
-import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
-import com.example.plimap.domain.track.repository.PlaceTrackRepository;
-import com.example.plimap.domain.track.repository.TrackRepository;
 import com.example.plimap.domain.track.service.command.impl.TrackCommandServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,13 +33,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PinCommandServiceImplTest {
@@ -132,6 +127,7 @@ class PinCommandServiceImplTest {
                 .build();
     }
 
+    // createPin 테스트
     @Test
     void 핀_생성에_성공한다() {
         PinRequest.Create request = new PinRequest.Create(
@@ -208,16 +204,16 @@ class PinCommandServiceImplTest {
 
     @Test
     void 태그가_5개_이상이면_예외가_발생한다() {
-        PinRequest.Create request = new PinRequest.Create(
-                37.5267894104045,
-                127.021265055462,
-                1L,
-                1L,
-                70000,
-                "한강 야경을 보면서 듣기 좋은 분위기의 노래예요.",
-                List.of( "몽환", "청량", "설렘", "신남", "힙함"),
-                true
-        );
+        PinRequest.Create request = PinRequest.Create.builder()
+                .userLatitude(37.5267894104045)
+                .userLongitude(127.021265055462)
+                .placeId(1L)
+                .itunesTrackId(1L)
+                .clipStartMs(70000)
+                .introduction("한강 야경을 보면서 듣기 좋은 분위기의 노래예요.")
+                .tags(List.of("몽환", "청량", "설렘", "신남", "힙함"))
+                .feedOpen(true)
+                .build();
 
         when(placeQueryService.getActivePlace(1L))
                 .thenReturn(place);
@@ -226,5 +222,4 @@ class PinCommandServiceImplTest {
                 .isInstanceOf(TagException.class)
                 .hasMessageContaining("태그는 최대 4개만 등록 가능합니다.");
     }
-
 }
