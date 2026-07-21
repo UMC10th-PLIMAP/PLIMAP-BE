@@ -14,6 +14,7 @@ dev 환경의 비밀값은 저장소나 채팅이 아니라 GCP 프로젝트 `pl
 | `KAKAO_REST_API_SECRET` | `plimap-dev-kakao-rest-api-secret` |
 | `GOOGLE_CLIENT_ID` | `plimap-dev-google-client-id` |
 | `GOOGLE_CLIENT_SECRET` | `plimap-dev-google-client-secret` |
+| `YOUTUBE_API_KEY` | `plimap-dev-youtube-api-key` |
 
 ## 최초 입력 또는 값 교체
 
