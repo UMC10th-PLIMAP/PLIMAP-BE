@@ -38,4 +38,14 @@ public class PinConverter {
                 .nearestPinDistanceMeters(nearestPinDistanceMeters)
                 .build();
     }
+
+    public static PinResponse.UpdatedPin toUpdatedPin(
+            Pin pin
+    ) {
+        return PinResponse.UpdatedPin.builder()
+                .introduction(pin.getIntroduction())
+                .tags(pin.getPinTagList().stream().map(pinTag -> pinTag.getTag().getName()).toList())
+                .feedOpen(pin.isFeedPublic())
+                .build();
+    }
 }

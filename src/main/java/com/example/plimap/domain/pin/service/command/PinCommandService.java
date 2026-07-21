@@ -6,4 +6,6 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 
 public interface PinCommandService {
     PinResponse.Summary createPin(Member currentMember, PinRequest.Create request);
+
+    PinResponse.UpdatedPin updatePin(Member currentMember, PinRequest.Update request, Long pinId);
 }

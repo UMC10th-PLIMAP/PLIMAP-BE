@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 
 public interface PinControllerDocs {
@@ -28,4 +29,14 @@ public interface PinControllerDocs {
     public ResponseEntity<ApiResponse<PinResponse.PinAvailability>> validatePinAvailability(
             @RequestBody @Valid PinRequest.PinAvailability request
     ) ;
+
+    @Operation(
+            summary = "PIN 수정",
+            description = "핀 내용을 수정합니다. (Figma 기준 화면: 추후 추가 예정)"
+    )
+    public ResponseEntity<ApiResponse<PinResponse.UpdatedPin>> updatePin(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestBody @Valid PinRequest.Update request,
+            @PathVariable Long pinId
+    );
 }

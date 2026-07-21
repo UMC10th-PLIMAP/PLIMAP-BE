@@ -3,6 +3,8 @@ package com.example.plimap.domain.pin.dto.response;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import lombok.Builder;
 
+import java.util.List;
+
 public class PinResponse {
     @Builder
     public record Summary(
@@ -30,5 +32,14 @@ public class PinResponse {
             Double distanceFromUserMeters,
 
             Double nearestPinDistanceMeters
+    ) {}
+
+    @Builder
+    public record UpdatedPin(
+            String introduction,
+
+            List<String> tags,
+
+            Boolean feedOpen
     ) {}
 }
