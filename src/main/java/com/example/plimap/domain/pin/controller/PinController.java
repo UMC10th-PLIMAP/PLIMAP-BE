@@ -6,6 +6,7 @@ import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.exception.PinSuccessCode;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PinController implements PinControllerDocs {
 
     private final PinCommandServiceImpl pinCommandService;
+    private final PinQueryService pinQueryService;
 
     @PostMapping("/pins")
     public ResponseEntity<ApiResponse<PinResponse.Summary>> createPin(
@@ -41,9 +43,9 @@ public class PinController implements PinControllerDocs {
     public ResponseEntity<ApiResponse<PinResponse.PinAvailability>> validatePinAvailability(
             @RequestBody @Valid PinRequest.PinAvailability request
     ) {
-        PinResponse.PinAvailability response = pinCommandService.validatePinAvailability(request);
+        PinResponse.PinAvailability response = pinQueryService.validatePinAvailability(request);
         return ResponseEntity
-                .status(HttpStatus.CREATED)
+                .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PIN_AVAILABILITY_CHECK_SUCCESS, response));
     }
 }

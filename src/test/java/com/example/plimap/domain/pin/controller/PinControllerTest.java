@@ -11,6 +11,7 @@ import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
+import com.example.plimap.domain.pin.service.query.impl.PinQueryServiceImpl;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -71,6 +72,9 @@ class PinControllerTest {
 
     @MockitoBean
     private PinCommandServiceImpl pinCommandService;
+
+    @MockitoBean
+    private PinQueryServiceImpl pinQueryService;
 
     @MockitoBean
     private OAuthFailureHandler oAuthFailureHandler;
@@ -136,8 +140,8 @@ class PinControllerTest {
     }
 
     @Test
-    void 지도_선택위치_검증_등록가능시_201을_반환한다() throws Exception {
-        when(pinCommandService.validatePinAvailability(
+    void 지도_선택위치_검증_등록가능시_200을_반환한다() throws Exception {
+        when(pinQueryService.validatePinAvailability(
                 any(PinRequest.PinAvailability.class)
         )).thenReturn(PinResponse.PinAvailability.builder()
                 .status(AvailabilityStatus.CREATABLE_NEW_PLACE)
@@ -151,7 +155,7 @@ class PinControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validPinAvailabilityRequest()))
-                .andExpect(status().isCreated())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("PIN 등록 가능 여부 검증에 성공했습니다."))
@@ -162,8 +166,8 @@ class PinControllerTest {
     }
 
     @Test
-    void 지도_선택위치_검증_500m_초과시_201을_반환한다() throws Exception {
-        when(pinCommandService.validatePinAvailability(
+    void 지도_선택위치_검증_500m_초과시_200을_반환한다() throws Exception {
+        when(pinQueryService.validatePinAvailability(
                 any(PinRequest.PinAvailability.class)
         )).thenReturn(PinResponse.PinAvailability.builder()
                 .status(AvailabilityStatus.OUT_OF_RANGE)
@@ -177,7 +181,7 @@ class PinControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validPinAvailabilityRequest()))
-                .andExpect(status().isCreated())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("PIN 등록 가능 여부 검증에 성공했습니다."))
@@ -188,8 +192,8 @@ class PinControllerTest {
     }
 
     @Test
-    void 지도_선택위치_검증_20m_이내_핀_존재시_201을_반환한다() throws Exception {
-        when(pinCommandService.validatePinAvailability(
+    void 지도_선택위치_검증_20m_이내_핀_존재시_200을_반환한다() throws Exception {
+        when(pinQueryService.validatePinAvailability(
                 any(PinRequest.PinAvailability.class)
         )).thenReturn(PinResponse.PinAvailability.builder()
                 .status(AvailabilityStatus.TOO_CLOSE_TO_PIN)
@@ -203,7 +207,7 @@ class PinControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validPinAvailabilityRequest()))
-                .andExpect(status().isCreated())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("PIN 등록 가능 여부 검증에 성공했습니다."))

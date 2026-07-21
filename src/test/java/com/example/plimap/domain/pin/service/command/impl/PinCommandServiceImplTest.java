@@ -13,6 +13,8 @@ import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.repository.TagRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.pin.service.query.impl.PinQueryServiceImpl;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
@@ -65,6 +67,9 @@ class PinCommandServiceImplTest {
 
     @Mock
     private PlaceQueryService placeQueryService;
+
+    @InjectMocks
+    private PinQueryServiceImpl pinQueryService;
 
     @Mock
     private PinQueryRepository pinQueryRepository;
@@ -243,7 +248,7 @@ class PinCommandServiceImplTest {
         when(pinLocationValidator.calculateDistance(request.userLatitude(), request.userLongitude(), request.latitude(), request.longitude()))
         .thenReturn(328.98070823323764);
 
-        PinResponse.PinAvailability result = pinCommandService.validatePinAvailability(request);
+        PinResponse.PinAvailability result = pinQueryService.validatePinAvailability(request);
         assertThat(result.status())
                 .isEqualTo(AvailabilityStatus.CREATABLE_NEW_PLACE);
         assertThat(result.registrable()).isTrue();
@@ -261,7 +266,7 @@ class PinCommandServiceImplTest {
         when(pinLocationValidator.calculateDistance(request.userLatitude(), request.userLongitude(), request.latitude(), request.longitude()))
                 .thenReturn(17838.988483971672);
 
-        PinResponse.PinAvailability result = pinCommandService.validatePinAvailability(request);
+        PinResponse.PinAvailability result = pinQueryService.validatePinAvailability(request);
         assertThat(result.status())
                 .isEqualTo(AvailabilityStatus.OUT_OF_RANGE);
         assertThat(result.registrable()).isFalse();
@@ -285,7 +290,7 @@ class PinCommandServiceImplTest {
         when(pinQueryRepository.findNearestActivePinWithin20m(request.latitude(), request.longitude()))
                 .thenReturn(Optional.of(11.09875689));
 
-        PinResponse.PinAvailability result = pinCommandService.validatePinAvailability(request);
+        PinResponse.PinAvailability result = pinQueryService.validatePinAvailability(request);
         assertThat(result.status())
                 .isEqualTo(AvailabilityStatus.TOO_CLOSE_TO_PIN);
         assertThat(result.registrable()).isFalse();
