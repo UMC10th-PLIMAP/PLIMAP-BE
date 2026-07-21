@@ -2,8 +2,11 @@ package com.example.plimap.domain.member.service.command.impl;
 
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.entity.MemberFollow;
+import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
+import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberCommandServiceImpl implements MemberCommandService {
 
     private final MemberRepository memberRepository;
+    private final MemberFollowRepository memberFollowRepository;
     private final MemberQueryService memberQueryService;
 
     @Override
@@ -70,5 +74,31 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         }
 
         return member;
+    }
+
+    @Override
+    @Transactional
+    public void follow(Long followerId, Long followingId) {
+        if (followerId.equals(followingId)) {
+            throw new MemberException(MemberErrorCode.CANNOT_FOLLOW_SELF);
+        }
+
+        Member follower = memberRepository.findByIdAndDeletedAtIsNull(followerId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Member following = memberRepository.findByIdAndDeletedAtIsNull(followingId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        MemberFollowId id = new MemberFollowId(followerId, followingId);
+        if (memberFollowRepository.existsById(id)) {
+            throw new MemberException(MemberErrorCode.ALREADY_FOLLOWING);
+        }
+
+        try {
+            memberFollowRepository.saveAndFlush(MemberFollow.create(follower, following));
+        } catch (DataIntegrityViolationException e) {
+            // 동시에 같은 대상을 팔로우하는 경우 사전 체크를 통과했더라도
+            // 복합 PK(pk_member_follow)에서 최종적으로 걸러진다.
+            throw new MemberException(MemberErrorCode.ALREADY_FOLLOWING, e);
+        }
     }
 }

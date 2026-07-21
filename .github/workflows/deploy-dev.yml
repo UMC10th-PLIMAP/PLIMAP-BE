@@ -1,0 +1,84 @@
+name: Deploy Dev
+
+on:
+  workflow_run:
+    workflows:
+      - PLIMAP CI
+    types:
+      - completed
+    branches:
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and Deploy Dev
+    permissions:
+      contents: read
+      id-token: write
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'develop')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: plimap
+          workload_identity_provider: projects/902362979890/locations/global/workloadIdentityPools/github-actions/providers/plimap-be
+          service_account: plimap-github-deployer@plimap.iam.gserviceaccount.com
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          version: "576.0.0"
+
+      - name: Configure Artifact Registry authentication
+        run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
+
+      - name: Set image name
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: echo "IMAGE=asia-northeast3-docker.pkg.dev/plimap/plimap-docker/api:${DEPLOY_SHA}" >> "$GITHUB_ENV"
+
+      - name: Build container image
+        run: docker build --pull --tag "$IMAGE" .
+
+      - name: Push container image
+        run: docker push "$IMAGE"
+
+      - name: Deploy and verify Cloud Run dev
+        shell: pwsh
+        env:
+          DEV_FRONTEND_ORIGIN: ${{ vars.DEV_FRONTEND_ORIGIN }}
+          DEV_FRONTEND_REDIRECT_URI: ${{ vars.DEV_FRONTEND_REDIRECT_URI }}
+        run: |
+          $frontendOrigin = if ($env:DEV_FRONTEND_ORIGIN) {
+            $env:DEV_FRONTEND_ORIGIN
+          } else {
+            "http://localhost:3000"
+          }
+          $frontendRedirectUri = if ($env:DEV_FRONTEND_REDIRECT_URI) {
+            $env:DEV_FRONTEND_REDIRECT_URI
+          } else {
+            "http://localhost:3000/home"
+          }
+
+          ./scripts/gcp/deploy-dev.ps1 `
+            -Image $env:IMAGE `
+            -FrontendOrigin $frontendOrigin `
+            -FrontendRedirectUri $frontendRedirectUri

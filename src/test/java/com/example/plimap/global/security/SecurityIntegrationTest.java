@@ -1,6 +1,7 @@
 package com.example.plimap.global.security;
 
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
+import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.repository.MemberRepository;
@@ -41,6 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         SecurityConfig.class,
         CorsConfig.class,
         SecurityErrorResponseHandler.class,
+        AuthCookieUtil.class,
+        HttpCookieOAuth2AuthorizationRequestRepository.class,
         SecurityIntegrationTest.TestController.class
 })
 @ActiveProfiles("test")
@@ -58,6 +61,9 @@ class SecurityIntegrationTest {
 
     @MockitoBean
     private OAuthSuccessHandler oAuthSuccessHandler;
+
+    @MockitoBean
+    private OAuthFailureHandler oAuthFailureHandler;
 
     @MockitoBean
     private JwtUtil jwtUtil;
@@ -88,9 +94,11 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    void OAuth와_Swagger_OpenAPI_경로는_인증_없이_접근할_수_있다() throws Exception {
+    void OAuth와_헬스체크와_Swagger_OpenAPI_경로는_인증_없이_접근할_수_있다() throws Exception {
         mockMvc.perform(get("/oauth/authorization/kakao"))
                 .andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/actuator/health/liveness"))
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
         mockMvc.perform(get("/swagger-ui/index.html"))
                 .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
         mockMvc.perform(get("/v3/api-docs"))

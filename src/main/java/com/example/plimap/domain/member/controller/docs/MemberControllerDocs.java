@@ -30,4 +30,10 @@ public interface MemberControllerDocs {
             description = "닉네임, 이름, 소개, 프로필 이미지를 수정합니다. 요청에 포함하지 않은 필드는 변경되지 않습니다."
     )
     ApiResponse<MemberResDTO.Profile> updateProfile(AuthMember authMember, @Valid MemberReqDTO.UpdateProfile request);
+
+    @Operation(
+            summary = "팔로우",
+            description = "경로의 memberId에 해당하는 회원을 팔로우합니다. 자기 자신은 팔로우할 수 없고, 이미 팔로우 중이면 실패합니다."
+    )
+    ApiResponse<Void> follow(AuthMember authMember, Long memberId);
 }

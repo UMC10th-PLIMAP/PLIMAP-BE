@@ -229,3 +229,4 @@ Soft Delete 대상의 삭제 유스케이스는 `repository.delete()` 또는 `re
 - Soft Delete 대상의 삭제와 복구는 `SoftDeleteEntity`의 `delete()`, `restore()`를 사용합니다.
 - API 요청/응답 DTO를 Entity 내부에 직접 의존시키지 않습니다.
 - Entity 생성과 변경은 Service 계층에서 유스케이스 흐름에 맞게 제어합니다.
+- Service는 Entity의 생성 시점과 유스케이스 흐름을 제어하며, 실제 인스턴스 생성은 Entity가 제공하는 정적 팩터리 메서드를 사용합니다. 정적 팩터리 메서드는 private 생성자에 선언한 Builder를 통해 Entity를 생성합니다.

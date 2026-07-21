@@ -19,6 +19,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -54,5 +56,15 @@ public class MemberController implements MemberControllerDocs {
     ) {
         Member member = memberCommandService.updateProfile(authMember.getMember().getId(), request);
         return ApiResponse.success(MemberSuccessCode.PROFILE_UPDATED, MemberConverter.toProfile(member));
+    }
+
+    @Override
+    @PostMapping("/{memberId}/follow")
+    public ApiResponse<Void> follow(
+            @AuthenticationPrincipal AuthMember authMember,
+            @PathVariable Long memberId
+    ) {
+        memberCommandService.follow(authMember.getMember().getId(), memberId);
+        return ApiResponse.success(MemberSuccessCode.FOLLOWED, null);
     }
 }
