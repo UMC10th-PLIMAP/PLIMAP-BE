@@ -7,6 +7,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
+import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
@@ -47,6 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PinControllerTest {
 
     private static final String PIN_CREATE_ENDPOINT = "/api/v1/pins";
+    private static final String PIN_AVAILABILITY_ENDPOINT = "/api/v1/pins/availability";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -133,6 +135,84 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.message").value("사용자가 장소 반경이 500m 이상에 있어 PIN을 등록할 수 없습니다."));
     }
 
+    @Test
+    void 지도_선택위치_검증_등록가능시_201을_반환한다() throws Exception {
+        when(pinCommandService.validatePinAvailability(
+                any(PinRequest.PinAvailability.class)
+        )).thenReturn(PinResponse.PinAvailability.builder()
+                .status(AvailabilityStatus.CREATABLE_NEW_PLACE)
+                .registrable(true)
+                .distanceFromUserMeters(328.98070823323764)
+                .nearestPinDistanceMeters(null)
+                .build());
+
+        // CREATABLE_NEW_PLACE
+        mockMvc.perform(post(PIN_AVAILABILITY_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPinAvailabilityRequest()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("PIN 등록 가능 여부 검증에 성공했습니다."))
+                .andExpect(jsonPath("$.result.status").value("CREATABLE_NEW_PLACE"))
+                .andExpect(jsonPath("$.result.registrable").value(true))
+                .andExpect(jsonPath("$.result.distanceFromUserMeters").value(328.98070823323764))
+                .andExpect(jsonPath("$.result.nearestPinDistanceMeters").doesNotExist());
+    }
+
+    @Test
+    void 지도_선택위치_검증_500m_초과시_201을_반환한다() throws Exception {
+        when(pinCommandService.validatePinAvailability(
+                any(PinRequest.PinAvailability.class)
+        )).thenReturn(PinResponse.PinAvailability.builder()
+                .status(AvailabilityStatus.OUT_OF_RANGE)
+                .registrable(false)
+                .distanceFromUserMeters(620.0)
+                .nearestPinDistanceMeters(null)
+                .build());
+
+        // OUT_OF_RANGE
+        mockMvc.perform(post(PIN_AVAILABILITY_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPinAvailabilityRequest()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("PIN 등록 가능 여부 검증에 성공했습니다."))
+                .andExpect(jsonPath("$.result.status").value("OUT_OF_RANGE"))
+                .andExpect(jsonPath("$.result.registrable").value(false))
+                .andExpect(jsonPath("$.result.distanceFromUserMeters").value(620.0))
+                .andExpect(jsonPath("$.result.nearestPinDistanceMeters").doesNotExist());
+    }
+
+    @Test
+    void 지도_선택위치_검증_20m_이내_핀_존재시_201을_반환한다() throws Exception {
+        when(pinCommandService.validatePinAvailability(
+                any(PinRequest.PinAvailability.class)
+        )).thenReturn(PinResponse.PinAvailability.builder()
+                .status(AvailabilityStatus.TOO_CLOSE_TO_PIN)
+                .registrable(false)
+                .distanceFromUserMeters(76.0836069534716)
+                .nearestPinDistanceMeters(83.07525620101859)
+                .build());
+
+        // TOO_CLOSE_TO_PIN
+        mockMvc.perform(post(PIN_AVAILABILITY_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPinAvailabilityRequest()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("PIN 등록 가능 여부 검증에 성공했습니다."))
+                .andExpect(jsonPath("$.result.status").value("TOO_CLOSE_TO_PIN"))
+                .andExpect(jsonPath("$.result.registrable").value(false))
+                .andExpect(jsonPath("$.result.distanceFromUserMeters").value(76.0836069534716))
+                .andExpect(jsonPath("$.result.nearestPinDistanceMeters").value(83.07525620101859));
+    }
+
     private String validCreateRequest() {
         return """
                 {
@@ -164,6 +244,17 @@ class PinControllerTest {
                    ],
                    "feedOpen": true
                  }
+                """;
+    }
+
+    private String validPinAvailabilityRequest() {
+        return """
+                {
+                  "latitude": 37.629000,
+                  "longitude": 127.094000,
+                  "userLatitude": 37.626144976334544,
+                  "userLongitude": 127.09302024107471
+                }
                 """;
     }
 

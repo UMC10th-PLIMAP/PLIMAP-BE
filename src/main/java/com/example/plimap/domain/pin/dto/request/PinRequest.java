@@ -4,10 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Builder;
 
 import java.util.List;
 
 public class PinRequest {
+    @Builder
     public record Create(
             @NotNull(message = "userLatitude는 널이어서는 안 됩니다.")
             @Schema(description = "현재 사용자 위치의 위도", example = "37.5297")
@@ -44,6 +46,7 @@ public class PinRequest {
     ) {
     }
 
+    @Builder
     public record PinAvailability(
             @NotNull(message = "latitude는 널이어서는 안 됩니다.")
             @Schema(description = "선택한 위치의 위도", example = "37.629000")

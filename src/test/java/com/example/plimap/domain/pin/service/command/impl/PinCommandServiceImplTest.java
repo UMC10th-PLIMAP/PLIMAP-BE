@@ -6,11 +6,13 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
+import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.repository.TagRepository;
+import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
@@ -38,10 +40,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PinCommandServiceImplTest {
@@ -65,6 +65,9 @@ class PinCommandServiceImplTest {
 
     @Mock
     private PlaceQueryService placeQueryService;
+
+    @Mock
+    private PinQueryRepository pinQueryRepository;
 
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
@@ -132,6 +135,7 @@ class PinCommandServiceImplTest {
                 .build();
     }
 
+    // createPin 테스트
     @Test
     void 핀_생성에_성공한다() {
         PinRequest.Create request = new PinRequest.Create(
@@ -208,16 +212,16 @@ class PinCommandServiceImplTest {
 
     @Test
     void 태그가_5개_이상이면_예외가_발생한다() {
-        PinRequest.Create request = new PinRequest.Create(
-                37.5267894104045,
-                127.021265055462,
-                1L,
-                1L,
-                70000,
-                "한강 야경을 보면서 듣기 좋은 분위기의 노래예요.",
-                List.of( "몽환", "청량", "설렘", "신남", "힙함"),
-                true
-        );
+        PinRequest.Create request = PinRequest.Create.builder()
+                .userLatitude(37.5267894104045)
+                .userLongitude(127.021265055462)
+                .placeId(1L)
+                .itunesTrackId(1L)
+                .clipStartMs(70000)
+                .introduction("한강 야경을 보면서 듣기 좋은 분위기의 노래예요.")
+                .tags(List.of("몽환", "청량", "설렘", "신남", "힙함"))
+                .feedOpen(true)
+                .build();
 
         when(placeQueryService.getActivePlace(1L))
                 .thenReturn(place);
@@ -225,6 +229,67 @@ class PinCommandServiceImplTest {
         assertThatThrownBy(() -> pinCommandService.createPin(member, request))
                 .isInstanceOf(TagException.class)
                 .hasMessageContaining("태그는 최대 4개만 등록 가능합니다.");
+    }
+
+    // validatePinAvailability 테스트
+    @Test
+    void 지도_선택위치_검증_등록가능시_CREATABLE_NEW_PLACE_상태를_반환한다() {
+        PinRequest.PinAvailability request = PinRequest.PinAvailability.builder()
+                .latitude(37.629000)
+                .longitude(127.094000)
+                .userLatitude(37.626144976334544)
+                .userLongitude(127.0930202410747)
+                .build();
+        when(pinLocationValidator.calculateDistance(request.userLatitude(), request.userLongitude(), request.latitude(), request.longitude()))
+        .thenReturn(328.98070823323764);
+
+        PinResponse.PinAvailability result = pinCommandService.validatePinAvailability(request);
+        assertThat(result.status())
+                .isEqualTo(AvailabilityStatus.CREATABLE_NEW_PLACE);
+        assertThat(result.registrable()).isTrue();
+        assertThat(result.nearestPinDistanceMeters()).isNull();
+    }
+
+    @Test
+    void 지도_선택위치_검증_500m_초과시_OUT_OF_RANGE_상태를_반환한다() {
+        PinRequest.PinAvailability request = PinRequest.PinAvailability.builder()
+                .latitude(37.5283)
+                .longitude(126.9326)
+                .userLatitude(37.626144976334544)
+                .userLongitude(127.09302024107471)
+                .build();
+        when(pinLocationValidator.calculateDistance(request.userLatitude(), request.userLongitude(), request.latitude(), request.longitude()))
+                .thenReturn(17838.988483971672);
+
+        PinResponse.PinAvailability result = pinCommandService.validatePinAvailability(request);
+        assertThat(result.status())
+                .isEqualTo(AvailabilityStatus.OUT_OF_RANGE);
+        assertThat(result.registrable()).isFalse();
+        assertThat(result.nearestPinDistanceMeters()).isNull();
+
+        verify(pinQueryRepository, never())
+                .findNearestActivePinWithin20m(anyDouble(), anyDouble());
+    }
+
+    @Test
+    void 지도_선택위치_검증_20m_이내_핀_존재시_TOO_CLOSE_TO_PIN_상태를_반환한다() {
+        PinRequest.PinAvailability request = PinRequest.PinAvailability.builder()
+                .latitude(37.5282)
+                .longitude(126.9326)
+                .userLatitude(37.5278)
+                .userLongitude(126.9319)
+                .build();
+        when(pinLocationValidator.calculateDistance(request.userLatitude(), request.userLongitude(), request.latitude(), request.longitude()))
+                .thenReturn(76.0836069534716);
+
+        when(pinQueryRepository.findNearestActivePinWithin20m(request.latitude(), request.longitude()))
+                .thenReturn(Optional.of(11.09875689));
+
+        PinResponse.PinAvailability result = pinCommandService.validatePinAvailability(request);
+        assertThat(result.status())
+                .isEqualTo(AvailabilityStatus.TOO_CLOSE_TO_PIN);
+        assertThat(result.registrable()).isFalse();
+        assertThat(result.nearestPinDistanceMeters()).isNotNull();
     }
 
 }

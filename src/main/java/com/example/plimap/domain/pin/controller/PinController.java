@@ -38,10 +38,12 @@ public class PinController implements PinControllerDocs {
     }
 
     @PostMapping("/pins/availability")
-    public ApiResponse<PinResponse.PinAvailability> validatePinAvailability(
+    public ResponseEntity<ApiResponse<PinResponse.PinAvailability>> validatePinAvailability(
             @RequestBody @Valid PinRequest.PinAvailability request
     ) {
         PinResponse.PinAvailability response = pinCommandService.validatePinAvailability(request);
-        return ApiResponse.success(PinSuccessCode.PIN_AVAILABILITY_CHECK_SUCCESS, response);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(PinSuccessCode.PIN_AVAILABILITY_CHECK_SUCCESS, response));
     }
 }
