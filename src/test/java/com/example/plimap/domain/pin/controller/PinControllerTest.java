@@ -1,6 +1,7 @@
 package com.example.plimap.domain.pin.controller;
 
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
+import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.repository.MemberRepository;
@@ -12,6 +13,7 @@ import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
+import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
 import com.example.plimap.global.security.TokenBlacklistService;
@@ -68,6 +70,11 @@ class PinControllerTest {
     @MockitoBean
     private PinCommandServiceImpl pinCommandService;
 
+    @MockitoBean
+    private OAuthFailureHandler oAuthFailureHandler;
+
+    @MockitoBean
+    private HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @BeforeEach
     void setUp() {
