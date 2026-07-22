@@ -80,6 +80,13 @@ public class CustomOAuthService extends DefaultOAuth2UserService {
             default -> throw new MemberException(MemberErrorCode.NOT_SUPPORT_SOCIAL_PROVIDER);
         };
 
+        Member member = resolveMember(provider, dto);
+
+        return new OAuthMember(member, oAuthUser.getAttributes());
+    }
+
+    @Transactional
+    Member resolveMember(AuthProvider provider, OAuthDTO dto) {
         Member member = socialAccountRepository
                 .findByProviderAndProviderSubject(provider, dto.getProviderSubject())
                 .map(SocialAccount::getMember)
@@ -88,8 +95,7 @@ public class CustomOAuthService extends DefaultOAuth2UserService {
         // OAuthSuccessHandler는 세션이 닫힌 뒤(트랜잭션 밖)에 member.isOnboarded()를 읽으므로
         // 세션이 살아있는 지금 초기화해둔다.
         Hibernate.initialize(member);
-
-        return new OAuthMember(member, oAuthUser.getAttributes());
+        return member;
     }
 
     private Member createMemberWithSocialAccount(AuthProvider provider, OAuthDTO dto) {
