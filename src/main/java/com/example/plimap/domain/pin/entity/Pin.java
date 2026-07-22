@@ -76,4 +76,12 @@ public class Pin extends SoftDeleteEntity {
                 .isFeedPublic(request.feedOpen())
                 .build();
     }
+
+    public void updateIntroduction(String introduction) {
+        this.introduction = introduction;
+    }
+
+    public void updateFeedOpen(Boolean feedOpen) {
+        this.isFeedPublic = feedOpen;
+    }
 }

@@ -14,10 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.parameters.P;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -47,5 +45,17 @@ public class PinController implements PinControllerDocs {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PIN_AVAILABILITY_CHECK_SUCCESS, response));
+    }
+
+    @PatchMapping("/pins/{pinId}")
+    public ResponseEntity<ApiResponse<PinResponse.UpdatedPin>> updatePin(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestBody @Valid PinRequest.Update request,
+            @PathVariable Long pinId
+    ) {
+        PinResponse.UpdatedPin response = pinCommandService.updatePin(currentMember.getMember(), request, pinId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.PIN_UPDATE_SUCCESS, response));
     }
 }
