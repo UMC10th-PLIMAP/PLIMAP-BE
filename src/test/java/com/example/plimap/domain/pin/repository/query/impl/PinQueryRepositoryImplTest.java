@@ -189,7 +189,7 @@ class PinQueryRepositoryImplTest {
     }
 
     @Test
-    void placeId_목록에_해당하는_장소의_핀등록_여부와_첫_등록자_닉네임을_반환한다() {
+    void 장소_ID_목록에_해당하는_장소의_핀등록_여부와_첫_등록자_닉네임을_반환한다() {
         List<Long> placeIdList = List.of(
                 place1.getId(),
                 place2.getId(),
@@ -206,7 +206,7 @@ class PinQueryRepositoryImplTest {
     }
 
     @Test
-    void 삭제된_핀이_있다면_그_다음으로_최신_핀을_등록한_사용자_닉네임을_반환한다() {
+    void 최초_등록_핀이_삭제되면_다음_활성_핀_등록자의_닉네임을_반환한다() {
         List<Long> placeIdList = List.of(
                 place1.getId(),
                 place2.getId(),

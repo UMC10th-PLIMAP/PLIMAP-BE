@@ -173,7 +173,7 @@ class PinQueryServiceImplTest {
     }
 
     @Test
-    void 빈_placeIds_입력시_빈_Map을_반환한다() {
+    void 빈_장소_아이디목록_입력시_빈_Map을_반환한다() {
         Map<Long, PlacePinInfo> result = pinQueryService.findPinInfosByPlaceIds(List.of());
         assertThat(result).isEqualTo(Collections.emptyMap());
     }
