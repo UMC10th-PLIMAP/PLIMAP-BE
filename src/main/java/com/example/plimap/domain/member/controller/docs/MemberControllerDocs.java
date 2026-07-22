@@ -5,25 +5,49 @@ import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 @Tag(name = "Member", description = "회원 API")
 public interface MemberControllerDocs {
 
     @Operation(
             summary = "닉네임 중복 확인",
-            description = "온보딩/프로필 수정 전에 닉네임 사용 가능 여부를 확인합니다."
+            description = """
+                    온보딩/프로필 수정 전에 닉네임 사용 가능 여부를 확인합니다.
+
+                    `available`이 false이면 `reason`으로 실패 사유를 알려줍니다.
+                    - TOO_SHORT: 두 글자 이상 입력해 주세요.
+                    - TOO_LONG: 최대 10자까지만 입력할 수 있어요.
+                    - INVALID_FORMAT: 한글, 영문, 숫자만 사용 가능하며 공백은 포함할 수 없어요.
+                    - FORBIDDEN_WORD: 부적절하거나 사용할 수 없는 단어가 포함되어 있어요.
+                    - DUPLICATE: 이미 사용 중인 닉네임이에요.
+                    """
     )
-    ApiResponse<MemberResDTO.NicknameCheck> checkNickname(
-            @NotBlank(message = "닉네임을 입력해주세요.")
-            @Size(min = 2, max = 10, message = "닉네임은 2~10자여야 합니다.")
-            @Pattern(regexp = "^[가-힣A-Za-z0-9]+$", message = "닉네임은 한글, 영문, 숫자만 사용할 수 있습니다.")
-            String nickname
-    );
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            content = @Content(examples = {
+                    @ExampleObject(name = "사용 가능", value = """
+                            {
+                              "isSuccess": true,
+                              "code": "MEMBER_200_NICKNAME_CHECKED",
+                              "message": "닉네임 사용 가능 여부를 조회했습니다.",
+                              "result": { "nickname": "예림", "available": true, "reason": null }
+                            }
+                            """),
+                    @ExampleObject(name = "이미 사용 중", value = """
+                            {
+                              "isSuccess": true,
+                              "code": "MEMBER_200_NICKNAME_CHECKED",
+                              "message": "닉네임 사용 가능 여부를 조회했습니다.",
+                              "result": { "nickname": "예림", "available": false, "reason": "DUPLICATE" }
+                            }
+                            """)
+            })
+    )
+    ApiResponse<MemberResDTO.NicknameCheck> checkNickname(String nickname);
 
     @Operation(
             summary = "내 프로필 수정",

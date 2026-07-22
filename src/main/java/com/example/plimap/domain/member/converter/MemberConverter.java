@@ -3,6 +3,7 @@ package com.example.plimap.domain.member.converter;
 import com.example.plimap.domain.auth.dto.OAuthDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 
 public class MemberConverter {
 
@@ -25,10 +26,11 @@ public class MemberConverter {
                 .build();
     }
 
-    public static MemberResDTO.NicknameCheck toNicknameCheck(String nickname, boolean available) {
+    public static MemberResDTO.NicknameCheck toNicknameCheck(String nickname, NicknameCheckFailReason reason) {
         return MemberResDTO.NicknameCheck.builder()
                 .nickname(nickname)
-                .available(available)
+                .available(reason == null)
+                .reason(reason)
                 .build();
     }
 

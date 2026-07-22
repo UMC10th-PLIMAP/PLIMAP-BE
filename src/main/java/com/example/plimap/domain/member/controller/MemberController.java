@@ -6,17 +6,14 @@ import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.exception.MemberSuccessCode;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,7 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
-@Validated
 public class MemberController implements MemberControllerDocs {
 
     private final MemberQueryService memberQueryService;
@@ -37,15 +33,9 @@ public class MemberController implements MemberControllerDocs {
 
     @Override
     @GetMapping("/nickname/check")
-    public ApiResponse<MemberResDTO.NicknameCheck> checkNickname(
-            @RequestParam
-            @NotBlank(message = "닉네임을 입력해주세요.")
-            @Size(min = 2, max = 10, message = "닉네임은 2~10자여야 합니다.")
-            @Pattern(regexp = "^[가-힣A-Za-z0-9]+$", message = "닉네임은 한글, 영문, 숫자만 사용할 수 있습니다.")
-            String nickname
-    ) {
-        boolean available = memberQueryService.isNicknameAvailable(nickname);
-        return ApiResponse.success(MemberSuccessCode.NICKNAME_CHECKED, MemberConverter.toNicknameCheck(nickname, available));
+    public ApiResponse<MemberResDTO.NicknameCheck> checkNickname(@RequestParam String nickname) {
+        NicknameCheckFailReason reason = memberQueryService.checkNicknameFailReason(nickname);
+        return ApiResponse.success(MemberSuccessCode.NICKNAME_CHECKED, MemberConverter.toNicknameCheck(nickname, reason));
     }
 
     @Override
