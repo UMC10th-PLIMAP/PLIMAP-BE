@@ -81,12 +81,6 @@ public class Pin extends SoftDeleteEntity {
         this.introduction = introduction;
     }
 
-    public void updatePinTagList(List<PinTag> pinTagList) {
-        this.pinTagList.clear();
-        for (PinTag pinTag:pinTagList) {
-            this.pinTagList.add(pinTag);
-        }
-    }
     public void updateFeedOpen(Boolean feedOpen) {
         this.isFeedPublic = feedOpen;
     }
