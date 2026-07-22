@@ -6,10 +6,11 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.exception.TagErrorCode;
 import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
-import com.example.plimap.domain.pin.repository.TagRepository;
+import com.example.plimap.domain.pin.service.query.TagQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
@@ -46,6 +47,9 @@ class PinCommandServiceImplTest {
     @InjectMocks
     private PinCommandServiceImpl pinCommandService;
 
+    @Mock
+    TagQueryService tagQueryService;
+
     private final PinLocationValidator pinLocationValidator2 = new PinLocationValidator();
 
     @Mock
@@ -53,9 +57,6 @@ class PinCommandServiceImplTest {
 
     @Mock
     private PinRepository pinRepository;
-
-    @Mock
-    private TagRepository tagRepository;
 
     @Mock
     private PinTagRepository pinTagRepository;
@@ -145,7 +146,7 @@ class PinCommandServiceImplTest {
 
         when(placeQueryService.getActivePlace(1L))
                 .thenReturn(place);
-        when(tagRepository.findAllByNameIn(anyList()))
+        when(tagQueryService.getTagsByNames(anyList()))
                 .thenReturn(new ArrayList<>(List.of(tag1, tag2)));
         when(trackCommandService.getOrCreatePlaceTrack(any(), any()))
                 .thenReturn(placeTrack);
@@ -194,8 +195,8 @@ class PinCommandServiceImplTest {
 
         when(placeQueryService.getActivePlace(1L))
                 .thenReturn(place);
-        when(tagRepository.findAllByNameIn(anyList()))
-                .thenReturn(new ArrayList<>(List.of(tag1)));
+        when(tagQueryService.getTagsByNames(anyList()))
+                .thenThrow(new TagException(TagErrorCode.TAG_NOT_FOUND));
         when(trackCommandService.getOrCreatePlaceTrack(any(), any()))
                 .thenReturn(placeTrack);
 
@@ -242,7 +243,7 @@ class PinCommandServiceImplTest {
         when(pinRepository.findByIdAndDeletedAtIsNull(1L))
                 .thenReturn(Optional.of(pin));
 
-        when(tagRepository.findAllByNameIn(anyList()))
+        when(tagQueryService.getTagsByNames(anyList()))
                 .thenReturn(new ArrayList<>(List.of(tag2, tag3)));
 
         PinRequest.Update request = PinRequest.Update.builder()

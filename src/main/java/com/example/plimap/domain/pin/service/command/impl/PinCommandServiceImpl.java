@@ -16,6 +16,7 @@ import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.repository.TagRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
+import com.example.plimap.domain.pin.service.query.TagQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
@@ -39,9 +40,9 @@ public class PinCommandServiceImpl implements PinCommandService {
     private final PlaceQueryService placeQueryService;
     private final TrackCommandService trackCommandService;
     private final PinRepository pinRepository;
-    private final TagRepository tagRepository;
     private final PinTagRepository pinTagRepository;
     private final PinLocationValidator pinLocationValidator;
+    private final TagQueryService tagQueryService;
 
     @Override
     public PinResponse.Summary createPin(Member currentMember, PinRequest.Create request) {
@@ -72,10 +73,7 @@ public class PinCommandServiceImpl implements PinCommandService {
         if (stringTags.size() > 4) {
             throw new TagException(TagErrorCode.TAG_SIZE_OVER_RANGE);
         }
-        List<Tag> tags = tagRepository.findAllByNameIn(stringTags);
-        if (tags.size() != stringTags.size()) {
-            throw new TagException(TagErrorCode.TAG_NOT_FOUND);
-        }
+        List<Tag> tags = tagQueryService.getTagsByNames(stringTags);
         tags.sort(Comparator.comparing(Tag::getDisplayOrder));
 
         List<PinTag> pinTags = new ArrayList<>();
@@ -108,12 +106,9 @@ public class PinCommandServiceImpl implements PinCommandService {
         }
 
         if (request.tags() != null) {
-            pinTagRepository.deleteByPin(pin);
-            pinTagRepository.flush();
-
-            pin.getPinTagList().clear();
-
             List<PinTag> pinTags = toPinTags(request.tags(), pin);
+            pin.getPinTagList().clear();
+            pinRepository.flush();
             pin.getPinTagList().addAll(pinTags);
         }
 
