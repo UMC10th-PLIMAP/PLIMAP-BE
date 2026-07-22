@@ -37,7 +37,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     private static final String SEARCH_FIRST_PIN_CREATOR_NICKNAME_QUERY = """
             SELECT DISTINCT ON (pl.id)
                    pl.id,
-                   m.nickname
+                   m.nickname,
+                   p.id
             FROM place pl
             LEFT JOIN pin p 
                     ON p.place_id = pl.id 
@@ -78,12 +79,10 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         for (Object[] row : rows) {
             Long placeId = ((Number) row[0]).longValue();
             String nickname = (String) row[1];
+            Number pinId = (Number) row[2];
 
-            if (nickname != null) {
-                result.put(placeId, new PlacePinInfo(true, nickname));
-                continue;
-            }
-            result.put(placeId, new PlacePinInfo(false, null));
+            boolean hasPin = pinId != null;
+            result.put(placeId, new PlacePinInfo(hasPin, nickname));
         }
 
         return result;

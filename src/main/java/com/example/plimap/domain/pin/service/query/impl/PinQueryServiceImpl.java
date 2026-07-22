@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +43,9 @@ public class PinQueryServiceImpl implements PinQueryService {
 
     @Override
     public Map<Long, PlacePinInfo> findPinInfosByPlaceIds(List<Long> placeIds) {
+        if (placeIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
         return pinQueryRepository.findPinInfosByPlaceIds(placeIds);
     }
 
