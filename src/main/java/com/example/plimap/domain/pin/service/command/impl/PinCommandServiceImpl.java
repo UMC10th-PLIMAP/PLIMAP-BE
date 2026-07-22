@@ -120,7 +120,7 @@ public class PinCommandServiceImpl implements PinCommandService {
 
     private void validateMemberAuthorization(Long memberId, Long writerId) {
         if (!memberId.equals(writerId)) {
-            throw new PinException(GeneralErrorCode.FORBIDDEN);
+            throw new PinException(PinErrorCode.);
         }
     }
 }
