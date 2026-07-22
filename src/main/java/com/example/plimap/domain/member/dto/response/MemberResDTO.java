@@ -1,5 +1,6 @@
 package com.example.plimap.domain.member.dto.response;
 
+import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -26,6 +27,7 @@ public class MemberResDTO {
     public static class NicknameCheck {
         private String nickname;
         private boolean available;
+        private NicknameCheckFailReason reason;
     }
 
     public record Profile(

@@ -1,20 +1,54 @@
 package com.example.plimap.domain.member.service.query.impl;
 
+import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.vane.badwordfiltering.BadWordFiltering;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MemberQueryServiceImpl implements MemberQueryService {
 
+    private static final int NICKNAME_MIN_LENGTH = 2;
+    private static final int NICKNAME_MAX_LENGTH = 10;
+    private static final Pattern NICKNAME_FORMAT = Pattern.compile("^[가-힣A-Za-z0-9]+$");
+    // BadWordFiltering.check()는 대소문자를 구분하는 완전 일치 substring 검사라 브랜드 사칭 방지용 단어는 별도로 대소문자 무시 검사한다.
+    private static final List<String> CUSTOM_FORBIDDEN_WORDS = List.of("plimap", "플리맵운영자");
+
     private final MemberRepository memberRepository;
+    private final BadWordFiltering badWordFiltering = new BadWordFiltering();
 
     @Override
     public boolean isNicknameAvailable(String nickname) {
         return !memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull(nickname);
+    }
+
+    @Override
+    public NicknameCheckFailReason checkNicknameFailReason(String nickname) {
+        if (nickname.length() < NICKNAME_MIN_LENGTH) {
+            return NicknameCheckFailReason.TOO_SHORT;
+        }
+        if (nickname.length() > NICKNAME_MAX_LENGTH) {
+            return NicknameCheckFailReason.TOO_LONG;
+        }
+        if (!NICKNAME_FORMAT.matcher(nickname).matches()) {
+            return NicknameCheckFailReason.INVALID_FORMAT;
+        }
+        String lowerNickname = nickname.toLowerCase(Locale.ROOT);
+        if (badWordFiltering.check(nickname) || CUSTOM_FORBIDDEN_WORDS.stream().anyMatch(lowerNickname::contains)) {
+            return NicknameCheckFailReason.FORBIDDEN_WORD;
+        }
+        if (!isNicknameAvailable(nickname)) {
+            return NicknameCheckFailReason.DUPLICATE;
+        }
+        return null;
     }
 }
