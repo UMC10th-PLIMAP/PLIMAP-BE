@@ -590,7 +590,7 @@ CREATE TABLE report
     reporter_member_id BIGINT      NOT NULL,
     reported_member_id BIGINT,
     reported_pin_id    BIGINT,
-    category           VARCHAR(50) NOT NULL,
+    category           TEXT        NOT NULL,
     detail             TEXT,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

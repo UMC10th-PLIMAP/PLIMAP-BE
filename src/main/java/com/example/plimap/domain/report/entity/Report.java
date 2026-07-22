@@ -3,6 +3,8 @@ package com.example.plimap.domain.report.entity;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.report.enums.ReportCategory;
+import com.example.plimap.domain.report.exception.ReportErrorCode;
+import com.example.plimap.domain.report.exception.ReportException;
 import com.example.plimap.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,7 +53,7 @@ public class Report extends BaseEntity {
     private Pin reportedPin;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false, length = 50)
+    @Column(name = "category", nullable = false, columnDefinition = "TEXT")
     private ReportCategory category;
 
     @Column(name = "detail", columnDefinition = "TEXT")
@@ -102,25 +104,25 @@ public class Report extends BaseEntity {
 
     private static void validateTarget(Member reporter, Member reportedMember, Pin reportedPin) {
         if (reporter == null) {
-            throw new IllegalArgumentException("reporter must not be null");
+            throw new ReportException(ReportErrorCode.REPORT_REPORTER_REQUIRED);
         }
         if ((reportedMember == null) == (reportedPin == null)) {
-            throw new IllegalArgumentException("exactly one report target is required");
+            throw new ReportException(ReportErrorCode.REPORT_TARGET_INVALID);
         }
         if (reportedMember != null && isSameMember(reporter, reportedMember)) {
-            throw new IllegalArgumentException("member cannot report self");
+            throw new ReportException(ReportErrorCode.REPORT_SELF_NOT_ALLOWED);
         }
     }
 
     private static void validateDetail(ReportCategory category, String detail) {
         if (category == null) {
-            throw new IllegalArgumentException("category must not be null");
+            throw new ReportException(ReportErrorCode.REPORT_CATEGORY_REQUIRED);
         }
         if (category == ReportCategory.OTHER && (detail == null || detail.isBlank())) {
-            throw new IllegalArgumentException("detail is required for OTHER category");
+            throw new ReportException(ReportErrorCode.REPORT_DETAIL_REQUIRED);
         }
         if (category != ReportCategory.OTHER && detail != null) {
-            throw new IllegalArgumentException("detail is allowed only for OTHER category");
+            throw new ReportException(ReportErrorCode.REPORT_DETAIL_NOT_ALLOWED);
         }
     }
 

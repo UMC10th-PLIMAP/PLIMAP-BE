@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.report.enums.ReportCategory;
+import com.example.plimap.domain.report.exception.ReportException;
 import org.junit.jupiter.api.Test;
 
 class ReportTest {
@@ -84,7 +85,7 @@ class ReportTest {
                 ReportCategory.OBSCENE_OR_HARMFUL,
                 null
         ))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ReportException.class)
                 .hasMessage("exactly one report target is required");
     }
 
@@ -100,7 +101,7 @@ class ReportTest {
                 ReportCategory.ABUSE_OR_HATE_SPEECH,
                 null
         ))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ReportException.class)
                 .hasMessage("member cannot report self");
     }
 
@@ -117,7 +118,7 @@ class ReportTest {
                 ReportCategory.OTHER,
                 " "
         ))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ReportException.class)
                 .hasMessage("detail is required for OTHER category");
     }
 
@@ -134,7 +135,7 @@ class ReportTest {
                 ReportCategory.COMMERCIAL_OR_PROMOTIONAL,
                 "상세 내용"
         ))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ReportException.class)
                 .hasMessage("detail is allowed only for OTHER category");
     }
 
