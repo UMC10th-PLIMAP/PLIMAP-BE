@@ -4,14 +4,13 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
-import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
-import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.exception.TagErrorCode;
 import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
-import com.example.plimap.domain.pin.repository.TagRepository;
+import com.example.plimap.domain.pin.service.query.TagQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
@@ -30,11 +29,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -44,6 +47,9 @@ class PinCommandServiceImplTest {
     @InjectMocks
     private PinCommandServiceImpl pinCommandService;
 
+    @Mock
+    TagQueryService tagQueryService;
+
     private final PinLocationValidator pinLocationValidator2 = new PinLocationValidator();
 
     @Mock
@@ -51,9 +57,6 @@ class PinCommandServiceImplTest {
 
     @Mock
     private PinRepository pinRepository;
-
-    @Mock
-    private TagRepository tagRepository;
 
     @Mock
     private PinTagRepository pinTagRepository;
@@ -92,27 +95,27 @@ class PinCommandServiceImplTest {
 
         tag1 = Tag.builder()
                 .name("몽환")
-                .displayOrder((short) 1)
+                .displayOrder((short) 3)
                 .build();
 
         tag2 = Tag.builder()
                 .name("설렘")
-                .displayOrder((short) 2)
+                .displayOrder((short) 4)
                 .build();
 
         tag3 = Tag.builder()
                 .name("청량")
-                .displayOrder((short) 2)
+                .displayOrder((short) 9)
                 .build();
 
         tag4 = Tag.builder()
                 .name("신남")
-                .displayOrder((short) 2)
+                .displayOrder((short) 5)
                 .build();
 
         tag5 = Tag.builder()
                 .name("힙함")
-                .displayOrder((short) 2)
+                .displayOrder((short) 10)
                 .build();
 
         Track track = Track.builder()
@@ -143,7 +146,7 @@ class PinCommandServiceImplTest {
 
         when(placeQueryService.getActivePlace(1L))
                 .thenReturn(place);
-        when(tagRepository.findAllByNameIn(anyList()))
+        when(tagQueryService.getTagsByNames(anyList()))
                 .thenReturn(new ArrayList<>(List.of(tag1, tag2)));
         when(trackCommandService.getOrCreatePlaceTrack(any(), any()))
                 .thenReturn(placeTrack);
@@ -179,21 +182,21 @@ class PinCommandServiceImplTest {
 
     @Test
     void 존재하지_않는_태그면_예외가_발생한다() {
-        PinRequest.Create request = new PinRequest.Create(
-                37.5267894104045,
-                127.021265055462,
-                1L,
-                1L,
-                70000,
-                "한강 야경을 보면서 듣기 좋은 분위기의 노래예요.",
-                List.of("최고", "몽환"),
-                true
-        );
+        PinRequest.Create request = PinRequest.Create.builder()
+                .userLatitude(37.5267894104045)
+                .userLongitude(127.021265055462)
+                .placeId(1L)
+                .itunesTrackId(1L)
+                .clipStartMs(70000)
+                .introduction("한강 야경을 보면서 듣기 좋은 분위기의 노래예요.")
+                .tags(List.of("몽환", "청량", "설렘", "신남"))
+                .feedOpen(true)
+                .build();
 
         when(placeQueryService.getActivePlace(1L))
                 .thenReturn(place);
-        when(tagRepository.findAllByNameIn(anyList()))
-                .thenReturn(new ArrayList<>(List.of(tag1)));
+        when(tagQueryService.getTagsByNames(anyList()))
+                .thenThrow(new TagException(TagErrorCode.TAG_NOT_FOUND));
         when(trackCommandService.getOrCreatePlaceTrack(any(), any()))
                 .thenReturn(placeTrack);
 
@@ -221,5 +224,39 @@ class PinCommandServiceImplTest {
         assertThatThrownBy(() -> pinCommandService.createPin(member, request))
                 .isInstanceOf(TagException.class)
                 .hasMessageContaining("태그는 최대 4개만 등록 가능합니다.");
+    }
+
+    // updatePin 테스트
+    @Test
+    void 핀_수정에_성공한다() {
+        Pin pin = Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .introduction("before")
+                .isFeedPublic(true)
+                .build();
+
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+
+        when(tagQueryService.getTagsByNames(anyList()))
+                .thenReturn(new ArrayList<>(List.of(tag2, tag3)));
+
+        PinRequest.Update request = PinRequest.Update.builder()
+                .introduction("i am all you need")
+                .tags(List.of("청량", "설렘"))
+                .feedOpen(false)
+                .build();
+
+        PinResponse.UpdatedPin response = pinCommandService.updatePin(member, request, 1L);
+
+        assertThat(response.introduction()).isEqualTo(request.introduction());
+        assertThat(response.tags())
+                .containsExactly("설렘", "청량");
+        assertThat(response.feedOpen()).isEqualTo(request.feedOpen());
     }
 }

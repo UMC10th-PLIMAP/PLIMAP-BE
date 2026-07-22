@@ -19,6 +19,12 @@ public enum PinSuccessCode implements BaseSuccessCode {
             HttpStatus.OK,
             "PIN_AVAILABILITY_CHECK_SUCCESS",
             "PIN 등록 가능 여부 검증에 성공했습니다."
+    ),
+
+    PIN_UPDATE_SUCCESS(
+            HttpStatus.OK,
+            "PIN_UPDATE_SUCCESS",
+            "PIN이 수정되었습니다."
     );
 
     private final HttpStatus status;

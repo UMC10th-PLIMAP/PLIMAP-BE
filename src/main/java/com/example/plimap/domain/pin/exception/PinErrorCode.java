@@ -25,6 +25,18 @@ public enum PinErrorCode implements BaseErrorCode {
             HttpStatus.BAD_REQUEST,
             "MEMBER_PIN_ALREADY_EXISTS",
             "이미 해당 장소에 등록한 핀이 있습니다."
+    ),
+
+    PIN_NOT_CHANGED(
+            HttpStatus.BAD_REQUEST,
+            "PIN_NOT_CHANGED",
+            "PIN 수정사항이 없습니다."
+    ),
+
+    INVALID_PIN_OWNER(
+            HttpStatus.FORBIDDEN,
+            "INVALID_PIN_OWNER",
+            "해당 PIN에 수정/삭제 권한이 없습니다."
     );
 
     private final HttpStatus status;

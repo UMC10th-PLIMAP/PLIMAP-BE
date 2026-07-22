@@ -15,15 +15,15 @@ import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.repository.TagRepository;
-import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
+import com.example.plimap.domain.pin.service.query.TagQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
-import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.dto.request.TrackCommand;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.service.command.TrackCommandService;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,18 +33,18 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class PinCommandServiceImpl implements PinCommandService {
 
     private final PlaceQueryService placeQueryService;
     private final TrackCommandService trackCommandService;
     private final PinRepository pinRepository;
-    private final TagRepository tagRepository;
     private final PinTagRepository pinTagRepository;
     private final PinLocationValidator pinLocationValidator;
+    private final TagQueryService tagQueryService;
 
     @Override
-    @Transactional
     public PinResponse.Summary createPin(Member currentMember, PinRequest.Create request) {
 
         // 장소 조회
@@ -62,13 +62,18 @@ public class PinCommandServiceImpl implements PinCommandService {
         pinRepository.save(pin);
 
         // 핀 태그 등록
-        if (request.tags().size() > 4) {
+        List<PinTag> pinTags = toPinTags(request.tags(), pin);
+
+        pinTagRepository.saveAll(pinTags);
+
+        return PinConverter.toSummary(currentMember, pin, placeTrack.getTrack(), place.getId());
+    }
+
+    private List<PinTag> toPinTags(List<String> stringTags, Pin pin) {
+        if (stringTags.size() > 4) {
             throw new TagException(TagErrorCode.TAG_SIZE_OVER_RANGE);
         }
-        List<Tag> tags = tagRepository.findAllByNameIn(request.tags());
-        if (tags.size() != request.tags().size()) {
-            throw new TagException(TagErrorCode.TAG_NOT_FOUND);
-        }
+        List<Tag> tags = tagQueryService.getTagsByNames(stringTags);
         tags.sort(Comparator.comparing(Tag::getDisplayOrder));
 
         List<PinTag> pinTags = new ArrayList<>();
@@ -77,15 +82,45 @@ public class PinCommandServiceImpl implements PinCommandService {
             PinTag pinTag = PinTag.create(pin, tags.get(i), (short) (i));
             pinTags.add(pinTag);
         }
-
-        pinTagRepository.saveAll(pinTags);
-
-        return PinConverter.toSummary(currentMember, pin, placeTrack.getTrack(), place.getId());
+        return pinTags;
     }
 
     private void validatePinExistsByMemberAndPlace(Member member, Place place) {
         if (pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place)) {
             throw new PinException(PinErrorCode.MEMBER_PIN_ALREADY_EXISTS);
+        }
+    }
+
+    @Override
+    public PinResponse.UpdatedPin updatePin(Member currentMember, PinRequest.Update request, Long id) {
+        Pin pin = pinRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
+        validateMemberAuthorization(currentMember.getId(), pin.getMember().getId());
+
+        if (request.introduction() == null && request.tags() == null && request.feedOpen() == null) {
+            throw new PinException(PinErrorCode.PIN_NOT_CHANGED);
+        }
+
+        if (request.introduction() != null) {
+            pin.updateIntroduction(request.introduction());
+        }
+
+        if (request.tags() != null) {
+            List<PinTag> pinTags = toPinTags(request.tags(), pin);
+            pin.getPinTagList().clear();
+            pinRepository.flush();
+            pin.getPinTagList().addAll(pinTags);
+        }
+
+        if (request.feedOpen() != null) {
+            pin.updateFeedOpen(request.feedOpen());
+        }
+        return PinConverter.toUpdatedPin(pin);
+    }
+
+    private void validateMemberAuthorization(Long memberId, Long writerId) {
+        if (!memberId.equals(writerId)) {
+            throw new PinException(PinErrorCode.INVALID_PIN_OWNER);
         }
     }
 }

@@ -2,7 +2,7 @@
 
 > 위치 기반 음악 공유 서비스 데이터베이스 설계서
 >
-> v0.6.0 | 2026-07-19
+> v0.6.1 | 2026-07-20
 
 ---
 
@@ -65,8 +65,8 @@ AuthProvider: KAKAO, GOOGLE, APPLE
 TermsType: SERVICE, PRIVACY, LOCATION, MARKETING
 PlaceSource: PLACE_SEARCH, MAP_SELECTION
 PinSortType: POPULAR, LATEST
-PinRegistrationStatus: CREATABLE_NEW_PLACE, CREATABLE_EXISTING_PLACE,
-                       OUT_OF_RANGE, TOO_CLOSE_TO_PIN, ALREADY_PINNED
+AvailabilityStatus: CREATABLE_NEW_PLACE, 
+                       OUT_OF_RANGE, TOO_CLOSE_TO_PIN
 ~~~
 
 | Enum | 표현하는 상태 | 저장 방식 |
@@ -585,8 +585,8 @@ CREATE INDEX idx_pin_like_member
 
 ## 변경 이력
 
-| 버전 | 날짜         | 변경 내용                                                                                                                 |
-|---|------------|-----------------------------------------------------------------------------------------------------------------------|
+| 버전    | 날짜         | 변경 내용                                                                                                                 |
+|-------|------------|-----------------------------------------------------------------------------------------------------------------------|
 | 0.1.0 | 2026-06-28 | Figma 화면 분석을 기반으로 PostgreSQL 14개 테이블을 설계하고 member·place·track·pin 도메인으로 구분, tag를 pin 도메인에 포함                          |
 | 0.1.1 | 2026-06-28 | 매핑 테이블을 원본으로 유지하면서 place_track에 PIN·하트·북마크 수, pin에 따봉 수를 조회용 카운트 컬럼으로 추가                                              |
 | 0.2.0 | 2026-06-28 | 위치를 PostGIS geography와 GiST 인덱스로 전환하고 화면 정렬 인덱스·고정 태그 카탈로그·API용 PIN Enum을 반영                                          |
@@ -598,3 +598,4 @@ CREATE INDEX idx_pin_like_member
 | 0.5.1 | 2026-07-12 | `place` 테이블에 nullable `category VARCHAR(100)` 컬럼 추가                                                                   |
 | 0.5.2 | 2026-07-15 | 닉네임 최대 길이를 7자에서 10자로 확장(`VARCHAR(10)`, `chk_member_nickname_length`), 이름 최소 길이를 1자에서 2자로 강화(`chk_member_name_length`) |
 | 0.6.0 | 2026-07-19 | pin에서 clip_end_ms를 삭제                                                                                                 |
+| 0.6.1 | 2026-07-20 | AvailabilityStatus enum 수정                                                                                            |
