@@ -1,6 +1,7 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Tag;
@@ -23,6 +24,9 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -166,5 +170,11 @@ class PinQueryServiceImplTest {
                 .isEqualTo(AvailabilityStatus.TOO_CLOSE_TO_PIN);
         assertThat(result.registrable()).isFalse();
         assertThat(result.nearestPinDistanceMeters()).isNotNull();
+    }
+
+    @Test
+    void 빈_placeIds_입력시_빈_Map을_반환한다() {
+        Map<Long, PlacePinInfo> result = pinQueryService.findPinInfosByPlaceIds(List.of());
+        assertThat(result).isEqualTo(Collections.emptyMap());
     }
 }
