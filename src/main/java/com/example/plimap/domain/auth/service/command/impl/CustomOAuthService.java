@@ -13,6 +13,7 @@ import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -83,6 +84,10 @@ public class CustomOAuthService extends DefaultOAuth2UserService {
                 .findByProviderAndProviderSubject(provider, dto.getProviderSubject())
                 .map(SocialAccount::getMember)
                 .orElseGet(() -> createMemberWithSocialAccount(provider, dto));
+        // SocialAccount.member는 LAZY라 기존 회원 로그인 시 프록시 상태로 반환되는데,
+        // OAuthSuccessHandler는 세션이 닫힌 뒤(트랜잭션 밖)에 member.isOnboarded()를 읽으므로
+        // 세션이 살아있는 지금 초기화해둔다.
+        Hibernate.initialize(member);
 
         return new OAuthMember(member, oAuthUser.getAttributes());
     }
