@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 @Service
@@ -41,7 +42,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         if (!NICKNAME_FORMAT.matcher(nickname).matches()) {
             return NicknameCheckFailReason.INVALID_FORMAT;
         }
-        String lowerNickname = nickname.toLowerCase();
+        String lowerNickname = nickname.toLowerCase(Locale.ROOT);
         if (badWordFiltering.check(nickname) || CUSTOM_FORBIDDEN_WORDS.stream().anyMatch(lowerNickname::contains)) {
             return NicknameCheckFailReason.FORBIDDEN_WORD;
         }
