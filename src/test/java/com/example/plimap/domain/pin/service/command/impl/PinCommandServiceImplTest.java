@@ -259,4 +259,26 @@ class PinCommandServiceImplTest {
                 .containsExactly("설렘", "청량");
         assertThat(response.feedOpen()).isEqualTo(request.feedOpen());
     }
+
+    // deletePin 테스트
+    @Test
+    void 핀_삭제에_성공한다() {
+        Pin pin = Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .introduction("before")
+                .isFeedPublic(true)
+                .build();
+
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+
+        pinCommandService.deletePin(member, 1L);
+
+        assertThat(pin.getDeletedAt()).isNotNull();
+    }
 }

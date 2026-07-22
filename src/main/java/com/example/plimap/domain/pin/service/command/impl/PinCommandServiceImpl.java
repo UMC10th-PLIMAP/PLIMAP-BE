@@ -92,9 +92,8 @@ public class PinCommandServiceImpl implements PinCommandService {
     }
 
     @Override
-    public PinResponse.UpdatedPin updatePin(Member currentMember, PinRequest.Update request, Long id) {
-        Pin pin = pinRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
+    public PinResponse.UpdatedPin updatePin(Member currentMember, PinRequest.Update request, Long pinId) {
+        Pin pin = getPin(pinId);
         validateMemberAuthorization(currentMember.getId(), pin.getMember().getId());
 
         if (request.introduction() == null && request.tags() == null && request.feedOpen() == null) {
@@ -116,6 +115,18 @@ public class PinCommandServiceImpl implements PinCommandService {
             pin.updateFeedOpen(request.feedOpen());
         }
         return PinConverter.toUpdatedPin(pin);
+    }
+
+    @Override
+    public void deletePin(Member currentMember, Long pinId) {
+        Pin pin = getPin(pinId);
+        validateMemberAuthorization(currentMember.getId(), pin.getMember().getId());
+        pin.delete();
+    }
+
+    private Pin getPin(Long id) {
+        return pinRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
     }
 
     private void validateMemberAuthorization(Long memberId, Long writerId) {

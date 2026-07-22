@@ -8,4 +8,6 @@ public interface PinCommandService {
     PinResponse.Summary createPin(Member currentMember, PinRequest.Create request);
 
     PinResponse.UpdatedPin updatePin(Member currentMember, PinRequest.Update request, Long pinId);
+
+    void deletePin(Member currentMember, Long pinId);
 }
