@@ -4,8 +4,8 @@ param(
     [string]$Region = "asia-northeast3",
     [string]$ServiceName = "plimap-api-dev",
     [string]$Image = "asia-northeast3-docker.pkg.dev/plimap/plimap-docker/api:dev-initial",
-    [string]$FrontendOrigin = "http://localhost:3000",
-    [string]$FrontendRedirectUri = "http://localhost:3000/home"
+    [string]$PublicBaseUrl = "https://dev.plimap.kr",
+    [string]$FrontendRedirectUri = "https://dev.plimap.kr/home"
 )
 
 Set-StrictMode -Version Latest
@@ -40,20 +40,52 @@ function ConvertTo-YamlSingleQuoted {
     return "'" + $Value.Replace("'", "''") + "'"
 }
 
+function Get-HttpsOrigin {
+    param([Parameter(Mandatory)][string]$Value)
+
+    $uri = [Uri]::new($Value, [UriKind]::Absolute)
+    if ($uri.Scheme -ne "https" -or
+        -not [string]::IsNullOrEmpty($uri.UserInfo) -or
+        -not $uri.IsDefaultPort -or
+        $uri.AbsolutePath -ne "/" -or
+        -not [string]::IsNullOrEmpty($uri.Query) -or
+        -not [string]::IsNullOrEmpty($uri.Fragment)) {
+        throw "PublicBaseUrl must be an HTTPS origin without a path, query, fragment, credentials, or custom port: $Value"
+    }
+
+    return $uri.GetLeftPart([UriPartial]::Authority)
+}
+
+function Get-HttpsUrl {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Value
+    )
+
+    $uri = [Uri]::new($Value, [UriKind]::Absolute)
+    if ($uri.Scheme -ne "https" -or
+        -not [string]::IsNullOrEmpty($uri.UserInfo) -or
+        -not $uri.IsDefaultPort -or
+        -not [string]::IsNullOrEmpty($uri.Fragment)) {
+        throw "$Name must be an HTTPS URL without credentials, a custom port, or a fragment: $Value"
+    }
+
+    return $uri.AbsoluteUri
+}
+
 function Write-EnvironmentFile {
     param(
         [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][string]$CallbackBaseUrl,
-        [Parameter(Mandatory)][string]$FrontendOrigin,
+        [Parameter(Mandatory)][string]$PublicOrigin,
         [Parameter(Mandatory)][string]$FrontendRedirectUri
     )
 
     $lines = @(
         "SPRING_PROFILES_ACTIVE: 'dev'",
-        "CORS_ALLOWED_ORIGINS: $(ConvertTo-YamlSingleQuoted $FrontendOrigin)",
+        "CORS_ALLOWED_ORIGINS: $(ConvertTo-YamlSingleQuoted $PublicOrigin)",
         "OAUTH_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted $FrontendRedirectUri)",
-        "KAKAO_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$CallbackBaseUrl/oauth/callback/kakao")",
-        "GOOGLE_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$CallbackBaseUrl/oauth/callback/google")"
+        "KAKAO_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$PublicOrigin/oauth/callback/kakao")",
+        "GOOGLE_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$PublicOrigin/oauth/callback/google")"
     )
 
     $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
@@ -63,6 +95,9 @@ function Write-EnvironmentFile {
 if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
     throw "gcloud CLI was not found. Check the Google Cloud CLI installation and login."
 }
+
+$publicOrigin = Get-HttpsOrigin -Value $PublicBaseUrl
+$frontendRedirectUrl = Get-HttpsUrl -Name "FrontendRedirectUri" -Value $FrontendRedirectUri
 
 foreach ($entry in $secretMap.GetEnumerator()) {
     $versionStates = @(& gcloud secrets versions list $entry.Value `
@@ -74,33 +109,12 @@ foreach ($entry in $secretMap.GetEnumerator()) {
     }
 }
 
-# Windows PowerShell 5.1 can promote native stderr to a terminating error when
-# the service does not exist yet. That is expected on the first deploy.
-$previousErrorActionPreference = $ErrorActionPreference
-try {
-    $ErrorActionPreference = "Continue"
-    $serviceUrl = & gcloud run services describe $ServiceName `
-        --project=$ProjectId `
-        --region=$Region `
-        --format="value(status.url)" 2>$null
-    $serviceDescribeExitCode = $LASTEXITCODE
-} finally {
-    $ErrorActionPreference = $previousErrorActionPreference
-}
-
-if ($serviceDescribeExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($serviceUrl)) {
-    $callbackBaseUrl = "https://placeholder.invalid"
-} else {
-    $callbackBaseUrl = $serviceUrl.TrimEnd('/')
-}
-
 $environmentFile = New-TemporaryFile
 try {
     Write-EnvironmentFile `
         -Path $environmentFile.FullName `
-        -CallbackBaseUrl $callbackBaseUrl `
-        -FrontendOrigin $FrontendOrigin `
-        -FrontendRedirectUri $FrontendRedirectUri
+        -PublicOrigin $publicOrigin `
+        -FrontendRedirectUri $frontendRedirectUrl
 
     $secretBindings = ($secretMap.GetEnumerator() | ForEach-Object {
         "$($_.Key)=$($_.Value):latest"
@@ -141,21 +155,6 @@ try {
         throw "Could not read the deployed Cloud Run URL."
     }
 
-    if ($callbackBaseUrl -ne $deployedUrl) {
-        Write-EnvironmentFile `
-            -Path $environmentFile.FullName `
-            -CallbackBaseUrl $deployedUrl `
-            -FrontendOrigin $FrontendOrigin `
-            -FrontendRedirectUri $FrontendRedirectUri
-        Invoke-Gcloud -Arguments @(
-            "run", "services", "update", $ServiceName,
-            "--project=$ProjectId",
-            "--region=$Region",
-            "--env-vars-file=$($environmentFile.FullName)",
-            "--quiet"
-        )
-    }
-
     foreach ($path in @(
         "/actuator/health/liveness",
         "/actuator/health/readiness",
@@ -169,7 +168,7 @@ try {
         }
     }
 
-    Write-Output "Cloud Run dev deployment and verification completed: $deployedUrl"
+    Write-Output "Cloud Run dev deployment and verification completed: $deployedUrl (public base: $publicOrigin)"
 } finally {
     Remove-Item -LiteralPath $environmentFile.FullName -Force -ErrorAction SilentlyContinue
 }

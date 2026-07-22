@@ -1,62 +1,194 @@
 # Deployment Guide
 
-## 환경 구성
+이 문서는 PLIMAP 백엔드의 local, dev, prod 환경별 실행 위치와 인프라 구성을 설명합니다.
 
-| 환경 | 애플리케이션 | PostgreSQL | Redis | Swagger |
-| --- | --- | --- | --- | --- |
-| local | 개발자 PC | Docker Compose PostGIS | Docker Compose Redis | 활성화 |
-| dev | Cloud Run (`asia-northeast3`) | Supabase Postgres/PostGIS | Redis Cloud (`ap-northeast-2`) | 활성화 |
-| prod | Cloud Run (`asia-northeast3`) | Cloud SQL for PostgreSQL | 추후 결정 | 비활성화 |
+## 환경별 구성
 
-dev와 prod는 동일한 컨테이너 이미지를 사용하고 `SPRING_PROFILES_ACTIVE`로 실행 환경을 구분합니다.
+| 구분 | local | dev | prod |
+| --- | --- | --- | --- |
+| 상태 | 개발자 PC에서 사용 | 배포 자동화 구성, 도메인 전환 진행 중 | 목표 구성만 정의, 배포 자동화 미구축 |
+| Spring profile | `local` | `dev` | `prod` |
+| 애플리케이션 실행 위치 | 개발자 PC | GCP Cloud Run Gen2 (`asia-northeast3`) | GCP Cloud Run 예정 |
+| PostgreSQL/PostGIS | Docker Compose | Supabase Transaction Pooler | Cloud SQL for PostgreSQL 예정 |
+| Redis | Docker Compose | Redis Cloud (`ap-northeast-2`) | 미정 |
+| 외부 진입점 | `localhost:8080` | 개인 서버의 Traefik | `plimap.kr` 사용 예정, 구성 미정 |
+| 프론트엔드 | `localhost:3000` 기준 | 개인 서버의 Docker | 구성 미정 |
+| Swagger/OpenAPI | 활성화 | 활성화, 현재 공개 | 기본 비활성화 |
+| 배포 방식 | Gradle로 직접 실행 | GitHub Actions 자동 배포 또는 PowerShell 스크립트 | 미구축 |
 
-## 컨테이너 빌드
+prod 항목은 현재 저장소에서 배포 완료를 의미하지 않습니다. `application-prod.yml`에는 Swagger를 기본적으로 비활성화하는 정책만 있으며, prod용 배포 워크플로와 인프라는 아직 추가되지 않았습니다.
 
-```bash
-docker build -t plimap-api:dev .
+## 배포 구성요소와 역할
+
+| 구성요소 | 적용 환경 | 역할 |
+| --- | --- | --- |
+| Docker Compose | local | PostGIS와 Redis를 개발자 PC에 실행 |
+| Dockerfile | dev, 향후 prod | Java 21 애플리케이션을 빌드하고 non-root 사용자로 실행하는 컨테이너 이미지 생성 |
+| GitHub Actions | CI, dev CD | Gradle 검증 후 컨테이너 이미지를 빌드하고 dev 배포 실행 |
+| Workload Identity Federation | dev CD | 장기 GCP 서비스 계정 키 없이 GitHub Actions가 GCP에 인증 |
+| Artifact Registry | dev, 향후 prod | 배포할 컨테이너 이미지 저장 |
+| Cloud Run | dev, 향후 prod | Spring Boot API 컨테이너 실행 및 트래픽 처리 |
+| Secret Manager | dev, 향후 prod | DB, Redis, JWT, OAuth, 외부 API 자격 증명 관리 |
+| Supabase | dev | PostgreSQL/PostGIS 데이터베이스 제공 |
+| Redis Cloud | dev | 공유 Redis 제공 |
+| 가비아 DNS | dev, 향후 prod | `plimap.kr` 도메인과 공개 서버 주소 연결 |
+| Traefik | dev | TLS 종료와 경로 기반 리버스 프록시 처리 |
+| 프론트 Docker | dev | SPA 정적 파일과 프론트엔드 애플리케이션 제공 |
+
+## 공통 애플리케이션 런타임
+
+- Java 21과 Spring Boot 애플리케이션을 하나의 컨테이너 이미지로 빌드합니다.
+- Docker 이미지는 JDK builder와 JRE runtime을 분리한 multi-stage build를 사용합니다.
+- 컨테이너는 non-root 사용자로 실행하며 기본 포트는 `8080`입니다.
+- Hibernate는 스키마를 자동 생성하지 않고 검증만 수행합니다.
+- Flyway가 애플리케이션 시작 시 데이터베이스 Migration을 적용합니다.
+- Actuator는 상태 확인 endpoint만 공개하고 상세 컴포넌트 정보는 노출하지 않습니다.
+- 프록시 환경에서는 전달된 host와 protocol 정보를 Spring이 인식하도록 forwarded header 처리를 사용합니다.
+
+## local 환경
+
+local 환경은 백엔드 개발자가 외부 배포 인프라 없이 기능을 개발하고 검증하기 위한 구성입니다.
+
+```text
+Spring Boot (개발자 PC, :8080)
+├─ PostGIS (Docker Compose, :5432)
+└─ Redis (Docker Compose, :6379)
 ```
 
-Cloud Run은 컨테이너에 `PORT` 환경변수를 주입합니다. 애플리케이션은 이 값을 사용하며 기본 포트는 `8080`입니다.
+- `compose.yml`이 PostGIS와 Redis를 실행하며 두 서비스 모두 localhost에만 port를 공개합니다.
+- PostgreSQL과 Redis 데이터는 Docker volume에 보존됩니다.
+- `application-local.yml`은 SQL 로그와 OAuth 상세 로그, Swagger/OpenAPI를 활성화합니다.
+- 로컬 쿠키는 HTTP 개발 환경에서 사용할 수 있도록 secure 정책을 비활성화합니다.
+- 프론트엔드는 `http://localhost:3000`, 백엔드는 `http://localhost:8080`을 기준으로 연동합니다.
+- Swagger UI는 `http://localhost:8080/swagger-ui/index.html`에서 확인합니다.
 
-## dev 필수 설정
+구체적인 실행 명령은 [README의 로컬 실행 방법](../README.md#로컬-실행-방법), DB와 volume 관리 방법은 [Database Guide](DATABASE.md)를 참고합니다.
 
-아래 값은 컨테이너 이미지나 저장소에 포함하지 않습니다. Cloud Run 일반 환경변수 또는 Secret Manager로 주입합니다.
+## dev 환경
 
-| 변수 | 저장 방식 | 설명 |
-| --- | --- | --- |
-| `SPRING_PROFILES_ACTIVE` | 환경변수 | `dev` |
-| `DB_URL` | Secret Manager | Supabase JDBC URL |
-| `DB_USERNAME` | Secret Manager | Supabase DB 사용자 |
-| `DB_PASSWORD` | Secret Manager | Supabase DB 비밀번호 |
-| `REDIS_URL` | Secret Manager | TLS를 사용하는 Redis 접속 URL (`rediss://...`) |
-| `JWT_SECRET` | Secret Manager | JWT 서명 키 |
-| `KAKAO_REST_API_KEY` | Secret Manager | 카카오 OAuth Client ID |
-| `KAKAO_REST_API_SECRET` | Secret Manager | 카카오 OAuth Client Secret |
-| `GOOGLE_CLIENT_ID` | Secret Manager | Google OAuth Client ID |
-| `GOOGLE_CLIENT_SECRET` | Secret Manager | Google OAuth Client Secret |
-| `YOUTUBE_API_KEY` | Secret Manager | YouTube Data API 키 |
-| `KAKAO_REDIRECT_URI` | 환경변수 | dev API의 카카오 콜백 URL |
-| `GOOGLE_REDIRECT_URI` | 환경변수 | dev API의 Google 콜백 URL |
-| `OAUTH_REDIRECT_URI` | 환경변수 | 로그인 완료 후 dev 프론트엔드 URL |
-| `CORS_ALLOWED_ORIGINS` | 환경변수 | 쉼표로 구분한 dev 프론트엔드 Origin |
+### 전체 요청 흐름
 
-Supabase 연결은 Transaction Pooler 주소와 포트 `6543`을 사용합니다. JDBC URL에는 실제 자격 증명을 넣지 않고 `DB_USERNAME`, `DB_PASSWORD`를 별도 Secret으로 주입합니다. Transaction Pooler의 prepared statement 제약은 dev 프로필의 `prepareThreshold: 0`으로 처리합니다.
+```mermaid
+flowchart LR
+    Browser["브라우저"] --> DNS["가비아 DNS"]
+    DNS --> Traefik["개인 서버 Traefik<br/>TLS 및 경로 라우팅"]
+    Traefik -->|"프론트 경로"| Frontend["프론트 Docker"]
+    Traefik -->|"API 및 OAuth 경로"| CloudRun["GCP Cloud Run<br/>plimap-api-dev"]
+    CloudRun --> Supabase["Supabase PostgreSQL/PostGIS"]
+    CloudRun --> Redis["Redis Cloud"]
+```
 
-## 헬스체크
+브라우저가 사용하는 공개 host는 `dev.plimap.kr` 하나입니다. 프론트는 API Base URL로 절대 주소 `https://dev.plimap.kr/api` 또는 동일 host의 상대 경로 `/api`를 사용합니다. Cloud Run 원본 URL은 Traefik upstream과 배포 직후 직접 검증에만 사용합니다.
 
-- 기본 상태: `/actuator/health`
-- 시작 및 생존 확인: `/actuator/health/liveness`
-- 트래픽 수신 준비 확인: `/actuator/health/readiness`
+### DNS와 TLS
 
-상세 컴포넌트 정보는 외부에 노출하지 않습니다.
+- 가비아의 `dev` A 레코드와 `*` A 레코드는 개인 서버의 동일한 고정 공인 IPv4를 가리킵니다.
+- `dev.plimap.kr`은 현재 사용하는 실제 dev 서비스 host입니다.
+- `*.plimap.kr`은 미등록 서브도메인을 같은 서버로 보내기 위한 DNS 규칙이며 실제 요청 주소가 아닙니다.
+- 루트 도메인 `plimap.kr`은 와일드카드에 포함되지 않으며 prod 구성 시 별도로 연결합니다.
+- TLS 인증서는 현재 `dev.plimap.kr` 단일 인증서만 사용합니다.
+- Traefik에 정의되지 않은 서브도메인은 기본 404로 처리합니다.
 
-## 초기 Cloud Run 정책
+### Traefik 라우팅
 
-- Region: `asia-northeast3`
-- Minimum instances: `0`
-- Maximum instances: `2`
-- Ingress: all
-- Authentication: dev Swagger와 프론트엔드 접근을 위해 public
-- Container port: `8080`
+| 공개 경로 | 목적지 |
+| --- | --- |
+| `/api/**` | dev Cloud Run |
+| `/oauth/**` | dev Cloud Run |
+| `/swagger-ui/**` | dev Cloud Run |
+| `/v3/api-docs/**` | dev Cloud Run |
+| 그 외 경로 | 프론트 Docker |
 
-dev 배포 자동화는 `develop` 브랜치에 PR이 병합된 뒤 테스트, 이미지 빌드, Artifact Registry push, Cloud Run 배포 순서로 구성합니다.
+Traefik은 공개 경로의 접두사를 제거하지 않고 그대로 Cloud Run에 전달합니다. 백엔드 경로는 프론트 SPA fallback보다 높은 우선순위를 사용하며 요청의 method, path, query, body, cookie와 응답의 `Set-Cookie`, `Location` header를 유지합니다.
+
+Cloud Run은 외부에서 접속한 `dev.plimap.kr` host와 HTTPS protocol을 인식해야 합니다. Traefik은 client 정보와 함께 원래 host, protocol, port를 forwarded header로 전달합니다. Cloud Run upstream 연결에서는 Cloud Run 서비스 host를 TLS server name으로 사용합니다.
+
+### Cloud Run 정책
+
+| 항목 | dev 설정 |
+| --- | --- |
+| GCP project | `plimap` |
+| Region | `asia-northeast3` |
+| Service | `plimap-api-dev` |
+| Execution environment | Gen2 |
+| CPU / Memory | 1 vCPU / 512 MiB |
+| Concurrency | 40 |
+| Request timeout | 60초 |
+| Minimum / Maximum instances | 0 / 2 |
+| Ingress | all |
+| Authentication | 공개 접근 허용 |
+| Container port | 8080 |
+
+dev Swagger와 프론트 연동을 위해 Cloud Run은 현재 공개 상태입니다. 접근 제한이나 Swagger 비공개 전환은 별도 보안 작업으로 진행합니다.
+
+Cloud Run 원본 URL은 고정 문서값으로 관리하지 않고 서비스 상태에서 조회합니다.
+
+```powershell
+gcloud run services describe plimap-api-dev `
+  --project=plimap `
+  --region=asia-northeast3 `
+  --format="value(status.url)"
+```
+
+### dev 배포 흐름
+
+1. `develop`에 반영된 커밋의 CI가 Gradle build와 test를 수행합니다.
+2. CI 성공 후 `Deploy Dev` 워크플로가 동일 커밋을 checkout합니다.
+3. GitHub Actions가 Workload Identity Federation으로 GCP에 인증합니다.
+4. Docker 이미지를 빌드해 Artifact Registry에 commit SHA tag로 push합니다.
+5. `deploy-dev.ps1`이 Cloud Run의 새 revision을 배포합니다.
+6. Cloud Run 원본 URL에서 health, Swagger UI, OpenAPI 응답을 검증합니다.
+
+로컬에서 동일한 배포 스크립트를 실행하는 방법은 [GCP 스크립트 README](../scripts/gcp/README.md)를 참고합니다.
+
+### dev profile 특성
+
+- Supabase Transaction Pooler를 사용하며 pooler 호환성을 위한 JDBC 설정을 적용합니다.
+- Redis Cloud의 TLS endpoint를 사용합니다.
+- Swagger UI와 OpenAPI 문서를 활성화합니다.
+- OAuth Provider callback과 로그인 완료 후 이동 주소는 `dev.plimap.kr`을 기준으로 사용합니다.
+- secure cookie와 forwarded header 처리는 HTTPS reverse proxy 구성을 기준으로 적용합니다.
+
+## prod 환경
+
+prod는 아직 배포되지 않았으며 다음 항목은 목표 구성입니다.
+
+| 항목 | 목표 또는 현재 결정 |
+| --- | --- |
+| 공개 도메인 | `plimap.kr` 예정 |
+| 애플리케이션 런타임 | dev와 동일한 Docker 이미지 기반 Cloud Run 예정 |
+| 데이터베이스 | Cloud SQL for PostgreSQL 예정 |
+| Redis | 제공 서비스와 region 미정 |
+| Swagger/OpenAPI | `prod` profile에서 기본 비활성화 |
+| 프록시와 TLS | 구성 방식 미정 |
+| CI/CD | prod 전용 workflow 미구축 |
+| 접근 정책과 모니터링 | 배포 전 결정 필요 |
+
+prod 배포 전에는 다음 사항을 별도 작업으로 확정해야 합니다.
+
+1. Cloud Run service, service account, Artifact Registry image 정책
+2. Cloud SQL의 PostGIS 지원, network 연결, backup과 Migration 전략
+3. Redis 제공 서비스와 장애 대응 정책
+4. `plimap.kr` DNS, TLS, 프론트·백엔드 라우팅 구조
+5. Google·Kakao 운영 OAuth client와 callback 등록
+6. Secret Manager의 prod 전용 Secret 분리
+7. 로그, 지표, 알림, rollback과 배포 승인 절차
+
+## 상태 확인과 배포 검증
+
+| 목적 | 경로 |
+| --- | --- |
+| 전체 상태 | `/actuator/health` |
+| 시작 및 생존 확인 | `/actuator/health/liveness` |
+| 트래픽 수신 준비 확인 | `/actuator/health/readiness` |
+| Swagger UI | `/swagger-ui/index.html` |
+| OpenAPI 문서 | `/v3/api-docs` |
+
+dev 배포 스크립트는 Cloud Run 원본에서 위 endpoint를 검증합니다. Traefik 설정 후에는 `https://dev.plimap.kr`에서도 API, OAuth 시작 경로, Swagger UI와 OpenAPI 문서를 추가로 확인해야 합니다.
+
+## 관련 문서
+
+- 환경변수, Secret Manager 매핑과 값 교체: [SECRETS.md](../scripts/gcp/SECRETS.md)
+- GCP 배포 스크립트 사용법: [scripts/gcp/README.md](../scripts/gcp/README.md)
+- 로컬 DB와 Migration: [DATABASE.md](DATABASE.md)
+- 로컬 실행 방법: [README.md](../README.md#로컬-실행-방법)
