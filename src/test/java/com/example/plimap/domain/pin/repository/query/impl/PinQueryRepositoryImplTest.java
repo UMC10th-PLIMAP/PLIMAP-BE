@@ -61,6 +61,12 @@ class PinQueryRepositoryImplTest {
     @Autowired
     EntityManager entityManager;
 
+    Pin pin1;
+    private Place place1;
+    private Place place2;
+    private Place place3;
+
+
     @BeforeEach
     void setup() {
         Member member1 = Member.builder()
@@ -79,7 +85,7 @@ class PinQueryRepositoryImplTest {
 
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-        Place place1 = Place.builder()
+        place1 = Place.builder()
                 .name("여의도 한강공원")
                 .address("서울 영등포구 여의동로 330")
                 .source(PlaceSource.MAP_SELECTION)
@@ -88,7 +94,7 @@ class PinQueryRepositoryImplTest {
                 ))
                 .build();
 
-        Place place2 = Place.builder()
+        place2 = Place.builder()
                 .name("서울숲")
                 .address("서울 성동구 뚝섬로 273")
                 .source(PlaceSource.MAP_SELECTION)
@@ -97,7 +103,7 @@ class PinQueryRepositoryImplTest {
                 ))
                 .build();
 
-        Place place3 = Place.builder()
+        place3 = Place.builder()
                 .name("남산서울타워")
                 .address("서울 용산구 남산공원길 105")
                 .source(PlaceSource.MAP_SELECTION)
@@ -127,7 +133,7 @@ class PinQueryRepositoryImplTest {
                 .build();
 
         // place1 - member1, member2가 pin 등록
-        Pin pin1 = Pin.builder()
+        pin1 = Pin.builder()
                 .member(member1)
                 .place(place1)
                 .placeTrack(placeTrack1)
@@ -183,16 +189,38 @@ class PinQueryRepositoryImplTest {
     }
 
     @Test
-    void pinId_목록에_해당하는_장소의_핀등록_여부와_첫_등록자_닉네임을_반환한다() {
-        List<Long> placeIdList = List.of(1L, 2L, 3L);
+    void placeId_목록에_해당하는_장소의_핀등록_여부와_첫_등록자_닉네임을_반환한다() {
+        List<Long> placeIdList = List.of(
+                place1.getId(),
+                place2.getId(),
+                place3.getId()
+        );
         Map<Long, PlacePinInfo> result = pinQueryRepository.findPinInfosByPlaceIds(placeIdList);
 
-        assertThat(result.get(1L).hasPin()).isTrue();
-        assertThat(result.get(1L).firstPinCreatorNickname()).isEqualTo("이서");
-        assertThat(result.get(2L).hasPin()).isTrue();
-        assertThat(result.get(2L).firstPinCreatorNickname()).isEqualTo("동길");
-        assertThat(result.get(3L).hasPin()).isFalse();
-        assertThat(result.get(3L).firstPinCreatorNickname()).isNull();
+        assertThat(result.get(place1.getId()).hasPin()).isTrue();
+        assertThat(result.get(place1.getId()).firstPinCreatorNickname()).isEqualTo("이서");
+        assertThat(result.get(place2.getId()).hasPin()).isTrue();
+        assertThat(result.get(place2.getId()).firstPinCreatorNickname()).isEqualTo("동길");
+        assertThat(result.get(place3.getId()).hasPin()).isFalse();
+        assertThat(result.get(place3.getId()).firstPinCreatorNickname()).isNull();
+    }
+
+    @Test
+    void 삭제된_핀이_있다면_그_다음으로_최신_핀을_등록한_사용자_닉네임을_반환한다() {
+        List<Long> placeIdList = List.of(
+                place1.getId(),
+                place2.getId(),
+                place3.getId()
+        );
+        Pin managedPin = pinRepository.findById(pin1.getId()).orElseThrow();
+        managedPin.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        Map<Long, PlacePinInfo> result = pinQueryRepository.findPinInfosByPlaceIds(placeIdList);
+
+        assertThat(result.get(place1.getId()).hasPin()).isTrue();
+        assertThat(result.get(place1.getId()).firstPinCreatorNickname()).isEqualTo("동길");
     }
 
 }

@@ -44,7 +44,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                     AND p.deleted_at IS NULL
             LEFT JOIN member m 
                     ON p.member_id = m.id
-            WHERE pl.id IN (:placeIds)
+            WHERE pl.id IN (:placeIds) 
+                    AND pl.deleted_at IS NULL
             ORDER BY pl.id, p.created_at ASC, p.id ASC;
             """;
 
