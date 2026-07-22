@@ -247,6 +247,25 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.result.feedOpen").value(true));
     }
 
+    @Test
+    void 수정할_값이_없을시_400을_반환한다() throws Exception {
+        when(pinCommandService.updatePin(
+                any(Member.class),
+                any(PinRequest.Update.class),
+                anyLong()
+        )).thenThrow(new PinException(PinErrorCode.PIN_NOT_CHANGED));
+
+        mockMvc.perform(patch(PIN_UPDATE_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidUpdateRequest()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("PIN_NOT_CHANGED"))
+                .andExpect(jsonPath("$.message").value("PIN 수정사항이 없습니다."))
+                .andExpect(jsonPath("$.result").doesNotExist());
+    }
+
 
     private String validCreateRequest() {
         return """
@@ -299,6 +318,16 @@ class PinControllerTest {
                   "introduction": "feeling love attack!",
                   "tags":["청량", "설렘"],
                   "feedOpen": true
+                }
+                """;
+    }
+
+    private String invalidUpdateRequest() {
+        return """
+                {
+                  "introduction": null,
+                  "tags":null,
+                  "feedOpen": null
                 }
                 """;
     }
