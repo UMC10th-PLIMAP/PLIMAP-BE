@@ -30,11 +30,14 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,6 +53,7 @@ class PinControllerTest {
 
     private static final String PIN_CREATE_ENDPOINT = "/api/v1/pins";
     private static final String PIN_AVAILABILITY_ENDPOINT = "/api/v1/pins/availability";
+    private static final String PIN_UPDATE_ENDPOINT = "/api/v1/pins/1";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -217,6 +221,33 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.result.nearestPinDistanceMeters").value(83.07525620101859));
     }
 
+    @Test
+    void 핀_수정에_성공하면_200을_반환한다() throws Exception {
+        when(pinCommandService.updatePin(
+                any(Member.class),
+                any(PinRequest.Update.class),
+                anyLong()
+        )).thenReturn(PinResponse.UpdatedPin.builder()
+                .introduction("feeling love attack!")
+                .tags(List.of("청량", "설렘"))
+                .feedOpen(true)
+                .build());
+
+        mockMvc.perform(patch(PIN_UPDATE_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validUpdateRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PIN_UPDATE_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("PIN이 수정되었습니다."))
+                .andExpect(jsonPath("$.result.introduction").value("feeling love attack!"))
+                .andExpect(jsonPath("$.result.tags[0]").value("청량"))
+                .andExpect(jsonPath("$.result.tags[1]").value("설렘"))
+                .andExpect(jsonPath("$.result.feedOpen").value(true));
+    }
+
+
     private String validCreateRequest() {
         return """
                 {
@@ -258,6 +289,16 @@ class PinControllerTest {
                   "longitude": 127.094000,
                   "userLatitude": 37.626144976334544,
                   "userLongitude": 127.09302024107471
+                }
+                """;
+    }
+
+    private String validUpdateRequest() {
+        return """
+                {
+                  "introduction": "feeling love attack!",
+                  "tags":["청량", "설렘"],
+                  "feedOpen": true
                 }
                 """;
     }
