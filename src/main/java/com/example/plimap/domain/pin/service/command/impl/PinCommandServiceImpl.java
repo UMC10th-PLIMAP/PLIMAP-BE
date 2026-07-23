@@ -9,10 +9,7 @@ import com.example.plimap.domain.pin.entity.PinLike;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
-import com.example.plimap.domain.pin.exception.PinErrorCode;
-import com.example.plimap.domain.pin.exception.PinException;
-import com.example.plimap.domain.pin.exception.TagErrorCode;
-import com.example.plimap.domain.pin.exception.TagException;
+import com.example.plimap.domain.pin.exception.*;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
@@ -137,6 +134,16 @@ public class PinCommandServiceImpl implements PinCommandService {
         }
         pinLikeRepository.save(pinLike);
         pin.increaseLikeCount();
+        return PinConverter.toLikeCount(pin.getLikeCount());
+    }
+
+    @Override
+    public PinResponse.LikeCount deletePinLike(Member currentMember, Long pinId) {
+        Pin pin = getPin(pinId);
+        PinLike pinLike = pinLikeRepository.findByPinAndMember(pin, currentMember)
+                        .orElseThrow(() -> new PinLikeException(PinLikeErrorCode.PIN_LIKE_NOT_FOUND));
+        pinLikeRepository.delete(pinLike);
+        pin.decreaseLikeCount();
         return PinConverter.toLikeCount(pin.getLikeCount());
     }
 

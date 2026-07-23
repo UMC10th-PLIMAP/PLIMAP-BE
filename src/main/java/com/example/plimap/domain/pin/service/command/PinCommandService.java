@@ -12,4 +12,6 @@ public interface PinCommandService {
     void deletePin(Member currentMember, Long pinId);
 
     PinResponse.LikeCount createPinLike(Member currentMember, Long pinId);
+
+    PinResponse.LikeCount deletePinLike(Member currentMember, Long pinId);
 }
