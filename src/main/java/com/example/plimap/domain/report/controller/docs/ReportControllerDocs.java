@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface ReportControllerDocs {
 
     @Operation(
-            summary = "회원 신고 접수",
+            summary = "회원 신고",
             description = """
                     로그인한 사용자가 다른 회원을 신고합니다. (Figma 기준 화면: FD-02-01)
 
@@ -150,7 +150,7 @@ public interface ReportControllerDocs {
     );
 
     @Operation(
-            summary = "PIN 신고 접수",
+            summary = "PIN 신고",
             description = """
                     로그인한 사용자가 공개 피드인 PIN을 신고합니다. (Figma 기준 화면: PN-01-03-a, b, c, d)
 
