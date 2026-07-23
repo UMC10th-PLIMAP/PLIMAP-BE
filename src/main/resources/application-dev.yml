@@ -26,6 +26,17 @@ oauth:
 cookie:
   same-site: None
 
+profile-image:
+  storage:
+    provider: ${PROFILE_IMAGE_STORAGE_PROVIDER:supabase}
+    bucket: ${PROFILE_IMAGE_BUCKET:profile-images}
+    connect-timeout: 2s
+    read-timeout: 5s
+    cache-control-seconds: 31536000
+    supabase:
+      url: ${SUPABASE_URL}
+      secret-key: ${SUPABASE_SECRET_KEY}
+
 # Swagger 설정
 springdoc:
   api-docs:
