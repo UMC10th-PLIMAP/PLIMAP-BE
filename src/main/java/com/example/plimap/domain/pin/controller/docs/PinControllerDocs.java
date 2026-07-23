@@ -39,4 +39,13 @@ public interface PinControllerDocs {
             @RequestBody @Valid PinRequest.Update request,
             @PathVariable Long pinId
     );
+
+    @Operation(
+            summary = "PIN 삭제",
+            description = "핀 내용을 삭제합니다. (Figma 기준 화면: 추후 추가 예정)"
+    )
+    public ResponseEntity<ApiResponse<Void>> deletePin(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long pinId
+    );
 }

@@ -58,4 +58,15 @@ public class PinController implements PinControllerDocs {
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PIN_UPDATE_SUCCESS, response));
     }
+
+    @DeleteMapping("/pins/{pinId}")
+    public ResponseEntity<ApiResponse<Void>> deletePin(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long pinId
+    ) {
+        pinCommandService.deletePin(currentMember.getMember(),pinId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.PIN_DELETE_SUCCESS, null));
+    }
 }

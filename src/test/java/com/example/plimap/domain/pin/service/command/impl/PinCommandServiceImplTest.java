@@ -67,7 +67,7 @@ class PinCommandServiceImplTest {
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
-    Member member;
+    Member member, member2;
     Place place;
     Tag tag1, tag2, tag3, tag4, tag5;
     PlaceTrack placeTrack;
@@ -77,6 +77,13 @@ class PinCommandServiceImplTest {
         member = Member.builder()
                 .name("이서윤")
                 .nickname("이서")
+                .introduction("안녕하세요")
+                .profileImageObjectKey("image_url")
+                .build();
+
+        member2 = Member.builder()
+                .name("홍길동")
+                .nickname("동길")
                 .introduction("안녕하세요")
                 .profileImageObjectKey("image_url")
                 .build();
@@ -258,5 +265,50 @@ class PinCommandServiceImplTest {
         assertThat(response.tags())
                 .containsExactly("설렘", "청량");
         assertThat(response.feedOpen()).isEqualTo(request.feedOpen());
+    }
+
+    // deletePin 테스트
+    @Test
+    void 핀_삭제에_성공한다() {
+        Pin pin = Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .introduction("before")
+                .isFeedPublic(true)
+                .build();
+
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+
+        pinCommandService.deletePin(member, 1L);
+
+        assertThat(pin.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    void 작성자가_아닐시_핀_삭제에_실패한다() {
+        Pin pin = Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .introduction("before")
+                .isFeedPublic(true)
+                .build();
+
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(member2, "id", 2L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+
+        assertThatThrownBy(() -> pinCommandService.deletePin(member2, 1L))
+                .isInstanceOf(PinException.class)
+                .hasMessage("해당 PIN에 수정/삭제 권한이 없습니다.");
+
     }
 }
