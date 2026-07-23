@@ -4,10 +4,13 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
+import com.example.plimap.domain.pin.entity.PinLike;
 import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.exception.PinLikeException;
 import com.example.plimap.domain.pin.exception.TagErrorCode;
 import com.example.plimap.domain.pin.exception.TagException;
+import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.service.query.TagQueryService;
@@ -29,6 +32,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
@@ -64,6 +68,9 @@ class PinCommandServiceImplTest {
     @Mock
     private PlaceQueryService placeQueryService;
 
+    @Mock
+    private PinLikeRepository pinLikeRepository;
+
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
@@ -71,6 +78,8 @@ class PinCommandServiceImplTest {
     Place place;
     Tag tag1, tag2, tag3, tag4, tag5;
     PlaceTrack placeTrack;
+    Pin pin;
+    PinLike pinLike;
 
     @BeforeEach
     void setup() {
@@ -134,6 +143,19 @@ class PinCommandServiceImplTest {
         placeTrack = PlaceTrack.builder()
                 .place(place)
                 .track(track)
+                .build();
+
+        pin = Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .introduction("before")
+                .isFeedPublic(true)
+                .build();
+
+        pinLike = PinLike.builder()
+                .member(member)
+                .pin(pin)
                 .build();
     }
 
@@ -270,14 +292,6 @@ class PinCommandServiceImplTest {
     // deletePin 테스트
     @Test
     void 핀_삭제에_성공한다() {
-        Pin pin = Pin.builder()
-                .member(member)
-                .place(place)
-                .placeTrack(placeTrack)
-                .introduction("before")
-                .isFeedPublic(true)
-                .build();
-
         ReflectionTestUtils.setField(member, "id", 1L);
         ReflectionTestUtils.setField(pin, "id", 1L);
 
@@ -291,14 +305,6 @@ class PinCommandServiceImplTest {
 
     @Test
     void 작성자가_아닐시_핀_삭제에_실패한다() {
-        Pin pin = Pin.builder()
-                .member(member)
-                .place(place)
-                .placeTrack(placeTrack)
-                .introduction("before")
-                .isFeedPublic(true)
-                .build();
-
         ReflectionTestUtils.setField(member, "id", 1L);
         ReflectionTestUtils.setField(member2, "id", 2L);
         ReflectionTestUtils.setField(pin, "id", 1L);
@@ -310,5 +316,68 @@ class PinCommandServiceImplTest {
                 .isInstanceOf(PinException.class)
                 .hasMessage("해당 PIN에 수정/삭제 권한이 없습니다.");
 
+    }
+
+    // createPinLike 테스트
+    @Test
+    void 핀_좋아요_등록시_좋아요_개수가_증가한다() {
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+
+        pinCommandService.createPinLike(member, pin.getId());
+
+        verify(pinLikeRepository).save(any(PinLike.class));
+        verify(pinRepository).increaseLikeCount(1L);
+    }
+
+    @Test
+    void 한사람이_같은_핀_좋아요를_여러번_요청할시_예외가_발생한다() {
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+        doThrow(new DataIntegrityViolationException("duplicate"))
+                .when(pinLikeRepository)
+                .save(any(PinLike.class));
+
+        assertThatThrownBy(() -> pinCommandService.createPinLike(member, 1L))
+                .isInstanceOf(PinLikeException.class)
+                .hasMessage("이미 좋아요한 핀입니다.");
+    }
+
+    // deletePinLike 테스트
+    @Test
+    void 핀_좋아요_삭제시_좋아요_개수가_감소한다() {
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+        when(pinLikeRepository.findByPinAndMember(pin, member))
+                .thenReturn(Optional.of(pinLike));
+
+        pinCommandService.deletePinLike(member, pin.getId());
+
+        verify(pinLikeRepository).delete(any(PinLike.class));
+        verify(pinRepository).decreaseLikeCount(1L);
+    }
+
+    @Test
+    void 좋아요하지_않은_핀을_삭제하면_예외가_발생한다() {
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+        when(pinLikeRepository.findByPinAndMember(pin, member))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> pinCommandService.deletePinLike(member, 1L))
+                .isInstanceOf(PinLikeException.class)
+                .hasMessage("핀 좋아요을 찾을 수 없습니다.");
     }
 }
