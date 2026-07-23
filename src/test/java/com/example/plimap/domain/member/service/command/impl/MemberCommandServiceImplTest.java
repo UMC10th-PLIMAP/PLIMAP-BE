@@ -274,6 +274,36 @@ class MemberCommandServiceImplTest {
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.ALREADY_FOLLOWING));
     }
 
+    @Test
+    void 자기_자신을_언팔로우하면_예외가_발생한다() {
+        assertThatThrownBy(() -> memberCommandService.unfollow(MEMBER_ID, MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.CANNOT_FOLLOW_SELF));
+
+        verify(memberFollowRepository, never()).existsById(any());
+    }
+
+    @Test
+    void 팔로우_중이_아니면_언팔로우_시_예외가_발생한다() {
+        when(memberFollowRepository.existsById(new MemberFollowId(MEMBER_ID, OTHER_MEMBER_ID))).thenReturn(false);
+
+        assertThatThrownBy(() -> memberCommandService.unfollow(MEMBER_ID, OTHER_MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NOT_FOLLOWING));
+
+        verify(memberFollowRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void 정상_요청이면_언팔로우한다() {
+        MemberFollowId id = new MemberFollowId(MEMBER_ID, OTHER_MEMBER_ID);
+        when(memberFollowRepository.existsById(id)).thenReturn(true);
+
+        memberCommandService.unfollow(MEMBER_ID, OTHER_MEMBER_ID);
+
+        verify(memberFollowRepository).deleteById(id);
+    }
+
     private MemberReqDTO.Onboarding onboarding(String nickname) {
         MemberReqDTO.Onboarding request = new MemberReqDTO.Onboarding();
         ReflectionTestUtils.setField(request, "nickname", nickname);
