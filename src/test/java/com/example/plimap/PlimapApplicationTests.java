@@ -33,7 +33,8 @@ class PlimapApplicationTests {
             "pin",
             "tag",
             "pin_tag",
-            "pin_like"
+            "pin_like",
+            "report"
     );
 
     @Autowired

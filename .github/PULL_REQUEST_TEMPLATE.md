@@ -19,6 +19,7 @@
 - [ ] `place`
 - [ ] `track`
 - [ ] `pin`
+- [ ] `report`
 - [ ] `infra`
 - [ ] `db`
 
