@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 
@@ -48,6 +49,12 @@ public class OAuthSuccessHandler implements AuthenticationSuccessHandler {
             csrfToken.getToken();
         }
 
-        response.sendRedirect(redirectUri);
+        boolean isNewUser = !oAuthMember.getMember().isOnboarded();
+        String redirectUrl = UriComponentsBuilder.fromUriString(redirectUri)
+                .queryParam("isNewUser", isNewUser)
+                .build()
+                .toUriString();
+
+        response.sendRedirect(redirectUrl);
     }
 }

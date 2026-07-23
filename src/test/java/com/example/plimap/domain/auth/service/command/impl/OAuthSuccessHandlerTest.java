@@ -40,14 +40,14 @@ class OAuthSuccessHandlerTest {
         request.setAttribute(CsrfToken.class.getName(), csrfToken);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication());
+        handler.onAuthenticationSuccess(request, response, authentication(true));
 
         verify(csrfToken).getToken();
         assertThat(response.getHeaders("Set-Cookie"))
                 .anyMatch(header -> header.startsWith("accessToken=access-token-value"));
         assertThat(response.getHeaders("Set-Cookie"))
                 .anyMatch(header -> header.startsWith("refreshToken=refresh-token-value"));
-        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/home");
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/home?isNewUser=false");
     }
 
     @Test
@@ -61,19 +61,72 @@ class OAuthSuccessHandlerTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication());
+        handler.onAuthenticationSuccess(request, response, authentication(true));
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/home");
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/home?isNewUser=false");
+    }
+
+    @Test
+    void 온보딩을_완료하지_않은_유저면_리다이렉트_URL에_isNewUser_true를_붙인다() throws Exception {
+        setUpHandler();
+        when(jwtUtil.createAccessToken(any())).thenReturn("access-token-value");
+        when(jwtUtil.createRefreshToken(any())).thenReturn("refresh-token-value");
+        when(jwtUtil.getAccessTokenExpiry()).thenReturn(Duration.ofDays(1));
+        when(jwtUtil.getRefreshTokenExpiry()).thenReturn(Duration.ofDays(14));
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication(false));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/home?isNewUser=true");
+    }
+
+    @Test
+    void 온보딩을_완료한_유저면_리다이렉트_URL에_isNewUser_false를_붙인다() throws Exception {
+        setUpHandler();
+        when(jwtUtil.createAccessToken(any())).thenReturn("access-token-value");
+        when(jwtUtil.createRefreshToken(any())).thenReturn("refresh-token-value");
+        when(jwtUtil.getAccessTokenExpiry()).thenReturn(Duration.ofDays(1));
+        when(jwtUtil.getRefreshTokenExpiry()).thenReturn(Duration.ofDays(14));
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication(true));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/home?isNewUser=false");
+    }
+
+    @Test
+    void redirectUri에_기존_쿼리스트링이_있어도_보존한_채_isNewUser를_추가한다() throws Exception {
+        setUpHandler("http://localhost:3000/home?foo=bar");
+        when(jwtUtil.createAccessToken(any())).thenReturn("access-token-value");
+        when(jwtUtil.createRefreshToken(any())).thenReturn("refresh-token-value");
+        when(jwtUtil.getAccessTokenExpiry()).thenReturn(Duration.ofDays(1));
+        when(jwtUtil.getRefreshTokenExpiry()).thenReturn(Duration.ofDays(14));
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication(false));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/home?foo=bar&isNewUser=true");
     }
 
     private void setUpHandler() {
-        ReflectionTestUtils.setField(handler, "redirectUri", "http://localhost:3000/home");
+        setUpHandler("http://localhost:3000/home");
+    }
+
+    private void setUpHandler(String redirectUri) {
+        ReflectionTestUtils.setField(handler, "redirectUri", redirectUri);
         ReflectionTestUtils.setField(authCookieUtil, "cookieSecure", false);
         ReflectionTestUtils.setField(authCookieUtil, "cookieSameSite", "Lax");
     }
 
-    private Authentication authentication() {
+    private Authentication authentication(boolean isOnboarded) {
         Member member = mock(Member.class);
+        when(member.isOnboarded()).thenReturn(isOnboarded);
         OAuthMember oAuthMember = new OAuthMember(member, Collections.emptyMap());
         Authentication authentication = mock(Authentication.class);
         when(authentication.getPrincipal()).thenReturn(oAuthMember);
