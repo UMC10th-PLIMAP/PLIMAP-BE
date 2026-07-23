@@ -69,4 +69,26 @@ public class PinController implements PinControllerDocs {
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PIN_DELETE_SUCCESS, null));
     }
+
+    @PutMapping("/pins/{pinId}/likes")
+    public ResponseEntity<ApiResponse<PinResponse.LikeCount>> createPinLike(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long pinId
+    ) {
+        PinResponse.LikeCount response = pinCommandService.createPinLike(currentMember.getMember(), pinId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.PIN_LIKE_PUT_SUCCESS, response));
+    }
+
+    @DeleteMapping("/pins/{pinId}/likes")
+    public ResponseEntity<ApiResponse<PinResponse.LikeCount>> deletePinLike(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long pinId
+    ) {
+        PinResponse.LikeCount response = pinCommandService.deletePinLike(currentMember.getMember(), pinId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.PIN_LIKE_DELETE_SUCCESS, response));
+    }
 }

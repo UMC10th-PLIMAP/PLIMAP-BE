@@ -48,4 +48,22 @@ public interface PinControllerDocs {
             @AuthenticationPrincipal AuthMember currentMember,
             @PathVariable Long pinId
     );
+
+    @Operation(
+            summary = "PIN 좋아요 등록",
+            description = "사용자의 핀 좋아요(따봉)을 등록합니다. (Figma 기준 화면: PN-01-03)"
+    )
+    public ResponseEntity<ApiResponse<PinResponse.LikeCount>> createPinLike(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long pinId
+    );
+
+    @Operation(
+            summary = "PIN 좋아요 삭제",
+            description = "사용자의 핀 좋아요(따봉)을 삭제합니다. (Figma 기준 화면: PN-01-03)"
+    )
+    public ResponseEntity<ApiResponse<PinResponse.LikeCount>> deletePinLike(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long pinId
+    );
 }

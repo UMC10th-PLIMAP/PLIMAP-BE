@@ -10,4 +10,8 @@ public interface PinCommandService {
     PinResponse.UpdatedPin updatePin(Member currentMember, PinRequest.Update request, Long pinId);
 
     void deletePin(Member currentMember, Long pinId);
+
+    PinResponse.LikeCount createPinLike(Member currentMember, Long pinId);
+
+    PinResponse.LikeCount deletePinLike(Member currentMember, Long pinId);
 }

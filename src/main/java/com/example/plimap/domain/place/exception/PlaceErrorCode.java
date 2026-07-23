@@ -28,6 +28,16 @@ public enum PlaceErrorCode implements BaseErrorCode {
             HttpStatus.NOT_FOUND,
             "PLACE_NOT_FOUND",
             "장소를 찾을 수 없습니다."
+    ),
+    PLACE_EXTERNAL_API_ERROR(
+            HttpStatus.BAD_GATEWAY,
+            "PLACE_EXTERNAL_API_ERROR",
+            "장소 검색 서비스 연동에 실패했습니다."
+    ),
+    PLACE_EXTERNAL_API_TIMEOUT(
+            HttpStatus.GATEWAY_TIMEOUT,
+            "PLACE_EXTERNAL_API_TIMEOUT",
+            "장소 검색 서비스 응답이 지연되고 있습니다."
     );
 
     private final HttpStatus status;
