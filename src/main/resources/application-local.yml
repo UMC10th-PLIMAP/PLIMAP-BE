@@ -29,7 +29,7 @@ spring:
         format_sql: true
 
 oauth:
-  redirect-uri: "http://localhost:3000/home"
+  redirect-uri: "http://localhost:5173/home"
 
 cookie:
   secure: false
