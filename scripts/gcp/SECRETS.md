@@ -12,18 +12,18 @@
 | --- | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | 스크립트 고정값 | `dev` |
 | `CORS_ALLOWED_ORIGINS` | `PublicBaseUrl` | `https://dev.plimap.kr` |
-| `OAUTH_REDIRECT_URI` | `FrontendRedirectUri` | `https://dev.plimap.kr/home` |
+| `OAUTH_REDIRECT_URI` | `FrontendRedirectUri` 또는 `PublicBaseUrl` + `/home` | `https://dev.plimap.kr/home` |
 | `KAKAO_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/kakao` |
 | `GOOGLE_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/google` |
 
-GitHub Actions에서는 다음 Repository Variable로 공개 주소를 덮어쓸 수 있습니다. 변수가 없으면 스크립트의 dev 기본값을 사용합니다.
+GitHub Actions에서는 다음 Repository Variable로 공개 주소를 덮어쓸 수 있습니다. `DEV_PUBLIC_BASE_URL`이 없으면 스크립트의 dev 기본값을 사용하고, `DEV_FRONTEND_REDIRECT_URI`가 없으면 선택된 공개 origin에 `/home`을 붙여 생성합니다.
 
-| Repository Variable | 스크립트 인자 | dev 기본값 |
+| Repository Variable | 스크립트 인자 | dev 기본 동작 |
 | --- | --- | --- |
 | `DEV_PUBLIC_BASE_URL` | `PublicBaseUrl` | `https://dev.plimap.kr` |
-| `DEV_FRONTEND_REDIRECT_URI` | `FrontendRedirectUri` | `https://dev.plimap.kr/home` |
+| `DEV_FRONTEND_REDIRECT_URI` | `FrontendRedirectUri` | 미설정 시 `PublicBaseUrl` + `/home` |
 
-`PublicBaseUrl`은 경로, query, fragment, credentials, custom port가 없는 HTTPS Origin이어야 합니다. `FrontendRedirectUri`는 HTTPS URL이어야 합니다.
+`PublicBaseUrl`은 경로, query, fragment, credentials, custom port가 없는 HTTPS Origin이어야 합니다. `FrontendRedirectUri`를 직접 설정할 때는 HTTPS URL이어야 하며 `PublicBaseUrl`과 동일한 origin을 사용해야 합니다. 경로는 변경할 수 있지만 다른 host로의 로그인 완료 redirect는 허용하지 않습니다.
 
 ## Secret Manager 매핑
 

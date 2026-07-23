@@ -78,7 +78,7 @@ flowchart LR
     CloudRun --> Redis["Redis Cloud"]
 ```
 
-브라우저가 사용하는 공개 host는 `dev.plimap.kr` 하나입니다. 프론트는 API Base URL로 절대 주소 `https://dev.plimap.kr/api` 또는 동일 host의 상대 경로 `/api`를 사용합니다. Cloud Run 원본 URL은 Traefik upstream과 배포 직후 직접 검증에만 사용합니다.
+브라우저가 사용하는 공개 host는 `dev.plimap.kr` 하나입니다. 프론트는 API Base URL로 절대 주소 `https://dev.plimap.kr/api` 또는 동일 host의 상대 경로 `/api`를 사용합니다. Cloud Run 원본 URL은 운영상 Traefik upstream과 배포 직후 직접 검증에 사용하지만, 현재 dev 배포 정책상 Traefik을 거치지 않고도 외부에서 직접 접근할 수 있습니다.
 
 ### DNS와 TLS
 
@@ -119,7 +119,7 @@ Cloud Run은 외부에서 접속한 `dev.plimap.kr` host와 HTTPS protocol을 �
 | Authentication | 공개 접근 허용 |
 | Container port | 8080 |
 
-dev Swagger와 프론트 연동을 위해 Cloud Run은 현재 공개 상태입니다. 접근 제한이나 Swagger 비공개 전환은 별도 보안 작업으로 진행합니다.
+dev Swagger와 프론트 연동을 위해 Cloud Run은 `ingress=all`, 인증 없는 공개 접근을 사용합니다. 이에 따른 `run.app` 원본 URL의 직접 노출은 dev 환경에서 한시적으로 허용한 위험이며, 접근 제한이나 Swagger 비공개 전환은 별도 보안 작업으로 진행합니다.
 
 Cloud Run 원본 URL은 고정 문서값으로 관리하지 않고 서비스 상태에서 조회합니다.
 
@@ -184,7 +184,13 @@ prod 배포 전에는 다음 사항을 별도 작업으로 확정해야 합니�
 | Swagger UI | `/swagger-ui/index.html` |
 | OpenAPI 문서 | `/v3/api-docs` |
 
-dev 배포 스크립트는 Cloud Run 원본에서 위 endpoint를 검증합니다. Traefik 설정 후에는 `https://dev.plimap.kr`에서도 API, OAuth 시작 경로, Swagger UI와 OpenAPI 문서를 추가로 확인해야 합니다.
+dev 배포 스크립트는 Cloud Run 원본에서 위 endpoint를 검증합니다. Traefik 설정 후에는 다음 외부 인프라 검증까지 완료해야 dev 공개 경로 구성이 완료된 것으로 판단합니다.
+
+- `dev.plimap.kr` DNS가 Traefik 서버의 고정 공인 IP를 가리키고 유효한 TLS 인증서를 제공하는지 확인합니다.
+- 서버 방화벽이 의도한 공개 포트만 허용하는지 확인합니다.
+- 프론트 화면, API, OAuth 시작 경로, Swagger UI와 OpenAPI 문서가 의도한 upstream으로 라우팅되는지 확인합니다.
+- 로그인 응답의 `Set-Cookie`와 OAuth 응답의 `Location` header가 Traefik을 거쳐도 유지되는지 확인합니다.
+- Google과 Kakao 로그인을 시작해 callback, 로그인 완료 redirect, 인증 쿠키가 모두 `dev.plimap.kr` 기준으로 동작하는지 E2E 검증합니다.
 
 ## 관련 문서
 

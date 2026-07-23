@@ -72,13 +72,7 @@ jobs:
           } else {
             "https://dev.plimap.kr"
           }
-          $frontendRedirectUri = if ($env:DEV_FRONTEND_REDIRECT_URI) {
-            $env:DEV_FRONTEND_REDIRECT_URI
-          } else {
-            "https://dev.plimap.kr/home"
-          }
-
           ./scripts/gcp/deploy-dev.ps1 `
             -Image $env:IMAGE `
             -PublicBaseUrl $publicBaseUrl `
-            -FrontendRedirectUri $frontendRedirectUri
+            -FrontendRedirectUri $env:DEV_FRONTEND_REDIRECT_URI

@@ -5,7 +5,7 @@ param(
     [string]$ServiceName = "plimap-api-dev",
     [string]$Image = "asia-northeast3-docker.pkg.dev/plimap/plimap-docker/api:dev-initial",
     [string]$PublicBaseUrl = "https://dev.plimap.kr",
-    [string]$FrontendRedirectUri = "https://dev.plimap.kr/home"
+    [string]$FrontendRedirectUri = ""
 )
 
 Set-StrictMode -Version Latest
@@ -59,7 +59,8 @@ function Get-HttpsOrigin {
 function Get-HttpsUrl {
     param(
         [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][string]$Value
+        [Parameter(Mandatory)][string]$Value,
+        [Parameter(Mandatory)][string]$ExpectedOrigin
     )
 
     $uri = [Uri]::new($Value, [UriKind]::Absolute)
@@ -68,6 +69,15 @@ function Get-HttpsUrl {
         -not $uri.IsDefaultPort -or
         -not [string]::IsNullOrEmpty($uri.Fragment)) {
         throw "$Name must be an HTTPS URL without credentials, a custom port, or a fragment: $Value"
+    }
+
+    $actualOrigin = $uri.GetLeftPart([UriPartial]::Authority)
+    if (-not [string]::Equals(
+        $actualOrigin,
+        $ExpectedOrigin,
+        [StringComparison]::OrdinalIgnoreCase
+    )) {
+        throw "$Name must use the same origin as PublicBaseUrl ($ExpectedOrigin): $Value"
     }
 
     return $uri.AbsoluteUri
@@ -97,7 +107,13 @@ if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
 }
 
 $publicOrigin = Get-HttpsOrigin -Value $PublicBaseUrl
-$frontendRedirectUrl = Get-HttpsUrl -Name "FrontendRedirectUri" -Value $FrontendRedirectUri
+if ([string]::IsNullOrWhiteSpace($FrontendRedirectUri)) {
+    $FrontendRedirectUri = "$publicOrigin/home"
+}
+$frontendRedirectUrl = Get-HttpsUrl `
+    -Name "FrontendRedirectUri" `
+    -Value $FrontendRedirectUri `
+    -ExpectedOrigin $publicOrigin
 
 foreach ($entry in $secretMap.GetEnumerator()) {
     $versionStates = @(& gcloud secrets versions list $entry.Value `
