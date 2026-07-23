@@ -11,9 +11,31 @@ import jakarta.validation.constraints.Size;
 
 public final class PlaceRequest {
 
-    private static final String INVALID_LOCATION_MESSAGE = "위치 정보가 올바르지 않습니다.";
+    public static final String INVALID_LOCATION_MESSAGE = "위치 정보가 올바르지 않습니다.";
 
     private PlaceRequest() {
+    }
+
+    private static String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.strip();
+    }
+
+    public record Search(
+            String keyword,
+            @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = INVALID_LOCATION_MESSAGE)
+            Double latitude,
+            @DecimalMin(value = "-180", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = INVALID_LOCATION_MESSAGE)
+            Double longitude
+    ) {
+
+        public Search {
+            keyword = normalize(keyword);
+        }
     }
 
     public record MapSelection(
@@ -59,11 +81,5 @@ public final class PlaceRequest {
             return resolvedName == null || resolvedName.length() <= 100;
         }
 
-        private static String normalize(String value) {
-            if (value == null || value.isBlank()) {
-                return null;
-            }
-            return value.strip();
-        }
     }
 }
