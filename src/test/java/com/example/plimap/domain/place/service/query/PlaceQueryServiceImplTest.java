@@ -143,6 +143,17 @@ class PlaceQueryServiceImplTest {
     }
 
     @Test
+    void 경도가_없으면_현재_위치_필수_예외를_던진다() {
+        PlaceRequest.Search request = new PlaceRequest.Search("한강", 37.5283, null);
+
+        assertPlaceError(
+                () -> placeQueryService.searchPlaces(request),
+                PlaceErrorCode.PLACE_CURRENT_LOCATION_REQUIRED
+        );
+        verifyNoInteractions(kakaoPlaceSearchClient);
+    }
+
+    @Test
     void 카카오_API_오류를_502_장소_예외로_변환한다() {
         PlaceRequest.Search request = new PlaceRequest.Search("한강", 37.5283, 126.9326);
         when(kakaoPlaceSearchClient.search("한강", 37.5283, 126.9326))
@@ -167,7 +178,7 @@ class PlaceQueryServiceImplTest {
     }
 
     @Test
-    void 카카오_좌표가_잘못되면_502_장소_예외로_변환한다() {
+    void 카카오_거리값이_잘못되면_502_장소_예외로_변환한다() {
         PlaceRequest.Search request = new PlaceRequest.Search("한강", 37.5283, 126.9326);
         when(kakaoPlaceSearchClient.search("한강", 37.5283, 126.9326))
                 .thenReturn(response("26338954", "not-number"));

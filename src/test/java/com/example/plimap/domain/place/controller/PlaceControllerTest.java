@@ -231,6 +231,20 @@ class PlaceControllerTest {
     }
 
     @Test
+    void 장소_검색_경도가_범위를_벗어나면_공통_400을_반환한다() throws Exception {
+        mockMvc.perform(get(SEARCH_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("keyword", "한강")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "181"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("위치 정보가 올바르지 않습니다."));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
     void 장소_검색어가_비어_있으면_명세_400을_반환한다() throws Exception {
         when(placeQueryService.searchPlaces(any()))
                 .thenThrow(new PlaceException(PlaceErrorCode.PLACE_SEARCH_KEYWORD_REQUIRED));
@@ -254,6 +268,20 @@ class PlaceControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .param("keyword", "한강")
                         .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PLACE_CURRENT_LOCATION_REQUIRED"))
+                .andExpect(jsonPath("$.message").value("현재 위치 정보가 필요합니다."));
+    }
+
+    @Test
+    void 장소_검색_경도가_없으면_명세_400을_반환한다() throws Exception {
+        when(placeQueryService.searchPlaces(any()))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_CURRENT_LOCATION_REQUIRED));
+
+        mockMvc.perform(get(SEARCH_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("keyword", "한강")
+                        .param("latitude", "37.5283"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("PLACE_CURRENT_LOCATION_REQUIRED"))
                 .andExpect(jsonPath("$.message").value("현재 위치 정보가 필요합니다."));

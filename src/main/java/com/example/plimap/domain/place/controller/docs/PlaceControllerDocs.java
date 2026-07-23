@@ -42,12 +42,12 @@ public interface PlaceControllerDocs {
             @Parameter(description = "검색어", required = true, example = "한강")
             String keyword,
             @Parameter(description = "사용자 현재 위도", required = true, example = "37.5283")
-            @DecimalMin(value = "-90", message = "위치 정보가 올바르지 않습니다.")
-            @DecimalMax(value = "90", message = "위치 정보가 올바르지 않습니다.")
+            @DecimalMin(value = "-90", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
             Double latitude,
             @Parameter(description = "사용자 현재 경도", required = true, example = "126.9326")
-            @DecimalMin(value = "-180", message = "위치 정보가 올바르지 않습니다.")
-            @DecimalMax(value = "180", message = "위치 정보가 올바르지 않습니다.")
+            @DecimalMin(value = "-180", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
             Double longitude
     );
 
