@@ -27,6 +27,7 @@ import com.example.plimap.global.external.itunes.dto.ItunesSearchResponse;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.RedisConnectionFailureException;
 
 class TrackQueryServiceImplTest {
@@ -76,9 +77,9 @@ class TrackQueryServiceImplTest {
         assertThat(result).isEqualTo(searchResult());
         verify(trackSearchCacheRepository).find(KEYWORD, LIMIT);
         verifyNoMoreInteractions(trackSearchCacheRepository);
+        verify(trackMetadataCacheRepository).save(metadata());
         verifyNoInteractions(
                 itunesSearchClient,
-                trackMetadataCacheRepository,
                 trackRepository,
                 placeTrackRepository
         );
@@ -128,10 +129,9 @@ class TrackQueryServiceImplTest {
     }
 
     @Test
-    void 오염된_검색_캐시는_iTunes_API로_fallback한다() {
-        CacheSerializationException serializationException =
-                new CacheSerializationException("invalid cache json", new RuntimeException());
-        when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenThrow(serializationException);
+    void Redis_조회_timeout이_발생하면_iTunes_API를_호출해_검색한다() {
+        when(trackSearchCacheRepository.find(KEYWORD, LIMIT))
+                .thenThrow(new QueryTimeoutException("redis timeout"));
         when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(itunesResponse());
 
         TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
@@ -141,16 +141,66 @@ class TrackQueryServiceImplTest {
     }
 
     @Test
-    void 검색_캐시_직렬화_실패가_발생해도_검색_결과를_반환한다() {
+    void 검색_캐시_역직렬화_오류를_장애_우회로_숨기지_않는다() {
+        CacheSerializationException serializationException =
+                new CacheSerializationException("invalid cache json", new RuntimeException());
+        when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenThrow(serializationException);
+
+        assertThatThrownBy(() -> trackQueryService.searchTracks(request()))
+                .isSameAs(serializationException);
+
+        verifyNoInteractions(itunesSearchClient, trackMetadataCacheRepository);
+    }
+
+    @Test
+    void 검색_캐시_직렬화_오류를_장애_우회로_숨기지_않는다() {
         when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenReturn(Optional.empty());
         when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(itunesResponse());
-        doThrow(new CacheSerializationException("serialization failed", new RuntimeException()))
+        CacheSerializationException serializationException =
+                new CacheSerializationException("serialization failed", new RuntimeException());
+        doThrow(serializationException)
                 .when(trackSearchCacheRepository)
                 .save(KEYWORD, LIMIT, new TrackSearchCache(List.of(metadata())));
 
+        assertThatThrownBy(() -> trackQueryService.searchTracks(request()))
+                .isSameAs(serializationException);
+    }
+
+    @Test
+    void 메타데이터_직렬화_오류를_장애_우회로_숨기지_않는다() {
+        when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenReturn(Optional.empty());
+        when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(itunesResponse());
+        CacheSerializationException serializationException =
+                new CacheSerializationException("serialization failed", new RuntimeException());
+        doThrow(serializationException)
+                .when(trackMetadataCacheRepository)
+                .save(metadata());
+
+        assertThatThrownBy(() -> trackQueryService.searchTracks(request()))
+                .isSameAs(serializationException);
+
+        verify(trackSearchCacheRepository, never()).save(
+                KEYWORD,
+                LIMIT,
+                new TrackSearchCache(List.of(metadata()))
+        );
+    }
+
+    @Test
+    void 빈_검색_결과도_정상_결과로_캐싱한다() {
+        when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenReturn(Optional.empty());
+        ItunesSearchResponse emptyResponse = new ItunesSearchResponse(0, List.of());
+        when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(emptyResponse);
+
         TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
 
-        assertThat(result).isEqualTo(searchResult());
+        assertThat(result.tracks()).isEmpty();
+        verify(trackSearchCacheRepository).save(
+                KEYWORD,
+                LIMIT,
+                new TrackSearchCache(List.of())
+        );
+        verifyNoInteractions(trackMetadataCacheRepository);
     }
 
     @Test
@@ -166,6 +216,11 @@ class TrackQueryServiceImplTest {
                                 .isEqualTo(TrackErrorCode.TRACK_EXTERNAL_API_ERROR));
 
         verify(trackMetadataCacheRepository, never()).save(metadata());
+        verify(trackSearchCacheRepository, never()).save(
+                "아이유",
+                LIMIT,
+                new TrackSearchCache(List.of(metadata()))
+        );
         verifyNoInteractions(trackRepository, placeTrackRepository);
     }
 
