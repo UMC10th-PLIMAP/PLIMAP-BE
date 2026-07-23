@@ -1,7 +1,9 @@
 package com.example.plimap.domain.place.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,7 +15,10 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.PlaceSource;
+import com.example.plimap.domain.place.exception.PlaceErrorCode;
+import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.service.command.PlaceCommandService;
+import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -46,7 +51,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles("test")
 class PlaceControllerTest {
 
-    private static final String ENDPOINT = "/api/v1/places/map-selections";
+    private static final String MAP_SELECTION_ENDPOINT = "/api/v1/places/map-selections";
+    private static final String SEARCH_ENDPOINT = "/api/v1/places/search";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -54,6 +60,9 @@ class PlaceControllerTest {
 
     @MockitoBean
     private PlaceCommandService placeCommandService;
+
+    @MockitoBean
+    private PlaceQueryService placeQueryService;
 
     @MockitoBean
     private CustomOAuthService customOAuthService;
@@ -94,7 +103,7 @@ class PlaceControllerTest {
                         126.9326
                 ));
 
-        mockMvc.perform(post(ENDPOINT)
+        mockMvc.perform(post(MAP_SELECTION_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequest()))
@@ -111,7 +120,7 @@ class PlaceControllerTest {
 
     @Test
     void 좌표가_유효_범위를_벗어나면_공통_400을_반환한다() throws Exception {
-        mockMvc.perform(post(ENDPOINT)
+        mockMvc.perform(post(MAP_SELECTION_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -132,7 +141,7 @@ class PlaceControllerTest {
 
     @Test
     void address가_blank이면_공통_400을_반환한다() throws Exception {
-        mockMvc.perform(post(ENDPOINT)
+        mockMvc.perform(post(MAP_SELECTION_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -151,7 +160,7 @@ class PlaceControllerTest {
 
     @Test
     void 유효하지_않은_Bearer_인증은_공통_401을_반환한다() throws Exception {
-        mockMvc.perform(post(ENDPOINT)
+        mockMvc.perform(post(MAP_SELECTION_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequest()))
@@ -161,6 +170,130 @@ class PlaceControllerTest {
                 .andExpect(jsonPath("$.result").isEmpty());
 
         verifyNoInteractions(placeCommandService);
+    }
+
+    @Test
+    void 장소_검색에_성공하면_명세_응답을_반환한다() throws Exception {
+        when(placeQueryService.searchPlaces(any())).thenReturn(new PlaceResponse.SearchResult(
+                java.util.List.of(new PlaceResponse.SearchItem(
+                        "KAKAO",
+                        "26338954",
+                        "한강",
+                        "여행 > 관광,명소 > 공원",
+                        "서울특별시 영등포구 여의도동",
+                        "서울특별시 영등포구 여의동로",
+                        37.5283,
+                        126.9326,
+                        470,
+                        true,
+                        "홍길동"
+                ))
+        ));
+
+        mockMvc.perform(get(SEARCH_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("keyword", "한강")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PLACE_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("장소 검색에 성공했습니다."))
+                .andExpect(jsonPath("$.result.items[0].provider").value("KAKAO"))
+                .andExpect(jsonPath("$.result.items[0].providerPlaceId").value("26338954"))
+                .andExpect(jsonPath("$.result.items[0].placeName").value("한강"))
+                .andExpect(jsonPath("$.result.items[0].category")
+                        .value("여행 > 관광,명소 > 공원"))
+                .andExpect(jsonPath("$.result.items[0].address")
+                        .value("서울특별시 영등포구 여의도동"))
+                .andExpect(jsonPath("$.result.items[0].roadAddress")
+                        .value("서울특별시 영등포구 여의동로"))
+                .andExpect(jsonPath("$.result.items[0].latitude").value(37.5283))
+                .andExpect(jsonPath("$.result.items[0].longitude").value(126.9326))
+                .andExpect(jsonPath("$.result.items[0].distanceMeters").value(470))
+                .andExpect(jsonPath("$.result.items[0].hasPin").value(true))
+                .andExpect(jsonPath("$.result.items[0].firstPinCreatorNickname")
+                        .value("홍길동"));
+    }
+
+    @Test
+    void 장소_검색_좌표가_범위를_벗어나면_공통_400을_반환한다() throws Exception {
+        mockMvc.perform(get(SEARCH_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("keyword", "한강")
+                        .param("latitude", "91")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("위치 정보가 올바르지 않습니다."));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
+    void 장소_검색어가_비어_있으면_명세_400을_반환한다() throws Exception {
+        when(placeQueryService.searchPlaces(any()))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_SEARCH_KEYWORD_REQUIRED));
+
+        mockMvc.perform(get(SEARCH_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("keyword", "   ")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PLACE_SEARCH_KEYWORD_REQUIRED"))
+                .andExpect(jsonPath("$.message").value("검색어를 입력해주세요."));
+    }
+
+    @Test
+    void 장소_검색_현재_위치가_없으면_명세_400을_반환한다() throws Exception {
+        when(placeQueryService.searchPlaces(any()))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_CURRENT_LOCATION_REQUIRED));
+
+        mockMvc.perform(get(SEARCH_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("keyword", "한강")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PLACE_CURRENT_LOCATION_REQUIRED"))
+                .andExpect(jsonPath("$.message").value("현재 위치 정보가 필요합니다."));
+    }
+
+    @Test
+    void 카카오_연동_오류는_명세_502를_반환한다() throws Exception {
+        when(placeQueryService.searchPlaces(any()))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR));
+
+        mockMvc.perform(validSearchRequest())
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("PLACE_EXTERNAL_API_ERROR"))
+                .andExpect(jsonPath("$.message")
+                        .value("장소 검색 서비스 연동에 실패했습니다."));
+    }
+
+    @Test
+    void 카카오_timeout은_명세_504를_반환한다() throws Exception {
+        when(placeQueryService.searchPlaces(any()))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT));
+
+        mockMvc.perform(validSearchRequest())
+                .andExpect(status().isGatewayTimeout())
+                .andExpect(jsonPath("$.code").value("PLACE_EXTERNAL_API_TIMEOUT"))
+                .andExpect(jsonPath("$.message")
+                        .value("장소 검색 서비스 응답이 지연되고 있습니다."));
+    }
+
+    @Test
+    void 장소_검색의_유효하지_않은_Bearer_인증은_공통_401을_반환한다() throws Exception {
+        mockMvc.perform(get(SEARCH_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token")
+                        .param("keyword", "한강")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("COMMON_401_UNAUTHORIZED"));
+
+        verifyNoInteractions(placeQueryService);
     }
 
     private String validRequest() {
@@ -173,5 +306,14 @@ class PlaceControllerTest {
                   "roadAddress": "서울특별시 영등포구 여의동로"
                 }
                 """;
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            validSearchRequest() {
+        return get(SEARCH_ENDPOINT)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                .param("keyword", "한강")
+                .param("latitude", "37.5283")
+                .param("longitude", "126.9326");
     }
 }

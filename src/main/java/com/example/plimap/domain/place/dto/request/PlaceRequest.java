@@ -16,6 +16,24 @@ public final class PlaceRequest {
     private PlaceRequest() {
     }
 
+    public record Search(
+            String keyword,
+            Double latitude,
+            Double longitude
+    ) {
+
+        public Search {
+            keyword = normalize(keyword);
+        }
+
+        private static String normalize(String value) {
+            if (value == null || value.isBlank()) {
+                return null;
+            }
+            return value.strip();
+        }
+    }
+
     public record MapSelection(
             @NotNull(message = INVALID_LOCATION_MESSAGE)
             @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)

@@ -30,6 +30,10 @@ plimap:
   cors:
     allowed-origins: http://localhost:3000
 
+kakao:
+  local:
+    rest-api-key: test-kakao-rest-api-key
+
 youtube:
   api:
     key: test-youtube-api-key

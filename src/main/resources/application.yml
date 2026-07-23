@@ -78,6 +78,14 @@ plimap:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
 
+# Kakao Local REST API 설정
+kakao:
+  local:
+    base-url: https://dapi.kakao.com
+    rest-api-key: ${KAKAO_REST_API_KEY}
+    connect-timeout: 2s
+    read-timeout: 5s
+
 # iTunes Search API 설정
 itunes:
   base-url: https://itunes.apple.com
