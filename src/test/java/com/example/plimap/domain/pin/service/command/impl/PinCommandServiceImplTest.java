@@ -125,16 +125,18 @@ class PinCommandServiceImplTest {
                 .displayOrder((short) 10)
                 .build();
 
-        Track track = Track.builder()
-                .previewUrl("preview")
-                .albumImageUrl("album")
-                .previewUrl("url_test")
-                .build();
+        Track track = Track.create(
+                null,
+                null,
+                null,
+                null,
+                null,
+                "album",
+                "url_test",
+                null
+        );
 
-        placeTrack = PlaceTrack.builder()
-                .place(place)
-                .track(track)
-                .build();
+        placeTrack = PlaceTrack.create(place, track);
     }
 
     // createPin 테스트

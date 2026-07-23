@@ -3,6 +3,7 @@ package com.example.plimap.domain.track.repository;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.track.entity.PlaceTrack;
+import com.example.plimap.domain.track.entity.PlaceTrackLike;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import com.example.plimap.support.RedisContainerConfiguration;
@@ -54,10 +55,8 @@ class TrackRepositoryIntegrationTest {
     void 활성_PlaceTrack을_장소와_트랙으로_조회한다() {
         Place place = savePlace();
         Track track = trackRepository.save(track("active-youtube-video-id"));
-        PlaceTrack savedPlaceTrack = placeTrackRepository.saveAndFlush(PlaceTrack.builder()
-                .place(place)
-                .track(track)
-                .build());
+        PlaceTrack savedPlaceTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
 
         PlaceTrack foundPlaceTrack = placeTrackRepository
                 .findByPlace_IdAndTrack_IdAndDeletedAtIsNull(place.getId(), track.getId())
@@ -71,10 +70,8 @@ class TrackRepositoryIntegrationTest {
     void 삭제된_PlaceTrack을_조회하고_복구하면_활성_조회가_가능하다() {
         Place place = savePlace();
         Track track = trackRepository.save(track("deleted-youtube-video-id"));
-        PlaceTrack placeTrack = placeTrackRepository.saveAndFlush(PlaceTrack.builder()
-                .place(place)
-                .track(track)
-                .build());
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
 
         placeTrack.delete();
         entityManager.flush();
@@ -99,17 +96,31 @@ class TrackRepositoryIntegrationTest {
         assertThat(restoredPlaceTrack.getDeletedAt()).isNull();
     }
 
+    @Test
+    void PlaceTrackLike를_정적_팩터리_메서드로_생성한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("liked-youtube-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+
+        PlaceTrackLike placeTrackLike = PlaceTrackLike.create(placeTrack, 1L);
+
+        assertThat(placeTrackLike.getPlaceTrack()).isEqualTo(placeTrack);
+        assertThat(placeTrackLike.getId().getPlaceTrackId()).isEqualTo(placeTrack.getId());
+        assertThat(placeTrackLike.getId().getMemberId()).isEqualTo(1L);
+    }
+
     private Track track(String providerTrackId) {
-        return Track.builder()
-                .provider("YOUTUBE")
-                .providerTrackId(providerTrackId)
-                .title("title")
-                .artistName("artist")
-                .albumTitle("album")
-                .albumImageUrl("https://example.com/album.jpg")
-                .previewUrl("https://example.com/preview")
-                .durationMs(180_000)
-                .build();
+        return Track.create(
+                "YOUTUBE",
+                providerTrackId,
+                "title",
+                "artist",
+                "album",
+                "https://example.com/album.jpg",
+                "https://example.com/preview",
+                180_000
+        );
     }
 
     private Place savePlace() {
