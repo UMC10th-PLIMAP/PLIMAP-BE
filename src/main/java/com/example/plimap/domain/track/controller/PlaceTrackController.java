@@ -1,0 +1,59 @@
+package com.example.plimap.domain.track.controller;
+
+import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.track.controller.docs.PlaceTrackControllerDocs;
+import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
+import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
+import com.example.plimap.domain.track.enums.PlaceTrackSort;
+import com.example.plimap.domain.track.exception.TrackSuccessCode;
+import com.example.plimap.domain.track.service.query.PlaceTrackQueryService;
+import com.example.plimap.global.apiPayload.ApiResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/places")
+@RequiredArgsConstructor
+@Validated
+public class PlaceTrackController implements PlaceTrackControllerDocs {
+
+    private final PlaceTrackQueryService placeTrackQueryService;
+
+    @Override
+    @GetMapping("/{placeId}/tracks")
+    public ResponseEntity<ApiResponse<PlaceTrackResponse.ListResult>> getPlaceTracks(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long placeId,
+            @RequestParam(defaultValue = "POPULAR") PlaceTrackSort sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam double latitude,
+            @RequestParam double longitude
+    ) {
+        PlaceTrackResponse.ListResult result = placeTrackQueryService.getPlaceTracks(
+                currentMember.getMember().getId(),
+                placeId,
+                new PlaceTrackRequest.List(
+                        sort,
+                        page,
+                        size,
+                        latitude,
+                        longitude
+                )
+        );
+
+        return ResponseEntity
+                .status(TrackSuccessCode.PLACE_TRACK_LIST_SUCCESS.getStatus())
+                .body(ApiResponse.success(
+                        TrackSuccessCode.PLACE_TRACK_LIST_SUCCESS,
+                        result
+                ));
+    }
+}

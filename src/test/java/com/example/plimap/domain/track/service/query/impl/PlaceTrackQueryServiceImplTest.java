@@ -1,0 +1,226 @@
+package com.example.plimap.domain.track.service.query.impl;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.pin.validator.PinLocationValidator;
+import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.place.exception.PlaceErrorCode;
+import com.example.plimap.domain.place.exception.PlaceException;
+import com.example.plimap.domain.place.service.query.PlaceQueryService;
+import com.example.plimap.domain.track.dto.PlaceTrackQueryResult;
+import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
+import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
+import com.example.plimap.domain.track.enums.PlaceTrackSort;
+import com.example.plimap.domain.track.repository.query.PlaceTrackQueryRepository;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.SliceImpl;
+
+class PlaceTrackQueryServiceImplTest {
+
+    private static final Long MEMBER_ID = 1L;
+    private static final Long PLACE_ID = 2L;
+
+    private final PlaceQueryService placeQueryService = mock(PlaceQueryService.class);
+    private final PinQueryService pinQueryService = mock(PinQueryService.class);
+    private final PinLocationValidator pinLocationValidator =
+            mock(PinLocationValidator.class);
+    private final PlaceTrackQueryRepository placeTrackQueryRepository =
+            mock(PlaceTrackQueryRepository.class);
+
+    private final PlaceTrackQueryServiceImpl placeTrackQueryService =
+            new PlaceTrackQueryServiceImpl(
+                    placeQueryService,
+                    pinQueryService,
+                    pinLocationValidator,
+                    placeTrackQueryRepository
+            );
+
+    @Test
+    void 존재하지_않는_장소이면_장소_예외를_전파한다() {
+        PlaceException exception = new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND);
+        when(placeQueryService.getActivePlace(PLACE_ID)).thenThrow(exception);
+
+        assertThatThrownBy(() ->
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request()))
+                .isSameAs(exception);
+
+        verifyNoInteractions(
+                pinQueryService,
+                pinLocationValidator,
+                placeTrackQueryRepository
+        );
+    }
+
+    @Test
+    void 장소에_곡이_없으면_빈_목록을_반환한다() {
+        givenPlaceAndDistance(100.0);
+        givenTracks(List.of(), false);
+        when(placeTrackQueryRepository.existsPlaceBookmark(PLACE_ID, MEMBER_ID))
+                .thenReturn(false);
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
+                .thenReturn(Map.of());
+
+        PlaceTrackResponse.ListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.tracks()).isEmpty();
+        assertThat(result.createdBy()).isNull();
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    void 반경_이내이면_좋아요_정보와_북마크를_반환한다() {
+        givenPlaceAndDistance(499.9);
+        givenTracks(List.of(track(10L, 5, true)), false);
+        when(placeTrackQueryRepository.existsPlaceBookmark(PLACE_ID, MEMBER_ID))
+                .thenReturn(true);
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
+                .thenReturn(Map.of(PLACE_ID, new PlacePinInfo(true, "냥코")));
+
+        PlaceTrackResponse.ListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.isWithinRadius()).isTrue();
+        assertThat(result.isBookmarked()).isTrue();
+        assertThat(result.createdBy()).isEqualTo("냥코");
+        assertThat(result.tracks().getFirst().likeCount()).isEqualTo(5);
+        assertThat(result.tracks().getFirst().isLiked()).isTrue();
+    }
+
+    @Test
+    void 정확히_500미터이면_반경_이내로_처리한다() {
+        givenPlaceAndDistance(500.0);
+        givenTracks(List.of(track(10L, 5, true)), false);
+        givenPlaceDetails();
+
+        PlaceTrackResponse.ListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.distance()).isEqualTo(500.0);
+        assertThat(result.isWithinRadius()).isTrue();
+        assertThat(result.tracks().getFirst().likeCount()).isEqualTo(5);
+    }
+
+    @Test
+    void 반경_밖이면_정렬은_유지하고_좋아요_정보를_null로_가린다() {
+        givenPlaceAndDistance(500.1);
+        givenTracks(
+                List.of(
+                        track(20L, 10, true),
+                        track(10L, 5, false)
+                ),
+                false
+        );
+        givenPlaceDetails();
+
+        PlaceTrackResponse.ListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.isWithinRadius()).isFalse();
+        assertThat(result.tracks())
+                .extracting(PlaceTrackResponse.Item::placeTrackId)
+                .containsExactly(20L, 10L);
+        assertThat(result.tracks())
+                .allSatisfy(track -> {
+                    assertThat(track.likeCount()).isNull();
+                    assertThat(track.isLiked()).isNull();
+                });
+    }
+
+    @Test
+    void size보다_한_건_더_조회되면_hasNext를_반환한다() {
+        givenPlaceAndDistance(100.0);
+        givenTracks(List.of(track(10L, 5, true)), true);
+        givenPlaceDetails();
+
+        PlaceTrackResponse.ListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(20);
+        assertThat(result.hasNext()).isTrue();
+        verify(placeTrackQueryRepository).findPlaceTracks(
+                PLACE_ID,
+                MEMBER_ID,
+                PlaceTrackSort.POPULAR,
+                PageRequest.of(0, 20)
+        );
+    }
+
+    private void givenPlaceAndDistance(double distance) {
+        Place place = place();
+        when(placeQueryService.getActivePlace(PLACE_ID)).thenReturn(place);
+        when(pinLocationValidator.calculateDistance(
+                37.0,
+                127.0,
+                place.getLocation().getY(),
+                place.getLocation().getX()
+        )).thenReturn(distance);
+    }
+
+    private void givenTracks(List<PlaceTrackQueryResult> tracks, boolean hasNext) {
+        when(placeTrackQueryRepository.findPlaceTracks(
+                PLACE_ID,
+                MEMBER_ID,
+                PlaceTrackSort.POPULAR,
+                PageRequest.of(0, 20)
+        )).thenReturn(new SliceImpl<>(
+                tracks,
+                PageRequest.of(0, 20),
+                hasNext
+        ));
+    }
+
+    private void givenPlaceDetails() {
+        when(placeTrackQueryRepository.existsPlaceBookmark(PLACE_ID, MEMBER_ID))
+                .thenReturn(false);
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
+                .thenReturn(Map.of(PLACE_ID, new PlacePinInfo(true, "냥코")));
+    }
+
+    private PlaceTrackRequest.List request() {
+        return new PlaceTrackRequest.List(
+                PlaceTrackSort.POPULAR,
+                0,
+                20,
+                37.0,
+                127.0
+        );
+    }
+
+    private PlaceTrackQueryResult track(Long id, int likeCount, boolean liked) {
+        return new PlaceTrackQueryResult(
+                id,
+                "곡 " + id,
+                "아티스트",
+                "https://image.example/" + id,
+                1,
+                likeCount,
+                liked
+        );
+    }
+
+    private Place place() {
+        Point location = new GeometryFactory(new PrecisionModel(), 4326)
+                .createPoint(new Coordinate(127.001, 37.001));
+        return Place.builder()
+                .name("테스트 장소")
+                .address("테스트 주소")
+                .location(location)
+                .build();
+    }
+}
