@@ -18,7 +18,8 @@ public interface PlaceControllerDocs {
     @Operation(
             summary = "장소 검색",
             description = "Kakao Local REST API를 통해 키워드와 현재 위치를 기준으로 장소를 검색합니다. "
-                    + "검색 결과는 저장하지 않습니다. (화면: MP-02-01-a, MP-02-01-b)"
+                    + "검색 결과는 저장하지 않습니다. "
+                    + "(Figma 기준 화면: MP-02-01, MP-02-01-b, PN-02-01, PN-02-01-b)"
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
