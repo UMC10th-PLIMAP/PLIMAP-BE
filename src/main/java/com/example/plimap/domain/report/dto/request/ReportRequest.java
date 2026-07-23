@@ -13,6 +13,7 @@ public final class ReportRequest {
     private ReportRequest() {
     }
 
+    @Schema(name = "ReportCreateRequest")
     public record Create(
             @NotNull(message = "신고 카테고리를 입력해주세요.")
             @Schema(description = "신고 카테고리", example = "OTHER")
