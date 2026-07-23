@@ -38,6 +38,26 @@ public enum ReportErrorCode implements BaseErrorCode {
             HttpStatus.BAD_REQUEST,
             "REPORT_DETAIL_NOT_ALLOWED",
             "detail is allowed only for OTHER category"
+    ),
+    REPORT_MEMBER_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "REPORT_MEMBER_ALREADY_EXISTS",
+            "이미 신고한 회원입니다."
+    ),
+    REPORT_PIN_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "REPORT_PIN_ALREADY_EXISTS",
+            "이미 신고한 PIN입니다."
+    ),
+    REPORT_OWN_PIN_NOT_ALLOWED(
+            HttpStatus.BAD_REQUEST,
+            "REPORT_OWN_PIN_NOT_ALLOWED",
+            "자신이 작성한 PIN은 신고할 수 없습니다."
+    ),
+    REPORT_PRIVATE_PIN_NOT_ALLOWED(
+            HttpStatus.BAD_REQUEST,
+            "REPORT_PRIVATE_PIN_NOT_ALLOWED",
+            "공개 피드가 아닌 PIN은 신고할 수 없습니다."
     );
 
     private final HttpStatus status;
