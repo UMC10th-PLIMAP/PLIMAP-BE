@@ -112,25 +112,20 @@ class PinQueryRepositoryImplTest {
                 ))
                 .build();
 
-        Track track = Track.builder()
-                .title("title")
-                .previewUrl("preview")
-                .albumImageUrl("album")
-                .artistName("artist")
-                .previewUrl("url_test")
-                .provider("provider")
-                .providerTrackId("providerTrackId")
-                .build();
+        Track track = Track.create(
+                "provider",
+                "providerTrackId",
+                "title",
+                "artist",
+                null,
+                "album",
+                "url_test",
+                null
+        );
 
-        PlaceTrack placeTrack1 = PlaceTrack.builder()
-                .place(place1)
-                .track(track)
-                .build();
+        PlaceTrack placeTrack1 = PlaceTrack.create(place1, track);
 
-        PlaceTrack placeTrack2 = PlaceTrack.builder()
-                .place(place2)
-                .track(track)
-                .build();
+        PlaceTrack placeTrack2 = PlaceTrack.create(place2, track);
 
         // place1 - member1, member2가 pin 등록
         pin1 = Pin.builder()

@@ -197,16 +197,17 @@ class ReportRepositoryIntegrationTest {
                 null,
                 geometryFactory.createPoint(new Coordinate(127.0, 37.0))
         );
-        Track track = Track.builder()
-                .provider("YOUTUBE")
-                .providerTrackId("report-test-track")
-                .title("테스트 곡")
-                .artistName("테스트 가수")
-                .build();
-        PlaceTrack placeTrack = PlaceTrack.builder()
-                .place(place)
-                .track(track)
-                .build();
+        Track track = Track.create(
+                "YOUTUBE",
+                "report-test-track",
+                "테스트 곡",
+                "테스트 가수",
+                null,
+                null,
+                null,
+                null
+        );
+        PlaceTrack placeTrack = PlaceTrack.create(place, track);
         Pin pin = Pin.builder()
                 .member(author)
                 .place(place)

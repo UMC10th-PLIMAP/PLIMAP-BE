@@ -44,4 +44,11 @@ public class PlaceTrackLike extends BaseEntity {
         this.id = new PlaceTrackLikeId(placeTrack.getId(), memberId);
     }
 
+    public static PlaceTrackLike create(PlaceTrack placeTrack, Long memberId) {
+        return PlaceTrackLike.builder()
+                .placeTrack(placeTrack)
+                .memberId(memberId)
+                .build();
+    }
+
 }

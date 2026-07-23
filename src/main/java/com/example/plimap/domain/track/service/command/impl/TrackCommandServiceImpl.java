@@ -55,16 +55,16 @@ public class TrackCommandServiceImpl implements TrackCommandService {
     private Track getOrCreateTrack(SelectedTrackCache selectedTrack, String youtubeVideoId) {
         return trackRepository
                 .findByProviderAndProviderTrackId(YOUTUBE_PROVIDER, youtubeVideoId)
-                .orElseGet(() -> trackRepository.save(Track.builder()
-                        .provider(YOUTUBE_PROVIDER)
-                        .providerTrackId(youtubeVideoId)
-                        .title(selectedTrack.title())
-                        .artistName(selectedTrack.artistName())
-                        .albumTitle(selectedTrack.albumTitle())
-                        .albumImageUrl(selectedTrack.albumImageUrl())
-                        .previewUrl(selectedTrack.previewUrl())
-                        .durationMs(selectedTrack.durationMs())
-                        .build()));
+                .orElseGet(() -> trackRepository.save(Track.create(
+                        YOUTUBE_PROVIDER,
+                        youtubeVideoId,
+                        selectedTrack.title(),
+                        selectedTrack.artistName(),
+                        selectedTrack.albumTitle(),
+                        selectedTrack.albumImageUrl(),
+                        selectedTrack.previewUrl(),
+                        selectedTrack.durationMs()
+                )));
     }
 
     private String getYoutubeVideoId(SelectedTrackCache selectedTrack) {
@@ -95,9 +95,6 @@ public class TrackCommandServiceImpl implements TrackCommandService {
             return deletedPlaceTrack;
         }
 
-        return placeTrackRepository.save(PlaceTrack.builder()
-                .place(place)
-                .track(track)
-                .build());
+        return placeTrackRepository.save(PlaceTrack.create(place, track));
     }
 }
