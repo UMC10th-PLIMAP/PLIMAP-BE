@@ -1,6 +1,5 @@
 package com.example.plimap.domain.track.service.query.impl;
 
-import com.example.plimap.domain.track.dto.TrackMetadataCache;
 import com.example.plimap.domain.track.dto.TrackSearchCache;
 import com.example.plimap.domain.track.dto.request.TrackRequest;
 import com.example.plimap.domain.track.dto.response.TrackResponse;
@@ -16,7 +15,8 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataAccessException;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +36,9 @@ public class TrackQueryServiceImpl implements TrackQueryService {
 
         Optional<TrackSearchCache> cachedResult = findCachedResult(request);
         if (cachedResult.isPresent()) {
-            return cachedResult.get().toResponse();
+            TrackSearchCache searchCache = cachedResult.get();
+            saveMetadata(searchCache);
+            return searchCache.toResponse();
         }
 
         ItunesSearchResponse itunesResponse;
@@ -46,9 +48,10 @@ public class TrackQueryServiceImpl implements TrackQueryService {
             throw new TrackException(TrackErrorCode.TRACK_EXTERNAL_API_ERROR, exception);
         }
         TrackResponse.SearchResult result = TrackResponse.SearchResult.from(itunesResponse);
+        TrackSearchCache searchCache = TrackSearchCache.from(result);
 
-        saveMetadata(result);
-        saveSearchResult(request, result);
+        saveMetadata(searchCache);
+        saveSearchResult(request, searchCache);
 
         return result;
     }
@@ -56,33 +59,31 @@ public class TrackQueryServiceImpl implements TrackQueryService {
     private Optional<TrackSearchCache> findCachedResult(TrackRequest.Search request) {
         try {
             return trackSearchCacheRepository.find(request.keyword(), request.limit());
-        } catch (DataAccessException exception) {
+        } catch (RedisConnectionFailureException | QueryTimeoutException exception) {
             log.warn("트랙 검색 Redis 캐시 조회에 실패해 iTunes 검색을 수행합니다.", exception);
             return Optional.empty();
         }
     }
 
-    private void saveMetadata(TrackResponse.SearchResult result) {
+    private void saveMetadata(TrackSearchCache searchCache) {
         try {
-            result.tracks().stream()
-                    .map(TrackMetadataCache::from)
-                    .forEach(trackMetadataCacheRepository::save);
-        } catch (DataAccessException exception) {
+            searchCache.tracks().forEach(trackMetadataCacheRepository::save);
+        } catch (RedisConnectionFailureException | QueryTimeoutException exception) {
             log.warn("트랙 메타데이터 Redis 캐시 저장에 실패했습니다.", exception);
         }
     }
 
     private void saveSearchResult(
             TrackRequest.Search request,
-            TrackResponse.SearchResult result
+            TrackSearchCache searchCache
     ) {
         try {
             trackSearchCacheRepository.save(
                     request.keyword(),
                     request.limit(),
-                    TrackSearchCache.from(result)
+                    searchCache
             );
-        } catch (DataAccessException exception) {
+        } catch (RedisConnectionFailureException | QueryTimeoutException exception) {
             log.warn("트랙 검색 Redis 캐시 저장에 실패했습니다.", exception);
         }
     }
