@@ -84,4 +84,8 @@ public class Pin extends SoftDeleteEntity {
     public void updateFeedOpen(Boolean feedOpen) {
         this.isFeedPublic = feedOpen;
     }
+
+    public void increaseLikeCount() {
+        this.likeCount += 1;
+    }
 }

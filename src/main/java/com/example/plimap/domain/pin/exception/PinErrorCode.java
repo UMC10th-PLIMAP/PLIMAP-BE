@@ -37,6 +37,12 @@ public enum PinErrorCode implements BaseErrorCode {
             HttpStatus.FORBIDDEN,
             "INVALID_PIN_OWNER",
             "해당 PIN에 수정/삭제 권한이 없습니다."
+    ),
+
+    ALREADY_LIKED_PIN(
+            HttpStatus.BAD_REQUEST,
+            "ALREADY_LIKED_PIN",
+            "이미 좋아요한 핀입니다."
     );
 
     private final HttpStatus status;

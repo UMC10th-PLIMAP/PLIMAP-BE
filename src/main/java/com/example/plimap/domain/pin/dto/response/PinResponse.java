@@ -42,4 +42,9 @@ public class PinResponse {
 
             Boolean feedOpen
     ) {}
+
+    @Builder
+    public record LikeCount(
+            Integer likeCount
+    ) {}
 }

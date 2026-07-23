@@ -5,6 +5,7 @@ import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
+import com.example.plimap.domain.pin.entity.PinLike;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
@@ -12,6 +13,7 @@ import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.exception.TagErrorCode;
 import com.example.plimap.domain.pin.exception.TagException;
+import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.repository.TagRepository;
@@ -43,6 +45,7 @@ public class PinCommandServiceImpl implements PinCommandService {
     private final PinTagRepository pinTagRepository;
     private final PinLocationValidator pinLocationValidator;
     private final TagQueryService tagQueryService;
+    private final PinLikeRepository pinLikeRepository;
 
     @Override
     public PinResponse.Summary createPin(Member currentMember, PinRequest.Create request) {
@@ -122,6 +125,19 @@ public class PinCommandServiceImpl implements PinCommandService {
         Pin pin = getPin(pinId);
         validateMemberAuthorization(currentMember.getId(), pin.getMember().getId());
         pin.delete();
+    }
+
+    @Override
+    public PinResponse.LikeCount createPinLike(Member currentMember, Long pinId) {
+        Pin pin = getPin(pinId);
+        PinLike pinLike = PinLike.create(pin, currentMember);
+
+        if (pinLikeRepository.existsByPinAndMember(pin, currentMember)) {
+            throw new PinException(PinErrorCode.ALREADY_LIKED_PIN);
+        }
+        pinLikeRepository.save(pinLike);
+        pin.increaseLikeCount();
+        return PinConverter.toLikeCount(pin.getLikeCount());
     }
 
     private Pin getPin(Long id) {

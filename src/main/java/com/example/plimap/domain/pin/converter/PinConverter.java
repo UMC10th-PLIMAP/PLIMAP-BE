@@ -48,4 +48,12 @@ public class PinConverter {
                 .feedOpen(pin.isFeedPublic())
                 .build();
     }
+
+    public static PinResponse.LikeCount toLikeCount(
+            Integer likeCount
+    ) {
+        return PinResponse.LikeCount.builder()
+                .likeCount(likeCount)
+                .build();
+    }
 }

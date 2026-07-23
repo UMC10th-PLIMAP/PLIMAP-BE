@@ -8,6 +8,7 @@ import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.exception.TagErrorCode;
 import com.example.plimap.domain.pin.exception.TagException;
+import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.service.query.TagQueryService;
@@ -64,6 +65,9 @@ class PinCommandServiceImplTest {
     @Mock
     private PlaceQueryService placeQueryService;
 
+    @Mock
+    private PinLikeRepository pinLikeRepository;
+
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
@@ -71,6 +75,7 @@ class PinCommandServiceImplTest {
     Place place;
     Tag tag1, tag2, tag3, tag4, tag5;
     PlaceTrack placeTrack;
+    Pin pin;
 
     @BeforeEach
     void setup() {
@@ -134,6 +139,14 @@ class PinCommandServiceImplTest {
         placeTrack = PlaceTrack.builder()
                 .place(place)
                 .track(track)
+                .build();
+
+        pin = Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .introduction("before")
+                .isFeedPublic(true)
                 .build();
     }
 
@@ -270,14 +283,6 @@ class PinCommandServiceImplTest {
     // deletePin 테스트
     @Test
     void 핀_삭제에_성공한다() {
-        Pin pin = Pin.builder()
-                .member(member)
-                .place(place)
-                .placeTrack(placeTrack)
-                .introduction("before")
-                .isFeedPublic(true)
-                .build();
-
         ReflectionTestUtils.setField(member, "id", 1L);
         ReflectionTestUtils.setField(pin, "id", 1L);
 
@@ -291,14 +296,6 @@ class PinCommandServiceImplTest {
 
     @Test
     void 작성자가_아닐시_핀_삭제에_실패한다() {
-        Pin pin = Pin.builder()
-                .member(member)
-                .place(place)
-                .placeTrack(placeTrack)
-                .introduction("before")
-                .isFeedPublic(true)
-                .build();
-
         ReflectionTestUtils.setField(member, "id", 1L);
         ReflectionTestUtils.setField(member2, "id", 2L);
         ReflectionTestUtils.setField(pin, "id", 1L);
@@ -310,5 +307,36 @@ class PinCommandServiceImplTest {
                 .isInstanceOf(PinException.class)
                 .hasMessage("해당 PIN에 수정/삭제 권한이 없습니다.");
 
+    }
+
+    // createPinLike 테스트
+    @Test
+    void 핀_좋아요_등록시_좋아요_개수가_증가한다() {
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+
+        Integer before = pin.getLikeCount();
+        PinResponse.LikeCount response = pinCommandService.createPinLike(member, pin.getId());
+
+        assertThat(before+1).isEqualTo(response.likeCount());
+    }
+
+    @Test
+    void 한사람이_같은_핀_좋아요를_여러번_요청할시_예외가_발생한다() {
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+
+        when(pinLikeRepository.existsByPinAndMember(pin, member))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> pinCommandService.createPinLike(member, 1L))
+                .isInstanceOf(PinException.class)
+                .hasMessage("이미 좋아요한 핀입니다.");
     }
 }

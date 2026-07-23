@@ -31,6 +31,12 @@ public enum PinSuccessCode implements BaseSuccessCode {
             HttpStatus.OK,
             "PIN_DELETE_SUCCESS",
             "PIN이 삭제되었습니다."
+    ),
+
+    PIN_LIKE_PUT_SUCCESS(
+            HttpStatus.OK,
+            "PIN_LIKE_PUT_SUCCESS",
+            "PIN 좋아요가 등록되었습니다."
     );
 
     private final HttpStatus status;
