@@ -32,9 +32,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import javax.swing.text.html.Option;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -327,11 +327,10 @@ class PinCommandServiceImplTest {
         when(pinRepository.findByIdAndDeletedAtIsNull(1L))
                 .thenReturn(Optional.of(pin));
 
-        Integer before = pin.getLikeCount();
-        PinResponse.LikeCount response = pinCommandService.createPinLike(member, pin.getId());
+        pinCommandService.createPinLike(member, pin.getId());
 
-        assertThat(before+1).isEqualTo(response.likeCount());
         verify(pinLikeRepository).save(any(PinLike.class));
+        verify(pinRepository).increaseLikeCount(1L);
     }
 
     @Test
@@ -341,11 +340,12 @@ class PinCommandServiceImplTest {
 
         when(pinRepository.findByIdAndDeletedAtIsNull(1L))
                 .thenReturn(Optional.of(pin));
-        when(pinLikeRepository.existsByPinAndMember(pin, member))
-                .thenReturn(true);
+        doThrow(new DataIntegrityViolationException("duplicate"))
+                .when(pinLikeRepository)
+                .save(any(PinLike.class));
 
         assertThatThrownBy(() -> pinCommandService.createPinLike(member, 1L))
-                .isInstanceOf(PinException.class)
+                .isInstanceOf(PinLikeException.class)
                 .hasMessage("이미 좋아요한 핀입니다.");
     }
 
@@ -360,11 +360,10 @@ class PinCommandServiceImplTest {
         when(pinLikeRepository.findByPinAndMember(pin, member))
                 .thenReturn(Optional.of(pinLike));
 
-        Integer before = pin.getLikeCount();
-        PinResponse.LikeCount response = pinCommandService.deletePinLike(member, pin.getId());
+        pinCommandService.deletePinLike(member, pin.getId());
 
-        assertThat(before-1).isEqualTo(response.likeCount());
-        verify(pinLikeRepository).delete(pinLike);
+        verify(pinLikeRepository).delete(any(PinLike.class));
+        verify(pinRepository).decreaseLikeCount(1L);
     }
 
     @Test

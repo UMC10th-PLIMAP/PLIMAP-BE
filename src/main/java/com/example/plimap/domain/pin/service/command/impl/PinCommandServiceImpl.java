@@ -8,12 +8,10 @@ import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.PinLike;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
-import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.exception.*;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
-import com.example.plimap.domain.pin.repository.TagRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.TagQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
@@ -22,8 +20,8 @@ import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.dto.request.TrackCommand;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.service.command.TrackCommandService;
-import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -129,11 +127,12 @@ public class PinCommandServiceImpl implements PinCommandService {
         Pin pin = getPin(pinId);
         PinLike pinLike = PinLike.create(pin, currentMember);
 
-        if (pinLikeRepository.existsByPinAndMember(pin, currentMember)) {
-            throw new PinException(PinErrorCode.ALREADY_LIKED_PIN);
+        try {
+            pinLikeRepository.save(pinLike);
+        } catch (DataIntegrityViolationException e) {
+            throw new PinLikeException(PinErrorCode.ALREADY_LIKED_PIN);
         }
-        pinLikeRepository.save(pinLike);
-        pin.increaseLikeCount();
+        pinRepository.increaseLikeCount(pinId);
         return PinConverter.toLikeCount(pin.getLikeCount());
     }
 
@@ -143,7 +142,7 @@ public class PinCommandServiceImpl implements PinCommandService {
         PinLike pinLike = pinLikeRepository.findByPinAndMember(pin, currentMember)
                         .orElseThrow(() -> new PinLikeException(PinLikeErrorCode.PIN_LIKE_NOT_FOUND));
         pinLikeRepository.delete(pinLike);
-        pin.decreaseLikeCount();
+        pinRepository.decreaseLikeCount(pinId);
         return PinConverter.toLikeCount(pin.getLikeCount());
     }
 
