@@ -29,7 +29,7 @@ spring:
         format_sql: true
 
 oauth:
-  redirect-uri: "http://localhost:3000/home"
+  redirect-uri: "http://localhost:5173/home"
 
 cookie:
   secure: false
@@ -37,7 +37,7 @@ cookie:
 
 plimap:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 logging:
   level:
