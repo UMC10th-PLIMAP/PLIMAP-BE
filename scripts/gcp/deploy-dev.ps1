@@ -5,7 +5,8 @@ param(
     [string]$ServiceName = "plimap-api-dev",
     [string]$Image = "asia-northeast3-docker.pkg.dev/plimap/plimap-docker/api:dev-initial",
     [string]$PublicBaseUrl = "https://dev.plimap.kr",
-    [string]$FrontendRedirectUri = ""
+    [string]$FrontendRedirectUri = "",
+    [string]$ProfileImageBucket = "profile-images"
 )
 
 Set-StrictMode -Version Latest
@@ -23,6 +24,8 @@ $secretMap = [ordered]@{
     GOOGLE_CLIENT_ID           = "plimap-dev-google-client-id"
     GOOGLE_CLIENT_SECRET       = "plimap-dev-google-client-secret"
     YOUTUBE_API_KEY            = "plimap-dev-youtube-api-key"
+    SUPABASE_URL               = "plimap-dev-supabase-url"
+    SUPABASE_SECRET_KEY        = "plimap-dev-supabase-secret-key"
 }
 
 function Invoke-Gcloud {
@@ -87,7 +90,8 @@ function Write-EnvironmentFile {
     param(
         [Parameter(Mandatory)][string]$Path,
         [Parameter(Mandatory)][string]$PublicOrigin,
-        [Parameter(Mandatory)][string]$FrontendRedirectUri
+        [Parameter(Mandatory)][string]$FrontendRedirectUri,
+        [Parameter(Mandatory)][string]$ProfileImageBucket
     )
 
     $lines = @(
@@ -95,7 +99,9 @@ function Write-EnvironmentFile {
         "CORS_ALLOWED_ORIGINS: $(ConvertTo-YamlSingleQuoted $PublicOrigin)",
         "OAUTH_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted $FrontendRedirectUri)",
         "KAKAO_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$PublicOrigin/oauth/callback/kakao")",
-        "GOOGLE_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$PublicOrigin/oauth/callback/google")"
+        "GOOGLE_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$PublicOrigin/oauth/callback/google")",
+        "PROFILE_IMAGE_STORAGE_PROVIDER: 'supabase'",
+        "PROFILE_IMAGE_BUCKET: $(ConvertTo-YamlSingleQuoted $ProfileImageBucket)"
     )
 
     $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
@@ -130,7 +136,8 @@ try {
     Write-EnvironmentFile `
         -Path $environmentFile.FullName `
         -PublicOrigin $publicOrigin `
-        -FrontendRedirectUri $frontendRedirectUrl
+        -FrontendRedirectUri $frontendRedirectUrl `
+        -ProfileImageBucket $ProfileImageBucket
 
     $secretBindings = ($secretMap.GetEnumerator() | ForEach-Object {
         "$($_.Key)=$($_.Value):latest"
