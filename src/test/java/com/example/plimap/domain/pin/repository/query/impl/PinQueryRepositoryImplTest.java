@@ -29,6 +29,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,7 +63,7 @@ class PinQueryRepositoryImplTest {
     @Autowired
     EntityManager entityManager;
 
-    Pin pin1;
+    Pin pin1, pin2, pin3;
     private Place place1;
     private Place place2;
     private Place place3;
@@ -130,15 +131,15 @@ class PinQueryRepositoryImplTest {
         PlaceTrack placeTrack3 = PlaceTrack.create(place4, track2);
 
         pin1 = createPin(member1, place1, placeTrack1);
-        Pin pin2 = createPin(member2, place1, placeTrack1);
-        Pin pin3 = createPin(member2, place2, placeTrack2);
+        pin2 = createPin(member2, place1, placeTrack1);
+        pin3 = createPin(member2, place2, placeTrack2);
         Pin pin4 = createPin(member2, place4, placeTrack3);
 
         memberRepository.saveAll(List.of(member1, member2));
         placeRepository.saveAll(List.of(place1, place2, place3, place4));
         trackRepository.saveAll(List.of(track, track2));
         placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3));
-        List<Pin> pins = pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4));
+        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4));
 
         entityManager.flush();
         entityManager.clear();
@@ -202,14 +203,25 @@ class PinQueryRepositoryImplTest {
 
         assertThat(response.data().size()).isEqualTo(2);
         assertThat(response.hasNext()).isTrue();
-        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(3L);
+        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
         String nextCursor = response.nextCursor();
-
         Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member2.getId(), nextCursor, 2 );
 
-        assertThat(response2.data().size()).isLessThan(2);
+        assertThat(response2.data().size()).isEqualTo(1);
         assertThat(response2.hasNext()).isFalse();
         assertThat(response2.nextCursor()).isNull();
+    }
+
+    @Test
+    void 전달한_커서_기반으로_피드정보를_조회한다() {
+        String cursor = "%s/%d".formatted(
+                pin3.getCreatedAt(),
+                pin3.getId()
+        );
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), cursor, 2 );
+        assertThat(response.data().size()).isEqualTo(1);
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.nextCursor()).isNull();
     }
 
     private Member createMember(String name, String nickname) {
