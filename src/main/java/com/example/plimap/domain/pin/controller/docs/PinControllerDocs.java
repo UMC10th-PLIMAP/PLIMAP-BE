@@ -7,6 +7,7 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -76,7 +77,10 @@ public interface PinControllerDocs {
     )
     public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMyFeedList(
             @AuthenticationPrincipal AuthMember currentMember,
-            @RequestParam(required = false, defaultValue = "10") @Min(1) Integer pageSize,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
             @RequestParam(required = false) String cursor
     );
 
@@ -86,7 +90,10 @@ public interface PinControllerDocs {
     )
     public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMemberFeedList(
             @PathVariable Long memberId,
-            @RequestParam(required = false, defaultValue = "10") @Min(1) Integer pageSize,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
             @RequestParam(required = false) String cursor
     );
 }
