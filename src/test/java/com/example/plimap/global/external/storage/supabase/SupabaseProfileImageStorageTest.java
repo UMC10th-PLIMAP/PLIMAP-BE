@@ -1,7 +1,7 @@
 package com.example.plimap.global.external.storage.supabase;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -42,8 +42,8 @@ class SupabaseProfileImageStorageTest {
 
     @Test
     void Secret_key를_apikey_헤더로_전달해_이미지를_업로드한다() {
+        // given
         byte[] image = {1, 2, 3};
-
         server.expect(once(), requestTo(OBJECT_URL))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(request -> {
@@ -59,17 +59,20 @@ class SupabaseProfileImageStorageTest {
                 .andExpect(content().bytes(image))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
+        // when
         storage.upload(
                 OBJECT_KEY,
                 image,
                 MediaType.parseMediaType("image/webp")
         );
 
+        // then
         server.verify();
     }
 
     @Test
     void 객체_키를_본문에_담아_이미지를_삭제한다() {
+        // given
         server.expect(once(), requestTo(
                         SUPABASE_URL + "/storage/v1/object/" + BUCKET
                 ))
@@ -86,15 +89,22 @@ class SupabaseProfileImageStorageTest {
                 ))
                 .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
+        // when
         storage.delete(OBJECT_KEY);
 
+        // then
         server.verify();
     }
 
     @Test
     void public_버킷의_공개_URL을_인증정보_없이_조합한다() {
-        URI publicUrl = storage.getPublicUrl(OBJECT_KEY);
+        // given
+        String objectKey = OBJECT_KEY;
 
+        // when
+        URI publicUrl = storage.getPublicUrl(objectKey);
+
+        // then
         assertThat(publicUrl).hasToString(
                 SUPABASE_URL + "/storage/v1/object/public/" + BUCKET + "/" + OBJECT_KEY
         );
@@ -102,41 +112,58 @@ class SupabaseProfileImageStorageTest {
 
     @Test
     void 업로드_HTTP_오류를_내부_예외로_변환하고_Secret을_노출하지_않는다() {
+        // given
         server.expect(once(), requestTo(OBJECT_URL))
                 .andRespond(withServerError());
 
-        assertThatThrownBy(() -> storage.upload(
+        // when
+        Throwable throwable = catchThrowable(() -> storage.upload(
                 OBJECT_KEY,
                 new byte[]{1},
                 MediaType.parseMediaType("image/webp")
-        )).isInstanceOfSatisfying(ProfileImageStorageException.class, exception ->
-                assertThat(exception.getMessage())
-                        .doesNotContain(SECRET_KEY)
-                        .isEqualTo("프로필 이미지 업로드에 실패했습니다.")
+        ));
+
+        // then
+        assertThat(throwable).isInstanceOfSatisfying(
+                ProfileImageStorageException.class, exception ->
+                        assertThat(exception.getMessage())
+                                .doesNotContain(SECRET_KEY)
+                                .isEqualTo("프로필 이미지 업로드에 실패했습니다.")
         );
         server.verify();
     }
 
     @Test
     void 삭제_HTTP_오류를_내부_예외로_변환하고_Secret을_노출하지_않는다() {
+        // given
         server.expect(once(), requestTo(
                         SUPABASE_URL + "/storage/v1/object/" + BUCKET
                 ))
                 .andRespond(withServerError());
 
-        assertThatThrownBy(() -> storage.delete(OBJECT_KEY))
-                .isInstanceOfSatisfying(ProfileImageStorageException.class, exception ->
+        // when
+        Throwable throwable = catchThrowable(() -> storage.delete(OBJECT_KEY));
+
+        // then
+        assertThat(throwable).isInstanceOfSatisfying(
+                ProfileImageStorageException.class, exception ->
                         assertThat(exception.getMessage())
                                 .doesNotContain(SECRET_KEY)
                                 .isEqualTo("프로필 이미지 삭제에 실패했습니다.")
-                );
+        );
         server.verify();
     }
 
     @Test
     void 허용된_형식이_아닌_객체_키는_요청하지_않는다() {
-        assertThatThrownBy(() -> storage.getPublicUrl("../secret"))
-                .isInstanceOf(IllegalArgumentException.class);
+        // given
+        String invalidObjectKey = "../secret";
+
+        // when
+        Throwable throwable = catchThrowable(() -> storage.getPublicUrl(invalidObjectKey));
+
+        // then
+        assertThat(throwable).isInstanceOf(IllegalArgumentException.class);
         server.verify();
     }
 
