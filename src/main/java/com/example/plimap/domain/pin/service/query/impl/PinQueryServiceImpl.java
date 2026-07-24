@@ -1,6 +1,8 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
+import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.converter.PinConverter;
+import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -47,6 +49,11 @@ public class PinQueryServiceImpl implements PinQueryService {
             return Collections.emptyMap();
         }
         return pinQueryRepository.findPinInfosByPlaceIds(placeIds);
+    }
+
+    @Override
+    public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
+        return pinQueryRepository.findFeedListByMemberId(memberId, cursor, pageSize);
     }
 
 }

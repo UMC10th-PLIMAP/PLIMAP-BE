@@ -2,7 +2,9 @@ package com.example.plimap.domain.pin.repository.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
@@ -19,15 +21,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,52 +66,42 @@ class PinQueryRepositoryImplTest {
     private Place place1;
     private Place place2;
     private Place place3;
-
+    private Place place4;
+    Member member2;
+    GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @BeforeEach
     void setup() {
-        Member member1 = Member.builder()
-                .name("이서윤")
-                .nickname("이서")
-                .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
-                .build();
+        Member member1 = createMember("이서윤", "이서");
+        member2 = createMember("홍길동", "동길");
 
-        Member member2 = Member.builder()
-                .name("홍길동")
-                .nickname("동길")
-                .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
-                .build();
+        place1 = createPlace(
+                "여의도 한강공원",
+                "서울 영등포구 여의동로 330",
+                126.9326,
+                37.5283
+        );
 
-        GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+        place2 = createPlace(
+                "서울숲",
+                "서울 성동구 뚝섬로 273",
+                127.0372,
+                37.5446
+        );
 
-        place1 = Place.builder()
-                .name("여의도 한강공원")
-                .address("서울 영등포구 여의동로 330")
-                .source(PlaceSource.MAP_SELECTION)
-                .location(geometryFactory.createPoint(
-                        new Coordinate(126.9326, 37.5283)
-                ))
-                .build();
+        place3 = createPlace(
+                "남산서울타워",
+                "서울 용산구 남산공원길 105",
+                126.9882,
+                37.5512
+        );
 
-        place2 = Place.builder()
-                .name("서울숲")
-                .address("서울 성동구 뚝섬로 273")
-                .source(PlaceSource.MAP_SELECTION)
-                .location(geometryFactory.createPoint(
-                        new Coordinate(127.0372, 37.5446)
-                ))
-                .build();
-
-        place3 = Place.builder()
-                .name("남산서울타워")
-                .address("서울 용산구 남산공원길 105")
-                .source(PlaceSource.MAP_SELECTION)
-                .location(geometryFactory.createPoint(
-                        new Coordinate(126.9882, 37.5512)
-                ))
-                .build();
+        place4 = createPlace(
+                "석촌호수",
+                "서울특별시 송파구 잠실동",
+                127.1025,
+                37.5125
+        );
 
         Track track = Track.create(
                 "provider",
@@ -123,44 +114,31 @@ class PinQueryRepositoryImplTest {
                 null
         );
 
+        Track track2 = Track.create(
+                "provider2",
+                "providerTrackId2",
+                "title",
+                "artist",
+                null,
+                "album2",
+                "url_test",
+                null
+        );
+
         PlaceTrack placeTrack1 = PlaceTrack.create(place1, track);
-
         PlaceTrack placeTrack2 = PlaceTrack.create(place2, track);
+        PlaceTrack placeTrack3 = PlaceTrack.create(place4, track2);
 
-        // place1 - member1, member2가 pin 등록
-        pin1 = Pin.builder()
-                .member(member1)
-                .place(place1)
-                .placeTrack(placeTrack1)
-                .clipStartMs(70000)
-                .introduction("good")
-                .isFeedPublic(true)
-                .build();
-
-        Pin pin2 = Pin.builder()
-                .member(member2)
-                .place(place1)
-                .placeTrack(placeTrack1)
-                .clipStartMs(70000)
-                .introduction("good")
-                .isFeedPublic(true)
-                .build();
-
-        // place2 - member2가 pin 등록
-        Pin pin3 = Pin.builder()
-                .member(member2)
-                .place(place2)
-                .placeTrack(placeTrack2)
-                .clipStartMs(70000)
-                .introduction("good")
-                .isFeedPublic(true)
-                .build();
+        pin1 = createPin(member1, place1, placeTrack1);
+        Pin pin2 = createPin(member2, place1, placeTrack1);
+        Pin pin3 = createPin(member2, place2, placeTrack2);
+        Pin pin4 = createPin(member2, place4, placeTrack3);
 
         memberRepository.saveAll(List.of(member1, member2));
-        placeRepository.saveAll(List.of(place1, place2, place3));
-        trackRepository.save(track);
-        placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2));
-        pinRepository.saveAll(List.of(pin1, pin2, pin3));
+        placeRepository.saveAll(List.of(place1, place2, place3, place4));
+        trackRepository.saveAll(List.of(track, track2));
+        placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3));
+        List<Pin> pins = pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4));
 
         entityManager.flush();
         entityManager.clear();
@@ -216,6 +194,51 @@ class PinQueryRepositoryImplTest {
 
         assertThat(result.get(place1.getId()).hasPin()).isTrue();
         assertThat(result.get(place1.getId()).firstPinCreatorNickname()).isEqualTo("동길");
+    }
+
+    @Test
+    void 피드정보를_커서기반_페이지네이션으로_조회한다() {
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, 2 );
+
+        assertThat(response.data().size()).isEqualTo(2);
+        assertThat(response.hasNext()).isTrue();
+        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(3L);
+        String nextCursor = response.nextCursor();
+
+        Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member2.getId(), nextCursor, 2 );
+
+        assertThat(response2.data().size()).isLessThan(2);
+        assertThat(response2.hasNext()).isFalse();
+        assertThat(response2.nextCursor()).isNull();
+    }
+
+    private Member createMember(String name, String nickname) {
+        return Member.builder()
+                .name(name)
+                .nickname(nickname)
+                .introduction("안녕하세요")
+                .profileImageObjectKey("image_url")
+                .build();
+    }
+
+    private Place createPlace(String name, String address, double lng, double lat) {
+        return Place.builder()
+                .name(name)
+                .address(address)
+                .source(PlaceSource.MAP_SELECTION)
+                .location(geometryFactory.createPoint(new Coordinate(lng, lat)))
+                .build();
+    }
+
+    private Pin createPin(Member member, Place place, PlaceTrack placeTrack) {
+        return Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .clipStartMs(70000)
+                .introduction("good")
+                .isFeedPublic(true)
+                .build();
     }
 
 }

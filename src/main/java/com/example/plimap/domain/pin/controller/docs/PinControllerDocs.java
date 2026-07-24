@@ -1,6 +1,7 @@
 package com.example.plimap.domain.pin.controller.docs;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 public interface PinControllerDocs {
 
@@ -65,5 +67,25 @@ public interface PinControllerDocs {
     public ResponseEntity<ApiResponse<PinResponse.LikeCount>> deletePinLike(
             @AuthenticationPrincipal AuthMember currentMember,
             @PathVariable Long pinId
+    );
+
+    @Operation(
+            summary = "내 피드 목록 조회",
+            description = "내 피드 목록을 조회합니다. (Figma 기준 화면: FD-01-01)"
+    )
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMyFeedList(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false, defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String cursor
+    );
+
+    @Operation(
+            summary = "타인 피드 목록 조회",
+            description = "타인 피드 목록을 조회합니다. (Figma 기준 화면: FD-02-01)"
+    )
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMemberFeedList(
+            @PathVariable Long memberId,
+            @RequestParam(required = false, defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String cursor
     );
 }

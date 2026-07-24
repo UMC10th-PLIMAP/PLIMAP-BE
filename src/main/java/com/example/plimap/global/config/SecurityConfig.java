@@ -82,7 +82,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api/v1/auth/token/test",
-                                "/api/v1/auth/reissue"
+                                "/api/v1/auth/reissue",
+                                "/api/v1/feed/members/{memberId:[0-9]+}"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
