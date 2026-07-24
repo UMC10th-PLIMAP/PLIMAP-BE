@@ -55,6 +55,7 @@ com.example.plimap/
 │   ├── auth/                       # 소셜 로그인·JWT
 │   ├── place/                      # 장소·위치·검색 기록
 │   ├── track/                      # 음악·장소별 곡·하트·북마크
+│   ├── report/                     # 회원·PIN 신고 접수
 │   └── pin/                        # PIN 핵심 도메인
 │       ├── controller/             # REST API 컨트롤러
 │       │   └── docs/               # Swagger 문서용 인터페이스/설명
@@ -89,7 +90,7 @@ com.example.plimap/
 └── PlimapApplication
 ```
 
-> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track` 도메인도 동일한 내부 패키지 구조를 따릅니다.
+> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report` 도메인도 동일한 내부 패키지 구조를 따릅니다.
 
 ## Domain Structure
 
@@ -134,6 +135,15 @@ PLIMAP의 PIN 핵심 도메인을 담당합니다.
 - PIN 생성, 수정, 삭제
 - PIN 조회
 - 사용자별 PIN 관리
+
+### 6. Report
+
+회원과 공개 PIN의 신고 접수를 담당합니다.
+
+- 회원 신고 접수
+- 공개 PIN 신고 접수
+- 자기 대상·중복·비공개 PIN 신고 제한
+- 관리자 조회·처리·제재 기능은 담당하지 않음
 
 ## Partial CQRS
 

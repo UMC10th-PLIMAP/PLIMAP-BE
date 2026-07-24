@@ -4,8 +4,12 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
+import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
+import com.example.plimap.domain.pin.exception.PinErrorCode;
+import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
@@ -30,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
@@ -42,6 +47,9 @@ class PinQueryServiceImplTest {
 
     @Mock
     private PinQueryRepository pinQueryRepository;
+
+    @Mock
+    private PinRepository pinRepository;
 
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
@@ -112,6 +120,35 @@ class PinQueryServiceImplTest {
         placeTrack = PlaceTrack.create(place, track);
     }
 
+
+    @Test
+    void 활성_PIN을_조회한다() {
+        // given
+        Pin pin = Pin.builder()
+                .member(member)
+                .clipStartMs(0)
+                .introduction("테스트 PIN")
+                .isFeedPublic(true)
+                .build();
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(pin));
+
+        // when
+        Pin result = pinQueryService.getActivePin(1L);
+
+        // then
+        assertThat(result).isSameAs(pin);
+    }
+
+    @Test
+    void 존재하지_않거나_삭제된_PIN은_조회할_수_없다() {
+        // given
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> pinQueryService.getActivePin(1L))
+                .isInstanceOfSatisfying(PinException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(PinErrorCode.PIN_NOT_FOUND));
+    }
 
     // validatePinAvailability 테스트
     @Test

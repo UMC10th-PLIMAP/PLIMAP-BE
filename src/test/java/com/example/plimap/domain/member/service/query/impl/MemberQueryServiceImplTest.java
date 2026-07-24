@@ -1,10 +1,16 @@
 package com.example.plimap.domain.member.service.query.impl;
 
+import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import com.example.plimap.domain.member.exception.MemberErrorCode;
+import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,6 +21,30 @@ class MemberQueryServiceImplTest {
 
     private final MemberRepository memberRepository = mock(MemberRepository.class);
     private final MemberQueryServiceImpl memberQueryService = new MemberQueryServiceImpl(memberRepository);
+
+    @Test
+    void 활성_회원을_조회한다() {
+        // given
+        Member member = Member.builder().nickname("회원").build();
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+
+        // when
+        Member result = memberQueryService.getActiveMember(1L);
+
+        // then
+        assertThat(result).isSameAs(member);
+    }
+
+    @Test
+    void 존재하지_않거나_삭제된_회원은_조회할_수_없다() {
+        // given
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> memberQueryService.getActiveMember(1L))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
 
     @Test
     void 닉네임이_이미_사용중이면_사용_불가능하다() {
