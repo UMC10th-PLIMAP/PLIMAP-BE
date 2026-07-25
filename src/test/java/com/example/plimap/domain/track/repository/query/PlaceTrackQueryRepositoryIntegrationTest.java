@@ -212,23 +212,6 @@ class PlaceTrackQueryRepositoryIntegrationTest {
         assertThat(secondPage.hasNext()).isFalse();
     }
 
-    @Test
-    void 장소_북마크_여부를_조회한다() {
-        assertThat(placeTrackQueryRepository.existsPlaceBookmark(placeId, memberId))
-                .isFalse();
-
-        jdbcTemplate.update(
-                "INSERT INTO place_bookmark (place_id, member_id) VALUES (?, ?)",
-                placeId,
-                memberId
-        );
-
-        assertThat(placeTrackQueryRepository.existsPlaceBookmark(placeId, memberId))
-                .isTrue();
-        assertThat(placeTrackQueryRepository.existsPlaceBookmark(placeId, otherMemberId))
-                .isFalse();
-    }
-
     private Slice<PlaceTrackQueryResult> find(
             PlaceTrackSort sort,
             int page,

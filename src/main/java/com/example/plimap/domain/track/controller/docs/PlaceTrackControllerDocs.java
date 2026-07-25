@@ -36,7 +36,8 @@ public interface PlaceTrackControllerDocs {
                     description = "조회 조건 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaceTrackListResult"),
                             examples = @ExampleObject(
                                     value = TrackSwaggerErrorExamples
                                             .PLACE_TRACK_VALIDATION_FAILED
@@ -47,7 +48,8 @@ public interface PlaceTrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaceTrackListResult"),
                             examples = @ExampleObject(
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
@@ -57,7 +59,8 @@ public interface PlaceTrackControllerDocs {
                     description = "장소 없음",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaceTrackListResult"),
                             examples = @ExampleObject(
                                     value = TrackSwaggerErrorExamples.PLACE_NOT_FOUND
                             )

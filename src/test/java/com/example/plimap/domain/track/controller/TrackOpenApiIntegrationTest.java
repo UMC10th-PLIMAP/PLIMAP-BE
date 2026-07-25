@@ -165,7 +165,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_PATH,
                 "get",
                 "400",
-                "ApiResponse",
+                "ApiResponsePlaceTrackListResult",
                 Set.of("COMMON_400_VALIDATION_FAILED")
         );
         assertFailureResponse(
@@ -173,7 +173,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_PATH,
                 "get",
                 "401",
-                "ApiResponse",
+                "ApiResponsePlaceTrackListResult",
                 Set.of("COMMON_401_UNAUTHORIZED")
         );
         assertFailureResponse(
@@ -181,7 +181,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_PATH,
                 "get",
                 "404",
-                "ApiResponse",
+                "ApiResponsePlaceTrackListResult",
                 Set.of("PLACE_NOT_FOUND")
         );
     }

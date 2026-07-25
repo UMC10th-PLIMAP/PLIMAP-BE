@@ -15,7 +15,6 @@ import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -28,17 +27,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class PlaceTrackQueryRepositoryImpl implements PlaceTrackQueryRepository {
 
-    private static final String PLACE_BOOKMARK_EXISTS_QUERY = """
-            SELECT EXISTS (
-                SELECT 1
-                FROM place_bookmark pb
-                WHERE pb.place_id = :placeId
-                  AND pb.member_id = :memberId
-            )
-            """;
-
     private final JPAQueryFactory queryFactory;
-    private final EntityManager entityManager;
 
     @Override
     public Slice<PlaceTrackQueryResult> findPlaceTracks(
@@ -115,14 +104,6 @@ public class PlaceTrackQueryRepositoryImpl implements PlaceTrackQueryRepository 
         }
 
         return new SliceImpl<>(content, pageable, hasNext);
-    }
-
-    @Override
-    public boolean existsPlaceBookmark(Long placeId, Long memberId) {
-        return (Boolean) entityManager.createNativeQuery(PLACE_BOOKMARK_EXISTS_QUERY)
-                .setParameter("placeId", placeId)
-                .setParameter("memberId", memberId)
-                .getSingleResult();
     }
 
     private PlaceTrackQueryResult toQueryResult(

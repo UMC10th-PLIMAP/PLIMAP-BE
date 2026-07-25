@@ -13,6 +13,4 @@ public interface PlaceTrackQueryRepository {
             PlaceTrackSort sort,
             Pageable pageable
     );
-
-    boolean existsPlaceBookmark(Long placeId, Long memberId);
 }
