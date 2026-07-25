@@ -101,4 +101,17 @@ public class MemberCommandServiceImpl implements MemberCommandService {
             throw new MemberException(MemberErrorCode.ALREADY_FOLLOWING, e);
         }
     }
+
+    @Override
+    @Transactional
+    public void unfollow(Long followerId, Long followingId) {
+        if (followerId.equals(followingId)) {
+            throw new MemberException(MemberErrorCode.CANNOT_UNFOLLOW_SELF);
+        }
+
+        long deletedCount = memberFollowRepository.deleteByIdFollowerIdAndIdFollowingId(followerId, followingId);
+        if (deletedCount == 0) {
+            throw new MemberException(MemberErrorCode.NOT_FOLLOWING);
+        }
+    }
 }

@@ -60,4 +60,10 @@ public interface MemberControllerDocs {
             description = "경로의 memberId에 해당하는 회원을 팔로우합니다. 자기 자신은 팔로우할 수 없고, 이미 팔로우 중이면 실패합니다."
     )
     ApiResponse<Void> follow(AuthMember authMember, Long memberId);
+
+    @Operation(
+            summary = "언팔로우",
+            description = "경로의 memberId에 해당하는 회원을 언팔로우합니다. 자기 자신은 언팔로우할 수 없고, 팔로우 중이 아니면 실패합니다."
+    )
+    ApiResponse<Void> unfollow(AuthMember authMember, Long memberId);
 }
