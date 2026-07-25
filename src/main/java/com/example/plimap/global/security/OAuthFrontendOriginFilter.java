@@ -6,11 +6,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 public class OAuthFrontendOriginFilter extends OncePerRequestFilter {
 
-    private static final String AUTHORIZATION_PATH_PREFIX = "/oauth/authorization/";
+    private static final RequestMatcher AUTHORIZATION_REQUEST_MATCHER =
+            PathPatternRequestMatcher.withDefaults()
+                    .matcher(HttpMethod.GET, "/oauth/authorization/{registrationId}");
 
     private final OAuthFrontendRedirectCookieRepository redirectCookieRepository;
 
@@ -20,10 +24,7 @@ public class OAuthFrontendOriginFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String requestPath = request.getRequestURI().substring(request.getContextPath().length());
-        return !HttpMethod.GET.matches(request.getMethod())
-                || !requestPath.startsWith(AUTHORIZATION_PATH_PREFIX)
-                || requestPath.length() == AUTHORIZATION_PATH_PREFIX.length();
+        return !AUTHORIZATION_REQUEST_MATCHER.matches(request);
     }
 
     @Override
