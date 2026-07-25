@@ -100,8 +100,9 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         // 커밋 실패 시 DB는 이전 objectKey를 가리키는데 실제 객체는 이미 삭제된 상태가 된다.
         // findById/saveAndFlush는 Spring Data JPA가 각각 자체 트랜잭션으로 짧게 처리하므로,
         // 이전 이미지 삭제는 이 DB 갱신이 실제로 커밋된 뒤에만 실행된다.
+        validateImageMetadata(image);
         byte[] content = readContent(image);
-        validateProfileImage(image, content);
+        validateWebpSignature(content);
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
@@ -129,10 +130,19 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         return MemberConverter.toProfileImage(newObjectKey, publicUrl);
     }
 
-    private byte[] readContent(MultipartFile image) {
+    private void validateImageMetadata(MultipartFile image) {
         if (image == null || image.isEmpty()) {
             throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
         }
+        if (image.getSize() > MAX_PROFILE_IMAGE_SIZE) {
+            throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
+        }
+        if (!IMAGE_WEBP.equals(parseContentType(image.getContentType()))) {
+            throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
+        }
+    }
+
+    private byte[] readContent(MultipartFile image) {
         try {
             return image.getBytes();
         } catch (IOException e) {
@@ -140,13 +150,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         }
     }
 
-    private void validateProfileImage(MultipartFile image, byte[] content) {
-        if (image.getSize() > MAX_PROFILE_IMAGE_SIZE) {
-            throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
-        }
-        if (!IMAGE_WEBP.equals(parseContentType(image.getContentType()))) {
-            throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
-        }
+    private void validateWebpSignature(byte[] content) {
         if (!hasWebpSignature(content)) {
             throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
         }
