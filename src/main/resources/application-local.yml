@@ -40,6 +40,17 @@ plimap:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
+profile-image:
+  storage:
+    provider: ${PROFILE_IMAGE_STORAGE_PROVIDER:supabase}
+    bucket: ${PROFILE_IMAGE_BUCKET:profile-images}
+    connect-timeout: 2s
+    read-timeout: 5s
+    cache-control-seconds: 31536000
+    supabase:
+      url: ${SUPABASE_URL}
+      secret-key: ${SUPABASE_SECRET_KEY}
+
 logging:
   level:
     org.springframework.security: DEBUG

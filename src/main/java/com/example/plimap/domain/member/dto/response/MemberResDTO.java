@@ -83,4 +83,10 @@ public class MemberResDTO {
             boolean isFollowing
     ) {
     }
+
+    public record ProfileImage(
+            String objectKey,
+            String imageUrl
+    ) {
+    }
 }
