@@ -139,6 +139,82 @@ class TrackRepositoryIntegrationTest {
     }
 
     @Test
+    void 좋아요_변경용_조회는_활성_Place와_PlaceTrack을_반환한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("active-like-target-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+
+        PlaceTrack foundPlaceTrack = placeTrackRepository
+                .findActiveByIdForUpdate(placeTrack.getId())
+                .orElseThrow();
+
+        assertThat(foundPlaceTrack.getId()).isEqualTo(placeTrack.getId());
+        assertThat(foundPlaceTrack.getDeletedAt()).isNull();
+        assertThat(foundPlaceTrack.getPlace().getDeletedAt()).isNull();
+    }
+
+    @Test
+    void 좋아요_변경용_조회는_삭제된_PlaceTrack을_제외한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("deleted-like-target-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+        placeTrack.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(placeTrackRepository
+                .findActiveByIdForUpdate(placeTrack.getId()))
+                .isEmpty();
+    }
+
+    @Test
+    void 좋아요_변경용_조회는_삭제된_Place의_활성_PlaceTrack을_제외한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("deleted-place-like-target-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+        place.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(placeTrackRepository
+                .findActiveByIdForUpdate(placeTrack.getId()))
+                .isEmpty();
+    }
+
+    @Test
+    void 현재_사용자의_PlaceTrackLike만_조회하고_삭제한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("member-like-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+        Member member = saveMember("좋아요사용자1");
+        Member otherMember = saveMember("다른사용자1");
+        placeTrackLikeRepository.saveAndFlush(
+                PlaceTrackLike.create(placeTrack, member.getId())
+        );
+        placeTrackLikeRepository.saveAndFlush(
+                PlaceTrackLike.create(placeTrack, otherMember.getId())
+        );
+
+        PlaceTrackLike foundLike = placeTrackLikeRepository.findById(
+                new PlaceTrackLikeId(placeTrack.getId(), member.getId())
+        ).orElseThrow();
+        placeTrackLikeRepository.delete(foundLike);
+        placeTrackLikeRepository.flush();
+        entityManager.clear();
+
+        assertThat(placeTrackLikeRepository.existsById(
+                new PlaceTrackLikeId(placeTrack.getId(), member.getId())
+        )).isFalse();
+        assertThat(placeTrackLikeRepository.existsById(
+                new PlaceTrackLikeId(placeTrack.getId(), otherMember.getId())
+        )).isTrue();
+    }
+
+    @Test
     void 삭제된_PlaceTrack을_조회하고_복구하면_활성_조회가_가능하다() {
         Place place = savePlace();
         Track track = trackRepository.save(track("deleted-youtube-video-id"));
@@ -212,8 +288,12 @@ class TrackRepositoryIntegrationTest {
     }
 
     private Member saveMember() {
+        return saveMember("좋아요사용자");
+    }
+
+    private Member saveMember(String nickname) {
         Member member = Member.builder()
-                .nickname("좋아요사용자")
+                .nickname(nickname)
                 .build();
         entityManager.persist(member);
         entityManager.flush();

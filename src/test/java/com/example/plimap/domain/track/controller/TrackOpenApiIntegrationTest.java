@@ -31,6 +31,8 @@ class TrackOpenApiIntegrationTest {
             "/api/v1/places/{placeId}/tracks";
     private static final String PLACE_TRACK_DETAIL_PATH =
             "/api/v1/place-tracks/{placeTrackId}";
+    private static final String PLACE_TRACK_LIKE_PATH =
+            "/api/v1/place-tracks/{placeTrackId}/likes";
     private static final String TRACK_SEARCH_PATH = "/api/v1/tracks/search";
     private static final String PLAYBACK_PREPARATION_PATH =
             "/api/v1/tracks/playback-preparations";
@@ -61,6 +63,18 @@ class TrackOpenApiIntegrationTest {
                 "get",
                 "200"
         ))).isEqualTo("ApiResponsePlaceTrackDetail");
+        assertThat(referenceName(responseSchemaReference(
+                openApi,
+                PLACE_TRACK_LIKE_PATH,
+                "put",
+                "200"
+        ))).isEqualTo("ApiResponsePlaceTrackLikeResult");
+        assertThat(referenceName(responseSchemaReference(
+                openApi,
+                PLACE_TRACK_LIKE_PATH,
+                "delete",
+                "200"
+        ))).isEqualTo("ApiResponsePlaceTrackLikeResult");
         assertThat(referenceName(responseSchemaReference(
                 openApi,
                 TRACK_SEARCH_PATH,
@@ -108,6 +122,17 @@ class TrackOpenApiIntegrationTest {
                         "likeCount",
                         "userLike"
                 );
+
+        JsonNode placeTrackLikeResult =
+                responseResultSchema(openApi, PLACE_TRACK_LIKE_PATH, "put");
+        List<String> placeTrackLikeFields = new ArrayList<>();
+        placeTrackLikeResult.path("properties").fieldNames()
+                .forEachRemaining(placeTrackLikeFields::add);
+        assertThat(placeTrackLikeFields).containsExactlyInAnyOrder(
+                "placeTrackId",
+                "isLiked",
+                "likeCount"
+        );
 
         JsonNode trackSearchResult =
                 responseResultSchema(openApi, TRACK_SEARCH_PATH, "get");
@@ -246,6 +271,65 @@ class TrackOpenApiIntegrationTest {
         ).path("application/json")).getFirst();
         assertThat(placeTrackNotFoundExample.path("message").asText())
                 .isEqualTo(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getMessage());
+
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_LIKE_PATH,
+                "put",
+                "400",
+                "ApiResponsePlaceTrackLikeResult",
+                Set.of(
+                        GeneralErrorCode.TYPE_MISMATCH.getCode(),
+                        GeneralErrorCode.VALIDATION_FAILED.getCode(),
+                        TrackErrorCode.PLACE_TRACK_ALREADY_LIKED.getCode()
+                )
+        );
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_LIKE_PATH,
+                "put",
+                "401",
+                "ApiResponsePlaceTrackLikeResult",
+                Set.of(GeneralErrorCode.UNAUTHORIZED.getCode())
+        );
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_LIKE_PATH,
+                "put",
+                "404",
+                "ApiResponsePlaceTrackLikeResult",
+                Set.of(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode())
+        );
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_LIKE_PATH,
+                "delete",
+                "400",
+                "ApiResponsePlaceTrackLikeResult",
+                Set.of(
+                        GeneralErrorCode.TYPE_MISMATCH.getCode(),
+                        GeneralErrorCode.VALIDATION_FAILED.getCode()
+                )
+        );
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_LIKE_PATH,
+                "delete",
+                "401",
+                "ApiResponsePlaceTrackLikeResult",
+                Set.of(GeneralErrorCode.UNAUTHORIZED.getCode())
+        );
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_LIKE_PATH,
+                "delete",
+                "404",
+                "ApiResponsePlaceTrackLikeResult",
+                Set.of(
+                        TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode(),
+                        TrackErrorCode.PLACE_TRACK_LIKE_NOT_FOUND.getCode()
+                )
+        );
     }
 
     private void assertFailureResponse(

@@ -4,7 +4,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +21,7 @@ import com.example.plimap.domain.track.enums.PlaceTrackSort;
 import com.example.plimap.domain.track.exception.TrackErrorCode;
 import com.example.plimap.domain.track.exception.TrackException;
 import com.example.plimap.domain.track.exception.TrackSuccessCode;
+import com.example.plimap.domain.track.service.command.PlaceTrackCommandService;
 import com.example.plimap.domain.track.service.query.PlaceTrackQueryService;
 import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
@@ -57,10 +60,14 @@ class PlaceTrackControllerTest {
 
     private static final String ENDPOINT = "/api/v1/places/1/tracks";
     private static final String DETAIL_ENDPOINT = "/api/v1/place-tracks/10";
+    private static final String LIKE_ENDPOINT = "/api/v1/place-tracks/10/likes";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private PlaceTrackCommandService placeTrackCommandService;
 
     @MockitoBean
     private PlaceTrackQueryService placeTrackQueryService;
@@ -222,6 +229,114 @@ class PlaceTrackControllerTest {
     }
 
     @Test
+    void 장소별_곡_좋아요를_등록하면_변경된_상태와_개수를_반환한다() throws Exception {
+        when(placeTrackCommandService.createPlaceTrackLike(1L, 10L))
+                .thenReturn(new PlaceTrackResponse.PlaceTrackLikeResult(
+                        10L,
+                        true,
+                        13
+                ));
+
+        mockMvc.perform(authenticatedPut(LIKE_ENDPOINT))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value(
+                        TrackSuccessCode.PLACE_TRACK_LIKE_PUT_SUCCESS.getCode()))
+                .andExpect(jsonPath("$.message").value(
+                        TrackSuccessCode.PLACE_TRACK_LIKE_PUT_SUCCESS.getMessage()))
+                .andExpect(jsonPath("$.result.placeTrackId").value(10))
+                .andExpect(jsonPath("$.result.isLiked").value(true))
+                .andExpect(jsonPath("$.result.likeCount").value(13));
+
+        verify(placeTrackCommandService).createPlaceTrackLike(1L, 10L);
+    }
+
+    @Test
+    void 장소별_곡_좋아요를_삭제하면_변경된_상태와_개수를_반환한다() throws Exception {
+        when(placeTrackCommandService.deletePlaceTrackLike(1L, 10L))
+                .thenReturn(new PlaceTrackResponse.PlaceTrackLikeResult(
+                        10L,
+                        false,
+                        12
+                ));
+
+        mockMvc.perform(authenticatedDelete(LIKE_ENDPOINT))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value(
+                        TrackSuccessCode.PLACE_TRACK_LIKE_DELETE_SUCCESS.getCode()))
+                .andExpect(jsonPath("$.message").value(
+                        TrackSuccessCode.PLACE_TRACK_LIKE_DELETE_SUCCESS.getMessage()))
+                .andExpect(jsonPath("$.result.placeTrackId").value(10))
+                .andExpect(jsonPath("$.result.isLiked").value(false))
+                .andExpect(jsonPath("$.result.likeCount").value(12));
+
+        verify(placeTrackCommandService).deletePlaceTrackLike(1L, 10L);
+    }
+
+    @Test
+    void 인증되지_않은_장소별_곡_좋아요_등록은_401을_반환한다() throws Exception {
+        mockMvc.perform(put(LIKE_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(placeTrackCommandService);
+    }
+
+    @Test
+    void 인증되지_않은_장소별_곡_좋아요_삭제는_401을_반환한다() throws Exception {
+        mockMvc.perform(delete(LIKE_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(placeTrackCommandService);
+    }
+
+    @Test
+    void 좋아요_등록시_placeTrackId가_0이면_validation_오류를_반환한다() throws Exception {
+        assertLikeValidationError(authenticatedPut(
+                "/api/v1/place-tracks/0/likes"
+        ));
+    }
+
+    @Test
+    void 좋아요_등록시_placeTrackId가_음수이면_validation_오류를_반환한다() throws Exception {
+        assertLikeValidationError(authenticatedPut(
+                "/api/v1/place-tracks/-1/likes"
+        ));
+    }
+
+    @Test
+    void 좋아요_삭제시_placeTrackId가_0이면_validation_오류를_반환한다() throws Exception {
+        assertLikeValidationError(authenticatedDelete(
+                "/api/v1/place-tracks/0/likes"
+        ));
+    }
+
+    @Test
+    void 좋아요_삭제시_placeTrackId가_음수이면_validation_오류를_반환한다() throws Exception {
+        assertLikeValidationError(authenticatedDelete(
+                "/api/v1/place-tracks/-1/likes"
+        ));
+    }
+
+    @Test
+    void 좋아요_등록시_placeTrackId가_비숫자이면_타입_불일치_오류를_반환한다()
+            throws Exception {
+        assertLikeTypeMismatch(authenticatedPut(
+                "/api/v1/place-tracks/not-number/likes"
+        ));
+    }
+
+    @Test
+    void 좋아요_삭제시_placeTrackId가_비숫자이면_타입_불일치_오류를_반환한다()
+            throws Exception {
+        assertLikeTypeMismatch(authenticatedDelete(
+                "/api/v1/place-tracks/not-number/likes"
+        ));
+    }
+
+    @Test
     void 정렬_페이지_크기와_좌표를_서비스에_전달한다() throws Exception {
         when(placeTrackQueryService.getPlaceTracks(any(), any(), any()))
                 .thenReturn(response());
@@ -340,6 +455,34 @@ class PlaceTrackControllerTest {
     private MockHttpServletRequestBuilder authenticatedGet(String endpoint) {
         return get(endpoint)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN);
+    }
+
+    private MockHttpServletRequestBuilder authenticatedPut(String endpoint) {
+        return put(endpoint)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN);
+    }
+
+    private MockHttpServletRequestBuilder authenticatedDelete(String endpoint) {
+        return delete(endpoint)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN);
+    }
+
+    private void assertLikeValidationError(MockHttpServletRequestBuilder request)
+            throws Exception {
+        mockMvc.perform(request)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value(GeneralErrorCode.VALIDATION_FAILED.getCode()));
+        verifyNoInteractions(placeTrackCommandService);
+    }
+
+    private void assertLikeTypeMismatch(MockHttpServletRequestBuilder request)
+            throws Exception {
+        mockMvc.perform(request)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value(GeneralErrorCode.TYPE_MISMATCH.getCode()));
+        verifyNoInteractions(placeTrackCommandService);
     }
 
     private PlaceTrackResponse.PlaceTrackListResult response() {

@@ -14,6 +14,16 @@ public enum TrackErrorCode implements BaseErrorCode {
             "PLACE_TRACK_NOT_FOUND",
             "존재하지 않는 placeTrack 입니다."
     ),
+    PLACE_TRACK_ALREADY_LIKED(
+            HttpStatus.BAD_REQUEST,
+            "PLACE_TRACK_ALREADY_LIKED",
+            "이미 좋아요를 등록한 장소별 곡입니다."
+    ),
+    PLACE_TRACK_LIKE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "PLACE_TRACK_LIKE_NOT_FOUND",
+            "장소별 곡 좋아요를 찾을 수 없습니다."
+    ),
     TRACK_EXTERNAL_API_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "TRACK_EXTERNAL_API_ERROR",

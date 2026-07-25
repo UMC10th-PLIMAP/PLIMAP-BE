@@ -28,6 +28,16 @@ public enum TrackSuccessCode implements BaseSuccessCode {
             HttpStatus.OK,
             "PLACE_TRACK_LIST_SUCCESS",
             "장소별 곡 목록 조회에 성공했습니다."
+    ),
+    PLACE_TRACK_LIKE_PUT_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_TRACK_LIKE_PUT_SUCCESS",
+            "장소별 곡 좋아요 등록에 성공했습니다."
+    ),
+    PLACE_TRACK_LIKE_DELETE_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_TRACK_LIKE_DELETE_SUCCESS",
+            "장소별 곡 좋아요 삭제에 성공했습니다."
     );
 
     private final HttpStatus status;

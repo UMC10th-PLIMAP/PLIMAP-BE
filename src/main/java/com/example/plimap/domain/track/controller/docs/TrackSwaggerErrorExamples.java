@@ -119,6 +119,24 @@ final class TrackSwaggerErrorExamples {
             }
             """;
 
+    static final String PLACE_TRACK_ALREADY_LIKED = """
+            {
+              "isSuccess": false,
+              "code": "PLACE_TRACK_ALREADY_LIKED",
+              "message": "이미 좋아요를 등록한 장소별 곡입니다.",
+              "result": null
+            }
+            """;
+
+    static final String PLACE_TRACK_LIKE_NOT_FOUND = """
+            {
+              "isSuccess": false,
+              "code": "PLACE_TRACK_LIKE_NOT_FOUND",
+              "message": "장소별 곡 좋아요를 찾을 수 없습니다.",
+              "result": null
+            }
+            """;
+
     private TrackSwaggerErrorExamples() {
     }
 }

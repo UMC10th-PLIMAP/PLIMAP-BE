@@ -62,4 +62,14 @@ public class PlaceTrack extends SoftDeleteEntity {
                 .build();
     }
 
+    public void increaseLikeCount() {
+        likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (likeCount > 0) {
+            likeCount--;
+        }
+    }
+
 }
