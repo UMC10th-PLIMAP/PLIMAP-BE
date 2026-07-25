@@ -12,7 +12,7 @@
 | PostgreSQL/PostGIS | Docker Compose | Supabase Transaction Pooler | Cloud SQL for PostgreSQL 예정 |
 | Redis | Docker Compose | Redis Cloud (`ap-northeast-2`) | 미정 |
 | 외부 진입점 | `localhost:8080` | 개인 서버의 Traefik | `plimap.kr` 사용 예정, 구성 미정 |
-| 프론트엔드 | `localhost:3000` 기준 | 개인 서버의 Docker | 구성 미정 |
+| 프론트엔드 | `localhost:5173` 기준 | 로컬 개발 서버와 개인 서버 Docker가 Dev 백엔드 공유 | 구성 미정 |
 | Swagger/OpenAPI | 활성화 | 활성화, 현재 공개 | 기본 비활성화 |
 | 배포 방식 | Gradle로 직접 실행 | GitHub Actions 자동 배포 또는 PowerShell 스크립트 | 미구축 |
 
@@ -59,7 +59,7 @@ Spring Boot (개발자 PC, :8080)
 - PostgreSQL과 Redis 데이터는 Docker volume에 보존됩니다.
 - `application-local.yml`은 SQL 로그와 OAuth 상세 로그, Swagger/OpenAPI를 활성화합니다.
 - 로컬 쿠키는 HTTP 개발 환경에서 사용할 수 있도록 secure 정책을 비활성화합니다.
-- 프론트엔드는 `http://localhost:3000`, 백엔드는 `http://localhost:8080`을 기준으로 연동합니다.
+- 프론트엔드는 `http://localhost:5173`, 백엔드는 `http://localhost:8080`을 기준으로 연동합니다.
 - Swagger UI는 `http://localhost:8080/swagger-ui/index.html`에서 확인합니다.
 
 구체적인 실행 명령은 [README의 로컬 실행 방법](../README.md#로컬-실행-방법), DB와 volume 관리 방법은 [Database Guide](DATABASE.md)를 참고합니다.
@@ -70,7 +70,8 @@ Spring Boot (개발자 PC, :8080)
 
 ```mermaid
 flowchart LR
-    Browser["브라우저"] --> DNS["가비아 DNS"]
+    LocalFrontend["로컬 프론트<br/>localhost:5173"] -->|"API·OAuth 요청"| DNS["dev.plimap.kr"]
+    DeployedBrowser["Dev 배포 프론트 사용자"] --> DNS
     DNS --> Traefik["개인 서버 Traefik<br/>TLS 및 경로 라우팅"]
     Traefik -->|"프론트 경로"| Frontend["프론트 Docker"]
     Traefik -->|"API 및 OAuth 경로"| CloudRun["GCP Cloud Run<br/>plimap-api-dev"]
@@ -78,7 +79,44 @@ flowchart LR
     CloudRun --> Redis["Redis Cloud"]
 ```
 
-브라우저가 사용하는 공개 host는 `dev.plimap.kr` 하나입니다. 프론트는 API Base URL로 절대 주소 `https://dev.plimap.kr/api` 또는 동일 host의 상대 경로 `/api`를 사용합니다. Cloud Run 원본 URL은 운영상 Traefik upstream과 배포 직후 직접 검증에 사용하지만, 현재 dev 배포 정책상 Traefik을 거치지 않고도 외부에서 직접 접근할 수 있습니다.
+Dev 백엔드는 배포된 Dev 프론트와 프론트 개발자의 로컬 개발 서버가 함께 사용합니다.
+
+- Dev 배포 프론트는 동일 host의 상대 경로 `/api`, `/oauth`를 사용합니다.
+- 로컬 프론트는 API Base URL과 OAuth 시작 주소로 `https://dev.plimap.kr`을 사용합니다.
+- credential CORS와 OAuth 프론트 allowlist는 `https://dev.plimap.kr`, `http://localhost:5173`을 명시적으로 허용합니다.
+- 프론트의 OAuth 시작 요청은 `frontendOrigin`을 전달하며, 백엔드는 allowlist 검증 후 요청별 로그인 완료 주소로 사용합니다.
+
+### 로컬 프론트 인증 호출 계약
+
+로컬 프론트는 OAuth 시작 요청과 API 요청에 다음 계약을 사용합니다.
+
+```javascript
+const backendOrigin = "https://dev.plimap.kr";
+
+// provider callback은 dev.plimap.kr로 유지되고, 로그인 완료 후 localhost로 돌아옵니다.
+window.location.assign(
+  `${backendOrigin}/oauth/authorization/google?frontendOrigin=${encodeURIComponent(window.location.origin)}`,
+);
+
+const csrfResponse = await fetch(`${backendOrigin}/api/v1/auth/csrf`, {
+  credentials: "include",
+});
+const { result } = await csrfResponse.json();
+
+await fetch(`${backendOrigin}/api/v1/example`, {
+  method: "POST",
+  credentials: "include",
+  headers: {
+    "Content-Type": "application/json",
+    "X-XSRF-TOKEN": result.token,
+  },
+  body: JSON.stringify({}),
+});
+```
+
+모든 인증 API 요청은 `credentials: "include"`를 사용합니다. `localhost`와 `dev.plimap.kr`은 cross-site 관계이므로 브라우저가 서드파티 쿠키를 차단하면 `SameSite=None`이어도 인증 쿠키가 전송되지 않을 수 있습니다. 로컬 E2E는 `dev.plimap.kr`의 서드파티 쿠키를 허용한 지원 브라우저에서 검증하고, 쿠키 차단 환경까지 공식 지원해야 한다면 별도의 same-site 개발 도메인 또는 로컬 callback/proxy 전략을 추가로 설계합니다.
+
+Cloud Run 원본 URL은 운영상 Traefik upstream과 배포 직후 직접 검증에 사용하지만, 현재 dev 배포 정책상 Traefik을 거치지 않고도 외부에서 직접 접근할 수 있습니다.
 
 ### DNS와 TLS
 
@@ -146,7 +184,9 @@ gcloud run services describe plimap-api-dev `
 - Supabase Transaction Pooler를 사용하며 pooler 호환성을 위한 JDBC 설정을 적용합니다.
 - Redis Cloud의 TLS endpoint를 사용합니다.
 - Swagger UI와 OpenAPI 문서를 활성화합니다.
-- OAuth Provider callback과 로그인 완료 후 이동 주소는 `dev.plimap.kr`을 기준으로 사용합니다.
+- OAuth Provider callback은 `dev.plimap.kr`에 고정하고, 로그인 완료 후 이동 주소는 요청별 `frontendOrigin`에 따라 Dev 배포 프론트 또는 로컬 프론트로 결정합니다.
+- Dev 인증 쿠키는 cross-site 로컬 프론트 요청을 위해 `Secure`, `HttpOnly`, `SameSite=None`을 사용합니다.
+- 로컬 프론트는 `GET /api/v1/auth/csrf` 응답 본문의 토큰을 상태 변경 요청의 `X-XSRF-TOKEN` 헤더로 전달합니다.
 - secure cookie와 forwarded header 처리는 HTTPS reverse proxy 구성을 기준으로 적용합니다.
 
 ## prod 환경
@@ -190,7 +230,9 @@ dev 배포 스크립트는 Cloud Run 원본에서 위 endpoint를 검증합니�
 - 서버 방화벽이 의도한 공개 포트만 허용하는지 확인합니다.
 - 프론트 화면, API, OAuth 시작 경로, Swagger UI와 OpenAPI 문서가 의도한 upstream으로 라우팅되는지 확인합니다.
 - 로그인 응답의 `Set-Cookie`와 OAuth 응답의 `Location` header가 Traefik을 거쳐도 유지되는지 확인합니다.
-- Google과 Kakao 로그인을 시작해 callback, 로그인 완료 redirect, 인증 쿠키가 모두 `dev.plimap.kr` 기준으로 동작하는지 E2E 검증합니다.
+- Dev 배포 프론트와 `localhost:5173`에서 Google/Kakao 로그인을 각각 시작해 callback은 `dev.plimap.kr`로 들어오고 로그인 완료 후에는 요청을 시작한 프론트의 `/home`으로 돌아가는지 검증합니다.
+- 두 프론트 Origin에서 credential CORS, 인증 GET, CSRF 보호 상태 변경 요청, 재발급과 로그아웃을 E2E 검증합니다.
+- allowlist에 없는 `frontendOrigin`과 CORS Origin이 거부되는지 확인합니다.
 
 ## 관련 문서
 

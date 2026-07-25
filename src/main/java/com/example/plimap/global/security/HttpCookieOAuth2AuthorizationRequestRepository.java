@@ -22,6 +22,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
 
     private final AuthCookieUtil authCookieUtil;
     private final ObjectMapper objectMapper;
+    private final OAuthFrontendRedirectCookieRepository frontendRedirectCookieRepository;
 
     @Override
     public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
@@ -29,8 +30,8 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         if (cookieValue == null) {
             return null;
         }
-        // 클라이언트가 조작하거나 손상시킨 쿠키 값은 조용히 무시하고 인증 실패로 자연스럽게
-        // 이어지도록 한다. 그대로 던지면 AuthenticationException이 아니라서 500으로 새어나간다.
+        // 클라이언트가 조작하거나 예상하지 못한 쿠키 값은 조용히 무시하고 인증 실패로 자연스럽게
+        // 이어지도록 한다. 그대로 던지면 AuthenticationException이 아니라서 500으로 빠져나간다.
         try {
             byte[] bytes = Base64.getUrlDecoder().decode(cookieValue);
             return objectMapper.readValue(bytes, CookiePayload.class).toAuthorizationRequest();
@@ -45,11 +46,17 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
                                          HttpServletResponse response) {
         if (authorizationRequest == null) {
             authCookieUtil.clearCookie(response, COOKIE_NAME);
+            frontendRedirectCookieRepository.clearCookie(response);
             return;
         }
         byte[] bytes = objectMapper.writeValueAsBytes(CookiePayload.from(authorizationRequest));
         String cookieValue = Base64.getUrlEncoder().encodeToString(bytes);
         authCookieUtil.setCookie(response, COOKIE_NAME, cookieValue, COOKIE_MAX_AGE);
+        frontendRedirectCookieRepository.saveRequestedOrigin(
+                request,
+                response,
+                authorizationRequest.getState()
+        );
     }
 
     @Override
@@ -71,7 +78,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
             Map<String, Object> additionalParameters,
             Map<String, Object> attributes
     ) {
-
         static CookiePayload from(OAuth2AuthorizationRequest authorizationRequest) {
             return new CookiePayload(
                     authorizationRequest.getAuthorizationUri(),
