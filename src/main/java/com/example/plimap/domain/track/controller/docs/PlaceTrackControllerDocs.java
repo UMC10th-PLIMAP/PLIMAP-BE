@@ -155,4 +155,137 @@ public interface PlaceTrackControllerDocs {
                     @Positive(message = "장소 노래 ID는 양수여야 합니다.")
                     Long placeTrackId
             );
+
+    @Operation(
+            summary = "장소별 곡 좋아요 등록",
+            description = "현재 사용자가 장소별 곡에 좋아요를 등록합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "장소별 곡 좋아요 등록 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "장소별 곡 ID 검증 실패 또는 중복 좋아요",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "타입 불일치",
+                                            value = TrackSwaggerErrorExamples
+                                                .PLACE_TRACK_DETAIL_TYPE_MISMATCH
+                                    ),
+                                    @ExampleObject(
+                                            name = "양수 검증 실패",
+                                            value = TrackSwaggerErrorExamples
+                                                .PLACE_TRACK_DETAIL_VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "중복 좋아요",
+                                            value = TrackSwaggerErrorExamples
+                                                .PLACE_TRACK_ALREADY_LIKED
+                                    )
+                            }
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "장소별 곡 없음",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples
+                                        .PLACE_TRACK_NOT_FOUND
+                            )
+                    ))
+    })
+    ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackLikeResult>>
+            createPlaceTrackLike(
+                    @AuthenticationPrincipal AuthMember currentMember,
+                    @Parameter(description = "장소별 곡 ID", required = true)
+                    @Positive(message = "장소별 곡 ID는 양수여야 합니다.")
+                    Long placeTrackId
+            );
+
+    @Operation(
+            summary = "장소별 곡 좋아요 삭제",
+            description = "현재 사용자가 등록한 장소별 곡 좋아요를 삭제합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "장소별 곡 좋아요 삭제 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "장소별 곡 ID 검증 실패",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "타입 불일치",
+                                            value = TrackSwaggerErrorExamples
+                                                .PLACE_TRACK_DETAIL_TYPE_MISMATCH
+                                    ),
+                                    @ExampleObject(
+                                            name = "양수 검증 실패",
+                                            value = TrackSwaggerErrorExamples
+                                                .PLACE_TRACK_DETAIL_VALIDATION_FAILED
+                                    )
+                            }
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "장소별 곡 또는 좋아요 없음",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "장소별 곡 없음",
+                                            value = TrackSwaggerErrorExamples
+                                                .PLACE_TRACK_NOT_FOUND
+                                    ),
+                                    @ExampleObject(
+                                            name = "좋아요 없음",
+                                            value = TrackSwaggerErrorExamples
+                                                .PLACE_TRACK_LIKE_NOT_FOUND
+                                    )
+                            }
+                    ))
+    })
+    ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackLikeResult>>
+            deletePlaceTrackLike(
+                    @AuthenticationPrincipal AuthMember currentMember,
+                    @Parameter(description = "장소별 곡 ID", required = true)
+                    @Positive(message = "장소별 곡 ID는 양수여야 합니다.")
+                    Long placeTrackId
+            );
 }

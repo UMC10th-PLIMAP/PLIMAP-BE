@@ -6,14 +6,17 @@ import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 import com.example.plimap.domain.track.enums.PlaceTrackSort;
 import com.example.plimap.domain.track.exception.TrackSuccessCode;
+import com.example.plimap.domain.track.service.command.PlaceTrackCommandService;
 import com.example.plimap.domain.track.service.query.PlaceTrackQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 public class PlaceTrackController implements PlaceTrackControllerDocs {
 
+    private final PlaceTrackCommandService placeTrackCommandService;
     private final PlaceTrackQueryService placeTrackQueryService;
 
     @Override
@@ -75,6 +79,48 @@ public class PlaceTrackController implements PlaceTrackControllerDocs {
                 .status(TrackSuccessCode.PLACE_TRACK_DETAIL_SUCCESS.getStatus())
                 .body(ApiResponse.success(
                         TrackSuccessCode.PLACE_TRACK_DETAIL_SUCCESS,
+                        result
+                ));
+    }
+
+    @Override
+    @PutMapping("/place-tracks/{placeTrackId}/likes")
+    public ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackLikeResult>>
+            createPlaceTrackLike(
+                    @AuthenticationPrincipal AuthMember currentMember,
+                    @PathVariable Long placeTrackId
+            ) {
+        PlaceTrackResponse.PlaceTrackLikeResult result =
+                placeTrackCommandService.createPlaceTrackLike(
+                        currentMember.getMember().getId(),
+                        placeTrackId
+                );
+
+        return ResponseEntity
+                .status(TrackSuccessCode.PLACE_TRACK_LIKE_PUT_SUCCESS.getStatus())
+                .body(ApiResponse.success(
+                        TrackSuccessCode.PLACE_TRACK_LIKE_PUT_SUCCESS,
+                        result
+                ));
+    }
+
+    @Override
+    @DeleteMapping("/place-tracks/{placeTrackId}/likes")
+    public ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackLikeResult>>
+            deletePlaceTrackLike(
+                    @AuthenticationPrincipal AuthMember currentMember,
+                    @PathVariable Long placeTrackId
+            ) {
+        PlaceTrackResponse.PlaceTrackLikeResult result =
+                placeTrackCommandService.deletePlaceTrackLike(
+                        currentMember.getMember().getId(),
+                        placeTrackId
+                );
+
+        return ResponseEntity
+                .status(TrackSuccessCode.PLACE_TRACK_LIKE_DELETE_SUCCESS.getStatus())
+                .body(ApiResponse.success(
+                        TrackSuccessCode.PLACE_TRACK_LIKE_DELETE_SUCCESS,
                         result
                 ));
     }

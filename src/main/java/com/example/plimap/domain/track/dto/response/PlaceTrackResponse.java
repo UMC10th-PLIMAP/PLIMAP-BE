@@ -60,4 +60,19 @@ public final class PlaceTrackResponse {
             );
         }
     }
+
+    public record PlaceTrackLikeResult(
+            Long placeTrackId,
+            Boolean isLiked,
+            Integer likeCount
+    ) {
+
+        public static PlaceTrackLikeResult from(PlaceTrack placeTrack, boolean isLiked) {
+            return new PlaceTrackLikeResult(
+                    placeTrack.getId(),
+                    isLiked,
+                    placeTrack.getLikeCount()
+            );
+        }
+    }
 }
