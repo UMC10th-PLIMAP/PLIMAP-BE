@@ -439,7 +439,10 @@ class MemberControllerTest {
     void image_파트_없이_프로필_이미지_업로드를_요청하면_400을_반환한다() throws Exception {
         mockMvc.perform(multipart("/api/v1/members/me/profile-image")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400_MISSING_PARAMETER"))
+                .andExpect(jsonPath("$.result").doesNotExist());
     }
 
     @Test
