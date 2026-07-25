@@ -7,4 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MemberFollowRepository extends JpaRepository<MemberFollow, MemberFollowId> {
 
     long deleteByIdFollowerIdAndIdFollowingId(Long followerId, Long followingId);
+
+    long countByIdFollowerId(Long followerId);
+
+    long countByIdFollowingId(Long followingId);
 }

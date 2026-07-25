@@ -50,6 +50,12 @@ public interface MemberControllerDocs {
     ApiResponse<MemberResDTO.NicknameCheck> checkNickname(String nickname);
 
     @Operation(
+            summary = "내 프로필 조회",
+            description = "로그인한 회원 자신의 프로필 정보를 조회합니다. 팔로워/팔로잉 수를 함께 반환합니다."
+    )
+    ApiResponse<MemberResDTO.MyProfile> getMyProfile(AuthMember authMember);
+
+    @Operation(
             summary = "내 프로필 수정",
             description = "닉네임, 이름, 소개, 프로필 이미지를 수정합니다. 요청에 포함하지 않은 필드는 변경되지 않습니다."
     )

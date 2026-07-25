@@ -1,9 +1,12 @@
 package com.example.plimap.domain.member.service.query.impl;
 
+import com.example.plimap.domain.member.converter.MemberConverter;
+import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
+import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.vane.badwordfiltering.BadWordFiltering;
@@ -27,6 +30,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     private static final List<String> CUSTOM_FORBIDDEN_WORDS = List.of("plimap", "플리맵운영자");
 
     private final MemberRepository memberRepository;
+    private final MemberFollowRepository memberFollowRepository;
     private final BadWordFiltering badWordFiltering = new BadWordFiltering();
 
     @Override
@@ -59,5 +63,13 @@ public class MemberQueryServiceImpl implements MemberQueryService {
             return NicknameCheckFailReason.DUPLICATE;
         }
         return null;
+    }
+
+    @Override
+    public MemberResDTO.MyProfile getMyProfile(Long memberId) {
+        Member member = getActiveMember(memberId);
+        long followerCount = memberFollowRepository.countByIdFollowingId(memberId);
+        long followingCount = memberFollowRepository.countByIdFollowerId(memberId);
+        return MemberConverter.toMyProfile(member, followerCount, followingCount);
     }
 }

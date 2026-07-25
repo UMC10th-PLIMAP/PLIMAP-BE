@@ -44,4 +44,17 @@ public class MemberConverter {
                 member.getUpdatedAt()
         );
     }
+
+    public static MemberResDTO.MyProfile toMyProfile(Member member, long followerCount, long followingCount) {
+        return new MemberResDTO.MyProfile(
+                member.getId(),
+                member.getNickname(),
+                member.getName(),
+                member.getIntroduction(),
+                member.getProfileImageObjectKey(),
+                followerCount,
+                followingCount,
+                member.getOnboardingCompletedAt()
+        );
+    }
 }
