@@ -298,7 +298,8 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
 
         MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "key", Instant.now(), true);
         Pagination<MemberResDTO.FollowerItem> page =
@@ -321,7 +322,8 @@ class MemberQueryServiceImplTest {
     @Test
     void 존재하지_않는_회원의_팔로워_목록은_조회할_수_없다() {
         // given
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> memberQueryService.findFollowers(99L, 1L, null, 10))
@@ -336,7 +338,8 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
 
         MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "key", Instant.now(), true);
         Pagination<MemberResDTO.FollowingItem> page =
@@ -359,7 +362,8 @@ class MemberQueryServiceImplTest {
     @Test
     void 존재하지_않는_회원의_팔로잉_목록은_조회할_수_없다() {
         // given
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> memberQueryService.findFollowing(99L, 1L, null, 10))
