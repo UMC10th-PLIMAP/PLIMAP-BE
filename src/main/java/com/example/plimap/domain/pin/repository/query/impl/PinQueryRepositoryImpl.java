@@ -271,7 +271,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .leftJoin(pinTag.tag, tag).fetchJoin()
                 .where(
                         pin.id.in(pinIds),
-                        placeTrack.deletedAt.isNull()
+                        placeTrack.deletedAt.isNull(),
+                        pin.deletedAt.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .fetch();

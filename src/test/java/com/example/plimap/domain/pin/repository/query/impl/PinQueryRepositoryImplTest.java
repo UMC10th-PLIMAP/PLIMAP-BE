@@ -68,6 +68,7 @@ class PinQueryRepositoryImplTest {
     private Place place2;
     private Place place3;
     private Place place4;
+    PlaceTrack placeTrack1;
     Member member2;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -126,7 +127,7 @@ class PinQueryRepositoryImplTest {
                 null
         );
 
-        PlaceTrack placeTrack1 = PlaceTrack.create(place1, track);
+        placeTrack1 = PlaceTrack.create(place1, track);
         PlaceTrack placeTrack2 = PlaceTrack.create(place2, track);
         PlaceTrack placeTrack3 = PlaceTrack.create(place4, track2);
 
@@ -257,13 +258,13 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 특정_장소에_대한_핀_목록을_커서기반_페이지네이션으로_조회한다() {
-        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), null, 1 , 1L);
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), null, 1 , placeTrack1.getId());
 
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isTrue();
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin2.getId());
         String nextCursor = response.nextCursor();
-        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), nextCursor, 2, 1L);
+        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), nextCursor, 2, placeTrack1.getId());
 
         assertThat(response2.data().size()).isEqualTo(1);
         assertThat(response2.hasNext()).isFalse();
@@ -276,7 +277,7 @@ class PinQueryRepositoryImplTest {
                 pin2.getCreatedAt(),
                 pin2.getId()
         );
-        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), cursor, 2, 1L);
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), cursor, 2, placeTrack1.getId());
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();
