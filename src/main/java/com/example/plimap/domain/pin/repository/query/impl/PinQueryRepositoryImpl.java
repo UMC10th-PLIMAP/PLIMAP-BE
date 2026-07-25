@@ -123,23 +123,31 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
         QPin pin = QPin.pin;
         QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
+        QPlace place = QPlace.place;
         QTrack track = QTrack.track;
         CursorInfo cursorInfo = parseCursor(cursor);
 
-        List<PinResponse.Feed> data = queryFactory
-                .select(
-                    Projections.constructor(
-                            PinResponse.Feed.class,
-                            pin.id,
-                            track.albumImageUrl,
-                            pin.createdAt
-                    )
+        List<Long> pinIds = queryFactory
+                .select(pin.id)
+                .from(pin)
+                .where(
+                        pin.member.id.eq(memberId),
+                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        pin.deletedAt.isNull()
                 )
+                .orderBy(pin.createdAt.desc(), pin.id.desc())
+                .limit(pageSize + 1)
+                .fetch();
+
+        List<Pin> pins = queryFactory
+                .selectDistinct(pin)
                 .from(pin)
                 .join(pin.placeTrack, placeTrack)
                 .join(placeTrack.track, track)
+                .join(placeTrack.place, place)
                 .where(
                         pin.member.id.eq(memberId),
+                        pin.id.in(pinIds),
                         cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
                         pin.isFeedPublic.eq(true),
                         pin.deletedAt.isNull()
@@ -147,6 +155,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
+
+        List<PinResponse.Feed> data = pins.stream()
+                .map(PinConverter::toFeed).toList();
 
         boolean hasNext = data.size() > pageSize;
 
