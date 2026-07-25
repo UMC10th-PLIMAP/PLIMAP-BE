@@ -49,6 +49,7 @@ public class Pin extends SoftDeleteEntity {
     private PlaceTrack placeTrack;
 
     @OneToMany(mappedBy = "pin", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
     private List<PinTag> pinTagList = new ArrayList<>();
 
     @Builder

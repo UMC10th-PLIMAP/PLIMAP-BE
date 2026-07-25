@@ -228,6 +228,34 @@ class PinQueryRepositoryImplTest {
         assertThat(response.nextCursor()).isNull();
     }
 
+    @Test
+    void 내_핀_목록을_커서기반_페이지네이션으로_조회한다() {
+        Pagination<PinResponse.MyPin> response = pinQueryRepository.findMyPinList(member2.getId(), null, 2 );
+
+        assertThat(response.data().size()).isEqualTo(2);
+        assertThat(response.hasNext()).isTrue();
+        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
+        String nextCursor = response.nextCursor();
+        System.out.println(nextCursor);
+        Pagination<PinResponse.MyPin> response2 = pinQueryRepository.findMyPinList(member2.getId(), nextCursor, 2 );
+
+        assertThat(response2.data().size()).isEqualTo(1);
+        assertThat(response2.hasNext()).isFalse();
+        assertThat(response2.nextCursor()).isNull();
+    }
+
+    @Test
+    void 전달한_커서_기반으로_내_핀_목록을_조회한다() {
+        String cursor = "%s/%d".formatted(
+                pin3.getCreatedAt(),
+                pin3.getId()
+        );
+        Pagination<PinResponse.MyPin> response = pinQueryRepository.findMyPinList(member2.getId(), cursor, 2 );
+        assertThat(response.data().size()).isEqualTo(1);
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.nextCursor()).isNull();
+    }
+
     private Member createMember(String name, String nickname) {
         return Member.builder()
                 .name(name)
@@ -256,5 +284,4 @@ class PinQueryRepositoryImplTest {
                 .isFeedPublic(true)
                 .build();
     }
-
 }

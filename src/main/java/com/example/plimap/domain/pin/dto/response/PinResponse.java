@@ -55,4 +55,17 @@ public class PinResponse {
             String albumImageUrl,
             Instant createdAt
     ) {}
+
+    @Builder
+    public record MyPin(
+            Long pinId,
+            String albumImageUrl,
+            String trackTitle,
+            String artist,
+            String placeName,
+            String introduction,
+            List<String> tags,
+            String staticCreatedAt,
+            Instant createdAt
+    ) {}
 }

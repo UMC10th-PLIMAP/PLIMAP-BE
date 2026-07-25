@@ -7,6 +7,8 @@ import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.track.entity.Track;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 public class PinConverter {
@@ -72,5 +74,45 @@ public class PinConverter {
                 .hasNext(hasNext)
                 .pageSize(pageSize)
                 .build();
+    }
+
+    public static PinResponse.MyPin toMyPin(
+            Pin pin
+    ) {
+        return PinResponse.MyPin.builder()
+                .pinId(pin.getId())
+                .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
+                .trackTitle(pin.getPlaceTrack().getTrack().getTitle())
+                .artist(pin.getPlaceTrack().getTrack().getArtistName())
+                .placeName(pin.getPlace().getName())
+                .introduction(pin.getIntroduction())
+                .tags(pin.getPinTagList().stream().map(pinTag -> pinTag.getTag().getName()).toList())
+                .staticCreatedAt(parseCreatedAt(pin.getCreatedAt(), Instant.now()))
+                .createdAt(pin.getCreatedAt())
+                .build();
+    }
+
+    public static String parseCreatedAt(
+            Instant createdAt,
+            Instant now
+    ) {
+        Duration gap = Duration.between(createdAt, now);
+        if (gap.getSeconds() < 60) {
+            return "방금";
+        }
+        if (gap.toMinutes() < 60) {
+            return "%d분 전".formatted(gap.toMinutes());
+        }
+        if (gap.toHours() < 24) {
+            return "%d시간 전".formatted(gap.toHours());
+        }
+        if (gap.toDays() < 30) {
+            return "%d일 전".formatted(gap.toDays());
+        }
+
+        if (gap.toDays() < 365) {
+            return "%d개월 전".formatted(gap.toDays()/30);
+        }
+        return "%d년 전".formatted(gap.toDays()/365);
     }
 }
