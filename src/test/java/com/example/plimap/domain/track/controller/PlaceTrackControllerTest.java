@@ -43,10 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-@WebMvcTest(controllers = {
-        PlaceTrackController.class,
-        PlaceTrackDetailController.class
-})
+@WebMvcTest(controllers = PlaceTrackController.class)
 @Import({
         SecurityConfig.class,
         CorsConfig.class,
@@ -169,6 +166,26 @@ class PlaceTrackControllerTest {
                 .andExpect(jsonPath("$.code")
                         .value(GeneralErrorCode.TYPE_MISMATCH.getCode()))
                 .andExpect(jsonPath("$.result").isEmpty());
+
+        verifyNoInteractions(placeTrackQueryService);
+    }
+
+    @Test
+    void 장소_노래_ID가_0이면_400을_반환한다() throws Exception {
+        mockMvc.perform(authenticatedGet("/api/v1/place-tracks/0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value(GeneralErrorCode.VALIDATION_FAILED.getCode()));
+
+        verifyNoInteractions(placeTrackQueryService);
+    }
+
+    @Test
+    void 장소_노래_ID가_음수이면_400을_반환한다() throws Exception {
+        mockMvc.perform(authenticatedGet("/api/v1/place-tracks/-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value(GeneralErrorCode.VALIDATION_FAILED.getCode()));
 
         verifyNoInteractions(placeTrackQueryService);
     }

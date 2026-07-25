@@ -38,6 +38,15 @@ final class TrackSwaggerErrorExamples {
             }
             """;
 
+    static final String PLACE_TRACK_DETAIL_VALIDATION_FAILED = """
+            {
+              "isSuccess": false,
+              "code": "COMMON_400_VALIDATION_FAILED",
+              "message": "장소 노래 ID는 양수여야 합니다.",
+              "result": null
+            }
+            """;
+
     static final String UNAUTHORIZED = """
             {
               "isSuccess": false,

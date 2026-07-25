@@ -93,7 +93,7 @@ class PlaceTrackQueryServiceImplTest {
         PlaceTrackResponse.PlaceTrackDetail result =
                 placeTrackQueryService.getPlaceTrackDetail(MEMBER_ID, 10L);
 
-        assertThat(result.likeCount()).isNotNull();
+        assertThat(result.likeCount()).isEqualTo(33);
         assertThat(result.userLike()).isFalse();
     }
 

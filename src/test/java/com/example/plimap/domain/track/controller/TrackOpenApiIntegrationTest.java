@@ -217,7 +217,10 @@ class TrackOpenApiIntegrationTest {
                 "get",
                 "400",
                 "ApiResponsePlaceTrackDetail",
-                Set.of(GeneralErrorCode.TYPE_MISMATCH.getCode())
+                Set.of(
+                        GeneralErrorCode.TYPE_MISMATCH.getCode(),
+                        GeneralErrorCode.VALIDATION_FAILED.getCode()
+                )
         );
         assertFailureResponse(
                 openApi,
