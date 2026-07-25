@@ -19,6 +19,7 @@ import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.Set;
@@ -86,6 +87,14 @@ class GlobalExceptionHandlerTest {
         mockMvc.perform(get("/exception-test/servlet-request-binding"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400_BAD_REQUEST"));
+    }
+
+    @Test
+    void 업로드_용량_초과는_413을_반환한다() throws Exception {
+        mockMvc.perform(get("/exception-test/max-upload-size"))
+                .andExpect(status().isContentTooLarge())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_413_CONTENT_TOO_LARGE"));
     }
 
     @Test
@@ -252,6 +261,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/exception-test/servlet-request-binding")
         void servletRequestBinding() throws ServletRequestBindingException {
             throw new ServletRequestBindingException("요청 바인딩 오류");
+        }
+
+        @GetMapping("/exception-test/max-upload-size")
+        void maxUploadSize() {
+            throw new MaxUploadSizeExceededException(5 * 1024 * 1024);
         }
 
         @GetMapping("/exception-test/business")
