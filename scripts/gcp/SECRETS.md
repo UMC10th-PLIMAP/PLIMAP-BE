@@ -11,19 +11,24 @@
 | 애플리케이션 환경변수 | 생성 기준 | dev 기본값 |
 | --- | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | 스크립트 고정값 | `dev` |
-| `CORS_ALLOWED_ORIGINS` | `PublicBaseUrl` | `https://dev.plimap.kr` |
-| `OAUTH_REDIRECT_URI` | `FrontendRedirectUri` 또는 `PublicBaseUrl` + `/home` | `https://dev.plimap.kr/home` |
+| `CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | `https://dev.plimap.kr,http://localhost:5173` |
+| `OAUTH_REDIRECT_URI` | 기본 `FrontendRedirectUri` 또는 `PublicBaseUrl` + `/home` | `https://dev.plimap.kr/home` |
+| `OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | `https://dev.plimap.kr,http://localhost:5173` |
 | `KAKAO_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/kakao` |
 | `GOOGLE_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/google` |
 
-GitHub Actions에서는 다음 Repository Variable로 공개 주소를 덮어쓸 수 있습니다. `DEV_PUBLIC_BASE_URL`이 없으면 스크립트의 dev 기본값을 사용하고, `DEV_FRONTEND_REDIRECT_URI`가 없으면 선택된 공개 origin에 `/home`을 붙여 생성합니다.
+GitHub Actions에서는 다음 Repository Variable로 공개 주소와 allowlist를 덮어쓸 수 있습니다. `DEV_PUBLIC_BASE_URL`이 없으면 스크립트의 dev 기본값을 사용하고, `DEV_FRONTEND_REDIRECT_URI`가 없으면 선택된 공개 origin에 `/home`을 붙여 기본 로그인 완료 주소를 생성합니다. CORS와 OAuth 프론트 allowlist가 없으면 Dev 배포 프론트와 로컬 프론트 Origin을 모두 포함합니다.
 
 | Repository Variable | 스크립트 인자 | dev 기본 동작 |
 | --- | --- | --- |
 | `DEV_PUBLIC_BASE_URL` | `PublicBaseUrl` | `https://dev.plimap.kr` |
 | `DEV_FRONTEND_REDIRECT_URI` | `FrontendRedirectUri` | 미설정 시 `PublicBaseUrl` + `/home` |
+| `DEV_CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | 미설정 시 `PublicBaseUrl,http://localhost:5173` |
+| `DEV_OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | 미설정 시 `PublicBaseUrl,http://localhost:5173` |
 
-`PublicBaseUrl`은 경로, query, fragment, credentials, custom port가 없는 HTTPS Origin이어야 합니다. `FrontendRedirectUri`를 직접 설정할 때는 HTTPS URL이어야 하며 `PublicBaseUrl`과 동일한 origin을 사용해야 합니다. 경로는 변경할 수 있지만 다른 host로의 로그인 완료 redirect는 허용하지 않습니다.
+`PublicBaseUrl`은 경로, query, fragment, credentials, custom port가 없는 HTTPS Origin이어야 합니다. `FrontendRedirectUri`는 `frontendOrigin`이 없거나 저장된 값이 유효하지 않을 때 사용하는 안전한 기본 주소이므로 HTTPS와 `PublicBaseUrl` 동일 origin 조건을 유지합니다.
+
+CORS와 OAuth 프론트 allowlist는 쉼표로 Origin을 구분합니다. HTTPS Origin 또는 HTTP localhost Origin만 허용하며 경로, query, fragment, credentials는 허용하지 않습니다. 두 allowlist에는 반드시 `PublicBaseUrl`이 포함되어야 합니다. OAuth 로그인 시작 시 전달된 `frontendOrigin`이 allowlist에 없으면 요청을 거부합니다.
 
 ## Secret Manager 매핑
 
@@ -71,4 +76,4 @@ rediss://default:{url-encoded-password}@{host}:{port}
 
 ### OAuth
 
-Kakao와 Google에는 dev 전용 OAuth client를 사용합니다. 각 Provider Console의 callback URI는 일반 환경변수 표의 `KAKAO_REDIRECT_URI`, `GOOGLE_REDIRECT_URI`와 일치해야 합니다. Cloud Run 원본 URL은 callback URI로 사용하지 않습니다.
+Kakao와 Google에는 dev 전용 OAuth client를 사용합니다. 각 Provider Console의 callback URI는 일반 환경변수 표의 `KAKAO_REDIRECT_URI`, `GOOGLE_REDIRECT_URI`와 일치해야 합니다. Cloud Run 원본 URL과 `localhost:5173`은 Provider callback URI로 사용하지 않습니다. 백엔드 callback 처리 후에는 로그인 시작 요청에 저장된 `frontendOrigin`에 따라 Dev 배포 프론트 또는 로컬 프론트의 `/home`으로 이동합니다.

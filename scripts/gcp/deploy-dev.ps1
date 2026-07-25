@@ -6,6 +6,8 @@ param(
     [string]$Image = "asia-northeast3-docker.pkg.dev/plimap/plimap-docker/api:dev-initial",
     [string]$PublicBaseUrl = "https://dev.plimap.kr",
     [string]$FrontendRedirectUri = "",
+    [string]$CorsAllowedOrigins = "",
+    [string]$OAuthAllowedFrontendOrigins = "",
     [string]$ProfileImageBucket = "profile-images"
 )
 
@@ -59,6 +61,54 @@ function Get-HttpsOrigin {
     return $uri.GetLeftPart([UriPartial]::Authority)
 }
 
+function Get-WebOrigin {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Value
+    )
+
+    try {
+        $uri = [Uri]::new($Value.Trim(), [UriKind]::Absolute)
+    } catch {
+        throw "$Name contains an invalid Origin: $Value"
+    }
+
+    $isHttps = $uri.Scheme -eq "https"
+    $isLocalHttp = $uri.Scheme -eq "http" -and $uri.Host -in @("localhost", "127.0.0.1", "::1")
+    if ((-not $isHttps -and -not $isLocalHttp) -or
+        -not [string]::IsNullOrEmpty($uri.UserInfo) -or
+        $uri.AbsolutePath -ne "/" -or
+        -not [string]::IsNullOrEmpty($uri.Query) -or
+        -not [string]::IsNullOrEmpty($uri.Fragment)) {
+        throw "$Name must contain only HTTPS Origins or HTTP localhost Origins without paths, query, fragment, or credentials: $Value"
+    }
+
+    return $uri.GetLeftPart([UriPartial]::Authority)
+}
+
+function Get-AllowedOrigins {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Value,
+        [Parameter(Mandatory)][string]$RequiredOrigin
+    )
+
+    $origins = @($Value.Split(",") |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        ForEach-Object { Get-WebOrigin -Name $Name -Value $_ } |
+        Select-Object -Unique)
+
+    if ($origins.Count -eq 0) {
+        throw "$Name must contain at least one Origin."
+    }
+    if ($origins -notcontains $RequiredOrigin) {
+        throw "$Name must include the public Origin ($RequiredOrigin)."
+    }
+
+    return $origins -join ","
+}
+
 function Get-HttpsUrl {
     param(
         [Parameter(Mandatory)][string]$Name,
@@ -91,13 +141,16 @@ function Write-EnvironmentFile {
         [Parameter(Mandatory)][string]$Path,
         [Parameter(Mandatory)][string]$PublicOrigin,
         [Parameter(Mandatory)][string]$FrontendRedirectUri,
+        [Parameter(Mandatory)][string]$CorsAllowedOrigins,
+        [Parameter(Mandatory)][string]$OAuthAllowedFrontendOrigins,
         [Parameter(Mandatory)][string]$ProfileImageBucket
     )
 
     $lines = @(
         "SPRING_PROFILES_ACTIVE: 'dev'",
-        "CORS_ALLOWED_ORIGINS: $(ConvertTo-YamlSingleQuoted $PublicOrigin)",
+        "CORS_ALLOWED_ORIGINS: $(ConvertTo-YamlSingleQuoted $CorsAllowedOrigins)",
         "OAUTH_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted $FrontendRedirectUri)",
+        "OAUTH_ALLOWED_FRONTEND_ORIGINS: $(ConvertTo-YamlSingleQuoted $OAuthAllowedFrontendOrigins)",
         "KAKAO_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$PublicOrigin/oauth/callback/kakao")",
         "GOOGLE_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$PublicOrigin/oauth/callback/google")",
         "PROFILE_IMAGE_STORAGE_PROVIDER: 'supabase'",
@@ -121,6 +174,22 @@ $frontendRedirectUrl = Get-HttpsUrl `
     -Value $FrontendRedirectUri `
     -ExpectedOrigin $publicOrigin
 
+if ([string]::IsNullOrWhiteSpace($CorsAllowedOrigins)) {
+    $CorsAllowedOrigins = "$publicOrigin,http://localhost:5173"
+}
+$corsOrigins = Get-AllowedOrigins `
+    -Name "CorsAllowedOrigins" `
+    -Value $CorsAllowedOrigins `
+    -RequiredOrigin $publicOrigin
+
+if ([string]::IsNullOrWhiteSpace($OAuthAllowedFrontendOrigins)) {
+    $OAuthAllowedFrontendOrigins = "$publicOrigin,http://localhost:5173"
+}
+$oauthFrontendOrigins = Get-AllowedOrigins `
+    -Name "OAuthAllowedFrontendOrigins" `
+    -Value $OAuthAllowedFrontendOrigins `
+    -RequiredOrigin $publicOrigin
+
 foreach ($entry in $secretMap.GetEnumerator()) {
     $versionStates = @(& gcloud secrets versions list $entry.Value `
         --project=$ProjectId `
@@ -137,6 +206,8 @@ try {
         -Path $environmentFile.FullName `
         -PublicOrigin $publicOrigin `
         -FrontendRedirectUri $frontendRedirectUrl `
+        -CorsAllowedOrigins $corsOrigins `
+        -OAuthAllowedFrontendOrigins $oauthFrontendOrigins `
         -ProfileImageBucket $ProfileImageBucket
 
     $secretBindings = ($secretMap.GetEnumerator() | ForEach-Object {
