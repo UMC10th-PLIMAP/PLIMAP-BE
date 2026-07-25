@@ -3,6 +3,7 @@ package com.example.plimap.domain.member.controller;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.member.controller.docs.MemberControllerDocs;
 import com.example.plimap.domain.member.converter.MemberConverter;
+import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
@@ -13,6 +14,7 @@ import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,8 +23,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/members")
@@ -67,6 +71,17 @@ public class MemberController implements MemberControllerDocs {
     }
 
     @Override
+    @PostMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<MemberResDTO.ProfileImage> uploadProfileImage(
+            @AuthenticationPrincipal AuthMember authMember,
+            @RequestPart("image") MultipartFile image
+    ) {
+        MemberResDTO.ProfileImage result =
+                memberCommandService.uploadProfileImage(authMember.getMember().getId(), image);
+        return ApiResponse.success(MemberSuccessCode.PROFILE_IMAGE_UPLOADED, result);
+    }
+
+    @Override
     @PostMapping("/{memberId}/follow")
     public ApiResponse<Void> follow(
             @AuthenticationPrincipal AuthMember authMember,
@@ -84,5 +99,31 @@ public class MemberController implements MemberControllerDocs {
     ) {
         memberCommandService.unfollow(authMember.getMember().getId(), memberId);
         return ApiResponse.success(MemberSuccessCode.UNFOLLOWED, null);
+    }
+
+    @Override
+    @GetMapping("/{memberId}/followers")
+    public ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
+            @AuthenticationPrincipal AuthMember authMember,
+            @PathVariable Long memberId,
+            @RequestParam(required = false, defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String cursor
+    ) {
+        Pagination<MemberResDTO.FollowerItem> response =
+                memberQueryService.findFollowers(authMember.getMember().getId(), memberId, cursor, pageSize);
+        return ApiResponse.success(MemberSuccessCode.FOLLOWERS_FETCHED, response);
+    }
+
+    @Override
+    @GetMapping("/{memberId}/following")
+    public ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(
+            @AuthenticationPrincipal AuthMember authMember,
+            @PathVariable Long memberId,
+            @RequestParam(required = false, defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String cursor
+    ) {
+        Pagination<MemberResDTO.FollowingItem> response =
+                memberQueryService.findFollowing(authMember.getMember().getId(), memberId, cursor, pageSize);
+        return ApiResponse.success(MemberSuccessCode.FOLLOWING_FETCHED, response);
     }
 }

@@ -5,5 +5,5 @@ import com.example.plimap.domain.track.dto.response.TrackResponse;
 
 public interface TrackQueryService {
 
-    TrackResponse.SearchResult searchTracks(TrackRequest.Search request);
+    TrackResponse.TrackSearchResult searchTracks(TrackRequest.Search request);
 }

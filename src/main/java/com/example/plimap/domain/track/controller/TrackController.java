@@ -28,13 +28,13 @@ public class TrackController implements TrackControllerDocs {
 
     @Override
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<TrackResponse.SearchResult>> searchTracks(
+    public ResponseEntity<ApiResponse<TrackResponse.TrackSearchResult>> searchTracks(
             @RequestParam
             String keyword,
             @RequestParam(defaultValue = "20")
             int limit
     ) {
-        TrackResponse.SearchResult result =
+        TrackResponse.TrackSearchResult result =
                 trackQueryService.searchTracks(new TrackRequest.Search(keyword, limit));
         return ResponseEntity
                 .status(TrackSuccessCode.TRACK_SEARCH_SUCCESS.getStatus())
@@ -43,11 +43,11 @@ public class TrackController implements TrackControllerDocs {
 
     @Override
     @PostMapping("/playback-preparations")
-    public ResponseEntity<ApiResponse<TrackResponse.PlaybackPreparation>>
+    public ResponseEntity<ApiResponse<TrackResponse.PlaybackPreparationResult>>
             preparePlayback(
                     @RequestBody TrackRequest.PlaybackPreparation request
             ) {
-        TrackResponse.PlaybackPreparation result =
+        TrackResponse.PlaybackPreparationResult result =
                 trackPlaybackPreparationService.prepare(request);
         return ResponseEntity
                 .status(TrackSuccessCode.PLAYBACK_PREPARATION_SUCCESS.getStatus())

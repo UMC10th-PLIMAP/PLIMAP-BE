@@ -29,7 +29,7 @@ spring:
         format_sql: true
 
 oauth:
-  redirect-uri: "http://localhost:5173/home"
+  redirect-uri: "http://localhost:5173/app/oauth/callback"
   allowed-frontend-origins: ${OAUTH_ALLOWED_FRONTEND_ORIGINS:http://localhost:5173}
 
 cookie:
@@ -44,6 +44,17 @@ plimap:
   auth:
     test-token:
       issue-key-required: false
+
+profile-image:
+  storage:
+    provider: ${PROFILE_IMAGE_STORAGE_PROVIDER:supabase}
+    bucket: ${PROFILE_IMAGE_BUCKET:profile-images}
+    connect-timeout: 2s
+    read-timeout: 5s
+    cache-control-seconds: 31536000
+    supabase:
+      url: ${SUPABASE_URL}
+      secret-key: ${SUPABASE_SECRET_KEY}
 
 logging:
   level:

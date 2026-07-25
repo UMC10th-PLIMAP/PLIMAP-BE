@@ -31,7 +31,7 @@ public class TrackQueryServiceImpl implements TrackQueryService {
     private final TrackSearchCacheRepository trackSearchCacheRepository;
 
     @Override
-    public TrackResponse.SearchResult searchTracks(TrackRequest.Search request) {
+    public TrackResponse.TrackSearchResult searchTracks(TrackRequest.Search request) {
         Objects.requireNonNull(request, "request must not be null");
 
         Optional<TrackSearchCache> cachedResult = findCachedResult(request);
@@ -47,7 +47,8 @@ public class TrackQueryServiceImpl implements TrackQueryService {
         } catch (ItunesClientException exception) {
             throw new TrackException(TrackErrorCode.TRACK_EXTERNAL_API_ERROR, exception);
         }
-        TrackResponse.SearchResult result = TrackResponse.SearchResult.from(itunesResponse);
+        TrackResponse.TrackSearchResult result =
+                TrackResponse.TrackSearchResult.from(itunesResponse);
         TrackSearchCache searchCache = TrackSearchCache.from(result);
 
         saveMetadata(searchCache);

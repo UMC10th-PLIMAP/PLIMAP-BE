@@ -11,7 +11,8 @@ class TrackResponseTest {
     void iTunes_results가_null이면_빈_검색_결과로_변환한다() {
         ItunesSearchResponse response = new ItunesSearchResponse(0, null);
 
-        TrackResponse.SearchResult result = TrackResponse.SearchResult.from(response);
+        TrackResponse.TrackSearchResult result =
+                TrackResponse.TrackSearchResult.from(response);
 
         assertThat(result.tracks()).isEmpty();
     }

@@ -38,3 +38,14 @@ kakao:
 youtube:
   api:
     key: test-youtube-api-key
+
+profile-image:
+  storage:
+    provider: supabase
+    bucket: profile-images
+    connect-timeout: 2s
+    read-timeout: 5s
+    cache-control-seconds: 31536000
+    supabase:
+      url: https://test-project.supabase.co
+      secret-key: test-only-supabase-secret-key

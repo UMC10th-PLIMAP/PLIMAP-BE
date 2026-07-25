@@ -221,7 +221,7 @@ if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
 
 $publicOrigin = Get-HttpsOrigin -Value $PublicBaseUrl
 if ([string]::IsNullOrWhiteSpace($FrontendRedirectUri)) {
-    $FrontendRedirectUri = "$publicOrigin/home"
+    $FrontendRedirectUri = "$publicOrigin/app/oauth/callback"
 }
 $frontendRedirectUrl = Get-HttpsUrl `
     -Name "FrontendRedirectUri" `

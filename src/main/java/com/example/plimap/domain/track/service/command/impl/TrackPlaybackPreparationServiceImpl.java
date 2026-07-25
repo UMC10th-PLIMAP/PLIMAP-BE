@@ -31,14 +31,14 @@ public class TrackPlaybackPreparationServiceImpl
     private final YoutubeSearchClient youtubeSearchClient;
 
     @Override
-    public TrackResponse.PlaybackPreparation prepare(
+    public TrackResponse.PlaybackPreparationResult prepare(
             TrackRequest.PlaybackPreparation request
     ) {
         Objects.requireNonNull(request, "request must not be null");
 
         Optional<SelectedTrackCache> cachedSelection = findSelection(request.itunesTrackId());
         if (cachedSelection.isPresent()) {
-            return TrackResponse.PlaybackPreparation.from(cachedSelection.get());
+            return TrackResponse.PlaybackPreparationResult.from(cachedSelection.get());
         }
 
         TrackMetadataCache metadata = findMetadata(request.itunesTrackId());
@@ -47,7 +47,7 @@ public class TrackPlaybackPreparationServiceImpl
         SelectedTrackCache selectedTrack = SelectedTrackCache.from(metadata, youtubeVideoId);
         saveSelection(selectedTrack);
 
-        return TrackResponse.PlaybackPreparation.from(selectedTrack);
+        return TrackResponse.PlaybackPreparationResult.from(selectedTrack);
     }
 
     private Optional<SelectedTrackCache> findSelection(Long itunesTrackId) {

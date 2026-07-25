@@ -55,7 +55,7 @@ class TrackQueryServiceImplTest {
         when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenReturn(Optional.empty());
         when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(itunesResponse());
 
-        TrackResponse.SearchResult result = trackQueryService.searchTracks(request);
+        TrackResponse.TrackSearchResult result = trackQueryService.searchTracks(request);
 
         assertThat(result).isEqualTo(searchResult());
         verify(trackMetadataCacheRepository).save(metadata());
@@ -72,7 +72,7 @@ class TrackQueryServiceImplTest {
         TrackSearchCache cached = new TrackSearchCache(List.of(metadata()));
         when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenReturn(Optional.of(cached));
 
-        TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
+        TrackResponse.TrackSearchResult result = trackQueryService.searchTracks(request());
 
         assertThat(result).isEqualTo(searchResult());
         verify(trackSearchCacheRepository).find(KEYWORD, LIMIT);
@@ -91,7 +91,7 @@ class TrackQueryServiceImplTest {
                 .thenThrow(new RedisConnectionFailureException("redis unavailable"));
         when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(itunesResponse());
 
-        TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
+        TrackResponse.TrackSearchResult result = trackQueryService.searchTracks(request());
 
         assertThat(result).isEqualTo(searchResult());
         verify(itunesSearchClient).search(KEYWORD, LIMIT);
@@ -105,7 +105,7 @@ class TrackQueryServiceImplTest {
                 .when(trackSearchCacheRepository)
                 .save(KEYWORD, LIMIT, new TrackSearchCache(List.of(metadata())));
 
-        TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
+        TrackResponse.TrackSearchResult result = trackQueryService.searchTracks(request());
 
         assertThat(result).isEqualTo(searchResult());
     }
@@ -118,7 +118,7 @@ class TrackQueryServiceImplTest {
                 .when(trackMetadataCacheRepository)
                 .save(metadata());
 
-        TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
+        TrackResponse.TrackSearchResult result = trackQueryService.searchTracks(request());
 
         assertThat(result).isEqualTo(searchResult());
         verify(trackSearchCacheRepository).save(
@@ -134,7 +134,7 @@ class TrackQueryServiceImplTest {
                 .thenThrow(new QueryTimeoutException("redis timeout"));
         when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(itunesResponse());
 
-        TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
+        TrackResponse.TrackSearchResult result = trackQueryService.searchTracks(request());
 
         assertThat(result).isEqualTo(searchResult());
         verify(itunesSearchClient).search(KEYWORD, LIMIT);
@@ -192,7 +192,7 @@ class TrackQueryServiceImplTest {
         ItunesSearchResponse emptyResponse = new ItunesSearchResponse(0, List.of());
         when(itunesSearchClient.search(KEYWORD, LIMIT)).thenReturn(emptyResponse);
 
-        TrackResponse.SearchResult result = trackQueryService.searchTracks(request());
+        TrackResponse.TrackSearchResult result = trackQueryService.searchTracks(request());
 
         assertThat(result.tracks()).isEmpty();
         verify(trackSearchCacheRepository).save(
@@ -240,8 +240,9 @@ class TrackQueryServiceImplTest {
         )));
     }
 
-    private TrackResponse.SearchResult searchResult() {
-        return new TrackResponse.SearchResult(List.of(new TrackResponse.Item(
+    private TrackResponse.TrackSearchResult searchResult() {
+        return new TrackResponse.TrackSearchResult(List.of(
+                new TrackResponse.TrackSearchItem(
                 123L,
                 "밤편지",
                 "아이유",
@@ -249,7 +250,7 @@ class TrackQueryServiceImplTest {
                 "https://image.example/cover.jpg",
                 "https://audio.example/preview.m4a",
                 253000
-        )));
+                )));
     }
 
     private TrackMetadataCache metadata() {

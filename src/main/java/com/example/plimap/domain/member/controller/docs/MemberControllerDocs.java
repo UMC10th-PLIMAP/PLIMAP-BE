@@ -1,6 +1,7 @@
 package com.example.plimap.domain.member.controller.docs;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.global.apiPayload.ApiResponse;
@@ -9,6 +10,9 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Member", description = "회원 API")
 public interface MemberControllerDocs {
@@ -63,9 +67,22 @@ public interface MemberControllerDocs {
 
     @Operation(
             summary = "내 프로필 수정",
-            description = "닉네임, 이름, 소개, 프로필 이미지를 수정합니다. 요청에 포함하지 않은 필드는 변경되지 않습니다."
+            description = "닉네임, 이름, 소개를 수정합니다. 요청에 포함하지 않은 필드는 변경되지 않습니다. 프로필 이미지는 `POST /api/v1/members/me/profile-image`를 이용해 주세요."
     )
     ApiResponse<MemberResDTO.Profile> updateProfile(AuthMember authMember, @Valid MemberReqDTO.UpdateProfile request);
+
+    @Operation(
+            summary = "프로필 이미지 업로드",
+            description = """
+                    로그인한 회원 자신의 프로필 이미지를 업로드합니다. multipart/form-data의 `image` 파트로 WebP 이미지 파일을 전달해 주세요.
+
+                    - 이미지는 클라이언트에서 WebP로 인코딩해 전달해야 합니다(서버는 별도로 포맷을 변환하지 않습니다).
+                    - 파일 크기는 5MB를 초과할 수 없습니다.
+                    - 이미 프로필 이미지가 있던 회원이 다시 업로드하면 기존 이미지는 새 이미지로 교체되고, 이전 이미지는 스토리지에서 삭제됩니다.
+                    - 응답의 imageUrl로 즉시 접근 가능한 공개 URL을 반환합니다.
+                    """
+    )
+    ApiResponse<MemberResDTO.ProfileImage> uploadProfileImage(AuthMember authMember, MultipartFile image);
 
     @Operation(
             summary = "팔로우",
@@ -78,4 +95,42 @@ public interface MemberControllerDocs {
             description = "경로의 memberId에 해당하는 회원을 언팔로우합니다. 자기 자신은 언팔로우할 수 없고, 팔로우 중이 아니면 실패합니다."
     )
     ApiResponse<Void> unfollow(AuthMember authMember, Long memberId);
+
+    @Operation(
+            summary = "팔로워 목록 조회",
+            description = """
+                    경로의 memberId에 해당하는 회원을 팔로우하는 회원 목록을 최신순으로 조회합니다.
+
+                    커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
+
+                    각 항목의 isFollowing은 목록 대상(memberId)이 아니라 로그인한 나(요청자)를 기준으로, 내가 그 사람을 팔로우하고 있는지를 나타냅니다. 즉 맞팔 여부를 판단할 때 씁니다.
+                    """
+    )
+    ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
+            AuthMember authMember,
+            Long memberId,
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            String cursor
+    );
+
+    @Operation(
+            summary = "팔로잉 목록 조회",
+            description = """
+                    경로의 memberId에 해당하는 회원이 팔로우하는 회원 목록을 최신순으로 조회합니다.
+
+                    커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
+
+                    각 항목의 isFollowing은 로그인한 나(요청자)를 기준으로, 내가 그 사람을 팔로우하고 있는지를 나타냅니다. memberId 본인의 팔로잉 목록을 조회하는 경우 항상 true입니다.
+                    """
+    )
+    ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(
+            AuthMember authMember,
+            Long memberId,
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            String cursor
+    );
 }

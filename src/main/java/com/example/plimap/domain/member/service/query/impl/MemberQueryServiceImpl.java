@@ -1,6 +1,7 @@
 package com.example.plimap.domain.member.service.query.impl;
 
 import com.example.plimap.domain.member.converter.MemberConverter;
+import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollowId;
@@ -10,6 +11,7 @@ import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.vane.badwordfiltering.BadWordFiltering;
 import lombok.RequiredArgsConstructor;
@@ -29,10 +31,11 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     private static final int NICKNAME_MAX_LENGTH = 10;
     private static final Pattern NICKNAME_FORMAT = Pattern.compile("^[가-힣A-Za-z0-9]+$");
     // BadWordFiltering.check()는 대소문자를 구분하는 완전 일치 substring 검사라 브랜드 사칭 방지용 단어는 별도로 대소문자 무시 검사한다.
-    private static final List<String> CUSTOM_FORBIDDEN_WORDS = List.of("plimap", "플리맵운영자");
+    private static final List<String> CUSTOM_FORBIDDEN_WORDS = List.of("plimap", "플리맵운영자", "플리맵사용자");
 
     private final MemberRepository memberRepository;
     private final MemberFollowRepository memberFollowRepository;
+    private final MemberQueryRepository memberQueryRepository;
     private final BadWordFiltering badWordFiltering = new BadWordFiltering();
 
     @Override
@@ -86,5 +89,17 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
         boolean isFollowing = memberFollowRepository.existsById(new MemberFollowId(viewerId, targetMemberId));
         return MemberConverter.toOtherProfile(member, followerCount, followingCount, isFollowing);
+    }
+
+    @Override
+    public Pagination<MemberResDTO.FollowerItem> findFollowers(Long viewerId, Long memberId, String cursor, Integer pageSize) {
+        getActiveMember(memberId);
+        return memberQueryRepository.findFollowersByMemberId(viewerId, memberId, cursor, pageSize);
+    }
+
+    @Override
+    public Pagination<MemberResDTO.FollowingItem> findFollowing(Long viewerId, Long memberId, String cursor, Integer pageSize) {
+        getActiveMember(memberId);
+        return memberQueryRepository.findFollowingByMemberId(viewerId, memberId, cursor, pageSize);
     }
 }

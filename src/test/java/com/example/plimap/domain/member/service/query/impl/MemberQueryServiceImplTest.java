@@ -1,5 +1,6 @@
 package com.example.plimap.domain.member.service.query.impl;
 
+import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollowId;
@@ -9,9 +10,12 @@ import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,8 +30,9 @@ class MemberQueryServiceImplTest {
 
     private final MemberRepository memberRepository = mock(MemberRepository.class);
     private final MemberFollowRepository memberFollowRepository = mock(MemberFollowRepository.class);
+    private final MemberQueryRepository memberQueryRepository = mock(MemberQueryRepository.class);
     private final MemberQueryServiceImpl memberQueryService =
-            new MemberQueryServiceImpl(memberRepository, memberFollowRepository);
+            new MemberQueryServiceImpl(memberRepository, memberFollowRepository, memberQueryRepository);
 
     @Test
     void 활성_회원을_조회한다() {
@@ -115,6 +120,12 @@ class MemberQueryServiceImplTest {
     @Test
     void 닉네임에_플리맵운영자가_포함되면_FORBIDDEN_WORD를_반환한다() {
         assertThat(memberQueryService.checkNicknameFailReason("플리맵운영자임"))
+                .isEqualTo(NicknameCheckFailReason.FORBIDDEN_WORD);
+    }
+
+    @Test
+    void 닉네임에_플리맵사용자가_포함되면_FORBIDDEN_WORD를_반환한다() {
+        assertThat(memberQueryService.checkNicknameFailReason("플리맵사용자임"))
                 .isEqualTo(NicknameCheckFailReason.FORBIDDEN_WORD);
     }
 
@@ -280,5 +291,81 @@ class MemberQueryServiceImplTest {
 
         verify(memberRepository, never())
                 .findByIdAndStatusAndDeletedAtIsNull(any(), any());
+    }
+
+    @Test
+    void 팔로워_목록을_조회한다() {
+        // given
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+
+        MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "key", Instant.now(), true);
+        Pagination<MemberResDTO.FollowerItem> page =
+                Pagination.<MemberResDTO.FollowerItem>builder()
+                        .data(List.of(follower))
+                        .nextCursor(null)
+                        .hasNext(false)
+                        .pageSize(10)
+                        .build();
+        when(memberQueryRepository.findFollowersByMemberId(99L, 1L, null, 10)).thenReturn(page);
+
+        // when
+        Pagination<MemberResDTO.FollowerItem> result = memberQueryService.findFollowers(99L, 1L, null, 10);
+
+        // then
+        assertThat(result.data()).containsExactly(follower);
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    void 존재하지_않는_회원의_팔로워_목록은_조회할_수_없다() {
+        // given
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> memberQueryService.findFollowers(99L, 1L, null, 10))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        verify(memberQueryRepository, never()).findFollowersByMemberId(any(), any(), any(), any());
+    }
+
+    @Test
+    void 팔로잉_목록을_조회한다() {
+        // given
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+
+        MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "key", Instant.now(), true);
+        Pagination<MemberResDTO.FollowingItem> page =
+                Pagination.<MemberResDTO.FollowingItem>builder()
+                        .data(List.of(following))
+                        .nextCursor(null)
+                        .hasNext(false)
+                        .pageSize(10)
+                        .build();
+        when(memberQueryRepository.findFollowingByMemberId(99L, 1L, null, 10)).thenReturn(page);
+
+        // when
+        Pagination<MemberResDTO.FollowingItem> result = memberQueryService.findFollowing(99L, 1L, null, 10);
+
+        // then
+        assertThat(result.data()).containsExactly(following);
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    void 존재하지_않는_회원의_팔로잉_목록은_조회할_수_없다() {
+        // given
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> memberQueryService.findFollowing(99L, 1L, null, 10))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        verify(memberQueryRepository, never()).findFollowingByMemberId(any(), any(), any(), any());
     }
 }
