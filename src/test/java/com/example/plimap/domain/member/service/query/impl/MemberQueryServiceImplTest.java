@@ -2,6 +2,7 @@ package com.example.plimap.domain.member.service.query.impl;
 
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
@@ -194,6 +195,67 @@ class MemberQueryServiceImplTest {
 
         // when & then
         assertThatThrownBy(() -> memberQueryService.getMyProfile(1L))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Test
+    void 다른_회원의_프로필을_팔로우_수와_함께_조회한다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberRepository.findByIdAndDeletedAtIsNull(2L)).thenReturn(Optional.of(member));
+        when(memberFollowRepository.countByIdFollowingId(2L)).thenReturn(3L);
+        when(memberFollowRepository.countByIdFollowerId(2L)).thenReturn(5L);
+        when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.id()).isEqualTo(2L);
+        assertThat(result.nickname()).isEqualTo("상대방");
+        assertThat(result.followerCount()).isEqualTo(3L);
+        assertThat(result.followingCount()).isEqualTo(5L);
+    }
+
+    @Test
+    void 팔로우_중인_회원이면_isFollowing이_true다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberRepository.findByIdAndDeletedAtIsNull(2L)).thenReturn(Optional.of(member));
+        when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(true);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.isFollowing()).isTrue();
+    }
+
+    @Test
+    void 팔로우_중이_아니면_isFollowing이_false다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberRepository.findByIdAndDeletedAtIsNull(2L)).thenReturn(Optional.of(member));
+        when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.isFollowing()).isFalse();
+    }
+
+    @Test
+    void 존재하지_않거나_탈퇴한_회원의_프로필은_조회할_수_없다() {
+        // given
+        when(memberRepository.findByIdAndDeletedAtIsNull(2L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> memberQueryService.getOtherProfile(1L, 2L))
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
     }

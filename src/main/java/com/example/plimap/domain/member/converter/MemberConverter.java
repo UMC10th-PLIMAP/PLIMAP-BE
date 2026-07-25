@@ -57,4 +57,17 @@ public class MemberConverter {
                 member.getOnboardingCompletedAt()
         );
     }
+
+    public static MemberResDTO.OtherProfile toOtherProfile(Member member, long followerCount, long followingCount, boolean isFollowing) {
+        return new MemberResDTO.OtherProfile(
+                member.getId(),
+                member.getNickname(),
+                member.getName(),
+                member.getIntroduction(),
+                member.getProfileImageObjectKey(),
+                followerCount,
+                followingCount,
+                isFollowing
+        );
+    }
 }

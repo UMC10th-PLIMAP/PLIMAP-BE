@@ -13,4 +13,6 @@ public interface MemberQueryService {
     NicknameCheckFailReason checkNicknameFailReason(String nickname);
 
     MemberResDTO.MyProfile getMyProfile(Long memberId);
+
+    MemberResDTO.OtherProfile getOtherProfile(Long viewerId, Long targetMemberId);
 }
