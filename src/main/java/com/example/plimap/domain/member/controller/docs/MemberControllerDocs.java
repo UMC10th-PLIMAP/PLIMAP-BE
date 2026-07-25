@@ -88,9 +88,31 @@ public interface MemberControllerDocs {
                     경로의 memberId에 해당하는 회원을 팔로우하는 회원 목록을 최신순으로 조회합니다.
 
                     커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
+
+                    각 항목의 isFollowing은 목록 대상(memberId)이 아니라 로그인한 나(요청자)를 기준으로, 내가 그 사람을 팔로우하고 있는지를 나타냅니다. 즉 맞팔 여부를 판단할 때 씁니다.
                     """
     )
     ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
+            AuthMember authMember,
+            Long memberId,
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            String cursor
+    );
+
+    @Operation(
+            summary = "팔로잉 목록 조회",
+            description = """
+                    경로의 memberId에 해당하는 회원이 팔로우하는 회원 목록을 최신순으로 조회합니다.
+
+                    커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
+
+                    각 항목의 isFollowing은 로그인한 나(요청자)를 기준으로, 내가 그 사람을 팔로우하고 있는지를 나타냅니다. memberId 본인의 팔로잉 목록을 조회하는 경우 항상 true입니다.
+                    """
+    )
+    ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(
+            AuthMember authMember,
             Long memberId,
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")

@@ -90,11 +90,26 @@ public class MemberController implements MemberControllerDocs {
     @Override
     @GetMapping("/{memberId}/followers")
     public ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
+            @AuthenticationPrincipal AuthMember authMember,
             @PathVariable Long memberId,
             @RequestParam(required = false, defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String cursor
     ) {
-        Pagination<MemberResDTO.FollowerItem> response = memberQueryService.findFollowers(memberId, cursor, pageSize);
+        Pagination<MemberResDTO.FollowerItem> response =
+                memberQueryService.findFollowers(authMember.getMember().getId(), memberId, cursor, pageSize);
         return ApiResponse.success(MemberSuccessCode.FOLLOWERS_FETCHED, response);
+    }
+
+    @Override
+    @GetMapping("/{memberId}/following")
+    public ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(
+            @AuthenticationPrincipal AuthMember authMember,
+            @PathVariable Long memberId,
+            @RequestParam(required = false, defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String cursor
+    ) {
+        Pagination<MemberResDTO.FollowingItem> response =
+                memberQueryService.findFollowing(authMember.getMember().getId(), memberId, cursor, pageSize);
+        return ApiResponse.success(MemberSuccessCode.FOLLOWING_FETCHED, response);
     }
 }

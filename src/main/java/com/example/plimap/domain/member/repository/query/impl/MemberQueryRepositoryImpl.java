@@ -11,6 +11,8 @@ import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.NumberPath;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -26,7 +28,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Pagination<MemberResDTO.FollowerItem> findFollowersByMemberId(Long memberId, String cursor, Integer pageSize) {
+    public Pagination<MemberResDTO.FollowerItem> findFollowersByMemberId(Long viewerId, Long memberId, String cursor, Integer pageSize) {
         QMemberFollow memberFollow = QMemberFollow.memberFollow;
         QMember follower = QMember.member;
         CursorInfo cursorInfo = parseCursor(cursor);
@@ -39,7 +41,8 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                                 follower.nickname,
                                 follower.name,
                                 follower.profileImageObjectKey,
-                                memberFollow.createdAt
+                                memberFollow.createdAt,
+                                isFollowedByViewer(viewerId, follower.id)
                         )
                 )
                 .from(memberFollow)
@@ -47,7 +50,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                 .where(
                         memberFollow.following.id.eq(memberId),
                         follower.deletedAt.isNull(),
-                        cursorCondition(memberFollow, cursorInfo.createdAt(), cursorInfo.memberId())
+                        cursorCondition(memberFollow, follower.id, cursorInfo.createdAt(), cursorInfo.memberId())
                 )
                 .orderBy(memberFollow.createdAt.desc(), follower.id.desc())
                 .limit(pageSize + 1)
@@ -63,6 +66,52 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
         }
 
         MemberResDTO.FollowerItem last = data.get(data.size() - 1);
+        String nextCursor = hasNext
+                ? last.followedAt() + "/" + last.id()
+                : null;
+
+        return MemberConverter.toPagination(data, nextCursor, hasNext, pageSize);
+    }
+
+    @Override
+    public Pagination<MemberResDTO.FollowingItem> findFollowingByMemberId(Long viewerId, Long memberId, String cursor, Integer pageSize) {
+        QMemberFollow memberFollow = QMemberFollow.memberFollow;
+        QMember following = QMember.member;
+        CursorInfo cursorInfo = parseCursor(cursor);
+
+        List<MemberResDTO.FollowingItem> data = queryFactory
+                .select(
+                        Projections.constructor(
+                                MemberResDTO.FollowingItem.class,
+                                following.id,
+                                following.nickname,
+                                following.name,
+                                following.profileImageObjectKey,
+                                memberFollow.createdAt,
+                                isFollowedByViewer(viewerId, following.id)
+                        )
+                )
+                .from(memberFollow)
+                .join(memberFollow.following, following)
+                .where(
+                        memberFollow.follower.id.eq(memberId),
+                        following.deletedAt.isNull(),
+                        cursorCondition(memberFollow, following.id, cursorInfo.createdAt(), cursorInfo.memberId())
+                )
+                .orderBy(memberFollow.createdAt.desc(), following.id.desc())
+                .limit(pageSize + 1)
+                .fetch();
+
+        boolean hasNext = data.size() > pageSize;
+        if (hasNext) {
+            data.remove(pageSize.intValue());
+        }
+
+        if (data.isEmpty()) {
+            return MemberConverter.toPagination(data, null, false, pageSize);
+        }
+
+        MemberResDTO.FollowingItem last = data.get(data.size() - 1);
         String nextCursor = hasNext
                 ? last.followedAt() + "/" + last.id()
                 : null;
@@ -89,7 +138,24 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
         }
     }
 
-    private BooleanExpression cursorCondition(QMemberFollow memberFollow, Instant createdAt, Long memberId) {
+    private BooleanExpression isFollowedByViewer(Long viewerId, NumberPath<Long> targetId) {
+        QMemberFollow viewerFollow = new QMemberFollow("viewerFollow");
+        return JPAExpressions
+                .selectOne()
+                .from(viewerFollow)
+                .where(
+                        viewerFollow.follower.id.eq(viewerId),
+                        viewerFollow.following.id.eq(targetId)
+                )
+                .exists();
+    }
+
+    private BooleanExpression cursorCondition(
+            QMemberFollow memberFollow,
+            NumberPath<Long> counterpartId,
+            Instant createdAt,
+            Long memberId
+    ) {
         if (createdAt == null || memberId == null) {
             return null;
         }
@@ -97,7 +163,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
         return memberFollow.createdAt.lt(createdAt)
                 .or(
                         memberFollow.createdAt.eq(createdAt)
-                                .and(memberFollow.follower.id.lt(memberId))
+                                .and(counterpartId.lt(memberId))
                 );
     }
 }

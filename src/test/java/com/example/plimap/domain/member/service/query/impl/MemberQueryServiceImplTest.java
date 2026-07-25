@@ -288,7 +288,7 @@ class MemberQueryServiceImplTest {
         ReflectionTestUtils.setField(member, "id", 1L);
         when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
 
-        MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "key", Instant.now());
+        MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "key", Instant.now(), true);
         Pagination<MemberResDTO.FollowerItem> page =
                 Pagination.<MemberResDTO.FollowerItem>builder()
                         .data(List.of(follower))
@@ -296,10 +296,10 @@ class MemberQueryServiceImplTest {
                         .hasNext(false)
                         .pageSize(10)
                         .build();
-        when(memberQueryRepository.findFollowersByMemberId(1L, null, 10)).thenReturn(page);
+        when(memberQueryRepository.findFollowersByMemberId(99L, 1L, null, 10)).thenReturn(page);
 
         // when
-        Pagination<MemberResDTO.FollowerItem> result = memberQueryService.findFollowers(1L, null, 10);
+        Pagination<MemberResDTO.FollowerItem> result = memberQueryService.findFollowers(99L, 1L, null, 10);
 
         // then
         assertThat(result.data()).containsExactly(follower);
@@ -312,10 +312,48 @@ class MemberQueryServiceImplTest {
         when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> memberQueryService.findFollowers(1L, null, 10))
+        assertThatThrownBy(() -> memberQueryService.findFollowers(99L, 1L, null, 10))
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        verify(memberQueryRepository, never()).findFollowersByMemberId(any(), any(), any());
+        verify(memberQueryRepository, never()).findFollowersByMemberId(any(), any(), any(), any());
+    }
+
+    @Test
+    void 팔로잉_목록을_조회한다() {
+        // given
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+
+        MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "key", Instant.now(), true);
+        Pagination<MemberResDTO.FollowingItem> page =
+                Pagination.<MemberResDTO.FollowingItem>builder()
+                        .data(List.of(following))
+                        .nextCursor(null)
+                        .hasNext(false)
+                        .pageSize(10)
+                        .build();
+        when(memberQueryRepository.findFollowingByMemberId(99L, 1L, null, 10)).thenReturn(page);
+
+        // when
+        Pagination<MemberResDTO.FollowingItem> result = memberQueryService.findFollowing(99L, 1L, null, 10);
+
+        // then
+        assertThat(result.data()).containsExactly(following);
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    void 존재하지_않는_회원의_팔로잉_목록은_조회할_수_없다() {
+        // given
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> memberQueryService.findFollowing(99L, 1L, null, 10))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        verify(memberQueryRepository, never()).findFollowingByMemberId(any(), any(), any(), any());
     }
 }
