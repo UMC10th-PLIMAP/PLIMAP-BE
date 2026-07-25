@@ -27,6 +27,15 @@ oauth:
 cookie:
   same-site: None
 
+plimap:
+  swagger:
+    access:
+      public-origin: ${PUBLIC_BASE_URL}
+  auth:
+    test-token:
+      issue-key-required: true
+      issue-key: ${TEST_TOKEN_ISSUE_KEY}
+
 profile-image:
   storage:
     provider: ${PROFILE_IMAGE_STORAGE_PROVIDER:supabase}

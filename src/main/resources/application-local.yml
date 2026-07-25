@@ -39,6 +39,9 @@ cookie:
 plimap:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  auth:
+    test-token:
+      issue-key-required: false
 
 logging:
   level:

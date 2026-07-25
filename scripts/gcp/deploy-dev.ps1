@@ -21,6 +21,7 @@ $secretMap = [ordered]@{
     DB_PASSWORD                = "plimap-dev-db-password"
     REDIS_URL                  = "plimap-dev-redis-url"
     JWT_SECRET                 = "plimap-dev-jwt-secret"
+    TEST_TOKEN_ISSUE_KEY       = "plimap-dev-test-token-issue-key"
     KAKAO_REST_API_KEY         = "plimap-dev-kakao-rest-api-key"
     KAKAO_REST_API_SECRET      = "plimap-dev-kakao-rest-api-secret"
     GOOGLE_CLIENT_ID           = "plimap-dev-google-client-id"
@@ -136,6 +137,34 @@ function Get-HttpsUrl {
     return $uri.AbsoluteUri
 }
 
+function Assert-HttpStatus {
+    param(
+        [Parameter(Mandatory)][string]$Uri,
+        [Parameter(Mandatory)][int]$ExpectedStatus
+    )
+
+    $webResponse = $null
+    try {
+        $webResponse = Invoke-WebRequest `
+            -UseBasicParsing `
+            -Uri $Uri `
+            -TimeoutSec 60
+        $actualStatus = [int]$webResponse.StatusCode
+    } catch {
+        $errorResponse = $_.Exception.Response
+        if ($null -eq $errorResponse) {
+            throw
+        }
+        $actualStatus = [int]$errorResponse.StatusCode
+    }
+
+    if ($actualStatus -ne $ExpectedStatus) {
+        throw "Endpoint verification failed: $Uri (expected=$ExpectedStatus, actual=$actualStatus)"
+    }
+
+    return $webResponse
+}
+
 function Write-EnvironmentFile {
     param(
         [Parameter(Mandatory)][string]$Path,
@@ -148,6 +177,7 @@ function Write-EnvironmentFile {
 
     $lines = @(
         "SPRING_PROFILES_ACTIVE: 'dev'",
+        "PUBLIC_BASE_URL: $(ConvertTo-YamlSingleQuoted $PublicOrigin)",
         "CORS_ALLOWED_ORIGINS: $(ConvertTo-YamlSingleQuoted $CorsAllowedOrigins)",
         "OAUTH_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted $FrontendRedirectUri)",
         "OAUTH_ALLOWED_FRONTEND_ORIGINS: $(ConvertTo-YamlSingleQuoted $OAuthAllowedFrontendOrigins)",
@@ -249,20 +279,45 @@ try {
         throw "Could not read the deployed Cloud Run URL."
     }
 
-    foreach ($path in @(
+    foreach ($healthPath in @(
         "/actuator/health/liveness",
         "/actuator/health/readiness",
-        "/actuator/health",
+        "/actuator/health"
+    )) {
+        Assert-HttpStatus `
+            -Uri "$deployedUrl$healthPath" `
+            -ExpectedStatus 200 | Out-Null
+    }
+
+    foreach ($documentationPath in @(
         "/swagger-ui/index.html",
         "/v3/api-docs"
     )) {
-        $response = Invoke-WebRequest -UseBasicParsing -Uri "$deployedUrl$path" -TimeoutSec 60
-        if ($response.StatusCode -ne 200) {
-            throw "Deployment verification failed: $path ($($response.StatusCode))"
-        }
+        Assert-HttpStatus `
+            -Uri "$deployedUrl$documentationPath" `
+            -ExpectedStatus 404 | Out-Null
     }
 
-    Write-Output "Cloud Run dev deployment and verification completed: $deployedUrl (public base: $publicOrigin)"
+    $swaggerResponse = Assert-HttpStatus `
+        -Uri "$publicOrigin/swagger-ui/index.html" `
+        -ExpectedStatus 200
+    if ($swaggerResponse.Content -notmatch "Swagger UI") {
+        throw "Public Swagger verification failed: expected Swagger UI content."
+    }
+
+    $openApiResponse = Assert-HttpStatus `
+        -Uri "$publicOrigin/v3/api-docs" `
+        -ExpectedStatus 200
+    try {
+        $openApiDocument = $openApiResponse.Content | ConvertFrom-Json
+    } catch {
+        throw "Public OpenAPI verification failed: response is not valid JSON."
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$openApiDocument.openapi)) {
+        throw "Public OpenAPI verification failed: openapi field is missing."
+    }
+
+    Write-Output "Cloud Run dev deployment and verification completed: $deployedUrl (Swagger: $publicOrigin)"
 } finally {
     Remove-Item -LiteralPath $environmentFile.FullName -Force -ErrorAction SilentlyContinue
 }

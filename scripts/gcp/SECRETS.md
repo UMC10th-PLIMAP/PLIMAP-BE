@@ -11,6 +11,7 @@
 | 애플리케이션 환경변수 | 생성 기준 | dev 기본값 |
 | --- | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | 스크립트 고정값 | `dev` |
+| `PUBLIC_BASE_URL` | `PublicBaseUrl` | `https://dev.plimap.kr` |
 | `CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | `https://dev.plimap.kr,http://localhost:5173` |
 | `OAUTH_REDIRECT_URI` | 기본 `FrontendRedirectUri` 또는 `PublicBaseUrl` + `/home` | `https://dev.plimap.kr/home` |
 | `OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | `https://dev.plimap.kr,http://localhost:5173` |
@@ -41,6 +42,7 @@ CORS와 OAuth 프론트 allowlist는 쉼표로 Origin을 구분합니다. HTTPS 
 | `DB_PASSWORD` | `plimap-dev-db-password` |
 | `REDIS_URL` | `plimap-dev-redis-url` |
 | `JWT_SECRET` | `plimap-dev-jwt-secret` |
+| `TEST_TOKEN_ISSUE_KEY` | `plimap-dev-test-token-issue-key` |
 | `KAKAO_REST_API_KEY` | `plimap-dev-kakao-rest-api-key` |
 | `KAKAO_REST_API_SECRET` | `plimap-dev-kakao-rest-api-secret` |
 | `GOOGLE_CLIENT_ID` | `plimap-dev-google-client-id` |
@@ -55,6 +57,26 @@ CORS와 OAuth 프론트 allowlist는 쉼표로 Origin을 구분합니다. HTTPS 
 4. 다음 dev 배포를 실행하거나 GitHub Actions의 `Deploy Dev`를 수동 실행합니다.
 
 Cloud Run은 새 revision이 시작될 때 `latest` Secret 버전을 주입받으므로 값을 바꾼 뒤에는 재배포가 필요합니다. Secret 교체만을 위해 `develop`에 빈 커밋을 만들 필요는 없습니다.
+
+### Dev 테스트 토큰 발급 키 생성
+
+테스트 토큰 발급 키는 JWT 서명 키와 분리하고, 사람이 정한 비밀번호나 UUID 대신 암호학적으로 안전한 32바이트 난수를 사용합니다. Windows PowerShell에서는 다음과 같이 Base64URL 문자열을 생성합니다.
+
+```powershell
+$bytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($bytes)
+$rng.Dispose()
+
+$issueKey = [Convert]::ToBase64String($bytes).
+    TrimEnd('=').
+    Replace('+', '-').
+    Replace('/', '_')
+
+$issueKey
+```
+
+출력값을 `plimap-dev-test-token-issue-key`의 Secret payload로 저장하고 저장소, 이슈, 채팅, 명령행 history에는 남기지 않습니다. Dev Swagger에서 토큰을 발급할 때만 별도 전달받은 값을 입력합니다. Local 프로필은 발급 키를 요구하지 않습니다.
 
 ## 연결 정보 형식
 

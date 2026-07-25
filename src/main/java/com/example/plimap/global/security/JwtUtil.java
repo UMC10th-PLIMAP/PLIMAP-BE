@@ -19,6 +19,7 @@ public class JwtUtil {
 
     private static final Duration ACCESS_TOKEN_EXPIRY = Duration.ofDays(1);
     private static final Duration REFRESH_TOKEN_EXPIRY = Duration.ofDays(14);
+    private static final Duration TEST_ACCESS_TOKEN_EXPIRY = Duration.ofHours(1);
 
     private static final String CLAIM_TOKEN_TYPE = "tokenType";
     private static final String TOKEN_TYPE_ACCESS = "access";
@@ -31,25 +32,15 @@ public class JwtUtil {
     }
 
     public String createAccessToken(AuthMember authMember) {
-        return Jwts.builder()
-                .id(UUID.randomUUID().toString())
-                .subject(authMember.getUsername())
-                .claim(CLAIM_TOKEN_TYPE, TOKEN_TYPE_ACCESS)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRY.toMillis()))
-                .signWith(secretKey)
-                .compact();
+        return createToken(authMember, TOKEN_TYPE_ACCESS, ACCESS_TOKEN_EXPIRY);
+    }
+
+    public String createTestAccessToken(AuthMember authMember) {
+        return createToken(authMember, TOKEN_TYPE_ACCESS, TEST_ACCESS_TOKEN_EXPIRY);
     }
 
     public String createRefreshToken(AuthMember authMember) {
-        return Jwts.builder()
-                .id(UUID.randomUUID().toString())
-                .subject(authMember.getUsername())
-                .claim(CLAIM_TOKEN_TYPE, TOKEN_TYPE_REFRESH)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRY.toMillis()))
-                .signWith(secretKey)
-                .compact();
+        return createToken(authMember, TOKEN_TYPE_REFRESH, REFRESH_TOKEN_EXPIRY);
     }
 
     public Duration getAccessTokenExpiry() {
@@ -58,6 +49,10 @@ public class JwtUtil {
 
     public Duration getRefreshTokenExpiry() {
         return REFRESH_TOKEN_EXPIRY;
+    }
+
+    public Duration getTestAccessTokenExpiry() {
+        return TEST_ACCESS_TOKEN_EXPIRY;
     }
 
     public Claims parseToken(String token) {
@@ -97,5 +92,20 @@ public class JwtUtil {
         Instant expiration = parseToken(token).getExpiration().toInstant();
         Duration remaining = Duration.between(Instant.now(), expiration);
         return remaining.isPositive() ? remaining : Duration.ofMillis(1);
+    }
+
+    private String createToken(
+            AuthMember authMember,
+            String tokenType,
+            Duration expiry
+    ) {
+        return Jwts.builder()
+                .id(UUID.randomUUID().toString())
+                .subject(authMember.getUsername())
+                .claim(CLAIM_TOKEN_TYPE, tokenType)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expiry.toMillis()))
+                .signWith(secretKey)
+                .compact();
     }
 }
