@@ -1,5 +1,6 @@
 package com.example.plimap.domain.place.controller;
 
+import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.place.controller.docs.PlaceControllerDocs;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
@@ -9,6 +10,7 @@ import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,6 +41,21 @@ public class PlaceController implements PlaceControllerDocs {
         return ResponseEntity
                 .status(PlaceSuccessCode.PLACE_SEARCH_SUCCESS.getStatus())
                 .body(ApiResponse.success(PlaceSuccessCode.PLACE_SEARCH_SUCCESS, result));
+    }
+
+    @Override
+    @PostMapping("/selections")
+    public ResponseEntity<ApiResponse<PlaceResponse.Selection>> selectSearchPlace(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestBody PlaceRequest.Selection request
+    ) {
+        PlaceResponse.Selection result = placeCommandService.selectSearchPlace(
+                currentMember.getMember().getId(),
+                request
+        );
+        return ResponseEntity
+                .status(PlaceSuccessCode.PLACE_SELECTION_SUCCESS.getStatus())
+                .body(ApiResponse.success(PlaceSuccessCode.PLACE_SELECTION_SUCCESS, result));
     }
 
     @Override

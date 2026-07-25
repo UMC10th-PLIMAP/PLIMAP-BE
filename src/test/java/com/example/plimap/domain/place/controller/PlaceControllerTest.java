@@ -1,6 +1,8 @@
 package com.example.plimap.domain.place.controller;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -52,6 +54,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class PlaceControllerTest {
 
     private static final String MAP_SELECTION_ENDPOINT = "/api/v1/places/map-selections";
+    private static final String SELECTION_ENDPOINT = "/api/v1/places/selections";
     private static final String SEARCH_ENDPOINT = "/api/v1/places/search";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
@@ -89,7 +92,9 @@ class PlaceControllerTest {
         when(jwtUtil.getJti(ACCESS_TOKEN)).thenReturn("test-jti");
         when(tokenBlacklistService.isBlacklisted("test-jti")).thenReturn(false);
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(Member.builder().build()));
+        Member member = mock(Member.class);
+        when(member.getId()).thenReturn(1L);
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
     }
 
     @Test
@@ -324,6 +329,114 @@ class PlaceControllerTest {
         verifyNoInteractions(placeQueryService);
     }
 
+    @Test
+    void 검색_장소_선택에_성공하면_명세_응답을_반환한다() throws Exception {
+        when(placeCommandService.selectSearchPlace(any(), any()))
+                .thenReturn(new PlaceResponse.Selection(
+                        1L,
+                        "한강",
+                        "서울특별시 영등포구 여의도동",
+                        "서울특별시 영등포구 여의동로",
+                        PlaceSource.PLACE_SEARCH,
+                        470,
+                        true,
+                        true,
+                        "홍길동",
+                        3L,
+                        false
+                ));
+
+        mockMvc.perform(post(SELECTION_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSelectionRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PLACE_SELECTION_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("장소 선택에 성공했습니다."))
+                .andExpect(jsonPath("$.result.placeId").value(1))
+                .andExpect(jsonPath("$.result.placeName").value("한강"))
+                .andExpect(jsonPath("$.result.address")
+                        .value("서울특별시 영등포구 여의도동"))
+                .andExpect(jsonPath("$.result.roadAddress")
+                        .value("서울특별시 영등포구 여의동로"))
+                .andExpect(jsonPath("$.result.source").value("PLACE_SEARCH"))
+                .andExpect(jsonPath("$.result.distanceMeters").value(470))
+                .andExpect(jsonPath("$.result.withinAccessRange").value(true))
+                .andExpect(jsonPath("$.result.hasPin").value(true))
+                .andExpect(jsonPath("$.result.firstPinCreatorNickname").value("홍길동"))
+                .andExpect(jsonPath("$.result.pinCount").value(3))
+                .andExpect(jsonPath("$.result.bookmarkedByMe").value(false));
+    }
+
+    @Test
+    void 도로명_주소가_없으면_전체_지번_주소와_null을_반환한다() throws Exception {
+        when(placeCommandService.selectSearchPlace(any(), any()))
+                .thenReturn(new PlaceResponse.Selection(
+                        1L,
+                        "한강",
+                        "서울특별시 영등포구 여의도동",
+                        null,
+                        PlaceSource.PLACE_SEARCH,
+                        470,
+                        true,
+                        false,
+                        null,
+                        0L,
+                        false
+                ));
+
+        mockMvc.perform(post(SELECTION_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSelectionRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.address")
+                        .value("서울특별시 영등포구 여의도동"))
+                .andExpect(jsonPath("$.result.roadAddress").value(nullValue()));
+    }
+
+    @Test
+    void 검색_장소_필수_정보가_올바르지_않으면_명세_400을_반환한다() throws Exception {
+        when(placeCommandService.selectSearchPlace(any(), any()))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_SELECTION_INVALID));
+
+        mockMvc.perform(post(SELECTION_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "provider": "KAKAO",
+                                  "providerPlaceId": "26338954",
+                                  "placeName": "한강",
+                                  "latitude": 37.5283,
+                                  "longitude": 126.9326,
+                                  "userLatitude": 37.5251,
+                                  "userLongitude": 126.9298
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("PLACE_SELECTION_INVALID"))
+                .andExpect(jsonPath("$.message").value("장소 선택 정보가 올바르지 않습니다."))
+                .andExpect(jsonPath("$.result").isEmpty());
+    }
+
+    @Test
+    void 검색_장소_선택의_유효하지_않은_Bearer_인증은_공통_401을_반환한다()
+            throws Exception {
+        mockMvc.perform(post(SELECTION_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSelectionRequest()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_401_UNAUTHORIZED"))
+                .andExpect(jsonPath("$.result").isEmpty());
+
+        verifyNoInteractions(placeCommandService);
+    }
+
     private String validRequest() {
         return """
                 {
@@ -343,5 +456,22 @@ class PlaceControllerTest {
                 .param("keyword", "한강")
                 .param("latitude", "37.5283")
                 .param("longitude", "126.9326");
+    }
+
+    private String validSelectionRequest() {
+        return """
+                {
+                  "provider": "KAKAO",
+                  "providerPlaceId": "26338954",
+                  "placeName": "한강",
+                  "category": "공원",
+                  "address": "서울특별시 영등포구 여의도동",
+                  "roadAddress": "서울특별시 영등포구 여의동로",
+                  "latitude": 37.5283,
+                  "longitude": 126.9326,
+                  "userLatitude": 37.5251,
+                  "userLongitude": 126.9298
+                }
+                """;
     }
 }

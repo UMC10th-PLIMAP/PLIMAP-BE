@@ -38,6 +38,48 @@ public final class PlaceRequest {
         }
     }
 
+    public record Selection(
+            @Schema(description = "장소 검색 provider", example = "KAKAO")
+            String provider,
+
+            @Schema(description = "provider가 제공하는 장소 ID", example = "26338954")
+            String providerPlaceId,
+
+            @Schema(description = "장소명", example = "한강")
+            String placeName,
+
+            @Schema(description = "장소 카테고리", example = "공원")
+            String category,
+
+            @Schema(description = "지번 주소", example = "서울특별시 영등포구 여의도동")
+            String address,
+
+            @Schema(description = "도로명 주소", example = "서울특별시 영등포구 여의동로")
+            String roadAddress,
+
+            @Schema(description = "장소 위도", example = "37.5283")
+            Double latitude,
+
+            @Schema(description = "장소 경도", example = "126.9326")
+            Double longitude,
+
+            @Schema(description = "사용자 현재 위도", example = "37.5251")
+            Double userLatitude,
+
+            @Schema(description = "사용자 현재 경도", example = "126.9298")
+            Double userLongitude
+    ) {
+
+        public Selection {
+            provider = normalize(provider);
+            providerPlaceId = normalize(providerPlaceId);
+            placeName = normalize(placeName);
+            category = normalize(category);
+            address = normalize(address);
+            roadAddress = normalize(roadAddress);
+        }
+    }
+
     public record MapSelection(
             @NotNull(message = INVALID_LOCATION_MESSAGE)
             @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)
