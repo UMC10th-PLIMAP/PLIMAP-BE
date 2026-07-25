@@ -141,6 +141,34 @@ class PlaceTrackQueryServiceImplTest {
         );
     }
 
+    @Test
+    void 최신순과_요청한_페이지_정보를_저장소에_전달한다() {
+        PlaceTrackRequest.List request = new PlaceTrackRequest.List(
+                PlaceTrackSort.LATEST,
+                1,
+                7,
+                37.0,
+                127.0
+        );
+        PageRequest pageable = PageRequest.of(1, 7);
+        givenPlaceAndDistance(100.0);
+        when(placeTrackQueryRepository.findPlaceTracks(
+                PLACE_ID,
+                MEMBER_ID,
+                PlaceTrackSort.LATEST,
+                pageable
+        )).thenReturn(new SliceImpl<>(List.of(), pageable, false));
+
+        placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request);
+
+        verify(placeTrackQueryRepository).findPlaceTracks(
+                PLACE_ID,
+                MEMBER_ID,
+                PlaceTrackSort.LATEST,
+                PageRequest.of(1, 7)
+        );
+    }
+
     private void givenPlaceAndDistance(double distance) {
         Place place = place();
         when(placeQueryService.getActivePlace(PLACE_ID)).thenReturn(place);

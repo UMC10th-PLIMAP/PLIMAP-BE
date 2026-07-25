@@ -165,7 +165,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_PATH,
                 "get",
                 "400",
-                "ApiResponsePlaceTrackListResult",
+                "ApiResponse",
                 Set.of("COMMON_400_VALIDATION_FAILED")
         );
         assertFailureResponse(
@@ -173,7 +173,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_PATH,
                 "get",
                 "401",
-                "ApiResponsePlaceTrackListResult",
+                "ApiResponse",
                 Set.of("COMMON_401_UNAUTHORIZED")
         );
         assertFailureResponse(
@@ -181,7 +181,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_PATH,
                 "get",
                 "404",
-                "ApiResponsePlaceTrackListResult",
+                "ApiResponse",
                 Set.of("PLACE_NOT_FOUND")
         );
     }
@@ -191,14 +191,14 @@ class TrackOpenApiIntegrationTest {
             String path,
             String operation,
             String status,
-            String successSchemaName,
+            String expectedSchemaName,
             Set<String> expectedCodes
     ) {
         JsonNode content = responseContent(openApi, path, operation, status)
                 .path("application/json");
         JsonNode schemaReference = content.path("schema");
 
-        assertThat(referenceName(schemaReference)).isNotEqualTo(successSchemaName);
+        assertThat(referenceName(schemaReference)).isEqualTo(expectedSchemaName);
         JsonNode failureSchema = resolveSchema(openApi, schemaReference);
         assertThat(failureSchema.path("properties").has("isSuccess")).isTrue();
         assertThat(failureSchema.path("properties").has("code")).isTrue();
@@ -243,12 +243,6 @@ class TrackOpenApiIntegrationTest {
             String path,
             String operation
     ) {
-        JsonNode responseContent = responseContent(
-                openApi,
-                path,
-                operation,
-                "200"
-        );
         JsonNode responseSchema = responseSchemaReference(
                 openApi,
                 path,

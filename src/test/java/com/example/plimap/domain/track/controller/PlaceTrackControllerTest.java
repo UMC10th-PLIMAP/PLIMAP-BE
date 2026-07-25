@@ -203,6 +203,34 @@ class PlaceTrackControllerTest {
         assertBadRequest(authenticatedRequest().queryParam("latitude", "37.0"));
     }
 
+    @Test
+    void 위도가_범위를_벗어나면_400을_반환한다() throws Exception {
+        assertBadRequest(authenticatedRequest()
+                .queryParam("latitude", "90.1")
+                .queryParam("longitude", "127.0"));
+    }
+
+    @Test
+    void 경도가_범위를_벗어나면_400을_반환한다() throws Exception {
+        assertBadRequest(authenticatedRequest()
+                .queryParam("latitude", "37.0")
+                .queryParam("longitude", "-180.1"));
+    }
+
+    @Test
+    void 위도가_NaN이면_400을_반환한다() throws Exception {
+        assertBadRequest(authenticatedRequest()
+                .queryParam("latitude", "NaN")
+                .queryParam("longitude", "127.0"));
+    }
+
+    @Test
+    void 경도가_NaN이면_400을_반환한다() throws Exception {
+        assertBadRequest(authenticatedRequest()
+                .queryParam("latitude", "37.0")
+                .queryParam("longitude", "NaN"));
+    }
+
     private void assertBadRequest(MockHttpServletRequestBuilder request) throws Exception {
         mockMvc.perform(request)
                 .andExpect(status().isBadRequest());

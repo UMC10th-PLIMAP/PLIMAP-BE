@@ -33,7 +33,8 @@ public interface TrackControllerDocs {
                     description = "검색어 또는 검색 결과 개수 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponseTrackSearchResult"),
                             examples = @ExampleObject(
                                     value = TrackSwaggerErrorExamples
                                             .SEARCH_VALIDATION_FAILED
@@ -44,7 +45,8 @@ public interface TrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponseTrackSearchResult"),
                             examples = @ExampleObject(
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
@@ -54,7 +56,8 @@ public interface TrackControllerDocs {
                     description = "iTunes 외부 API 호출 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponseTrackSearchResult"),
                             examples = @ExampleObject(
                                     value = TrackSwaggerErrorExamples
                                             .TRACK_EXTERNAL_API_ERROR
@@ -84,7 +87,8 @@ public interface TrackControllerDocs {
                     description = "iTunes 트랙 ID 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
                             examples = @ExampleObject(
                                     value = TrackSwaggerErrorExamples
                                             .PLAYBACK_VALIDATION_FAILED
@@ -95,7 +99,8 @@ public interface TrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
                             examples = @ExampleObject(
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
@@ -105,7 +110,8 @@ public interface TrackControllerDocs {
                     description = "메타데이터 만료 또는 YouTube 매칭 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
                             examples = {
                                     @ExampleObject(
                                             name = "메타데이터 만료",
@@ -124,7 +130,8 @@ public interface TrackControllerDocs {
                     description = "YouTube 외부 API 또는 캐시 처리 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = ApiResponse.class),
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
                             examples = {
                                     @ExampleObject(
                                             name = "YouTube 외부 API 오류",

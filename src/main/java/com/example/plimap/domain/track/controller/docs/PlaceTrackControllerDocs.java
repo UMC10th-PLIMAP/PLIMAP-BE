@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
@@ -75,9 +77,19 @@ public interface PlaceTrackControllerDocs {
             @Min(value = 1, message = "페이지 크기는 1개 이상이어야 합니다.")
             @Max(value = 200, message = "페이지 크기는 200개 이하여야 합니다.")
             int size,
-            @Parameter(description = "사용자 현재 위도", required = true)
+            @Parameter(
+                    description = "사용자 현재 위도(-90 이상 90 이하)",
+                    required = true,
+                    example = "37.5665")
+            @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 합니다.")
+            @DecimalMax(value = "90", message = "위도는 90 이하여야 합니다.")
             double latitude,
-            @Parameter(description = "사용자 현재 경도", required = true)
+            @Parameter(
+                    description = "사용자 현재 경도(-180 이상 180 이하)",
+                    required = true,
+                    example = "126.9780")
+            @DecimalMin(value = "-180", message = "경도는 -180 이상이어야 합니다.")
+            @DecimalMax(value = "180", message = "경도는 180 이하여야 합니다.")
             double longitude
     );
 }
