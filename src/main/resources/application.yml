@@ -18,8 +18,11 @@ spring:
       ddl-auto: validate
   servlet:
     multipart:
+      # max-file-size는 파일 하나의 크기만 제한하고, max-request-size는 멀티파트
+      # 요청 전체(경계·헤더 오버헤드 포함) 크기를 제한한다. 둘을 동일하게 두면
+      # 5MB 파일도 오버헤드 때문에 request 제한에 걸려 거부될 수 있어 여유를 둔다.
       max-file-size: 5MB
-      max-request-size: 5MB
+      max-request-size: 6MB
 
   security:
     oauth2:
