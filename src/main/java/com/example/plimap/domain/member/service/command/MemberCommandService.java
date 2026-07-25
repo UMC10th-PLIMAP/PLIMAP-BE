@@ -10,4 +10,6 @@ public interface MemberCommandService {
     Member updateProfile(Long memberId, MemberReqDTO.UpdateProfile request);
 
     void follow(Long followerId, Long followingId);
+
+    void unfollow(Long followerId, Long followingId);
 }

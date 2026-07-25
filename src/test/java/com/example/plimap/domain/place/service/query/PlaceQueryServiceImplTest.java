@@ -69,7 +69,7 @@ class PlaceQueryServiceImplTest {
         when(place.getId()).thenReturn(12L);
         when(place.getProviderPlaceId()).thenReturn("26338954");
         when(pinQueryService.findPinInfosByPlaceIds(List.of(12L)))
-                .thenReturn(Map.of(12L, new PlacePinInfo(true, "홍길동")));
+                .thenReturn(Map.of(12L, new PlacePinInfo(true, "홍길동",1L)));
 
         PlaceResponse.SearchResult result = placeQueryService.searchPlaces(request);
 

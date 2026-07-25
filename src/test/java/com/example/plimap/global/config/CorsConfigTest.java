@@ -13,7 +13,7 @@ class CorsConfigTest {
 
     @Test
     void 쿠키_인증과_CSRF_헤더를_허용한다() {
-        CorsProperties properties = new CorsProperties(List.of("http://localhost:3000"));
+        CorsProperties properties = new CorsProperties(List.of("http://localhost:5173", "https://dev.plimap.kr"));
         CorsConfig config = new CorsConfig(properties);
         TestCorsRegistry registry = new TestCorsRegistry();
 
@@ -21,7 +21,7 @@ class CorsConfigTest {
 
         CorsConfiguration cors = registry.configurations().get("/**");
         assertThat(cors).isNotNull();
-        assertThat(cors.getAllowedOrigins()).containsExactly("http://localhost:3000");
+        assertThat(cors.getAllowedOrigins()).containsExactly("http://localhost:5173", "https://dev.plimap.kr");
         assertThat(cors.getAllowedMethods())
                 .containsExactly("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
         assertThat(cors.getAllowedHeaders())

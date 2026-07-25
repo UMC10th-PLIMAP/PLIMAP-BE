@@ -49,7 +49,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class SecurityIntegrationTest {
 
-    private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+    private static final String ALLOWED_ORIGIN = "http://localhost:5173";
+    private static final String DEV_ORIGIN = "https://dev.plimap.kr";
     private static final String PROTECTED_PATH = "/api/v1/security-test";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
@@ -103,6 +104,29 @@ class SecurityIntegrationTest {
                 .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
+    }
+
+    @Test
+    void 허용된_로컬_Origin으로_OAuth_로그인을_시작하면_Origin_쿠키를_발급한다() throws Exception {
+        mockMvc.perform(get("/oauth/authorization/google")
+                        .param("frontendOrigin", ALLOWED_ORIGIN))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(result -> assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                        .anyMatch(header -> header.startsWith("oauth2_frontend_origin=")));
+    }
+
+    @Test
+    void 허용된_Dev_Origin으로_OAuth_로그인을_시작할_수_있다() throws Exception {
+        mockMvc.perform(get("/oauth/authorization/google")
+                        .param("frontendOrigin", DEV_ORIGIN))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void 허용되지_않은_Origin으로_OAuth_로그인을_시작하면_거부한다() throws Exception {
+        mockMvc.perform(get("/oauth/authorization/google")
+                        .param("frontendOrigin", "https://attacker.example"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -172,6 +196,17 @@ class SecurityIntegrationTest {
                         HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS,
                         containsString("X-XSRF-TOKEN")
                 ));
+    }
+
+    @Test
+    void Dev_Origin의_credential_Preflight를_처리한다() throws Exception {
+        mockMvc.perform(options(PROTECTED_PATH)
+                        .header(HttpHeaders.ORIGIN, DEV_ORIGIN)
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "X-XSRF-TOKEN"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, DEV_ORIGIN))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
     }
 
     @Test

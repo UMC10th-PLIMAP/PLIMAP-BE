@@ -173,10 +173,13 @@ class PinQueryRepositoryImplTest {
 
         assertThat(result.get(place1.getId()).hasPin()).isTrue();
         assertThat(result.get(place1.getId()).firstPinCreatorNickname()).isEqualTo("이서");
+        assertThat(result.get(place1.getId()).pinCount()).isEqualTo(2L);
         assertThat(result.get(place2.getId()).hasPin()).isTrue();
         assertThat(result.get(place2.getId()).firstPinCreatorNickname()).isEqualTo("동길");
+        assertThat(result.get(place2.getId()).pinCount()).isEqualTo(1L);
         assertThat(result.get(place3.getId()).hasPin()).isFalse();
         assertThat(result.get(place3.getId()).firstPinCreatorNickname()).isNull();
+        assertThat(result.get(place3.getId()).pinCount()).isEqualTo(0L);
     }
 
     @Test
@@ -195,6 +198,7 @@ class PinQueryRepositoryImplTest {
 
         assertThat(result.get(place1.getId()).hasPin()).isTrue();
         assertThat(result.get(place1.getId()).firstPinCreatorNickname()).isEqualTo("동길");
+        assertThat(result.get(place1.getId()).pinCount()).isEqualTo(1L);
     }
 
     @Test

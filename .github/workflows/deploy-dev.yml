@@ -64,21 +64,19 @@ jobs:
       - name: Deploy and verify Cloud Run dev
         shell: pwsh
         env:
-          DEV_FRONTEND_ORIGIN: ${{ vars.DEV_FRONTEND_ORIGIN }}
+          DEV_PUBLIC_BASE_URL: ${{ vars.DEV_PUBLIC_BASE_URL }}
           DEV_FRONTEND_REDIRECT_URI: ${{ vars.DEV_FRONTEND_REDIRECT_URI }}
+          DEV_CORS_ALLOWED_ORIGINS: ${{ vars.DEV_CORS_ALLOWED_ORIGINS }}
+          DEV_OAUTH_ALLOWED_FRONTEND_ORIGINS: ${{ vars.DEV_OAUTH_ALLOWED_FRONTEND_ORIGINS }}
         run: |
-          $frontendOrigin = if ($env:DEV_FRONTEND_ORIGIN) {
-            $env:DEV_FRONTEND_ORIGIN
+          $publicBaseUrl = if ($env:DEV_PUBLIC_BASE_URL) {
+            $env:DEV_PUBLIC_BASE_URL
           } else {
-            "http://localhost:3000"
+            "https://dev.plimap.kr"
           }
-          $frontendRedirectUri = if ($env:DEV_FRONTEND_REDIRECT_URI) {
-            $env:DEV_FRONTEND_REDIRECT_URI
-          } else {
-            "http://localhost:3000/home"
-          }
-
           ./scripts/gcp/deploy-dev.ps1 `
             -Image $env:IMAGE `
-            -FrontendOrigin $frontendOrigin `
-            -FrontendRedirectUri $frontendRedirectUri
+            -PublicBaseUrl $publicBaseUrl `
+            -FrontendRedirectUri $env:DEV_FRONTEND_REDIRECT_URI `
+            -CorsAllowedOrigins $env:DEV_CORS_ALLOWED_ORIGINS `
+            -OAuthAllowedFrontendOrigins $env:DEV_OAUTH_ALLOWED_FRONTEND_ORIGINS

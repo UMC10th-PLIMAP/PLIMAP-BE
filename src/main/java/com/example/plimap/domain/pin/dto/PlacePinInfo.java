@@ -5,5 +5,6 @@ import lombok.Builder;
 @Builder
 public record PlacePinInfo(
         boolean hasPin,
-        String firstPinCreatorNickname
+        String firstPinCreatorNickname,
+        Long pinCount
 ) {}

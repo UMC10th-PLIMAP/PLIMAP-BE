@@ -12,14 +12,14 @@ class CorsPropertiesTest {
     @Test
     void Origin의_공백과_빈_값을_정리한다() {
         CorsProperties properties = new CorsProperties(List.of(
-                " http://localhost:3000 ",
+                " http://localhost:5173 ",
                 "",
                 "  ",
                 "https://dev.plimap.com"
         ));
 
         assertThat(properties.allowedOrigins()).containsExactly(
-                "http://localhost:3000",
+                "http://localhost:5173",
                 "https://dev.plimap.com"
         );
     }

@@ -14,6 +14,7 @@ import com.example.plimap.global.apiPayload.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -56,5 +57,15 @@ public class MemberController implements MemberControllerDocs {
     ) {
         memberCommandService.follow(authMember.getMember().getId(), memberId);
         return ApiResponse.success(MemberSuccessCode.FOLLOWED, null);
+    }
+
+    @Override
+    @DeleteMapping("/{memberId}/follow")
+    public ApiResponse<Void> unfollow(
+            @AuthenticationPrincipal AuthMember authMember,
+            @PathVariable Long memberId
+    ) {
+        memberCommandService.unfollow(authMember.getMember().getId(), memberId);
+        return ApiResponse.success(MemberSuccessCode.UNFOLLOWED, null);
     }
 }

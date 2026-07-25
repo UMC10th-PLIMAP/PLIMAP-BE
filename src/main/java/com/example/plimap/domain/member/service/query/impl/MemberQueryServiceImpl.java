@@ -1,6 +1,9 @@
 package com.example.plimap.domain.member.service.query.impl;
 
+import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import com.example.plimap.domain.member.exception.MemberErrorCode;
+import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.vane.badwordfiltering.BadWordFiltering;
@@ -25,6 +28,12 @@ public class MemberQueryServiceImpl implements MemberQueryService {
 
     private final MemberRepository memberRepository;
     private final BadWordFiltering badWordFiltering = new BadWordFiltering();
+
+    @Override
+    public Member getActiveMember(Long memberId) {
+        return memberRepository.findByIdAndDeletedAtIsNull(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
 
     @Override
     public boolean isNicknameAvailable(String nickname) {

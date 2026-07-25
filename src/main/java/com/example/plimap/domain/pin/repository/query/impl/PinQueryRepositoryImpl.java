@@ -55,13 +55,23 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             SELECT DISTINCT ON (pl.id)
                    pl.id,
                    m.nickname,
-                   p.id
+                   p.id,
+                   COALESCE(pc.pin_count, 0) AS pin_count
             FROM place pl
             LEFT JOIN pin p 
                     ON p.place_id = pl.id 
                     AND p.deleted_at IS NULL
             LEFT JOIN member m 
                     ON p.member_id = m.id
+            LEFT JOIN (
+                SELECT place_id,
+                       COUNT(*) AS pin_count
+                FROM pin
+                WHERE deleted_at IS NULL
+                        AND place_id IN (:placeIds) 
+                GROUP BY place_id
+            ) pc
+                ON pc.place_id = pl.id
             WHERE pl.id IN (:placeIds) 
                     AND pl.deleted_at IS NULL
             ORDER BY pl.id, p.created_at ASC, p.id ASC;
@@ -98,9 +108,10 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             Long placeId = ((Number) row[0]).longValue();
             String nickname = (String) row[1];
             Number pinId = (Number) row[2];
+            Long pinCount = (Long) row[3];
 
             boolean hasPin = pinId != null;
-            result.put(placeId, new PlacePinInfo(hasPin, nickname));
+            result.put(placeId, new PlacePinInfo(hasPin, nickname, pinCount));
         }
 
         return result;

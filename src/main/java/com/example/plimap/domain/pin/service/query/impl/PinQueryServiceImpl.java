@@ -6,7 +6,11 @@ import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
+import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
+import com.example.plimap.domain.pin.exception.PinErrorCode;
+import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
@@ -25,6 +29,13 @@ public class PinQueryServiceImpl implements PinQueryService {
 
     private final PinLocationValidator pinLocationValidator;
     private final PinQueryRepository pinQueryRepository;
+    private final PinRepository pinRepository;
+
+    @Override
+    public Pin getActivePin(Long pinId) {
+        return pinRepository.findByIdAndDeletedAtIsNull(pinId)
+                .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
+    }
 
     @Override
     public PinResponse.PinAvailability validatePinAvailability(PinRequest.PinAvailability request) {
