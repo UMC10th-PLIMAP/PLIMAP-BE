@@ -1,6 +1,7 @@
 package com.example.plimap.domain.member.controller.docs;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.global.apiPayload.ApiResponse;
@@ -9,6 +10,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @Tag(name = "Member", description = "회원 API")
 public interface MemberControllerDocs {
@@ -78,4 +81,20 @@ public interface MemberControllerDocs {
             description = "경로의 memberId에 해당하는 회원을 언팔로우합니다. 자기 자신은 언팔로우할 수 없고, 팔로우 중이 아니면 실패합니다."
     )
     ApiResponse<Void> unfollow(AuthMember authMember, Long memberId);
+
+    @Operation(
+            summary = "팔로워 목록 조회",
+            description = """
+                    경로의 memberId에 해당하는 회원을 팔로우하는 회원 목록을 최신순으로 조회합니다.
+
+                    커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
+                    """
+    )
+    ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
+            Long memberId,
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            String cursor
+    );
 }

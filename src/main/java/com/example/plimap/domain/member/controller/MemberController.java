@@ -3,6 +3,7 @@ package com.example.plimap.domain.member.controller;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.member.controller.docs.MemberControllerDocs;
 import com.example.plimap.domain.member.converter.MemberConverter;
+import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
@@ -84,5 +85,16 @@ public class MemberController implements MemberControllerDocs {
     ) {
         memberCommandService.unfollow(authMember.getMember().getId(), memberId);
         return ApiResponse.success(MemberSuccessCode.UNFOLLOWED, null);
+    }
+
+    @Override
+    @GetMapping("/{memberId}/followers")
+    public ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
+            @PathVariable Long memberId,
+            @RequestParam(required = false, defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String cursor
+    ) {
+        Pagination<MemberResDTO.FollowerItem> response = memberQueryService.findFollowers(memberId, cursor, pageSize);
+        return ApiResponse.success(MemberSuccessCode.FOLLOWERS_FETCHED, response);
     }
 }

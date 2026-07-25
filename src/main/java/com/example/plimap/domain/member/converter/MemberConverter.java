@@ -1,9 +1,12 @@
 package com.example.plimap.domain.member.converter;
 
 import com.example.plimap.domain.auth.dto.OAuthDTO;
+import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+
+import java.util.List;
 
 public class MemberConverter {
 
@@ -69,5 +72,14 @@ public class MemberConverter {
                 followingCount,
                 isFollowing
         );
+    }
+
+    public static <T> Pagination<T> toPagination(List<T> data, String nextCursor, Boolean hasNext, Integer pageSize) {
+        return Pagination.<T>builder()
+                .data(data)
+                .nextCursor(nextCursor)
+                .hasNext(hasNext)
+                .pageSize(pageSize)
+                .build();
     }
 }
