@@ -159,7 +159,12 @@ function Assert-HttpStatus {
                 -TimeoutSec $RequestTimeoutSeconds
             $actualStatus = [int]$webResponse.StatusCode
         } catch {
-            $errorResponse = $_.Exception.Response
+            $responseProperty = $_.Exception.PSObject.Properties["Response"]
+            $errorResponse = if ($null -ne $responseProperty) {
+                $responseProperty.Value
+            } else {
+                $null
+            }
             if ($null -ne $errorResponse) {
                 $actualStatus = [int]$errorResponse.StatusCode
             } else {
