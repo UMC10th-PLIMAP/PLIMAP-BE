@@ -328,8 +328,9 @@ class TrackControllerTest {
                 .andExpect(jsonPath("$.result").isEmpty());
     }
 
-    private TrackResponse.SearchResult searchResult() {
-        return new TrackResponse.SearchResult(List.of(new TrackResponse.Item(
+    private TrackResponse.TrackSearchResult searchResult() {
+        return new TrackResponse.TrackSearchResult(List.of(
+                new TrackResponse.TrackSearchItem(
                 123L,
                 "밤편지",
                 "아이유",
@@ -337,11 +338,11 @@ class TrackControllerTest {
                 "https://image.example/cover.jpg",
                 "https://audio.example/preview.m4a",
                 253000
-        )));
+                )));
     }
 
-    private TrackResponse.PlaybackPreparation playbackResponse() {
-        return new TrackResponse.PlaybackPreparation(
+    private TrackResponse.PlaybackPreparationResult playbackResponse() {
+        return new TrackResponse.PlaybackPreparationResult(
                 123L,
                 "abcdefghijk",
                 "밤편지",

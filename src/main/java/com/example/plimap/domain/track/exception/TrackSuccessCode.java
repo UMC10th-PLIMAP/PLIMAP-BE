@@ -18,6 +18,11 @@ public enum TrackSuccessCode implements BaseSuccessCode {
             HttpStatus.OK,
             "TRACK_PLAYBACK_PREPARATION_SUCCESS",
             "구간 재생 준비에 성공했습니다."
+    ),
+    PLACE_TRACK_LIST_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_TRACK_LIST_SUCCESS",
+            "장소별 곡 목록 조회에 성공했습니다."
     );
 
     private final HttpStatus status;
