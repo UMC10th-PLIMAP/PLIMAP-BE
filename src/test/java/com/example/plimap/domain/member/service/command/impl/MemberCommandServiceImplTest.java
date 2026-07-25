@@ -427,6 +427,18 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
+    void 매직바이트_검증에_필요한_최소_길이보다_짧으면_스토리지를_호출하지_않고_예외가_발생한다() {
+        byte[] tooShortContent = {1, 2, 3};
+        MockMultipartFile tooShortFile = new MockMultipartFile("image", "short.webp", "image/webp", tooShortContent);
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, tooShortFile))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_PROFILE_IMAGE));
+
+        verify(profileImageStorage, never()).upload(any(), any(), any());
+    }
+
+    @Test
     void 파일_크기가_제한을_초과하면_스토리지를_호출하지_않고_예외가_발생한다() {
         byte[] oversized = new byte[6 * 1024 * 1024];
         System.arraycopy(WEBP_CONTENT, 0, oversized, 0, WEBP_CONTENT.length);
