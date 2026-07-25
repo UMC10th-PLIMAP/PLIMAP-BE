@@ -1,6 +1,7 @@
 package com.example.plimap.domain.member.service.command.impl;
 
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
+import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
@@ -9,16 +10,22 @@ import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.global.external.storage.ProfileImageObjectKeyGenerator;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
+import com.example.plimap.global.external.storage.ProfileImageStorageException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.net.URI;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -29,16 +36,28 @@ class MemberCommandServiceImplTest {
 
     private static final Long MEMBER_ID = 1L;
     private static final Long OTHER_MEMBER_ID = 2L;
+    private static final byte[] WEBP_CONTENT = {
+            'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P', 0, 0
+    };
 
     private final MemberRepository memberRepository = mock(MemberRepository.class);
     private final MemberFollowRepository memberFollowRepository = mock(MemberFollowRepository.class);
     private final MemberQueryService memberQueryService = mock(MemberQueryService.class);
+    private final ProfileImageStorage profileImageStorage = mock(ProfileImageStorage.class);
+    private final ProfileImageObjectKeyGenerator profileImageObjectKeyGenerator =
+            mock(ProfileImageObjectKeyGenerator.class);
 
     private MemberCommandServiceImpl memberCommandService;
 
     @BeforeEach
     void setUp() {
-        memberCommandService = new MemberCommandServiceImpl(memberRepository, memberFollowRepository, memberQueryService);
+        memberCommandService = new MemberCommandServiceImpl(
+                memberRepository,
+                memberFollowRepository,
+                memberQueryService,
+                profileImageStorage,
+                profileImageObjectKeyGenerator
+        );
     }
 
     @Test
@@ -60,7 +79,7 @@ class MemberCommandServiceImplTest {
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.ALREADY_ONBOARDED));
 
-        verify(member, never()).completeOnboarding(any(), any());
+        verify(member, never()).completeOnboarding(any());
     }
 
     @Test
@@ -74,7 +93,7 @@ class MemberCommandServiceImplTest {
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
 
-        verify(member, never()).completeOnboarding(any(), any());
+        verify(member, never()).completeOnboarding(any());
     }
 
     @Test
@@ -88,7 +107,7 @@ class MemberCommandServiceImplTest {
         Member result = memberCommandService.completeOnboarding(MEMBER_ID, request);
 
         assertThat(result).isSameAs(member);
-        verify(member).completeOnboarding("닉네임", request.getProfileImageObjectKey());
+        verify(member).completeOnboarding("닉네임");
         verify(memberRepository).flush();
     }
 
@@ -109,7 +128,7 @@ class MemberCommandServiceImplTest {
     void 프로필_수정_시_존재하지_않는_회원이면_예외가_발생한다() {
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile("새닉네임", null, null, null)))
+        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile("새닉네임", null, null)))
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
     }
@@ -121,11 +140,11 @@ class MemberCommandServiceImplTest {
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
         when(memberQueryService.isNicknameAvailable("새닉네임")).thenReturn(false);
 
-        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile("새닉네임", null, null, null)))
+        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile("새닉네임", null, null)))
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
 
-        verify(member, never()).updateProfile(any(), any(), any(), any());
+        verify(member, never()).updateProfile(any(), any(), any());
     }
 
     @Test
@@ -134,10 +153,10 @@ class MemberCommandServiceImplTest {
         when(member.getNickname()).thenReturn("plimap");
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
 
-        memberCommandService.updateProfile(MEMBER_ID, updateProfile("PLIMAP", null, null, null));
+        memberCommandService.updateProfile(MEMBER_ID, updateProfile("PLIMAP", null, null));
 
         verify(memberQueryService, never()).isNicknameAvailable(any());
-        verify(member).updateProfile("PLIMAP", null, null, null);
+        verify(member).updateProfile("PLIMAP", null, null);
     }
 
     @Test
@@ -146,10 +165,10 @@ class MemberCommandServiceImplTest {
         when(member.getNickname()).thenReturn("기존닉네임");
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
 
-        memberCommandService.updateProfile(MEMBER_ID, updateProfile(null, "새이름", "새소개", null));
+        memberCommandService.updateProfile(MEMBER_ID, updateProfile(null, "새이름", "새소개"));
 
         verify(memberQueryService, never()).isNicknameAvailable(any());
-        verify(member).updateProfile(null, "새이름", "새소개", null);
+        verify(member).updateProfile(null, "새이름", "새소개");
     }
 
     @Test
@@ -159,11 +178,11 @@ class MemberCommandServiceImplTest {
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
         when(memberQueryService.isNicknameAvailable("새닉네임")).thenReturn(true);
 
-        MemberReqDTO.UpdateProfile request = updateProfile("새닉네임", "새이름", "새소개", "profile/1/new.jpg");
+        MemberReqDTO.UpdateProfile request = updateProfile("새닉네임", "새이름", "새소개");
         Member result = memberCommandService.updateProfile(MEMBER_ID, request);
 
         assertThat(result).isSameAs(member);
-        verify(member).updateProfile("새닉네임", "새이름", "새소개", "profile/1/new.jpg");
+        verify(member).updateProfile("새닉네임", "새이름", "새소개");
         verify(memberRepository).flush();
     }
 
@@ -175,7 +194,7 @@ class MemberCommandServiceImplTest {
         when(memberQueryService.isNicknameAvailable("새닉네임")).thenReturn(true);
         doThrow(new DataIntegrityViolationException("duplicate")).when(memberRepository).flush();
 
-        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile("새닉네임", null, null, null)))
+        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile("새닉네임", null, null)))
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
     }
@@ -188,7 +207,7 @@ class MemberCommandServiceImplTest {
         DataIntegrityViolationException original = new DataIntegrityViolationException("unexpected constraint violation");
         doThrow(original).when(memberRepository).flush();
 
-        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile(null, "새이름", null, null)))
+        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile(null, "새이름", null)))
                 .isSameAs(original);
 
         verify(memberQueryService, never()).isNicknameAvailable(any());
@@ -301,14 +320,136 @@ class MemberCommandServiceImplTest {
         verify(memberFollowRepository).deleteByIdFollowerIdAndIdFollowingId(MEMBER_ID, OTHER_MEMBER_ID);
     }
 
+    @Test
+    void 존재하지_않는_회원의_프로필_이미지를_업로드하면_예외가_발생한다() {
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, webpFile()))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Test
+    void 기존_이미지가_없던_회원이_최초로_업로드하면_삭제를_호출하지_않는다() {
+        Member member = mock(Member.class);
+        when(member.getProfileImageObjectKey()).thenReturn(null);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(profileImageObjectKeyGenerator.generate(MEMBER_ID)).thenReturn("members/1/new.webp");
+        when(profileImageStorage.getPublicUrl("members/1/new.webp"))
+                .thenReturn(URI.create("https://project.supabase.co/storage/v1/object/public/profile-images/members/1/new.webp"));
+
+        MemberResDTO.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
+
+        assertThat(result.objectKey()).isEqualTo("members/1/new.webp");
+        verify(member).updateProfileImage("members/1/new.webp");
+        verify(memberRepository).flush();
+        verify(profileImageStorage, never()).delete(any());
+    }
+
+    @Test
+    void 기존_이미지가_있던_회원이_교체_업로드하면_이전_이미지를_삭제한다() {
+        Member member = mock(Member.class);
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(profileImageObjectKeyGenerator.generate(MEMBER_ID)).thenReturn("members/1/new.webp");
+        when(profileImageStorage.getPublicUrl("members/1/new.webp"))
+                .thenReturn(URI.create("https://project.supabase.co/storage/v1/object/public/profile-images/members/1/new.webp"));
+
+        memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
+
+        verify(profileImageStorage).delete("members/1/old.webp");
+    }
+
+    @Test
+    void 이전_이미지_삭제가_실패해도_업로드_자체는_성공한다() {
+        Member member = mock(Member.class);
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(profileImageObjectKeyGenerator.generate(MEMBER_ID)).thenReturn("members/1/new.webp");
+        when(profileImageStorage.getPublicUrl("members/1/new.webp"))
+                .thenReturn(URI.create("https://project.supabase.co/storage/v1/object/public/profile-images/members/1/new.webp"));
+        doThrow(new ProfileImageStorageException("실패", new RuntimeException()))
+                .when(profileImageStorage).delete("members/1/old.webp");
+
+        MemberResDTO.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
+
+        assertThat(result.objectKey()).isEqualTo("members/1/new.webp");
+    }
+
+    @Test
+    void 스토리지_업로드에_실패하면_도메인_예외로_변환한다() {
+        Member member = mock(Member.class);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(profileImageObjectKeyGenerator.generate(MEMBER_ID)).thenReturn("members/1/new.webp");
+        doThrow(new ProfileImageStorageException("실패", new RuntimeException()))
+                .when(profileImageStorage).upload(eq("members/1/new.webp"), any(), any());
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, webpFile()))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.PROFILE_IMAGE_UPLOAD_FAILED));
+
+        verify(member, never()).updateProfileImage(any());
+    }
+
+    @Test
+    void 빈_파일이면_스토리지를_호출하지_않고_예외가_발생한다() {
+        MockMultipartFile emptyFile = new MockMultipartFile("image", "empty.webp", "image/webp", new byte[0]);
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, emptyFile))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_PROFILE_IMAGE));
+
+        verify(memberRepository, never()).findById(any());
+        verify(profileImageStorage, never()).upload(any(), any(), any());
+    }
+
+    @Test
+    void 콘텐츠_타입이_webp가_아니면_스토리지를_호출하지_않고_예외가_발생한다() {
+        MockMultipartFile pngFile = new MockMultipartFile("image", "profile.png", "image/png", WEBP_CONTENT);
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, pngFile))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_PROFILE_IMAGE));
+
+        verify(profileImageStorage, never()).upload(any(), any(), any());
+    }
+
+    @Test
+    void 매직바이트가_webp_형식이_아니면_스토리지를_호출하지_않고_예외가_발생한다() {
+        byte[] fakeContent = "not a real webp file".getBytes();
+        MockMultipartFile fakeFile = new MockMultipartFile("image", "fake.webp", "image/webp", fakeContent);
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, fakeFile))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_PROFILE_IMAGE));
+
+        verify(profileImageStorage, never()).upload(any(), any(), any());
+    }
+
+    @Test
+    void 파일_크기가_제한을_초과하면_스토리지를_호출하지_않고_예외가_발생한다() {
+        byte[] oversized = new byte[6 * 1024 * 1024];
+        System.arraycopy(WEBP_CONTENT, 0, oversized, 0, WEBP_CONTENT.length);
+        MockMultipartFile oversizedFile = new MockMultipartFile("image", "big.webp", "image/webp", oversized);
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, oversizedFile))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_PROFILE_IMAGE));
+
+        verify(profileImageStorage, never()).upload(any(), any(), any());
+    }
+
+    private MockMultipartFile webpFile() {
+        return new MockMultipartFile("image", "profile.webp", "image/webp", WEBP_CONTENT);
+    }
+
     private MemberReqDTO.Onboarding onboarding(String nickname) {
         MemberReqDTO.Onboarding request = new MemberReqDTO.Onboarding();
         ReflectionTestUtils.setField(request, "nickname", nickname);
-        ReflectionTestUtils.setField(request, "profileImageObjectKey", "profile/1/key.jpg");
         return request;
     }
 
-    private MemberReqDTO.UpdateProfile updateProfile(String nickname, String name, String introduction, String profileImageObjectKey) {
-        return new MemberReqDTO.UpdateProfile(nickname, name, introduction, profileImageObjectKey);
+    private MemberReqDTO.UpdateProfile updateProfile(String nickname, String name, String introduction) {
+        return new MemberReqDTO.UpdateProfile(nickname, name, introduction);
     }
 }

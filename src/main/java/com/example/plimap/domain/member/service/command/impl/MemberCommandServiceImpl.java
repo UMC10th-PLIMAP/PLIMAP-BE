@@ -1,6 +1,8 @@
 package com.example.plimap.domain.member.service.command.impl;
 
+import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
+import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
@@ -10,18 +12,33 @@ import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.global.external.storage.ProfileImageObjectKeyGenerator;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
+import com.example.plimap.global.external.storage.ProfileImageStorageException;
+import java.io.IOException;
+import java.net.URI;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemberCommandServiceImpl implements MemberCommandService {
 
+    private static final long MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024;
+    private static final MediaType IMAGE_WEBP = MediaType.parseMediaType("image/webp");
+
     private final MemberRepository memberRepository;
     private final MemberFollowRepository memberFollowRepository;
     private final MemberQueryService memberQueryService;
+    private final ProfileImageStorage profileImageStorage;
+    private final ProfileImageObjectKeyGenerator profileImageObjectKeyGenerator;
 
     @Override
     @Transactional
@@ -38,7 +55,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         }
 
         try {
-            member.completeOnboarding(request.getNickname(), request.getProfileImageObjectKey());
+            member.completeOnboarding(request.getNickname());
             memberRepository.flush();
         } catch (DataIntegrityViolationException e) {
             // 동시에 같은 닉네임으로 온보딩을 완료하는 경우 사전 체크를 통과했더라도
@@ -62,7 +79,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         }
 
         try {
-            member.updateProfile(request.nickname(), request.name(), request.introduction(), request.profileImageObjectKey());
+            member.updateProfile(request.nickname(), request.name(), request.introduction());
             memberRepository.flush();
         } catch (DataIntegrityViolationException e) {
             if (!nicknameChanged) {
@@ -74,6 +91,78 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         }
 
         return member;
+    }
+
+    @Override
+    @Transactional
+    public MemberResDTO.ProfileImage uploadProfileImage(Long memberId, MultipartFile image) {
+        byte[] content = readContent(image);
+        validateProfileImage(image, content);
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        String oldObjectKey = member.getProfileImageObjectKey();
+
+        String newObjectKey = profileImageObjectKeyGenerator.generate(memberId);
+        try {
+            profileImageStorage.upload(newObjectKey, content, IMAGE_WEBP);
+        } catch (ProfileImageStorageException e) {
+            throw new MemberException(MemberErrorCode.PROFILE_IMAGE_UPLOAD_FAILED, e);
+        }
+
+        member.updateProfileImage(newObjectKey);
+        memberRepository.flush();
+
+        if (oldObjectKey != null) {
+            try {
+                profileImageStorage.delete(oldObjectKey);
+            } catch (ProfileImageStorageException e) {
+                log.warn("이전 프로필 이미지 삭제 실패: objectKey={}", oldObjectKey, e);
+            }
+        }
+
+        URI publicUrl = profileImageStorage.getPublicUrl(newObjectKey);
+        return MemberConverter.toProfileImage(newObjectKey, publicUrl);
+    }
+
+    private byte[] readContent(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
+        }
+        try {
+            return image.getBytes();
+        } catch (IOException e) {
+            throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE, e);
+        }
+    }
+
+    private void validateProfileImage(MultipartFile image, byte[] content) {
+        if (image.getSize() > MAX_PROFILE_IMAGE_SIZE) {
+            throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
+        }
+        if (!IMAGE_WEBP.equals(parseContentType(image.getContentType()))) {
+            throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
+        }
+        if (!hasWebpSignature(content)) {
+            throw new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE);
+        }
+    }
+
+    private MediaType parseContentType(String contentType) {
+        try {
+            return contentType == null ? null : MediaType.parseMediaType(contentType);
+        } catch (InvalidMediaTypeException e) {
+            return null;
+        }
+    }
+
+    private boolean hasWebpSignature(byte[] content) {
+        if (content.length < 12) {
+            return false;
+        }
+        boolean hasRiffHeader = content[0] == 'R' && content[1] == 'I' && content[2] == 'F' && content[3] == 'F';
+        boolean hasWebpMarker = content[8] == 'W' && content[9] == 'E' && content[10] == 'B' && content[11] == 'P';
+        return hasRiffHeader && hasWebpMarker;
     }
 
     @Override

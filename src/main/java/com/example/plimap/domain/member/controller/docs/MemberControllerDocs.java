@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Member", description = "회원 API")
 public interface MemberControllerDocs {
@@ -66,9 +67,22 @@ public interface MemberControllerDocs {
 
     @Operation(
             summary = "내 프로필 수정",
-            description = "닉네임, 이름, 소개, 프로필 이미지를 수정합니다. 요청에 포함하지 않은 필드는 변경되지 않습니다."
+            description = "닉네임, 이름, 소개를 수정합니다. 요청에 포함하지 않은 필드는 변경되지 않습니다. 프로필 이미지는 `POST /api/v1/members/me/profile-image`를 이용해 주세요."
     )
     ApiResponse<MemberResDTO.Profile> updateProfile(AuthMember authMember, @Valid MemberReqDTO.UpdateProfile request);
+
+    @Operation(
+            summary = "프로필 이미지 업로드",
+            description = """
+                    로그인한 회원 자신의 프로필 이미지를 업로드합니다. multipart/form-data의 `image` 파트로 WebP 이미지 파일을 전달해 주세요.
+
+                    - 이미지는 클라이언트에서 WebP로 인코딩해 전달해야 합니다(서버는 별도로 포맷을 변환하지 않습니다).
+                    - 파일 크기는 5MB를 초과할 수 없습니다.
+                    - 이미 프로필 이미지가 있던 회원이 다시 업로드하면 기존 이미지는 새 이미지로 교체되고, 이전 이미지는 스토리지에서 삭제됩니다.
+                    - 응답의 imageUrl로 즉시 접근 가능한 공개 URL을 반환합니다.
+                    """
+    )
+    ApiResponse<MemberResDTO.ProfileImage> uploadProfileImage(AuthMember authMember, MultipartFile image);
 
     @Operation(
             summary = "팔로우",
