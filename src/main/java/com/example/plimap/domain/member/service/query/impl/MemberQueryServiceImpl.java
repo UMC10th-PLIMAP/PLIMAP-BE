@@ -28,7 +28,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     private static final int NICKNAME_MAX_LENGTH = 10;
     private static final Pattern NICKNAME_FORMAT = Pattern.compile("^[가-힣A-Za-z0-9]+$");
     // BadWordFiltering.check()는 대소문자를 구분하는 완전 일치 substring 검사라 브랜드 사칭 방지용 단어는 별도로 대소문자 무시 검사한다.
-    private static final List<String> CUSTOM_FORBIDDEN_WORDS = List.of("plimap", "플리맵운영자");
+    private static final List<String> CUSTOM_FORBIDDEN_WORDS = List.of("plimap", "플리맵운영자", "플리맵사용자");
 
     private final MemberRepository memberRepository;
     private final MemberFollowRepository memberFollowRepository;
