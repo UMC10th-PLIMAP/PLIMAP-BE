@@ -280,28 +280,25 @@ class MemberCommandServiceImplTest {
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.CANNOT_UNFOLLOW_SELF));
 
-        verify(memberFollowRepository, never()).existsById(any());
+        verify(memberFollowRepository, never()).deleteByIdFollowerIdAndIdFollowingId(any(), any());
     }
 
     @Test
     void 팔로우_중이_아니면_언팔로우_시_예외가_발생한다() {
-        when(memberFollowRepository.existsById(new MemberFollowId(MEMBER_ID, OTHER_MEMBER_ID))).thenReturn(false);
+        when(memberFollowRepository.deleteByIdFollowerIdAndIdFollowingId(MEMBER_ID, OTHER_MEMBER_ID)).thenReturn(0L);
 
         assertThatThrownBy(() -> memberCommandService.unfollow(MEMBER_ID, OTHER_MEMBER_ID))
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NOT_FOLLOWING));
-
-        verify(memberFollowRepository, never()).deleteById(any());
     }
 
     @Test
     void 정상_요청이면_언팔로우한다() {
-        MemberFollowId id = new MemberFollowId(MEMBER_ID, OTHER_MEMBER_ID);
-        when(memberFollowRepository.existsById(id)).thenReturn(true);
+        when(memberFollowRepository.deleteByIdFollowerIdAndIdFollowingId(MEMBER_ID, OTHER_MEMBER_ID)).thenReturn(1L);
 
         memberCommandService.unfollow(MEMBER_ID, OTHER_MEMBER_ID);
 
-        verify(memberFollowRepository).deleteById(id);
+        verify(memberFollowRepository).deleteByIdFollowerIdAndIdFollowingId(MEMBER_ID, OTHER_MEMBER_ID);
     }
 
     private MemberReqDTO.Onboarding onboarding(String nickname) {
