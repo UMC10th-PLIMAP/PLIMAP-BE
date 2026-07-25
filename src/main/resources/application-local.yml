@@ -29,7 +29,7 @@ spring:
         format_sql: true
 
 oauth:
-  redirect-uri: "http://localhost:5173/home"
+  redirect-uri: "http://localhost:5173/app/oauth/callback"
   allowed-frontend-origins: ${OAUTH_ALLOWED_FRONTEND_ORIGINS:http://localhost:5173}
 
 cookie:
