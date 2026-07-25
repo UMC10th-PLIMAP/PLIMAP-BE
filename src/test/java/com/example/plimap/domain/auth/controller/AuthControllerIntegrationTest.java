@@ -6,6 +6,8 @@ import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import com.example.plimap.support.RedisContainerConfiguration;
+import com.jayway.jsonpath.JsonPath;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -15,12 +17,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,6 +43,45 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Test
+    void 로컬_Origin에서_발급받은_CSRF_토큰으로_쿠키_인증_POST에_성공한다() throws Exception {
+        String localOrigin = "http://localhost:5173";
+        MvcResult csrfResult = mockMvc.perform(get("/api/v1/auth/csrf")
+                        .header(HttpHeaders.ORIGIN, localOrigin))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, localOrigin))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
+                .andExpect(jsonPath("$.code").value("AUTH_200_CSRF_TOKEN_ISSUED"))
+                .andExpect(jsonPath("$.result.token").isNotEmpty())
+                .andReturn();
+
+        Cookie csrfCookie = csrfResult.getResponse().getCookie("XSRF-TOKEN");
+        assertThat(csrfCookie).isNotNull();
+        String csrfToken = JsonPath.read(
+                csrfResult.getResponse().getContentAsString(),
+                "$.result.token"
+        );
+        String accessToken = issueAccessToken();
+
+        mockMvc.perform(post("/api/v1/auth/terms")
+                        .header(HttpHeaders.ORIGIN, localOrigin)
+                        .header("X-XSRF-TOKEN", csrfToken)
+                        .cookie(new Cookie("accessToken", accessToken), csrfCookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "agreements": [
+                                    { "type": "SERVICE", "agreed": true },
+                                    { "type": "PRIVACY", "agreed": true },
+                                    { "type": "LOCATION", "agreed": true }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, localOrigin))
+                .andExpect(jsonPath("$.code").value("TERMS_200_TERMS_AGREED"));
+    }
 
     @Test
     void 필수_약관_중_일부만_동의하면_약관_동의_필수_에러를_반환한다() throws Exception {

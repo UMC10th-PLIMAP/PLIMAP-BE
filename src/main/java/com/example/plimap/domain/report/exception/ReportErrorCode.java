@@ -12,32 +12,52 @@ public enum ReportErrorCode implements BaseErrorCode {
     REPORT_REPORTER_REQUIRED(
             HttpStatus.BAD_REQUEST,
             "REPORT_REPORTER_REQUIRED",
-            "reporter must not be null"
+            "신고자는 필수입니다."
     ),
     REPORT_TARGET_INVALID(
             HttpStatus.BAD_REQUEST,
             "REPORT_TARGET_INVALID",
-            "exactly one report target is required"
+            "신고 대상은 회원 또는 PIN 중 하나여야 합니다."
     ),
     REPORT_SELF_NOT_ALLOWED(
             HttpStatus.BAD_REQUEST,
             "REPORT_SELF_NOT_ALLOWED",
-            "member cannot report self"
+            "자기 자신은 신고할 수 없습니다."
     ),
     REPORT_CATEGORY_REQUIRED(
             HttpStatus.BAD_REQUEST,
             "REPORT_CATEGORY_REQUIRED",
-            "category must not be null"
+            "신고 카테고리는 필수입니다."
     ),
     REPORT_DETAIL_REQUIRED(
             HttpStatus.BAD_REQUEST,
             "REPORT_DETAIL_REQUIRED",
-            "detail is required for OTHER category"
+            "기타 신고는 상세 내용이 필수입니다."
     ),
     REPORT_DETAIL_NOT_ALLOWED(
             HttpStatus.BAD_REQUEST,
             "REPORT_DETAIL_NOT_ALLOWED",
-            "detail is allowed only for OTHER category"
+            "상세 내용은 기타 신고에만 입력할 수 있습니다."
+    ),
+    REPORT_MEMBER_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "REPORT_MEMBER_ALREADY_EXISTS",
+            "이미 신고한 회원입니다."
+    ),
+    REPORT_PIN_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "REPORT_PIN_ALREADY_EXISTS",
+            "이미 신고한 PIN입니다."
+    ),
+    REPORT_OWN_PIN_NOT_ALLOWED(
+            HttpStatus.BAD_REQUEST,
+            "REPORT_OWN_PIN_NOT_ALLOWED",
+            "자신이 작성한 PIN은 신고할 수 없습니다."
+    ),
+    REPORT_PRIVATE_PIN_NOT_ALLOWED(
+            HttpStatus.BAD_REQUEST,
+            "REPORT_PRIVATE_PIN_NOT_ALLOWED",
+            "공개 피드가 아닌 PIN은 신고할 수 없습니다."
     );
 
     private final HttpStatus status;

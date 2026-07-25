@@ -4,8 +4,11 @@ param(
     [string]$Region = "asia-northeast3",
     [string]$ServiceName = "plimap-api-dev",
     [string]$Image = "asia-northeast3-docker.pkg.dev/plimap/plimap-docker/api:dev-initial",
-    [string]$FrontendOrigin = "http://localhost:3000",
-    [string]$FrontendRedirectUri = "http://localhost:3000/home"
+    [string]$PublicBaseUrl = "https://dev.plimap.kr",
+    [string]$FrontendRedirectUri = "",
+    [string]$CorsAllowedOrigins = "",
+    [string]$OAuthAllowedFrontendOrigins = "",
+    [string]$ProfileImageBucket = "profile-images"
 )
 
 Set-StrictMode -Version Latest
@@ -23,6 +26,8 @@ $secretMap = [ordered]@{
     GOOGLE_CLIENT_ID           = "plimap-dev-google-client-id"
     GOOGLE_CLIENT_SECRET       = "plimap-dev-google-client-secret"
     YOUTUBE_API_KEY            = "plimap-dev-youtube-api-key"
+    SUPABASE_URL               = "plimap-dev-supabase-url"
+    SUPABASE_SECRET_KEY        = "plimap-dev-supabase-secret-key"
 }
 
 function Invoke-Gcloud {
@@ -40,20 +45,116 @@ function ConvertTo-YamlSingleQuoted {
     return "'" + $Value.Replace("'", "''") + "'"
 }
 
+function Get-HttpsOrigin {
+    param([Parameter(Mandatory)][string]$Value)
+
+    $uri = [Uri]::new($Value, [UriKind]::Absolute)
+    if ($uri.Scheme -ne "https" -or
+        -not [string]::IsNullOrEmpty($uri.UserInfo) -or
+        -not $uri.IsDefaultPort -or
+        $uri.AbsolutePath -ne "/" -or
+        -not [string]::IsNullOrEmpty($uri.Query) -or
+        -not [string]::IsNullOrEmpty($uri.Fragment)) {
+        throw "PublicBaseUrl must be an HTTPS origin without a path, query, fragment, credentials, or custom port: $Value"
+    }
+
+    return $uri.GetLeftPart([UriPartial]::Authority)
+}
+
+function Get-WebOrigin {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Value
+    )
+
+    try {
+        $uri = [Uri]::new($Value.Trim(), [UriKind]::Absolute)
+    } catch {
+        throw "$Name contains an invalid Origin: $Value"
+    }
+
+    $isHttps = $uri.Scheme -eq "https"
+    $isLocalHttp = $uri.Scheme -eq "http" -and $uri.Host -in @("localhost", "127.0.0.1", "::1")
+    if ((-not $isHttps -and -not $isLocalHttp) -or
+        -not [string]::IsNullOrEmpty($uri.UserInfo) -or
+        $uri.AbsolutePath -ne "/" -or
+        -not [string]::IsNullOrEmpty($uri.Query) -or
+        -not [string]::IsNullOrEmpty($uri.Fragment)) {
+        throw "$Name must contain only HTTPS Origins or HTTP localhost Origins without paths, query, fragment, or credentials: $Value"
+    }
+
+    return $uri.GetLeftPart([UriPartial]::Authority)
+}
+
+function Get-AllowedOrigins {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Value,
+        [Parameter(Mandatory)][string]$RequiredOrigin
+    )
+
+    $origins = @($Value.Split(",") |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        ForEach-Object { Get-WebOrigin -Name $Name -Value $_ } |
+        Select-Object -Unique)
+
+    if ($origins.Count -eq 0) {
+        throw "$Name must contain at least one Origin."
+    }
+    if ($origins -notcontains $RequiredOrigin) {
+        throw "$Name must include the public Origin ($RequiredOrigin)."
+    }
+
+    return $origins -join ","
+}
+
+function Get-HttpsUrl {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Value,
+        [Parameter(Mandatory)][string]$ExpectedOrigin
+    )
+
+    $uri = [Uri]::new($Value, [UriKind]::Absolute)
+    if ($uri.Scheme -ne "https" -or
+        -not [string]::IsNullOrEmpty($uri.UserInfo) -or
+        -not $uri.IsDefaultPort -or
+        -not [string]::IsNullOrEmpty($uri.Fragment)) {
+        throw "$Name must be an HTTPS URL without credentials, a custom port, or a fragment: $Value"
+    }
+
+    $actualOrigin = $uri.GetLeftPart([UriPartial]::Authority)
+    if (-not [string]::Equals(
+        $actualOrigin,
+        $ExpectedOrigin,
+        [StringComparison]::OrdinalIgnoreCase
+    )) {
+        throw "$Name must use the same origin as PublicBaseUrl ($ExpectedOrigin): $Value"
+    }
+
+    return $uri.AbsoluteUri
+}
+
 function Write-EnvironmentFile {
     param(
         [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][string]$CallbackBaseUrl,
-        [Parameter(Mandatory)][string]$FrontendOrigin,
-        [Parameter(Mandatory)][string]$FrontendRedirectUri
+        [Parameter(Mandatory)][string]$PublicOrigin,
+        [Parameter(Mandatory)][string]$FrontendRedirectUri,
+        [Parameter(Mandatory)][string]$CorsAllowedOrigins,
+        [Parameter(Mandatory)][string]$OAuthAllowedFrontendOrigins,
+        [Parameter(Mandatory)][string]$ProfileImageBucket
     )
 
     $lines = @(
         "SPRING_PROFILES_ACTIVE: 'dev'",
-        "CORS_ALLOWED_ORIGINS: $(ConvertTo-YamlSingleQuoted $FrontendOrigin)",
+        "CORS_ALLOWED_ORIGINS: $(ConvertTo-YamlSingleQuoted $CorsAllowedOrigins)",
         "OAUTH_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted $FrontendRedirectUri)",
-        "KAKAO_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$CallbackBaseUrl/oauth/callback/kakao")",
-        "GOOGLE_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$CallbackBaseUrl/oauth/callback/google")"
+        "OAUTH_ALLOWED_FRONTEND_ORIGINS: $(ConvertTo-YamlSingleQuoted $OAuthAllowedFrontendOrigins)",
+        "KAKAO_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$PublicOrigin/oauth/callback/kakao")",
+        "GOOGLE_REDIRECT_URI: $(ConvertTo-YamlSingleQuoted "$PublicOrigin/oauth/callback/google")",
+        "PROFILE_IMAGE_STORAGE_PROVIDER: 'supabase'",
+        "PROFILE_IMAGE_BUCKET: $(ConvertTo-YamlSingleQuoted $ProfileImageBucket)"
     )
 
     $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
@@ -63,6 +164,31 @@ function Write-EnvironmentFile {
 if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
     throw "gcloud CLI was not found. Check the Google Cloud CLI installation and login."
 }
+
+$publicOrigin = Get-HttpsOrigin -Value $PublicBaseUrl
+if ([string]::IsNullOrWhiteSpace($FrontendRedirectUri)) {
+    $FrontendRedirectUri = "$publicOrigin/home"
+}
+$frontendRedirectUrl = Get-HttpsUrl `
+    -Name "FrontendRedirectUri" `
+    -Value $FrontendRedirectUri `
+    -ExpectedOrigin $publicOrigin
+
+if ([string]::IsNullOrWhiteSpace($CorsAllowedOrigins)) {
+    $CorsAllowedOrigins = "$publicOrigin,http://localhost:5173"
+}
+$corsOrigins = Get-AllowedOrigins `
+    -Name "CorsAllowedOrigins" `
+    -Value $CorsAllowedOrigins `
+    -RequiredOrigin $publicOrigin
+
+if ([string]::IsNullOrWhiteSpace($OAuthAllowedFrontendOrigins)) {
+    $OAuthAllowedFrontendOrigins = "$publicOrigin,http://localhost:5173"
+}
+$oauthFrontendOrigins = Get-AllowedOrigins `
+    -Name "OAuthAllowedFrontendOrigins" `
+    -Value $OAuthAllowedFrontendOrigins `
+    -RequiredOrigin $publicOrigin
 
 foreach ($entry in $secretMap.GetEnumerator()) {
     $versionStates = @(& gcloud secrets versions list $entry.Value `
@@ -74,33 +200,15 @@ foreach ($entry in $secretMap.GetEnumerator()) {
     }
 }
 
-# Windows PowerShell 5.1 can promote native stderr to a terminating error when
-# the service does not exist yet. That is expected on the first deploy.
-$previousErrorActionPreference = $ErrorActionPreference
-try {
-    $ErrorActionPreference = "Continue"
-    $serviceUrl = & gcloud run services describe $ServiceName `
-        --project=$ProjectId `
-        --region=$Region `
-        --format="value(status.url)" 2>$null
-    $serviceDescribeExitCode = $LASTEXITCODE
-} finally {
-    $ErrorActionPreference = $previousErrorActionPreference
-}
-
-if ($serviceDescribeExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($serviceUrl)) {
-    $callbackBaseUrl = "https://placeholder.invalid"
-} else {
-    $callbackBaseUrl = $serviceUrl.TrimEnd('/')
-}
-
 $environmentFile = New-TemporaryFile
 try {
     Write-EnvironmentFile `
         -Path $environmentFile.FullName `
-        -CallbackBaseUrl $callbackBaseUrl `
-        -FrontendOrigin $FrontendOrigin `
-        -FrontendRedirectUri $FrontendRedirectUri
+        -PublicOrigin $publicOrigin `
+        -FrontendRedirectUri $frontendRedirectUrl `
+        -CorsAllowedOrigins $corsOrigins `
+        -OAuthAllowedFrontendOrigins $oauthFrontendOrigins `
+        -ProfileImageBucket $ProfileImageBucket
 
     $secretBindings = ($secretMap.GetEnumerator() | ForEach-Object {
         "$($_.Key)=$($_.Value):latest"
@@ -141,21 +249,6 @@ try {
         throw "Could not read the deployed Cloud Run URL."
     }
 
-    if ($callbackBaseUrl -ne $deployedUrl) {
-        Write-EnvironmentFile `
-            -Path $environmentFile.FullName `
-            -CallbackBaseUrl $deployedUrl `
-            -FrontendOrigin $FrontendOrigin `
-            -FrontendRedirectUri $FrontendRedirectUri
-        Invoke-Gcloud -Arguments @(
-            "run", "services", "update", $ServiceName,
-            "--project=$ProjectId",
-            "--region=$Region",
-            "--env-vars-file=$($environmentFile.FullName)",
-            "--quiet"
-        )
-    }
-
     foreach ($path in @(
         "/actuator/health/liveness",
         "/actuator/health/readiness",
@@ -169,7 +262,7 @@ try {
         }
     }
 
-    Write-Output "Cloud Run dev deployment and verification completed: $deployedUrl"
+    Write-Output "Cloud Run dev deployment and verification completed: $deployedUrl (public base: $publicOrigin)"
 } finally {
     Remove-Item -LiteralPath $environmentFile.FullName -Force -ErrorAction SilentlyContinue
 }

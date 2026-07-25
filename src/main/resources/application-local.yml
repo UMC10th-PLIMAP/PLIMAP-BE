@@ -30,6 +30,7 @@ spring:
 
 oauth:
   redirect-uri: "http://localhost:5173/home"
+  allowed-frontend-origins: ${OAUTH_ALLOWED_FRONTEND_ORIGINS:http://localhost:5173}
 
 cookie:
   secure: false

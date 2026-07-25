@@ -30,7 +30,7 @@ import org.springframework.validation.annotation.Validated;
 public class PlaceQueryServiceImpl implements PlaceQueryService {
 
     private static final String KAKAO_PROVIDER = "KAKAO";
-    private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null);
+    private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null,0L);
 
     private final PlaceRepository placeRepository;
     private final KakaoPlaceSearchClient kakaoPlaceSearchClient;

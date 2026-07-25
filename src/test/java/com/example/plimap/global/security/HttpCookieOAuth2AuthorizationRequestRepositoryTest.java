@@ -1,6 +1,8 @@
 package com.example.plimap.global.security;
 
+import com.example.plimap.global.config.OAuthProperties;
 import jakarta.servlet.http.Cookie;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -15,8 +17,20 @@ class HttpCookieOAuth2AuthorizationRequestRepositoryTest {
     private static final String COOKIE_NAME = "oauth2_auth_request";
 
     private final AuthCookieUtil authCookieUtil = new AuthCookieUtil();
+    private final OAuthFrontendRedirectCookieRepository frontendRedirectCookieRepository =
+            new OAuthFrontendRedirectCookieRepository(
+                    authCookieUtil,
+                    new OAuthProperties(
+                            "https://dev.plimap.kr/home",
+                            List.of("https://dev.plimap.kr", "http://localhost:5173")
+                    )
+            );
     private final HttpCookieOAuth2AuthorizationRequestRepository repository =
-            new HttpCookieOAuth2AuthorizationRequestRepository(authCookieUtil, new ObjectMapper());
+            new HttpCookieOAuth2AuthorizationRequestRepository(
+                    authCookieUtil,
+                    new ObjectMapper(),
+                    frontendRedirectCookieRepository
+            );
 
     @Test
     void 저장한_인가_요청을_쿠키에서_그대로_조회한다() {

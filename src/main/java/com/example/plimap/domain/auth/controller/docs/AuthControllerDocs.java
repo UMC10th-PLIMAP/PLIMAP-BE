@@ -1,5 +1,6 @@
 package com.example.plimap.domain.auth.controller.docs;
 
+import com.example.plimap.domain.auth.dto.response.AuthResDTO;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.request.TermsReqDTO;
@@ -7,15 +8,25 @@ import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.dto.response.TermsResDTO;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
+import org.springframework.security.web.csrf.CsrfToken;
 
 @Tag(name = "Auth", description = "인증 API")
 public interface AuthControllerDocs {
+
+    @Operation(
+            summary = "CSRF 토큰 발급",
+            description = "쿠키 인증 상태 변경 요청의 X-XSRF-TOKEN 헤더에 사용할 CSRF 토큰을 반환합니다."
+    )
+    ApiResponse<AuthResDTO.CsrfToken> getCsrfToken(
+            @Parameter(hidden = true) CsrfToken csrfToken
+    );
 
     @Operation(
             summary = "온보딩 (닉네임/프로필 설정)",

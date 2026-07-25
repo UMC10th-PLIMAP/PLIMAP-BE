@@ -4,18 +4,17 @@ import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.auth.entity.OAuthMember;
 import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.JwtUtil;
+import com.example.plimap.global.security.OAuthFrontendRedirectCookieRepository;
 import com.example.plimap.global.security.RefreshTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
@@ -24,9 +23,7 @@ public class OAuthSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtUtil jwtUtil;
     private final RefreshTokenService refreshTokenService;
     private final AuthCookieUtil authCookieUtil;
-
-    @Value("${oauth.redirect-uri}")
-    private String redirectUri;
+    private final OAuthFrontendRedirectCookieRepository redirectCookieRepository;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -50,6 +47,7 @@ public class OAuthSuccessHandler implements AuthenticationSuccessHandler {
         }
 
         boolean isNewUser = !oAuthMember.getMember().isOnboarded();
+        String redirectUri = redirectCookieRepository.consumeRedirectUri(request, response);
         String redirectUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("isNewUser", isNewUser)
                 .build()
