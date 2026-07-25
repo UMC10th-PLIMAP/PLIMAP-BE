@@ -342,7 +342,7 @@ class MemberCommandServiceImplTest {
 
         assertThat(result.objectKey()).isEqualTo("members/1/new.webp");
         verify(member).updateProfileImage("members/1/new.webp");
-        verify(memberRepository).flush();
+        verify(memberRepository).saveAndFlush(member);
         verify(profileImageStorage, never()).delete(any());
     }
 
