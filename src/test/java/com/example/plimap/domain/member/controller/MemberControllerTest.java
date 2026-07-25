@@ -188,14 +188,14 @@ class MemberControllerTest {
     @Test
     void 팔로워_목록_조회에_성공하면_200과_FOLLOWERS_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(
-                3L, "팔로워", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"));
+                3L, "팔로워", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true);
         Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
                 .data(List.of(follower))
                 .nextCursor(null)
                 .hasNext(false)
                 .pageSize(10)
                 .build();
-        when(memberQueryService.findFollowers(eq(TARGET_MEMBER_ID), isNull(), eq(10))).thenReturn(page);
+        when(memberQueryService.findFollowers(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), isNull(), eq(10))).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
@@ -203,12 +203,13 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("MEMBER_200_FOLLOWERS_FETCHED"))
                 .andExpect(jsonPath("$.result.data[0].nickname").value("팔로워"))
+                .andExpect(jsonPath("$.result.data[0].isFollowing").value(true))
                 .andExpect(jsonPath("$.result.hasNext").value(false));
     }
 
     @Test
     void 존재하지_않는_회원의_팔로워_목록을_조회하면_404를_반환한다() throws Exception {
-        when(memberQueryService.findFollowers(eq(TARGET_MEMBER_ID), isNull(), eq(10)))
+        when(memberQueryService.findFollowers(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), isNull(), eq(10)))
                 .thenThrow(new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
@@ -250,14 +251,14 @@ class MemberControllerTest {
                 .hasNext(false)
                 .pageSize(50)
                 .build();
-        when(memberQueryService.findFollowers(eq(TARGET_MEMBER_ID), isNull(), eq(50))).thenReturn(page);
+        when(memberQueryService.findFollowers(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), isNull(), eq(50))).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
                         .param("pageSize", "50")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk());
 
-        verify(memberQueryService).findFollowers(TARGET_MEMBER_ID, null, 50);
+        verify(memberQueryService).findFollowers(AUTH_MEMBER_ID, TARGET_MEMBER_ID, null, 50);
     }
 
     @Test
@@ -269,19 +270,19 @@ class MemberControllerTest {
                 .hasNext(false)
                 .pageSize(10)
                 .build();
-        when(memberQueryService.findFollowers(TARGET_MEMBER_ID, cursor, 10)).thenReturn(page);
+        when(memberQueryService.findFollowers(AUTH_MEMBER_ID, TARGET_MEMBER_ID, cursor, 10)).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
                         .param("cursor", cursor)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk());
 
-        verify(memberQueryService).findFollowers(TARGET_MEMBER_ID, cursor, 10);
+        verify(memberQueryService).findFollowers(AUTH_MEMBER_ID, TARGET_MEMBER_ID, cursor, 10);
     }
 
     @Test
     void 팔로워_목록_조회시_잘못된_커서면_400을_반환한다() throws Exception {
-        when(memberQueryService.findFollowers(eq(TARGET_MEMBER_ID), eq("invalid-cursor"), eq(10)))
+        when(memberQueryService.findFollowers(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), eq("invalid-cursor"), eq(10)))
                 .thenThrow(new MemberException(MemberErrorCode.INVALID_CURSOR));
 
         mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
@@ -295,14 +296,14 @@ class MemberControllerTest {
     @Test
     void 팔로잉_목록_조회에_성공하면_200과_FOLLOWING_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(
-                3L, "팔로잉", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"));
+                3L, "팔로잉", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true);
         Pagination<MemberResDTO.FollowingItem> page = Pagination.<MemberResDTO.FollowingItem>builder()
                 .data(List.of(following))
                 .nextCursor(null)
                 .hasNext(false)
                 .pageSize(10)
                 .build();
-        when(memberQueryService.findFollowing(eq(TARGET_MEMBER_ID), isNull(), eq(10))).thenReturn(page);
+        when(memberQueryService.findFollowing(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), isNull(), eq(10))).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/members/{memberId}/following", TARGET_MEMBER_ID)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
@@ -310,12 +311,13 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("MEMBER_200_FOLLOWING_FETCHED"))
                 .andExpect(jsonPath("$.result.data[0].nickname").value("팔로잉"))
+                .andExpect(jsonPath("$.result.data[0].isFollowing").value(true))
                 .andExpect(jsonPath("$.result.hasNext").value(false));
     }
 
     @Test
     void 존재하지_않는_회원의_팔로잉_목록을_조회하면_404를_반환한다() throws Exception {
-        when(memberQueryService.findFollowing(eq(TARGET_MEMBER_ID), isNull(), eq(10)))
+        when(memberQueryService.findFollowing(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), isNull(), eq(10)))
                 .thenThrow(new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         mockMvc.perform(get("/api/v1/members/{memberId}/following", TARGET_MEMBER_ID)
@@ -357,14 +359,14 @@ class MemberControllerTest {
                 .hasNext(false)
                 .pageSize(50)
                 .build();
-        when(memberQueryService.findFollowing(eq(TARGET_MEMBER_ID), isNull(), eq(50))).thenReturn(page);
+        when(memberQueryService.findFollowing(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), isNull(), eq(50))).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/members/{memberId}/following", TARGET_MEMBER_ID)
                         .param("pageSize", "50")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk());
 
-        verify(memberQueryService).findFollowing(TARGET_MEMBER_ID, null, 50);
+        verify(memberQueryService).findFollowing(AUTH_MEMBER_ID, TARGET_MEMBER_ID, null, 50);
     }
 
     @Test
@@ -376,19 +378,19 @@ class MemberControllerTest {
                 .hasNext(false)
                 .pageSize(10)
                 .build();
-        when(memberQueryService.findFollowing(TARGET_MEMBER_ID, cursor, 10)).thenReturn(page);
+        when(memberQueryService.findFollowing(AUTH_MEMBER_ID, TARGET_MEMBER_ID, cursor, 10)).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/members/{memberId}/following", TARGET_MEMBER_ID)
                         .param("cursor", cursor)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk());
 
-        verify(memberQueryService).findFollowing(TARGET_MEMBER_ID, cursor, 10);
+        verify(memberQueryService).findFollowing(AUTH_MEMBER_ID, TARGET_MEMBER_ID, cursor, 10);
     }
 
     @Test
     void 팔로잉_목록_조회시_잘못된_커서면_400을_반환한다() throws Exception {
-        when(memberQueryService.findFollowing(eq(TARGET_MEMBER_ID), eq("invalid-cursor"), eq(10)))
+        when(memberQueryService.findFollowing(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), eq("invalid-cursor"), eq(10)))
                 .thenThrow(new MemberException(MemberErrorCode.INVALID_CURSOR));
 
         mockMvc.perform(get("/api/v1/members/{memberId}/following", TARGET_MEMBER_ID)

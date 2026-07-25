@@ -12,6 +12,7 @@ import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberPath;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -27,7 +28,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Pagination<MemberResDTO.FollowerItem> findFollowersByMemberId(Long memberId, String cursor, Integer pageSize) {
+    public Pagination<MemberResDTO.FollowerItem> findFollowersByMemberId(Long viewerId, Long memberId, String cursor, Integer pageSize) {
         QMemberFollow memberFollow = QMemberFollow.memberFollow;
         QMember follower = QMember.member;
         CursorInfo cursorInfo = parseCursor(cursor);
@@ -40,7 +41,8 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                                 follower.nickname,
                                 follower.name,
                                 follower.profileImageObjectKey,
-                                memberFollow.createdAt
+                                memberFollow.createdAt,
+                                isFollowedByViewer(viewerId, follower.id)
                         )
                 )
                 .from(memberFollow)
@@ -72,7 +74,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
     }
 
     @Override
-    public Pagination<MemberResDTO.FollowingItem> findFollowingByMemberId(Long memberId, String cursor, Integer pageSize) {
+    public Pagination<MemberResDTO.FollowingItem> findFollowingByMemberId(Long viewerId, Long memberId, String cursor, Integer pageSize) {
         QMemberFollow memberFollow = QMemberFollow.memberFollow;
         QMember following = QMember.member;
         CursorInfo cursorInfo = parseCursor(cursor);
@@ -85,7 +87,8 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                                 following.nickname,
                                 following.name,
                                 following.profileImageObjectKey,
-                                memberFollow.createdAt
+                                memberFollow.createdAt,
+                                isFollowedByViewer(viewerId, following.id)
                         )
                 )
                 .from(memberFollow)
@@ -133,6 +136,18 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
         } catch (DateTimeParseException | NumberFormatException e) {
             throw new MemberException(MemberErrorCode.INVALID_CURSOR, e);
         }
+    }
+
+    private BooleanExpression isFollowedByViewer(Long viewerId, NumberPath<Long> targetId) {
+        QMemberFollow viewerFollow = new QMemberFollow("viewerFollow");
+        return JPAExpressions
+                .selectOne()
+                .from(viewerFollow)
+                .where(
+                        viewerFollow.follower.id.eq(viewerId),
+                        viewerFollow.following.id.eq(targetId)
+                )
+                .exists();
     }
 
     private BooleanExpression cursorCondition(

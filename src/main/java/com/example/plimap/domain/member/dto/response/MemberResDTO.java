@@ -69,7 +69,8 @@ public class MemberResDTO {
             String nickname,
             String name,
             String profileImageObjectKey,
-            Instant followedAt
+            Instant followedAt,
+            boolean isFollowing
     ) {
     }
 
@@ -78,7 +79,8 @@ public class MemberResDTO {
             String nickname,
             String name,
             String profileImageObjectKey,
-            Instant followedAt
+            Instant followedAt,
+            boolean isFollowing
     ) {
     }
 }
