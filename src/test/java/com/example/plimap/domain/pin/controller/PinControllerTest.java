@@ -302,7 +302,7 @@ class PinControllerTest {
 
     @Test
     void 로그인하지_않은채로_내_피드_조회시_401을_반환한다() throws Exception {
-        mockMvc.perform(get(MEMBER_FEED_ENDPOINT))
+        mockMvc.perform(get(MY_FEED_ENDPOINT))
                 .andExpect(status().isUnauthorized());
     }
 

@@ -250,7 +250,7 @@ class PinQueryRepositoryImplTest {
                 pin3.getCreatedAt(),
                 pin3.getId()
         );
-        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), cursor, 2 );
+        Pagination<PinResponse.MyPin> response = pinQueryRepository.findMyPinList(member2.getId(), cursor, 2 );
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();

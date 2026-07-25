@@ -179,13 +179,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         QPlace place = QPlace.place;
         CursorInfo cursorInfo = parseCursor(cursor);
 
-        List<Pin> pins = queryFactory
-                .selectFrom(pin)
-                .join(pin.placeTrack, placeTrack).fetchJoin()
-                .join(placeTrack.track, track).fetchJoin()
-                .join(placeTrack.place, place).fetchJoin()
-                .leftJoin(pin.pinTagList, pinTag).fetchJoin()
-                .leftJoin(pinTag.tag, tag).fetchJoin()
+        List<Long> pinIds = queryFactory
+                .select(pin.id)
+                .from(pin)
                 .where(
                         pin.member.id.eq(memberId),
                         cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
@@ -195,17 +191,31 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .limit(pageSize + 1)
                 .fetch();
 
-        List<PinResponse.MyPin> data = new ArrayList<>(
-                pins.stream()
-                .map(PinConverter::toMyPin)
-                .toList()
-        );
-
-        boolean hasNext = data.size() > pageSize;
+        boolean hasNext = pinIds.size() > pageSize;
 
         if (hasNext) {
-            data.remove(pageSize.intValue());
+            pinIds.remove(pageSize.intValue());
         }
+
+        List<Pin> pins = queryFactory
+                .selectDistinct(pin)
+                .from(pin)
+                .join(pin.placeTrack, placeTrack).fetchJoin()
+                .join(placeTrack.track, track).fetchJoin()
+                .join(placeTrack.place, place).fetchJoin()
+                .leftJoin(pin.pinTagList, pinTag).fetchJoin()
+                .leftJoin(pinTag.tag, tag).fetchJoin()
+                .where(
+                        pin.id.in(pinIds),
+                        place.deletedAt.isNull(),
+                        placeTrack.deletedAt.isNull()
+                )
+                .orderBy(pin.createdAt.desc(), pin.id.desc())
+                .fetch();
+
+        List<PinResponse.MyPin> data = pins.stream()
+                .map(PinConverter::toMyPin)
+                .toList();
 
         if (data.isEmpty()) {
             return PinConverter.toPagination(
