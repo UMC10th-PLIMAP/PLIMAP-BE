@@ -95,4 +95,10 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         getActiveMember(memberId);
         return memberQueryRepository.findFollowersByMemberId(memberId, cursor, pageSize);
     }
+
+    @Override
+    public Pagination<MemberResDTO.FollowingItem> findFollowing(Long memberId, String cursor, Integer pageSize) {
+        getActiveMember(memberId);
+        return memberQueryRepository.findFollowingByMemberId(memberId, cursor, pageSize);
+    }
 }

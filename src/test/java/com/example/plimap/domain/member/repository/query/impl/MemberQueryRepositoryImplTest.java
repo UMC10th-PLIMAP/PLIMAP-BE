@@ -43,6 +43,10 @@ class MemberQueryRepositoryImplTest {
     private Member follower1;
     private Member follower2;
     private Member follower3;
+    private Member source;
+    private Member following1;
+    private Member following2;
+    private Member following3;
 
     @BeforeEach
     void setup() {
@@ -50,13 +54,25 @@ class MemberQueryRepositoryImplTest {
         follower1 = createMember("팔로워1");
         follower2 = createMember("팔로워2");
         follower3 = createMember("탈퇴한팔로워");
-        memberRepository.saveAll(List.of(target, follower1, follower2, follower3));
+        source = createMember("출발점");
+        following1 = createMember("팔로잉1");
+        following2 = createMember("팔로잉2");
+        following3 = createMember("탈퇴한팔로잉");
+        memberRepository.saveAll(List.of(
+                target, follower1, follower2, follower3,
+                source, following1, following2, following3
+        ));
 
         memberFollowRepository.save(MemberFollow.create(follower1, target));
         memberFollowRepository.save(MemberFollow.create(follower2, target));
         memberFollowRepository.save(MemberFollow.create(follower3, target));
 
+        memberFollowRepository.save(MemberFollow.create(source, following1));
+        memberFollowRepository.save(MemberFollow.create(source, following2));
+        memberFollowRepository.save(MemberFollow.create(source, following3));
+
         follower3.delete();
+        following3.delete();
 
         entityManager.flush();
         entityManager.clear();
@@ -98,6 +114,44 @@ class MemberQueryRepositoryImplTest {
         assertThat(secondPage.hasNext()).isFalse();
         assertThat(secondPage.nextCursor()).isNull();
         assertThat(secondPage.data().get(0).nickname()).isEqualTo("팔로워1");
+    }
+
+    @Test
+    void 팔로잉_목록을_최신순으로_조회한다() {
+        Pagination<MemberResDTO.FollowingItem> response =
+                memberQueryRepository.findFollowingByMemberId(source.getId(), null, 10);
+
+        assertThat(response.data()).extracting(MemberResDTO.FollowingItem::nickname)
+                .containsExactly("팔로잉2", "팔로잉1");
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.nextCursor()).isNull();
+    }
+
+    @Test
+    void 탈퇴한_회원은_팔로잉_목록에서_제외된다() {
+        Pagination<MemberResDTO.FollowingItem> response =
+                memberQueryRepository.findFollowingByMemberId(source.getId(), null, 10);
+
+        assertThat(response.data()).extracting(MemberResDTO.FollowingItem::nickname)
+                .doesNotContain("탈퇴한팔로잉");
+    }
+
+    @Test
+    void 팔로잉_목록을_커서_기반_페이지네이션으로_조회한다() {
+        Pagination<MemberResDTO.FollowingItem> firstPage =
+                memberQueryRepository.findFollowingByMemberId(source.getId(), null, 1);
+
+        assertThat(firstPage.data()).hasSize(1);
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(firstPage.nextCursor()).isNotNull();
+
+        Pagination<MemberResDTO.FollowingItem> secondPage =
+                memberQueryRepository.findFollowingByMemberId(source.getId(), firstPage.nextCursor(), 1);
+
+        assertThat(secondPage.data()).hasSize(1);
+        assertThat(secondPage.hasNext()).isFalse();
+        assertThat(secondPage.nextCursor()).isNull();
+        assertThat(secondPage.data().get(0).nickname()).isEqualTo("팔로잉1");
     }
 
     private Member createMember(String nickname) {

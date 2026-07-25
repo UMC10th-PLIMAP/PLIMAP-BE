@@ -97,4 +97,20 @@ public interface MemberControllerDocs {
             Integer pageSize,
             String cursor
     );
+
+    @Operation(
+            summary = "팔로잉 목록 조회",
+            description = """
+                    경로의 memberId에 해당하는 회원이 팔로우하는 회원 목록을 최신순으로 조회합니다.
+
+                    커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
+                    """
+    )
+    ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(
+            Long memberId,
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            String cursor
+    );
 }

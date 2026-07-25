@@ -18,7 +18,8 @@ public enum MemberSuccessCode implements BaseSuccessCode {
     OTHER_PROFILE_FETCHED(HttpStatus.OK, "MEMBER_200_OTHER_PROFILE_FETCHED", "회원 프로필을 조회했습니다."),
     FOLLOWED(HttpStatus.OK, "MEMBER_200_FOLLOWED", "팔로우했습니다."),
     UNFOLLOWED(HttpStatus.OK, "MEMBER_200_UNFOLLOWED", "언팔로우했습니다."),
-    FOLLOWERS_FETCHED(HttpStatus.OK, "MEMBER_200_FOLLOWERS_FETCHED", "팔로워 목록을 조회했습니다.");
+    FOLLOWERS_FETCHED(HttpStatus.OK, "MEMBER_200_FOLLOWERS_FETCHED", "팔로워 목록을 조회했습니다."),
+    FOLLOWING_FETCHED(HttpStatus.OK, "MEMBER_200_FOLLOWING_FETCHED", "팔로잉 목록을 조회했습니다.");
 
     private final HttpStatus status;
     private final String code;

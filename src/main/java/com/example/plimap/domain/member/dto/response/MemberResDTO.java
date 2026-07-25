@@ -72,4 +72,13 @@ public class MemberResDTO {
             Instant followedAt
     ) {
     }
+
+    public record FollowingItem(
+            Long id,
+            String nickname,
+            String name,
+            String profileImageObjectKey,
+            Instant followedAt
+    ) {
+    }
 }

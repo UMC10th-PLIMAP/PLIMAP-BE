@@ -18,4 +18,6 @@ public interface MemberQueryService {
     MemberResDTO.OtherProfile getOtherProfile(Long viewerId, Long targetMemberId);
 
     Pagination<MemberResDTO.FollowerItem> findFollowers(Long memberId, String cursor, Integer pageSize);
+
+    Pagination<MemberResDTO.FollowingItem> findFollowing(Long memberId, String cursor, Integer pageSize);
 }
