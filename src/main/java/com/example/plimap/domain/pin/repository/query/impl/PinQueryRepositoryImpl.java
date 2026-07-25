@@ -51,6 +51,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                        COUNT(*) AS pin_count
                 FROM pin
                 WHERE deleted_at IS NULL
+                        AND pl.id IN (:placeIds) 
                 GROUP BY place_id
             ) pc
                 ON pc.place_id = pl.id
