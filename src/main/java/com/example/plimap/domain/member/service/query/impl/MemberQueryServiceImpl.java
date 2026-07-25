@@ -1,6 +1,7 @@
 package com.example.plimap.domain.member.service.query.impl;
 
 import com.example.plimap.domain.member.converter.MemberConverter;
+import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollowId;
@@ -9,6 +10,7 @@ import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.vane.badwordfiltering.BadWordFiltering;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
 
     private final MemberRepository memberRepository;
     private final MemberFollowRepository memberFollowRepository;
+    private final MemberQueryRepository memberQueryRepository;
     private final BadWordFiltering badWordFiltering = new BadWordFiltering();
 
     @Override
@@ -85,5 +88,11 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
         boolean isFollowing = memberFollowRepository.existsById(new MemberFollowId(viewerId, targetMemberId));
         return MemberConverter.toOtherProfile(member, followerCount, followingCount, isFollowing);
+    }
+
+    @Override
+    public Pagination<MemberResDTO.FollowerItem> findFollowers(Long memberId, String cursor, Integer pageSize) {
+        getActiveMember(memberId);
+        return memberQueryRepository.findFollowersByMemberId(memberId, cursor, pageSize);
     }
 }

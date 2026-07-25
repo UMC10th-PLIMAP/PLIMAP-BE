@@ -63,4 +63,13 @@ public class MemberResDTO {
             boolean isFollowing
     ) {
     }
+
+    public record FollowerItem(
+            Long id,
+            String nickname,
+            String name,
+            String profileImageObjectKey,
+            Instant followedAt
+    ) {
+    }
 }
