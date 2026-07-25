@@ -114,6 +114,45 @@ class MemberControllerTest {
     }
 
     @Test
+    void 다른_사용자_프로필_조회에_성공하면_200과_OTHER_PROFILE_FETCHED_응답을_반환한다() throws Exception {
+        MemberResDTO.OtherProfile profile = new MemberResDTO.OtherProfile(
+                TARGET_MEMBER_ID, "상대방", "김상대", "소개", "key", 3L, 5L, true);
+        when(memberQueryService.getOtherProfile(AUTH_MEMBER_ID, TARGET_MEMBER_ID)).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/members/{memberId}", TARGET_MEMBER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_200_OTHER_PROFILE_FETCHED"))
+                .andExpect(jsonPath("$.result.nickname").value("상대방"))
+                .andExpect(jsonPath("$.result.isFollowing").value(true));
+    }
+
+    @Test
+    void 존재하지_않는_회원의_프로필을_조회하면_404를_반환한다() throws Exception {
+        when(memberQueryService.getOtherProfile(AUTH_MEMBER_ID, TARGET_MEMBER_ID))
+                .thenThrow(new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        mockMvc.perform(get("/api/v1/members/{memberId}", TARGET_MEMBER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("MEMBER_404_MEMBER_NOT_FOUND"));
+    }
+
+    @Test
+    void 본인의_memberId로_다른_사용자_프로필_조회를_요청하면_400을_반환한다() throws Exception {
+        when(memberQueryService.getOtherProfile(AUTH_MEMBER_ID, AUTH_MEMBER_ID))
+                .thenThrow(new MemberException(MemberErrorCode.CANNOT_VIEW_SELF_PROFILE));
+
+        mockMvc.perform(get("/api/v1/members/{memberId}", AUTH_MEMBER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("MEMBER_400_CANNOT_VIEW_SELF_PROFILE"));
+    }
+
+    @Test
     void 언팔로우에_성공하면_200과_UNFOLLOWED_응답을_반환한다() throws Exception {
         doNothing().when(memberCommandService).unfollow(AUTH_MEMBER_ID, TARGET_MEMBER_ID);
 

@@ -47,6 +47,16 @@ public class MemberController implements MemberControllerDocs {
     }
 
     @Override
+    @GetMapping("/{memberId}")
+    public ApiResponse<MemberResDTO.OtherProfile> getOtherProfile(
+            @AuthenticationPrincipal AuthMember authMember,
+            @PathVariable Long memberId
+    ) {
+        MemberResDTO.OtherProfile profile = memberQueryService.getOtherProfile(authMember.getMember().getId(), memberId);
+        return ApiResponse.success(MemberSuccessCode.OTHER_PROFILE_FETCHED, profile);
+    }
+
+    @Override
     @PatchMapping("/me")
     public ApiResponse<MemberResDTO.Profile> updateProfile(
             @AuthenticationPrincipal AuthMember authMember,

@@ -3,6 +3,7 @@ package com.example.plimap.domain.member.service.query.impl;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
@@ -71,5 +72,18 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         long followerCount = memberFollowRepository.countByIdFollowingId(memberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(memberId);
         return MemberConverter.toMyProfile(member, followerCount, followingCount);
+    }
+
+    @Override
+    public MemberResDTO.OtherProfile getOtherProfile(Long viewerId, Long targetMemberId) {
+        if (viewerId.equals(targetMemberId)) {
+            throw new MemberException(MemberErrorCode.CANNOT_VIEW_SELF_PROFILE);
+        }
+
+        Member member = getActiveMember(targetMemberId);
+        long followerCount = memberFollowRepository.countByIdFollowingId(targetMemberId);
+        long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
+        boolean isFollowing = memberFollowRepository.existsById(new MemberFollowId(viewerId, targetMemberId));
+        return MemberConverter.toOtherProfile(member, followerCount, followingCount, isFollowing);
     }
 }

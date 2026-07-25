@@ -17,7 +17,8 @@ public enum MemberErrorCode implements BaseErrorCode {
     CANNOT_FOLLOW_SELF(HttpStatus.BAD_REQUEST, "MEMBER_400_CANNOT_FOLLOW_SELF", "자기 자신을 팔로우할 수 없습니다."),
     ALREADY_FOLLOWING(HttpStatus.CONFLICT, "MEMBER_409_ALREADY_FOLLOWING", "이미 팔로우 중인 사용자입니다."),
     NOT_FOLLOWING(HttpStatus.NOT_FOUND, "MEMBER_404_NOT_FOLLOWING", "팔로우 중이 아닌 사용자입니다."),
-    CANNOT_UNFOLLOW_SELF(HttpStatus.BAD_REQUEST, "MEMBER_400_CANNOT_UNFOLLOW_SELF", "자기 자신을 언팔로우할 수 없습니다.");
+    CANNOT_UNFOLLOW_SELF(HttpStatus.BAD_REQUEST, "MEMBER_400_CANNOT_UNFOLLOW_SELF", "자기 자신을 언팔로우할 수 없습니다."),
+    CANNOT_VIEW_SELF_PROFILE(HttpStatus.BAD_REQUEST, "MEMBER_400_CANNOT_VIEW_SELF_PROFILE", "본인 프로필은 내 프로필 조회 API를 이용해 주세요.");
 
     private final HttpStatus status;
     private final String code;

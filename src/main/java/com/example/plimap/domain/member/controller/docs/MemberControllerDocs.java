@@ -56,6 +56,12 @@ public interface MemberControllerDocs {
     ApiResponse<MemberResDTO.MyProfile> getMyProfile(AuthMember authMember);
 
     @Operation(
+            summary = "다른 사용자 프로필 조회",
+            description = "경로의 memberId에 해당하는 회원의 프로필을 조회합니다. 팔로워/팔로잉 수와 내가 이 회원을 팔로우 중인지 여부를 함께 반환합니다. 본인의 memberId로는 조회할 수 없으며, 내 프로필 조회는 `GET /api/v1/members/me`를 이용해야 합니다."
+    )
+    ApiResponse<MemberResDTO.OtherProfile> getOtherProfile(AuthMember authMember, Long memberId);
+
+    @Operation(
             summary = "내 프로필 수정",
             description = "닉네임, 이름, 소개, 프로필 이미지를 수정합니다. 요청에 포함하지 않은 필드는 변경되지 않습니다."
     )

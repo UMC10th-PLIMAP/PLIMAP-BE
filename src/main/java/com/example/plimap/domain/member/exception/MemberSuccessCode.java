@@ -15,6 +15,7 @@ public enum MemberSuccessCode implements BaseSuccessCode {
     LOGOUT(HttpStatus.OK, "MEMBER_200_LOGOUT", "로그아웃되었습니다."),
     PROFILE_UPDATED(HttpStatus.OK, "MEMBER_200_PROFILE_UPDATED", "프로필이 수정되었습니다."),
     MY_PROFILE_FETCHED(HttpStatus.OK, "MEMBER_200_MY_PROFILE_FETCHED", "내 프로필을 조회했습니다."),
+    OTHER_PROFILE_FETCHED(HttpStatus.OK, "MEMBER_200_OTHER_PROFILE_FETCHED", "회원 프로필을 조회했습니다."),
     FOLLOWED(HttpStatus.OK, "MEMBER_200_FOLLOWED", "팔로우했습니다."),
     UNFOLLOWED(HttpStatus.OK, "MEMBER_200_UNFOLLOWED", "언팔로우했습니다.");
 

@@ -51,4 +51,16 @@ public class MemberResDTO {
             Instant onboardingCompletedAt
     ) {
     }
+
+    public record OtherProfile(
+            Long id,
+            String nickname,
+            String name,
+            String introduction,
+            String profileImageObjectKey,
+            long followerCount,
+            long followingCount,
+            boolean isFollowing
+    ) {
+    }
 }
