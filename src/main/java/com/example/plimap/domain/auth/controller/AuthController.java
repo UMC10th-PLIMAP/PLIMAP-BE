@@ -1,6 +1,7 @@
 package com.example.plimap.domain.auth.controller;
 
 import com.example.plimap.domain.auth.controller.docs.AuthControllerDocs;
+import com.example.plimap.domain.auth.dto.response.AuthResDTO;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.auth.exception.AuthErrorCode;
 import com.example.plimap.domain.auth.exception.AuthException;
@@ -31,6 +32,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,6 +53,15 @@ public class AuthController implements AuthControllerDocs {
     private final TokenBlacklistService tokenBlacklistService;
     private final RefreshTokenService refreshTokenService;
     private final AuthCookieUtil authCookieUtil;
+
+    @Override
+    @GetMapping("/csrf")
+    public ApiResponse<AuthResDTO.CsrfToken> getCsrfToken(CsrfToken csrfToken) {
+        return ApiResponse.success(
+                AuthSuccessCode.CSRF_TOKEN_ISSUED,
+                new AuthResDTO.CsrfToken(csrfToken.getToken())
+        );
+    }
 
     @Override
     @PostMapping("/onboarding")

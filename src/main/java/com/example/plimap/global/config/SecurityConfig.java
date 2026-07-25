@@ -4,23 +4,29 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.BearerTokenRequestMatcher;
 import com.example.plimap.global.security.CsrfCookieFilter;
 import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.example.plimap.global.security.JwtAuthFilter;
 import com.example.plimap.global.security.JwtUtil;
+import com.example.plimap.global.security.OAuthFrontendOriginFilter;
+import com.example.plimap.global.security.OAuthFrontendRedirectCookieRepository;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
 import com.example.plimap.global.security.TokenBlacklistService;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -30,6 +36,8 @@ import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(OAuthProperties.class)
+@Import(AuthCookieUtil.class)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -40,7 +48,6 @@ public class SecurityConfig {
     private final MemberRepository memberRepository;
     private final SecurityErrorResponseHandler securityErrorResponseHandler;
     private final TokenBlacklistService tokenBlacklistService;
-    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     @Value("${cookie.secure}")
     private boolean cookieSecure;
@@ -60,7 +67,19 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public OAuthFrontendRedirectCookieRepository oAuthFrontendRedirectCookieRepository(
+            AuthCookieUtil authCookieUtil,
+            OAuthProperties oAuthProperties
+    ) {
+        return new OAuthFrontendRedirectCookieRepository(authCookieUtil, oAuthProperties);
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(
+            HttpSecurity http,
+            HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository,
+            OAuthFrontendRedirectCookieRepository oAuthFrontendRedirectCookieRepository
+    ) throws Exception {
         http
                 .csrf(csrf -> csrf
                         .spa()
@@ -82,6 +101,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api/v1/auth/token/test",
+                                "/api/v1/auth/csrf",
                                 "/api/v1/auth/reissue"
                         ).permitAll()
                         .anyRequest().authenticated()
@@ -104,6 +124,10 @@ public class SecurityConfig {
                         .failureHandler(oAuthFailureHandler)
                 )
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(
+                        new OAuthFrontendOriginFilter(oAuthFrontendRedirectCookieRepository),
+                        OAuth2AuthorizationRequestRedirectFilter.class
+                )
                 .addFilterBefore(
                         new JwtAuthFilter(jwtUtil, memberRepository, tokenBlacklistService),
                         UsernamePasswordAuthenticationFilter.class

@@ -1,22 +1,22 @@
 package com.example.plimap.domain.auth.service.command.impl;
 
+import com.example.plimap.global.security.OAuthFrontendRedirectCookieRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.IOException;
-
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class OAuthFailureHandler implements AuthenticationFailureHandler {
 
-    @Value("${oauth.redirect-uri}")
-    private String redirectUri;
+    private final OAuthFrontendRedirectCookieRepository redirectCookieRepository;
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request,
@@ -26,6 +26,7 @@ public class OAuthFailureHandler implements AuthenticationFailureHandler {
         // 리다이렉트해서 실패 원인이 어디에도 남지 않는다. 여기서 명시적으로 기록한다.
         log.warn("OAuth2 로그인 실패: method={} uri={}", request.getMethod(), request.getRequestURI(), exception);
 
+        String redirectUri = redirectCookieRepository.consumeRedirectUri(request, response);
         String redirectLocation = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("error", "oauth_login_failed")
                 .build()
