@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TestTokenPropertiesTest {
 
-    private static final String ISSUE_KEY = "3B7YhG0A5czm0k0xGkTxYJofXxGtDZQp1yAp3_9XgS8";
+    private static final String ISSUE_KEY = "test-only-issue-key!".repeat(2);
 
     @Test
     void Dev_발급_키가_정확히_일치하면_허용한다() {

@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AuthTestTokenConfigTest {
 
-    private static final String ISSUE_KEY = "3B7YhG0A5czm0k0xGkTxYJofXxGtDZQp1yAp3_9XgS8";
+    private static final String ISSUE_KEY = "test-only-issue-key!".repeat(2);
 
     @Test
     void Dev에서_발급_키가_없으면_Context_시작에_실패한다() {

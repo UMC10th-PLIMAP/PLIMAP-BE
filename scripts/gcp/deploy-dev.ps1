@@ -140,29 +140,53 @@ function Get-HttpsUrl {
 function Assert-HttpStatus {
     param(
         [Parameter(Mandatory)][string]$Uri,
-        [Parameter(Mandatory)][int]$ExpectedStatus
+        [Parameter(Mandatory)][int]$ExpectedStatus,
+        [ValidateRange(1, 10)][int]$MaxAttempts = 3,
+        [ValidateRange(1, 60)][int]$RequestTimeoutSeconds = 20,
+        [ValidateRange(0, 60)][int]$InitialDelaySeconds = 2
     )
 
-    $webResponse = $null
-    try {
-        $webResponse = Invoke-WebRequest `
-            -UseBasicParsing `
-            -Uri $Uri `
-            -TimeoutSec 60
-        $actualStatus = [int]$webResponse.StatusCode
-    } catch {
-        $errorResponse = $_.Exception.Response
-        if ($null -eq $errorResponse) {
-            throw
+    $delaySeconds = $InitialDelaySeconds
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        $webResponse = $null
+        $actualStatus = $null
+        $lastErrorMessage = $null
+
+        try {
+            $webResponse = Invoke-WebRequest `
+                -UseBasicParsing `
+                -Uri $Uri `
+                -TimeoutSec $RequestTimeoutSeconds
+            $actualStatus = [int]$webResponse.StatusCode
+        } catch {
+            $errorResponse = $_.Exception.Response
+            if ($null -ne $errorResponse) {
+                $actualStatus = [int]$errorResponse.StatusCode
+            } else {
+                $lastErrorMessage = $_.Exception.Message
+            }
         }
-        $actualStatus = [int]$errorResponse.StatusCode
-    }
 
-    if ($actualStatus -ne $ExpectedStatus) {
-        throw "Endpoint verification failed: $Uri (expected=$ExpectedStatus, actual=$actualStatus)"
-    }
+        if ($actualStatus -eq $ExpectedStatus) {
+            return $webResponse
+        }
 
-    return $webResponse
+        if ($attempt -eq $MaxAttempts) {
+            if ($null -ne $actualStatus) {
+                throw "Endpoint verification failed after $MaxAttempts attempts: $Uri (expected=$ExpectedStatus, actual=$actualStatus)"
+            }
+            throw "Endpoint verification failed after $MaxAttempts attempts: $Uri (expected=$ExpectedStatus, error=$lastErrorMessage)"
+        }
+
+        $failureReason = if ($null -ne $actualStatus) {
+            "expected=$ExpectedStatus, actual=$actualStatus"
+        } else {
+            "error=$lastErrorMessage"
+        }
+        Write-Warning "Endpoint verification attempt $attempt/$MaxAttempts failed: $Uri ($failureReason). Retrying in $delaySeconds seconds."
+        Start-Sleep -Seconds $delaySeconds
+        $delaySeconds = [Math]::Min($delaySeconds * 2, 10)
+    }
 }
 
 function Write-EnvironmentFile {

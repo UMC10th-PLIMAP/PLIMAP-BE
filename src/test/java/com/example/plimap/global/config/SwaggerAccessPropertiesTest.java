@@ -36,4 +36,16 @@ class SwaggerAccessPropertiesTest {
         assertThatThrownBy(() -> new SwaggerAccessProperties("https://dev.plimap.kr?from=test"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void 커스텀_포트가_있는_Origin은_거부한다() {
+        assertThatThrownBy(() -> new SwaggerAccessProperties("https://dev.plimap.kr:8443"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void credentials가_포함된_Origin은_거부한다() {
+        assertThatThrownBy(() -> new SwaggerAccessProperties("https://user:pass@dev.plimap.kr"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
