@@ -5,6 +5,12 @@ import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 
 public interface PlaceTrackQueryService {
 
+    PlaceTrackResponse.LikedPlaceTrackListResult getLikedPlaceTracks(
+            Long memberId,
+            int page,
+            int size
+    );
+
     PlaceTrackResponse.PlaceTrackDetail getPlaceTrackDetail(
             Long memberId,
             Long placeTrackId

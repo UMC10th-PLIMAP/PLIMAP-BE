@@ -61,6 +61,7 @@ class PlaceTrackControllerTest {
     private static final String ENDPOINT = "/api/v1/places/1/tracks";
     private static final String DETAIL_ENDPOINT = "/api/v1/place-tracks/10";
     private static final String LIKE_ENDPOINT = "/api/v1/place-tracks/10/likes";
+    private static final String LIKED_TRACKS_ENDPOINT = "/api/v1/place-tracks/likes";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -272,6 +273,103 @@ class PlaceTrackControllerTest {
                 .andExpect(jsonPath("$.result.likeCount").value(12));
 
         verify(placeTrackCommandService).deletePlaceTrackLike(1L, 10L);
+    }
+
+    @Test
+    void 좋아요한_장소별_곡_목록을_반환한다() throws Exception {
+        when(placeTrackQueryService.getLikedPlaceTracks(1L, 0, 20))
+                .thenReturn(likedListResponse());
+
+        mockMvc.perform(authenticatedGet(LIKED_TRACKS_ENDPOINT))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PLACE_TRACK200_3"))
+                .andExpect(jsonPath("$.message")
+                        .value("좋아요한 곡 목록 조회에 성공했습니다."))
+                .andExpect(jsonPath("$.result.tracks[0].placeTrackId").value(10))
+                .andExpect(jsonPath("$.result.tracks[0].trackName")
+                        .value("LOVE ATTACK"))
+                .andExpect(jsonPath("$.result.tracks[0].artistName")
+                        .value("RESCENE"))
+                .andExpect(jsonPath("$.result.tracks[0].artworkUrl")
+                        .value("https://image.example/love-attack.jpg"))
+                .andExpect(jsonPath("$.result.tracks[0].likeCount").value(5))
+                .andExpect(jsonPath("$.result.tracks[0].isLiked").doesNotExist())
+                .andExpect(jsonPath("$.result.tracks[0].pinCount").doesNotExist())
+                .andExpect(jsonPath("$.result.page").value(0))
+                .andExpect(jsonPath("$.result.size").value(20))
+                .andExpect(jsonPath("$.result.hasNext").value(false));
+
+        verify(placeTrackQueryService).getLikedPlaceTracks(1L, 0, 20);
+    }
+
+    @Test
+    void 좋아요한_장소별_곡이_없으면_빈_배열을_반환한다() throws Exception {
+        when(placeTrackQueryService.getLikedPlaceTracks(1L, 0, 20))
+                .thenReturn(new PlaceTrackResponse.LikedPlaceTrackListResult(
+                        List.of(),
+                        0,
+                        20,
+                        false
+                ));
+
+        mockMvc.perform(authenticatedGet(LIKED_TRACKS_ENDPOINT))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.tracks").isArray())
+                .andExpect(jsonPath("$.result.tracks").isEmpty())
+                .andExpect(jsonPath("$.result.hasNext").value(false));
+    }
+
+    @Test
+    void 좋아요한_장소별_곡_목록의_페이지_조건을_서비스에_전달한다()
+            throws Exception {
+        when(placeTrackQueryService.getLikedPlaceTracks(1L, 2, 30))
+                .thenReturn(new PlaceTrackResponse.LikedPlaceTrackListResult(
+                        List.of(),
+                        2,
+                        30,
+                        false
+                ));
+
+        mockMvc.perform(authenticatedGet(LIKED_TRACKS_ENDPOINT)
+                        .queryParam("page", "2")
+                        .queryParam("size", "30"))
+                .andExpect(status().isOk());
+
+        verify(placeTrackQueryService).getLikedPlaceTracks(1L, 2, 30);
+    }
+
+    @Test
+    void 인증되지_않은_좋아요한_장소별_곡_목록_조회는_401을_반환한다()
+            throws Exception {
+        mockMvc.perform(get(LIKED_TRACKS_ENDPOINT))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(placeTrackQueryService);
+    }
+
+    @Test
+    void 좋아요한_장소별_곡_목록의_page가_음수이면_400을_반환한다()
+            throws Exception {
+        mockMvc.perform(authenticatedGet(LIKED_TRACKS_ENDPOINT)
+                        .queryParam("page", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value(GeneralErrorCode.VALIDATION_FAILED.getCode()));
+
+        verifyNoInteractions(placeTrackQueryService);
+    }
+
+    @Test
+    void 좋아요한_장소별_곡_목록의_size가_범위를_벗어나면_400을_반환한다()
+            throws Exception {
+        mockMvc.perform(authenticatedGet(LIKED_TRACKS_ENDPOINT)
+                        .queryParam("size", "201"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value(GeneralErrorCode.VALIDATION_FAILED.getCode()));
+
+        verifyNoInteractions(placeTrackQueryService);
     }
 
     @Test
@@ -515,6 +613,21 @@ class PlaceTrackControllerTest {
                 "https://example.com/love-attack.png",
                 33,
                 true
+        );
+    }
+
+    private PlaceTrackResponse.LikedPlaceTrackListResult likedListResponse() {
+        return new PlaceTrackResponse.LikedPlaceTrackListResult(
+                List.of(new PlaceTrackResponse.LikedPlaceTrackItem(
+                        10L,
+                        "LOVE ATTACK",
+                        "RESCENE",
+                        "https://image.example/love-attack.jpg",
+                        5
+                )),
+                0,
+                20,
+                false
         );
     }
 }
