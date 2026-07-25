@@ -105,6 +105,21 @@ class TrackRepositoryIntegrationTest {
     }
 
     @Test
+    void 삭제된_Place의_활성_PlaceTrack은_상세_조회에서_제외한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("deleted-place-detail-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+        place.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(placeTrackRepository
+                .findDetailByIdAndDeletedAtIsNull(placeTrack.getId()))
+                .isEmpty();
+    }
+
+    @Test
     void 사용자별_PlaceTrack_좋아요_여부를_정확히_조회한다() {
         Place place = savePlace();
         Track track = trackRepository.save(track("like-detail-video-id"));
