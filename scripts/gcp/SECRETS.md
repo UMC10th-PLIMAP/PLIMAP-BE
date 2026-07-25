@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | 스크립트 고정값 | `dev` |
 | `CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | `https://dev.plimap.kr,http://localhost:5173` |
-| `OAUTH_REDIRECT_URI` | 기본 `FrontendRedirectUri` 또는 `PublicBaseUrl` + `/home` | `https://dev.plimap.kr/home` |
+| `OAUTH_REDIRECT_URI` | 기본 `FrontendRedirectUri` 또는 `PublicBaseUrl` + `/app/oauth/callback` | `https://dev.plimap.kr/app/oauth/callback` |
 | `OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | `https://dev.plimap.kr,http://localhost:5173` |
 | `KAKAO_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/kakao` |
 | `GOOGLE_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/google` |
@@ -22,7 +22,7 @@ GitHub Actions에서는 다음 Repository Variable로 공개 주소와 allowlist
 | Repository Variable | 스크립트 인자 | dev 기본 동작 |
 | --- | --- | --- |
 | `DEV_PUBLIC_BASE_URL` | `PublicBaseUrl` | `https://dev.plimap.kr` |
-| `DEV_FRONTEND_REDIRECT_URI` | `FrontendRedirectUri` | 미설정 시 `PublicBaseUrl` + `/home` |
+| `DEV_FRONTEND_REDIRECT_URI` | `FrontendRedirectUri` | 미설정 시 `PublicBaseUrl` + `/app/oauth/callback` |
 | `DEV_CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | 미설정 시 `PublicBaseUrl,http://localhost:5173` |
 | `DEV_OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | 미설정 시 `PublicBaseUrl,http://localhost:5173` |
 
@@ -76,4 +76,4 @@ rediss://default:{url-encoded-password}@{host}:{port}
 
 ### OAuth
 
-Kakao와 Google에는 dev 전용 OAuth client를 사용합니다. 각 Provider Console의 callback URI는 일반 환경변수 표의 `KAKAO_REDIRECT_URI`, `GOOGLE_REDIRECT_URI`와 일치해야 합니다. Cloud Run 원본 URL과 `localhost:5173`은 Provider callback URI로 사용하지 않습니다. 백엔드 callback 처리 후에는 로그인 시작 요청에 저장된 `frontendOrigin`에 따라 Dev 배포 프론트 또는 로컬 프론트의 `/home`으로 이동합니다.
+Kakao와 Google에는 dev 전용 OAuth client를 사용합니다. 각 Provider Console의 callback URI는 일반 환경변수 표의 `KAKAO_REDIRECT_URI`, `GOOGLE_REDIRECT_URI`와 일치해야 합니다. Cloud Run 원본 URL과 `localhost:5173`은 Provider callback URI로 사용하지 않습니다. 백엔드 callback 처리 후에는 로그인 시작 요청에 저장된 `frontendOrigin`에 따라 Dev 배포 프론트 또는 로컬 프론트의 `/app/oauth/callback`으로 이동합니다.
