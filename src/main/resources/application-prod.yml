@@ -1,6 +1,5 @@
 # Prod 환경 설정
 
-# Swagger 설정
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:false}

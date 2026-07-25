@@ -63,6 +63,19 @@ class JwtUtilTest {
         assertThat(jwtUtil.isRefreshToken(refreshToken)).isTrue();
     }
 
+    @Test
+    void 테스트_액세스_토큰은_1시간_동안_유효하다() {
+        String token = jwtUtil.createTestAccessToken(authMember(1L));
+
+        Duration remaining = jwtUtil.getRemainingExpiry(token);
+
+        assertThat(jwtUtil.isAccessToken(token)).isTrue();
+        assertThat(remaining).isPositive();
+        assertThat(remaining)
+                .isLessThanOrEqualTo(jwtUtil.getTestAccessTokenExpiry())
+                .isGreaterThan(jwtUtil.getTestAccessTokenExpiry().minusSeconds(5));
+    }
+
     private AuthMember authMember(Long memberId) {
         Member member = mock(Member.class);
         when(member.getId()).thenReturn(memberId);

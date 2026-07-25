@@ -13,7 +13,7 @@
 | Redis | Docker Compose | Redis Cloud (`ap-northeast-2`) | 미정 |
 | 외부 진입점 | `localhost:8080` | 개인 서버의 Traefik | `plimap.kr` 사용 예정, 구성 미정 |
 | 프론트엔드 | `localhost:5173` 기준 | 로컬 개발 서버와 개인 서버 Docker가 Dev 백엔드 공유 | 구성 미정 |
-| Swagger/OpenAPI | 활성화 | 활성화, 현재 공개 | 기본 비활성화 |
+| Swagger/OpenAPI | 활성화 | 활성화 | 기본 비활성화 |
 | 배포 방식 | Gradle로 직접 실행 | GitHub Actions 자동 배포 또는 PowerShell 스크립트 | 미구축 |
 
 prod 항목은 현재 저장소에서 배포 완료를 의미하지 않습니다. `application-prod.yml`에는 Swagger를 기본적으로 비활성화하는 정책만 있으며, prod용 배포 워크플로와 인프라는 아직 추가되지 않았습니다.
@@ -157,7 +157,7 @@ Cloud Run은 외부에서 접속한 `dev.plimap.kr` host와 HTTPS protocol을 �
 | Authentication | 공개 접근 허용 |
 | Container port | 8080 |
 
-dev Swagger와 프론트 연동을 위해 Cloud Run은 `ingress=all`, 인증 없는 공개 접근을 사용합니다. 이에 따른 `run.app` 원본 URL의 직접 노출은 dev 환경에서 한시적으로 허용한 위험이며, 접근 제한이나 Swagger 비공개 전환은 별도 보안 작업으로 진행합니다.
+Cloud Run은 프론트와 API 연동을 위해 `ingress=all`, 인증 없는 공개 접근을 유지합니다. 일반 API, OAuth와 health 경로는 원본 URL에서도 기존 동작을 유지하지만, Swagger UI와 OpenAPI 경로는 forwarded host가 `dev.plimap.kr`인 요청에만 응답합니다. Cloud Run 원본 host의 동일 경로는 `404 Not Found`를 반환합니다.
 
 Cloud Run 원본 URL은 고정 문서값으로 관리하지 않고 서비스 상태에서 조회합니다.
 
@@ -175,7 +175,7 @@ gcloud run services describe plimap-api-dev `
 3. GitHub Actions가 Workload Identity Federation으로 GCP에 인증합니다.
 4. Docker 이미지를 빌드해 Artifact Registry에 commit SHA tag로 push합니다.
 5. `deploy-dev.ps1`이 Cloud Run의 새 revision을 배포합니다.
-6. Cloud Run 원본 URL에서 health, Swagger UI, OpenAPI 응답을 검증합니다.
+6. Cloud Run 원본 URL의 health와 문서 경로 차단을 확인하고, `dev.plimap.kr`에서 Swagger UI와 OpenAPI 실제 콘텐츠를 검증합니다.
 
 로컬에서 동일한 배포 스크립트를 실행하는 방법은 [GCP 스크립트 README](../scripts/gcp/README.md)를 참고합니다.
 
@@ -183,7 +183,9 @@ gcloud run services describe plimap-api-dev `
 
 - Supabase Transaction Pooler를 사용하며 pooler 호환성을 위한 JDBC 설정을 적용합니다.
 - Redis Cloud의 TLS endpoint를 사용합니다.
-- Swagger UI와 OpenAPI 문서를 활성화합니다.
+- Swagger UI와 OpenAPI 문서는 `dev.plimap.kr`에서만 제공하고 Cloud Run 원본 host에는 `404`를 반환합니다.
+- Dev 테스트 토큰은 Secret Manager에서 주입한 별도 발급 키가 일치하고 대상 회원이 활성 상태일 때만 발급합니다.
+- Dev 테스트 토큰은 일반 액세스 권한을 가지며 유효기간은 1시간입니다. Local에서는 발급 키를 생략할 수 있고 Prod에는 테스트 토큰 API가 생성되지 않습니다.
 - OAuth Provider callback은 `dev.plimap.kr`에 고정하고, 로그인 완료 후 이동 주소는 요청별 `frontendOrigin`에 따라 Dev 배포 프론트 또는 로컬 프론트로 결정합니다.
 - Dev 인증 쿠키는 cross-site 로컬 프론트 요청을 위해 `Secure`, `HttpOnly`, `SameSite=None`을 사용합니다.
 - 로컬 프론트는 `GET /api/v1/auth/csrf` 응답 본문의 토큰을 상태 변경 요청의 `X-XSRF-TOKEN` 헤더로 전달합니다.
@@ -224,11 +226,12 @@ prod 배포 전에는 다음 사항을 별도 작업으로 확정해야 합니�
 | Swagger UI | `/swagger-ui/index.html` |
 | OpenAPI 문서 | `/v3/api-docs` |
 
-dev 배포 스크립트는 Cloud Run 원본에서 위 endpoint를 검증합니다. Traefik 설정 후에는 다음 외부 인프라 검증까지 완료해야 dev 공개 경로 구성이 완료된 것으로 판단합니다.
+dev 배포 스크립트는 Cloud Run 원본에서 health endpoint의 `200`과 Swagger/OpenAPI 경로의 `404`를 확인합니다. 이어서 `dev.plimap.kr`의 Swagger UI가 실제 HTML을, OpenAPI 경로가 `openapi` 필드를 가진 JSON을 `200`으로 반환하는지 검증합니다. 다음 외부 인프라 검증까지 완료해야 dev 공개 경로 구성이 완료된 것으로 판단합니다.
 
 - `dev.plimap.kr` DNS가 Traefik 서버의 고정 공인 IP를 가리키고 유효한 TLS 인증서를 제공하는지 확인합니다.
 - 서버 방화벽이 의도한 공개 포트만 허용하는지 확인합니다.
 - 프론트 화면, API, OAuth 시작 경로, Swagger UI와 OpenAPI 문서가 의도한 upstream으로 라우팅되는지 확인합니다.
+- Cloud Run 원본 URL의 Swagger UI와 OpenAPI 문서가 `404`인지 확인합니다.
 - 로그인 응답의 `Set-Cookie`와 OAuth 응답의 `Location` header가 Traefik을 거쳐도 유지되는지 확인합니다.
 - Dev 배포 프론트와 `localhost:5173`에서 Google/Kakao 로그인을 각각 시작해 callback은 `dev.plimap.kr`로 들어오고 로그인 완료 후에는 요청을 시작한 프론트의 `/home`으로 돌아가는지 검증합니다.
 - 두 프론트 Origin에서 credential CORS, 인증 GET, CSRF 보호 상태 변경 요청, 재발급과 로그아웃을 E2E 검증합니다.
