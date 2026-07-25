@@ -16,7 +16,11 @@ import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 import com.example.plimap.domain.track.enums.PlaceTrackSort;
+import com.example.plimap.domain.track.exception.TrackErrorCode;
+import com.example.plimap.domain.track.exception.TrackException;
+import com.example.plimap.domain.track.exception.TrackSuccessCode;
 import com.example.plimap.domain.track.service.query.PlaceTrackQueryService;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -39,7 +43,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-@WebMvcTest(controllers = PlaceTrackController.class)
+@WebMvcTest(controllers = {
+        PlaceTrackController.class,
+        PlaceTrackDetailController.class
+})
 @Import({
         SecurityConfig.class,
         CorsConfig.class,
@@ -52,6 +59,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class PlaceTrackControllerTest {
 
     private static final String ENDPOINT = "/api/v1/places/1/tracks";
+    private static final String DETAIL_ENDPOINT = "/api/v1/place-tracks/10";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -123,6 +131,77 @@ class PlaceTrackControllerTest {
                         126.9780
                 )
         );
+    }
+
+    @Test
+    void 장소_노래_상세의_모든_필드를_반환한다() throws Exception {
+        when(placeTrackQueryService.getPlaceTrackDetail(1L, 10L))
+                .thenReturn(detailResponse());
+
+        mockMvc.perform(authenticatedGet(DETAIL_ENDPOINT))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value(
+                        TrackSuccessCode.PLACE_TRACK_DETAIL_SUCCESS.getCode()))
+                .andExpect(jsonPath("$.message")
+                        .value(TrackSuccessCode
+                                .PLACE_TRACK_DETAIL_SUCCESS
+                                .getMessage()))
+                .andExpect(jsonPath("$.result.placeTrackId").value(10))
+                .andExpect(jsonPath("$.result.trackId").value(20))
+                .andExpect(jsonPath("$.result.youtubeVideoId")
+                        .value("youtube-video-id"))
+                .andExpect(jsonPath("$.result.title").value("LOVE ATTACK"))
+                .andExpect(jsonPath("$.result.artist").value("RESCENE"))
+                .andExpect(jsonPath("$.result.albumImageUrl")
+                        .value("https://example.com/love-attack.png"))
+                .andExpect(jsonPath("$.result.likeCount").value(33))
+                .andExpect(jsonPath("$.result.userLike").value(true));
+
+        verify(placeTrackQueryService).getPlaceTrackDetail(1L, 10L);
+    }
+
+    @Test
+    void 장소_노래_ID_타입이_잘못되면_400을_반환한다() throws Exception {
+        mockMvc.perform(authenticatedGet("/api/v1/place-tracks/not-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code")
+                        .value(GeneralErrorCode.TYPE_MISMATCH.getCode()))
+                .andExpect(jsonPath("$.result").isEmpty());
+
+        verifyNoInteractions(placeTrackQueryService);
+    }
+
+    @Test
+    void 장소_노래_상세_인증이_누락되면_401을_반환한다() throws Exception {
+        mockMvc.perform(get(DETAIL_ENDPOINT))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code")
+                        .value(GeneralErrorCode.UNAUTHORIZED.getCode()))
+                .andExpect(jsonPath("$.result").isEmpty());
+
+        verifyNoInteractions(placeTrackQueryService);
+    }
+
+    @Test
+    void 장소_노래가_없으면_PLACE_TRACK_NOT_FOUND를_반환한다() throws Exception {
+        when(placeTrackQueryService.getPlaceTrackDetail(1L, 10L))
+                .thenThrow(new TrackException(
+                        TrackErrorCode.PLACE_TRACK_NOT_FOUND
+                ));
+
+        mockMvc.perform(authenticatedGet(DETAIL_ENDPOINT))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code")
+                        .value(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode()))
+                .andExpect(jsonPath("$.message")
+                        .value(TrackErrorCode
+                                .PLACE_TRACK_NOT_FOUND
+                                .getMessage()))
+                .andExpect(jsonPath("$.result").isEmpty());
     }
 
     @Test
@@ -238,7 +317,11 @@ class PlaceTrackControllerTest {
     }
 
     private MockHttpServletRequestBuilder authenticatedRequest() {
-        return get(ENDPOINT)
+        return authenticatedGet(ENDPOINT);
+    }
+
+    private MockHttpServletRequestBuilder authenticatedGet(String endpoint) {
+        return get(endpoint)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN);
     }
 
@@ -259,6 +342,19 @@ class PlaceTrackControllerTest {
                 0,
                 20,
                 false
+        );
+    }
+
+    private PlaceTrackResponse.PlaceTrackDetail detailResponse() {
+        return new PlaceTrackResponse.PlaceTrackDetail(
+                10L,
+                20L,
+                "youtube-video-id",
+                "LOVE ATTACK",
+                "RESCENE",
+                "https://example.com/love-attack.png",
+                33,
+                true
         );
     }
 }

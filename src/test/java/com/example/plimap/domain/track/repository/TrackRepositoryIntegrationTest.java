@@ -2,8 +2,10 @@ package com.example.plimap.domain.track.repository;
 
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
+import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.PlaceTrackLike;
+import com.example.plimap.domain.track.entity.PlaceTrackLikeId;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import com.example.plimap.support.RedisContainerConfiguration;
@@ -36,6 +38,9 @@ class TrackRepositoryIntegrationTest {
     private PlaceTrackRepository placeTrackRepository;
 
     @Autowired
+    private PlaceTrackLikeRepository placeTrackLikeRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Test
@@ -64,6 +69,58 @@ class TrackRepositoryIntegrationTest {
 
         assertThat(foundPlaceTrack.getId()).isEqualTo(savedPlaceTrack.getId());
         assertThat(foundPlaceTrack.getDeletedAt()).isNull();
+    }
+
+    @Test
+    void 장소_노래_상세는_활성_PlaceTrack과_Track을_함께_조회한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("detail-youtube-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+        entityManager.clear();
+
+        PlaceTrack foundPlaceTrack = placeTrackRepository
+                .findDetailByIdAndDeletedAtIsNull(placeTrack.getId())
+                .orElseThrow();
+
+        assertThat(foundPlaceTrack.getId()).isEqualTo(placeTrack.getId());
+        assertThat(foundPlaceTrack.getTrack().getId()).isEqualTo(track.getId());
+        assertThat(foundPlaceTrack.getTrack().getProviderTrackId())
+                .isEqualTo("detail-youtube-video-id");
+    }
+
+    @Test
+    void 삭제된_PlaceTrack은_상세_조회에서_제외한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("deleted-detail-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+        placeTrack.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(placeTrackRepository
+                .findDetailByIdAndDeletedAtIsNull(placeTrack.getId()))
+                .isEmpty();
+    }
+
+    @Test
+    void 사용자별_PlaceTrack_좋아요_여부를_정확히_조회한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("like-detail-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+        Member member = saveMember();
+        placeTrackLikeRepository.saveAndFlush(
+                PlaceTrackLike.create(placeTrack, member.getId())
+        );
+
+        assertThat(placeTrackLikeRepository.existsById(
+                new PlaceTrackLikeId(placeTrack.getId(), member.getId())
+        )).isTrue();
+        assertThat(placeTrackLikeRepository.existsById(
+                new PlaceTrackLikeId(placeTrack.getId(), member.getId() + 1L)
+        )).isFalse();
     }
 
     @Test
@@ -137,5 +194,14 @@ class TrackRepositoryIntegrationTest {
         entityManager.persist(place);
         entityManager.flush();
         return place;
+    }
+
+    private Member saveMember() {
+        Member member = Member.builder()
+                .nickname("좋아요사용자")
+                .build();
+        entityManager.persist(member);
+        entityManager.flush();
+        return member;
     }
 }

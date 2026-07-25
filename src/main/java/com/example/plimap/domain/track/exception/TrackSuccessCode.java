@@ -9,6 +9,11 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum TrackSuccessCode implements BaseSuccessCode {
 
+    PLACE_TRACK_DETAIL_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_TRACK_DETAIL_SUCCESS",
+            "장소 노래 상세 정보가 조회되었습니다."
+    ),
     TRACK_SEARCH_SUCCESS(
             HttpStatus.OK,
             "TRACK_SEARCH_SUCCESS",
