@@ -115,6 +115,12 @@ class MemberQueryServiceImplTest {
     }
 
     @Test
+    void 닉네임에_플리맵사용자가_포함되면_FORBIDDEN_WORD를_반환한다() {
+        assertThat(memberQueryService.checkNicknameFailReason("플리맵사용자임"))
+                .isEqualTo(NicknameCheckFailReason.FORBIDDEN_WORD);
+    }
+
+    @Test
     void 닉네임이_이미_사용중이면_DUPLICATE를_반환한다() {
         when(memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull("예림")).thenReturn(true);
 
