@@ -21,7 +21,7 @@ public enum TrackSuccessCode implements BaseSuccessCode {
     ),
     PLACE_TRACK_LIST_SUCCESS(
             HttpStatus.OK,
-            "PLACE_TRACK200_1",
+            "PLACE_TRACK_LIST_SUCCESS",
             "장소별 곡 목록 조회에 성공했습니다."
     );
 
