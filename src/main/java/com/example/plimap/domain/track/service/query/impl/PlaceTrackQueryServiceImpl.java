@@ -33,7 +33,7 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
     private final PlaceTrackQueryRepository placeTrackQueryRepository;
 
     @Override
-    public PlaceTrackResponse.ListResult getPlaceTracks(
+    public PlaceTrackResponse.PlaceTrackListResult getPlaceTracks(
             Long memberId,
             Long placeId,
             PlaceTrackRequest.List request

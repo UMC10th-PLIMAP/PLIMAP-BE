@@ -48,7 +48,7 @@ class TrackPlaybackPreparationServiceImplTest {
         when(selectedTrackCacheRepository.findByItunesTrackId(ITUNES_TRACK_ID))
                 .thenReturn(Optional.of(selectedTrack()));
 
-        TrackResponse.PlaybackPreparation result = service.prepare(request());
+        TrackResponse.PlaybackPreparationResult result = service.prepare(request());
 
         assertThat(result).isEqualTo(response());
         verify(selectedTrackCacheRepository).findByItunesTrackId(ITUNES_TRACK_ID);
@@ -65,7 +65,7 @@ class TrackPlaybackPreparationServiceImplTest {
         when(youtubeSearchClient.search(QUERY, 5))
                 .thenReturn(youtubeResponse("abcdefghijk"));
 
-        TrackResponse.PlaybackPreparation result = service.prepare(request());
+        TrackResponse.PlaybackPreparationResult result = service.prepare(request());
 
         assertThat(result).isEqualTo(response());
         verify(youtubeSearchClient).search(QUERY, 5);
@@ -127,7 +127,7 @@ class TrackPlaybackPreparationServiceImplTest {
                 new YoutubeSearchResponse.Item(new YoutubeSearchResponse.Id("abcdefghijk"))
         )));
 
-        TrackResponse.PlaybackPreparation result = service.prepare(request());
+        TrackResponse.PlaybackPreparationResult result = service.prepare(request());
 
         assertThat(result.youtubeVideoId()).isEqualTo("abcdefghijk");
         verify(selectedTrackCacheRepository).save(selectedTrack());
@@ -220,8 +220,8 @@ class TrackPlaybackPreparationServiceImplTest {
         );
     }
 
-    private TrackResponse.PlaybackPreparation response() {
-        return TrackResponse.PlaybackPreparation.from(selectedTrack());
+    private TrackResponse.PlaybackPreparationResult response() {
+        return TrackResponse.PlaybackPreparationResult.from(selectedTrack());
     }
 
     private YoutubeSearchResponse youtubeResponse(String videoId) {

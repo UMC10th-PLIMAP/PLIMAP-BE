@@ -9,20 +9,20 @@ public final class TrackResponse {
     private TrackResponse() {
     }
 
-    public record SearchResult(List<Item> tracks) {
+    public record TrackSearchResult(List<TrackSearchItem> tracks) {
 
-        public SearchResult {
+        public TrackSearchResult {
             tracks = List.copyOf(tracks);
         }
 
-        public static SearchResult from(ItunesSearchResponse response) {
-            return new SearchResult(response.results().stream()
-                    .map(Item::from)
+        public static TrackSearchResult from(ItunesSearchResponse response) {
+            return new TrackSearchResult(response.results().stream()
+                    .map(TrackSearchItem::from)
                     .toList());
         }
     }
 
-    public record Item(
+    public record TrackSearchItem(
             Long itunesTrackId,
             String trackName,
             String artistName,
@@ -32,8 +32,8 @@ public final class TrackResponse {
             Integer durationMs
     ) {
 
-        public static Item from(ItunesSearchResponse.Item item) {
-            return new Item(
+        public static TrackSearchItem from(ItunesSearchResponse.Item item) {
+            return new TrackSearchItem(
                     item.trackId(),
                     item.trackName(),
                     item.artistName(),
@@ -45,7 +45,7 @@ public final class TrackResponse {
         }
     }
 
-    public record PlaybackPreparation(
+    public record PlaybackPreparationResult(
             Long itunesTrackId,
             String youtubeVideoId,
             String title,
@@ -56,8 +56,8 @@ public final class TrackResponse {
             Integer durationMs
     ) {
 
-        public static PlaybackPreparation from(SelectedTrackCache selectedTrack) {
-            return new PlaybackPreparation(
+        public static PlaybackPreparationResult from(SelectedTrackCache selectedTrack) {
+            return new PlaybackPreparationResult(
                     selectedTrack.itunesTrackId(),
                     selectedTrack.youtubeVideoId(),
                     selectedTrack.title(),

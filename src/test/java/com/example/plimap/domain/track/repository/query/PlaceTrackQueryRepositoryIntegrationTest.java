@@ -84,7 +84,7 @@ class PlaceTrackQueryRepositoryIntegrationTest {
     }
 
     @Test
-    void 유효한_공개_PIN만_집계하고_삭제된_PlaceTrack을_제외한다() {
+    void 공개_PIN과_비공개_PIN을_모두_집계하고_삭제된_PIN은_제외한다() {
         Long active = insertPlaceTrack(3, "활성 곡");
         Long deleted = insertPlaceTrack(10, "삭제 곡");
         insertPin(active, "2026-07-23T00:01:00Z", true, false);
@@ -98,7 +98,78 @@ class PlaceTrackQueryRepositoryIntegrationTest {
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().placeTrackId()).isEqualTo(active);
-        assertThat(result.getContent().getFirst().pinCount()).isEqualTo(2);
+        assertThat(result.getContent().getFirst().pinCount()).isEqualTo(3);
+    }
+
+    @Test
+    void 비공개_PIN만_존재하는_PlaceTrack도_목록에_반환한다() {
+        Long privateOnly = insertPlaceTrack(1, "비공개 곡");
+        insertPin(privateOnly, "2026-07-23T00:01:00Z", false, false);
+
+        Slice<PlaceTrackQueryResult> result = find(PlaceTrackSort.POPULAR, 0, 20);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().getFirst().placeTrackId()).isEqualTo(privateOnly);
+        assertThat(result.getContent().getFirst().pinCount()).isEqualTo(1);
+    }
+
+    @Test
+    void 비공개_PIN이_더_최근이면_최신순에_반영한다() {
+        Long publicOlder = insertPlaceTrack(1, "공개 PIN 곡");
+        Long privateNewer = insertPlaceTrack(1, "비공개 PIN 곡");
+        insertPin(publicOlder, "2026-07-23T00:01:00Z", true, false);
+        insertPin(privateNewer, "2026-07-23T00:02:00Z", false, false);
+
+        Slice<PlaceTrackQueryResult> result = find(PlaceTrackSort.LATEST, 0, 20);
+
+        assertThat(result.getContent())
+                .extracting(PlaceTrackQueryResult::placeTrackId)
+                .containsExactly(privateNewer, publicOlder);
+    }
+
+    @Test
+    void 인기순_좋아요가_같으면_비공개_PIN_생성_시각을_보조_정렬에_반영한다() {
+        Long publicOlder = insertPlaceTrack(5, "공개 PIN 인기 곡");
+        Long privateNewer = insertPlaceTrack(5, "비공개 PIN 인기 곡");
+        insertPin(publicOlder, "2026-07-23T00:01:00Z", true, false);
+        insertPin(privateNewer, "2026-07-23T00:02:00Z", false, false);
+
+        Slice<PlaceTrackQueryResult> result = find(PlaceTrackSort.POPULAR, 0, 20);
+
+        assertThat(result.getContent())
+                .extracting(PlaceTrackQueryResult::placeTrackId)
+                .containsExactly(privateNewer, publicOlder);
+    }
+
+    @Test
+    void 삭제된_PIN은_목록과_PIN수와_최신_생성_시각에서_제외한다() {
+        Long activeWithDeletedNewer = insertPlaceTrack(1, "삭제 PIN 포함 곡");
+        Long activeNewer = insertPlaceTrack(1, "활성 최신 곡");
+        Long deletedOnly = insertPlaceTrack(1, "삭제 PIN 전용 곡");
+        insertPin(
+                activeWithDeletedNewer,
+                "2026-07-23T00:01:00Z",
+                true,
+                false
+        );
+        insertPin(
+                activeWithDeletedNewer,
+                "2026-07-23T00:03:00Z",
+                false,
+                true
+        );
+        insertPin(activeNewer, "2026-07-23T00:02:00Z", false, false);
+        insertPin(deletedOnly, "2026-07-23T00:04:00Z", true, true);
+
+        Slice<PlaceTrackQueryResult> result = find(PlaceTrackSort.LATEST, 0, 20);
+
+        assertThat(result.getContent())
+                .extracting(PlaceTrackQueryResult::placeTrackId)
+                .containsExactly(activeNewer, activeWithDeletedNewer);
+        assertThat(result.getContent().get(1).pinCount()).isEqualTo(1);
+        assertThat(result.getContent())
+                .extracting(PlaceTrackQueryResult::placeTrackId)
+                .doesNotContain(deletedOnly);
     }
 
     @Test

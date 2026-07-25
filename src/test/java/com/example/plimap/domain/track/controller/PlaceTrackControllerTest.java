@@ -210,15 +210,15 @@ class PlaceTrackControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN);
     }
 
-    private PlaceTrackResponse.ListResult response() {
-        return new PlaceTrackResponse.ListResult(
+    private PlaceTrackResponse.PlaceTrackListResult response() {
+        return new PlaceTrackResponse.PlaceTrackListResult(
                 1L,
                 "불빛무대 앞 광장",
                 "냥코",
                 100.0,
                 true,
                 true,
-                List.of(new PlaceTrackResponse.Item(
+                List.of(new PlaceTrackResponse.PlaceTrackItem(
                         10L,
                         "LOVE ATTACK",
                         "RESCENE",

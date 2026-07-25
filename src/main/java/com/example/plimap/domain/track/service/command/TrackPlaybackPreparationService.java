@@ -5,5 +5,5 @@ import com.example.plimap.domain.track.dto.response.TrackResponse;
 
 public interface TrackPlaybackPreparationService {
 
-    TrackResponse.PlaybackPreparation prepare(TrackRequest.PlaybackPreparation request);
+    TrackResponse.PlaybackPreparationResult prepare(TrackRequest.PlaybackPreparation request);
 }

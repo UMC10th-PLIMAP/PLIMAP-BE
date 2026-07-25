@@ -28,7 +28,7 @@ public class PlaceTrackController implements PlaceTrackControllerDocs {
 
     @Override
     @GetMapping("/{placeId}/tracks")
-    public ResponseEntity<ApiResponse<PlaceTrackResponse.ListResult>> getPlaceTracks(
+    public ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackListResult>> getPlaceTracks(
             @AuthenticationPrincipal AuthMember currentMember,
             @PathVariable Long placeId,
             @RequestParam(defaultValue = "POPULAR") PlaceTrackSort sort,
@@ -37,17 +37,18 @@ public class PlaceTrackController implements PlaceTrackControllerDocs {
             @RequestParam double latitude,
             @RequestParam double longitude
     ) {
-        PlaceTrackResponse.ListResult result = placeTrackQueryService.getPlaceTracks(
-                currentMember.getMember().getId(),
-                placeId,
-                new PlaceTrackRequest.List(
-                        sort,
-                        page,
-                        size,
-                        latitude,
-                        longitude
-                )
-        );
+        PlaceTrackResponse.PlaceTrackListResult result =
+                placeTrackQueryService.getPlaceTracks(
+                        currentMember.getMember().getId(),
+                        placeId,
+                        new PlaceTrackRequest.List(
+                                sort,
+                                page,
+                                size,
+                                latitude,
+                                longitude
+                        )
+                );
 
         return ResponseEntity
                 .status(TrackSuccessCode.PLACE_TRACK_LIST_SUCCESS.getStatus())

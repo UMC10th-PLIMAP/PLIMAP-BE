@@ -74,7 +74,7 @@ class PlaceTrackQueryServiceImplTest {
         when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
                 .thenReturn(Map.of());
 
-        PlaceTrackResponse.ListResult result =
+        PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
 
         assertThat(result.tracks()).isEmpty();
@@ -91,7 +91,7 @@ class PlaceTrackQueryServiceImplTest {
         when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
                 .thenReturn(Map.of(PLACE_ID, new PlacePinInfo(true, "냥코")));
 
-        PlaceTrackResponse.ListResult result =
+        PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
 
         assertThat(result.isWithinRadius()).isTrue();
@@ -102,12 +102,31 @@ class PlaceTrackQueryServiceImplTest {
     }
 
     @Test
+    void createdBy는_PinQueryService가_반환한_가장_오래된_활성_PIN_작성자다() {
+        givenPlaceAndDistance(100.0);
+        givenTracks(List.of(track(10L, 5, true)), false);
+        when(placeTrackQueryRepository.existsPlaceBookmark(PLACE_ID, MEMBER_ID))
+                .thenReturn(false);
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
+                .thenReturn(Map.of(
+                        PLACE_ID,
+                        new PlacePinInfo(true, "비공개PIN작성자")
+                ));
+
+        PlaceTrackResponse.PlaceTrackListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.createdBy()).isEqualTo("비공개PIN작성자");
+        verify(pinQueryService).findPinInfosByPlaceIds(List.of(PLACE_ID));
+    }
+
+    @Test
     void 정확히_500미터이면_반경_이내로_처리한다() {
         givenPlaceAndDistance(500.0);
         givenTracks(List.of(track(10L, 5, true)), false);
         givenPlaceDetails();
 
-        PlaceTrackResponse.ListResult result =
+        PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
 
         assertThat(result.distance()).isEqualTo(500.0);
@@ -127,12 +146,12 @@ class PlaceTrackQueryServiceImplTest {
         );
         givenPlaceDetails();
 
-        PlaceTrackResponse.ListResult result =
+        PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
 
         assertThat(result.isWithinRadius()).isFalse();
         assertThat(result.tracks())
-                .extracting(PlaceTrackResponse.Item::placeTrackId)
+                .extracting(PlaceTrackResponse.PlaceTrackItem::placeTrackId)
                 .containsExactly(20L, 10L);
         assertThat(result.tracks())
                 .allSatisfy(track -> {
@@ -147,7 +166,7 @@ class PlaceTrackQueryServiceImplTest {
         givenTracks(List.of(track(10L, 5, true)), true);
         givenPlaceDetails();
 
-        PlaceTrackResponse.ListResult result =
+        PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
 
         assertThat(result.page()).isZero();

@@ -32,7 +32,6 @@ public class PlaceTrackQueryRepositoryImpl implements PlaceTrackQueryRepository 
               ON p.place_track_id = pt.id
              AND p.place_id = pt.place_id
              AND p.deleted_at IS NULL
-             AND p.is_feed_public = TRUE
             LEFT JOIN place_track_like ptl
               ON ptl.place_track_id = pt.id
              AND ptl.member_id = :memberId

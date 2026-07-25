@@ -12,7 +12,7 @@ public record TrackMetadataCache(
         Integer durationMs
 ) {
 
-    public static TrackMetadataCache from(TrackResponse.Item item) {
+    public static TrackMetadataCache from(TrackResponse.TrackSearchItem item) {
         return new TrackMetadataCache(
                 item.itunesTrackId(),
                 item.trackName(),

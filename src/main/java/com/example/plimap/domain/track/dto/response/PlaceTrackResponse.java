@@ -7,25 +7,25 @@ public final class PlaceTrackResponse {
     private PlaceTrackResponse() {
     }
 
-    public record ListResult(
+    public record PlaceTrackListResult(
             Long placeId,
             String placeName,
             String createdBy,
             double distance,
             boolean isWithinRadius,
             boolean isBookmarked,
-            List<Item> tracks,
+            List<PlaceTrackItem> tracks,
             int page,
             int size,
             boolean hasNext
     ) {
 
-        public ListResult {
+        public PlaceTrackListResult {
             tracks = List.copyOf(tracks);
         }
     }
 
-    public record Item(
+    public record PlaceTrackItem(
             Long placeTrackId,
             String trackName,
             String artistName,

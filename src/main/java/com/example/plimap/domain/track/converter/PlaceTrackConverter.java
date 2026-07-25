@@ -11,7 +11,7 @@ public final class PlaceTrackConverter {
     private PlaceTrackConverter() {
     }
 
-    public static PlaceTrackResponse.ListResult toListResult(
+    public static PlaceTrackResponse.PlaceTrackListResult toListResult(
             Place place,
             String createdBy,
             double distance,
@@ -19,11 +19,11 @@ public final class PlaceTrackConverter {
             boolean bookmarked,
             Slice<PlaceTrackQueryResult> placeTracks
     ) {
-        List<PlaceTrackResponse.Item> tracks = placeTracks.getContent().stream()
+        List<PlaceTrackResponse.PlaceTrackItem> tracks = placeTracks.getContent().stream()
                 .map(placeTrack -> toItem(placeTrack, withinRadius))
                 .toList();
 
-        return new PlaceTrackResponse.ListResult(
+        return new PlaceTrackResponse.PlaceTrackListResult(
                 place.getId(),
                 place.getName(),
                 createdBy,
@@ -37,11 +37,11 @@ public final class PlaceTrackConverter {
         );
     }
 
-    private static PlaceTrackResponse.Item toItem(
+    private static PlaceTrackResponse.PlaceTrackItem toItem(
             PlaceTrackQueryResult placeTrack,
             boolean withinRadius
     ) {
-        return new PlaceTrackResponse.Item(
+        return new PlaceTrackResponse.PlaceTrackItem(
                 placeTrack.placeTrackId(),
                 placeTrack.trackName(),
                 placeTrack.artistName(),
