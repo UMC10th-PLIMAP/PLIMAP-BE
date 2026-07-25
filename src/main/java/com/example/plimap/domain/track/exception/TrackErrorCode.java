@@ -15,7 +15,7 @@ public enum TrackErrorCode implements BaseErrorCode {
             "존재하지 않는 placeTrack 입니다."
     ),
     PLACE_TRACK_ALREADY_LIKED(
-            HttpStatus.BAD_REQUEST,
+            HttpStatus.CONFLICT,
             "PLACE_TRACK_ALREADY_LIKED",
             "이미 좋아요를 등록한 장소별 곡입니다."
     ),
