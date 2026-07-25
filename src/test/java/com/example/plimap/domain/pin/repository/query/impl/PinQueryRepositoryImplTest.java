@@ -236,7 +236,6 @@ class PinQueryRepositoryImplTest {
         assertThat(response.hasNext()).isTrue();
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
         String nextCursor = response.nextCursor();
-        System.out.println(nextCursor);
         Pagination<PinResponse.MyPin> response2 = pinQueryRepository.findMyPinList(member2.getId(), nextCursor, 2 );
 
         assertThat(response2.data().size()).isEqualTo(1);
@@ -251,6 +250,33 @@ class PinQueryRepositoryImplTest {
                 pin3.getId()
         );
         Pagination<PinResponse.MyPin> response = pinQueryRepository.findMyPinList(member2.getId(), cursor, 2 );
+        assertThat(response.data().size()).isEqualTo(1);
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.nextCursor()).isNull();
+    }
+
+    @Test
+    void 특정_장소에_대한_핀_목록을_커서기반_페이지네이션으로_조회한다() {
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), null, 1 , 1L);
+
+        assertThat(response.data().size()).isEqualTo(1);
+        assertThat(response.hasNext()).isTrue();
+        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin2.getId());
+        String nextCursor = response.nextCursor();
+        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), nextCursor, 2, 1L);
+
+        assertThat(response2.data().size()).isEqualTo(1);
+        assertThat(response2.hasNext()).isFalse();
+        assertThat(response2.nextCursor()).isNull();
+    }
+
+    @Test
+    void 전달한_커서_기반으로_특정_장소에_대한_핀_목록을_조회한다() {
+        String cursor = "%s/%d".formatted(
+                pin2.getCreatedAt(),
+                pin2.getId()
+        );
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), cursor, 2, 1L);
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();
