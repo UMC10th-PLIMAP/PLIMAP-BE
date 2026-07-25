@@ -53,13 +53,12 @@ public class Member extends SoftDeleteEntity {
         return onboardingCompletedAt != null;
     }
 
-    public void completeOnboarding(String nickname, String profileImageObjectKey) {
+    public void completeOnboarding(String nickname) {
         this.nickname = nickname;
-        this.profileImageObjectKey = profileImageObjectKey;
         this.onboardingCompletedAt = Instant.now();
     }
 
-    public void updateProfile(String nickname, String name, String introduction, String profileImageObjectKey) {
+    public void updateProfile(String nickname, String name, String introduction) {
         if (nickname != null) {
             this.nickname = nickname;
         }
@@ -69,8 +68,12 @@ public class Member extends SoftDeleteEntity {
         if (introduction != null) {
             this.introduction = introduction;
         }
-        if (profileImageObjectKey != null) {
-            this.profileImageObjectKey = profileImageObjectKey;
+    }
+
+    public void updateProfileImage(String profileImageObjectKey) {
+        if (profileImageObjectKey == null) {
+            throw new IllegalArgumentException("profileImageObjectKey must not be null");
         }
+        this.profileImageObjectKey = profileImageObjectKey;
     }
 }

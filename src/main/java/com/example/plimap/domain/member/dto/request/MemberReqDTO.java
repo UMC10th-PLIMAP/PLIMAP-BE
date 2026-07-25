@@ -15,10 +15,6 @@ public class MemberReqDTO {
         @Pattern(regexp = "^[가-힣A-Za-z0-9]+$")
         @Schema(description = "닉네임 (2~10자, 한글/영문/숫자)", example = "플리맵")
         private String nickname;
-
-        @Size(max = 500)
-        @Schema(description = "프로필 이미지 객체 키", example = "profile/1/abc123.jpg")
-        private String profileImageObjectKey;
     }
 
     public record UpdateProfile(
@@ -34,11 +30,7 @@ public class MemberReqDTO {
 
             @Size(max = 100)
             @Schema(description = "소개. 값을 보내지 않으면 변경되지 않습니다.", example = "플리맵 개발 중입니다.")
-            String introduction,
-
-            @Size(max = 500)
-            @Schema(description = "프로필 이미지 객체 키. 값을 보내지 않으면 변경되지 않습니다.", example = "profile/1/abc123.jpg")
-            String profileImageObjectKey
+            String introduction
     ) {
     }
 }
