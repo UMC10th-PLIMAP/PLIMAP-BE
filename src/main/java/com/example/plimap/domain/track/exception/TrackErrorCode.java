@@ -9,6 +9,11 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum TrackErrorCode implements BaseErrorCode {
 
+    PLACE_TRACK_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "PLACE_TRACK_NOT_FOUND",
+            "존재하지 않는 placeTrack 입니다."
+    ),
     TRACK_EXTERNAL_API_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "TRACK_EXTERNAL_API_ERROR",

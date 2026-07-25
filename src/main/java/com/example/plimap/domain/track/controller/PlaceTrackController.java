@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/places")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @Validated
 public class PlaceTrackController implements PlaceTrackControllerDocs {
@@ -27,7 +27,7 @@ public class PlaceTrackController implements PlaceTrackControllerDocs {
     private final PlaceTrackQueryService placeTrackQueryService;
 
     @Override
-    @GetMapping("/{placeId}/tracks")
+    @GetMapping("/places/{placeId}/tracks")
     public ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackListResult>> getPlaceTracks(
             @AuthenticationPrincipal AuthMember currentMember,
             @PathVariable Long placeId,
@@ -54,6 +54,27 @@ public class PlaceTrackController implements PlaceTrackControllerDocs {
                 .status(TrackSuccessCode.PLACE_TRACK_LIST_SUCCESS.getStatus())
                 .body(ApiResponse.success(
                         TrackSuccessCode.PLACE_TRACK_LIST_SUCCESS,
+                        result
+                ));
+    }
+
+    @Override
+    @GetMapping("/place-tracks/{placeTrackId}")
+    public ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackDetail>>
+            getPlaceTrackDetail(
+                    @AuthenticationPrincipal AuthMember currentMember,
+                    @PathVariable Long placeTrackId
+            ) {
+        PlaceTrackResponse.PlaceTrackDetail result =
+                placeTrackQueryService.getPlaceTrackDetail(
+                        currentMember.getMember().getId(),
+                        placeTrackId
+                );
+
+        return ResponseEntity
+                .status(TrackSuccessCode.PLACE_TRACK_DETAIL_SUCCESS.getStatus())
+                .body(ApiResponse.success(
+                        TrackSuccessCode.PLACE_TRACK_DETAIL_SUCCESS,
                         result
                 ));
     }

@@ -15,9 +15,17 @@ import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.dto.PlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
+import com.example.plimap.domain.track.entity.PlaceTrack;
+import com.example.plimap.domain.track.entity.PlaceTrackLikeId;
+import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.domain.track.enums.PlaceTrackSort;
+import com.example.plimap.domain.track.exception.TrackErrorCode;
+import com.example.plimap.domain.track.exception.TrackException;
+import com.example.plimap.domain.track.repository.PlaceTrackLikeRepository;
+import com.example.plimap.domain.track.repository.PlaceTrackRepository;
 import com.example.plimap.domain.track.repository.query.PlaceTrackQueryRepository;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -34,6 +42,10 @@ class PlaceTrackQueryServiceImplTest {
     private final PlaceQueryService placeQueryService = mock(PlaceQueryService.class);
     private final PinLocationValidator pinLocationValidator =
             mock(PinLocationValidator.class);
+    private final PlaceTrackRepository placeTrackRepository =
+            mock(PlaceTrackRepository.class);
+    private final PlaceTrackLikeRepository placeTrackLikeRepository =
+            mock(PlaceTrackLikeRepository.class);
     private final PlaceTrackQueryRepository placeTrackQueryRepository =
             mock(PlaceTrackQueryRepository.class);
 
@@ -41,8 +53,63 @@ class PlaceTrackQueryServiceImplTest {
             new PlaceTrackQueryServiceImpl(
                     placeQueryService,
                     pinLocationValidator,
+                    placeTrackRepository,
+                    placeTrackLikeRepository,
                     placeTrackQueryRepository
             );
+
+    @Test
+    void 장소_노래_상세와_사용자_좋아요를_반환한다() {
+        PlaceTrack placeTrack = detailPlaceTrack();
+        when(placeTrackRepository.findDetailByIdAndDeletedAtIsNull(10L))
+                .thenReturn(Optional.of(placeTrack));
+        when(placeTrackLikeRepository.existsById(
+                new PlaceTrackLikeId(10L, MEMBER_ID)
+        )).thenReturn(true);
+
+        PlaceTrackResponse.PlaceTrackDetail result =
+                placeTrackQueryService.getPlaceTrackDetail(MEMBER_ID, 10L);
+
+        assertThat(result.placeTrackId()).isEqualTo(10L);
+        assertThat(result.trackId()).isEqualTo(20L);
+        assertThat(result.youtubeVideoId()).isEqualTo("youtube-video-id");
+        assertThat(result.title()).isEqualTo("LOVE ATTACK");
+        assertThat(result.artist()).isEqualTo("RESCENE");
+        assertThat(result.albumImageUrl())
+                .isEqualTo("https://example.com/love-attack.png");
+        assertThat(result.likeCount()).isEqualTo(33);
+        assertThat(result.userLike()).isTrue();
+    }
+
+    @Test
+    void 좋아요하지_않은_장소_노래는_userLike가_false다() {
+        PlaceTrack placeTrack = detailPlaceTrack();
+        when(placeTrackRepository.findDetailByIdAndDeletedAtIsNull(10L))
+                .thenReturn(Optional.of(placeTrack));
+        when(placeTrackLikeRepository.existsById(
+                new PlaceTrackLikeId(10L, MEMBER_ID)
+        )).thenReturn(false);
+
+        PlaceTrackResponse.PlaceTrackDetail result =
+                placeTrackQueryService.getPlaceTrackDetail(MEMBER_ID, 10L);
+
+        assertThat(result.likeCount()).isEqualTo(33);
+        assertThat(result.userLike()).isFalse();
+    }
+
+    @Test
+    void 장소_노래가_없으면_PLACE_TRACK_NOT_FOUND_예외가_발생한다() {
+        when(placeTrackRepository.findDetailByIdAndDeletedAtIsNull(10L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                placeTrackQueryService.getPlaceTrackDetail(MEMBER_ID, 10L))
+                .isInstanceOfSatisfying(TrackException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(TrackErrorCode.PLACE_TRACK_NOT_FOUND));
+
+        verifyNoInteractions(placeTrackLikeRepository);
+    }
 
     @Test
     void 존재하지_않는_장소이면_장소_예외를_전파한다() {
@@ -223,5 +290,21 @@ class PlaceTrackQueryServiceImplTest {
                 .address("테스트 주소")
                 .location(location)
                 .build();
+    }
+
+    private PlaceTrack detailPlaceTrack() {
+        Track track = mock(Track.class);
+        when(track.getId()).thenReturn(20L);
+        when(track.getProviderTrackId()).thenReturn("youtube-video-id");
+        when(track.getTitle()).thenReturn("LOVE ATTACK");
+        when(track.getArtistName()).thenReturn("RESCENE");
+        when(track.getAlbumImageUrl())
+                .thenReturn("https://example.com/love-attack.png");
+
+        PlaceTrack placeTrack = mock(PlaceTrack.class);
+        when(placeTrack.getId()).thenReturn(10L);
+        when(placeTrack.getTrack()).thenReturn(track);
+        when(placeTrack.getLikeCount()).thenReturn(33);
+        return placeTrack;
     }
 }

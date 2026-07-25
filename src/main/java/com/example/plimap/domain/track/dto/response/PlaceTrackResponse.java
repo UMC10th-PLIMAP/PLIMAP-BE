@@ -1,5 +1,7 @@
 package com.example.plimap.domain.track.dto.response;
 
+import com.example.plimap.domain.track.entity.PlaceTrack;
+import com.example.plimap.domain.track.entity.Track;
 import java.util.List;
 
 public final class PlaceTrackResponse {
@@ -31,5 +33,31 @@ public final class PlaceTrackResponse {
             Integer likeCount,
             Boolean isLiked
     ) {
+    }
+
+    public record PlaceTrackDetail(
+            Long placeTrackId,
+            Long trackId,
+            String youtubeVideoId,
+            String title,
+            String artist,
+            String albumImageUrl,
+            Integer likeCount,
+            Boolean userLike
+    ) {
+
+        public static PlaceTrackDetail from(PlaceTrack placeTrack, boolean userLike) {
+            Track track = placeTrack.getTrack();
+            return new PlaceTrackDetail(
+                    placeTrack.getId(),
+                    track.getId(),
+                    track.getProviderTrackId(),
+                    track.getTitle(),
+                    track.getArtistName(),
+                    track.getAlbumImageUrl(),
+                    placeTrack.getLikeCount(),
+                    userLike
+            );
+        }
     }
 }

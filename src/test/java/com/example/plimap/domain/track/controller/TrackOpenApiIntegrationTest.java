@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.plimap.domain.track.exception.TrackErrorCode;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import com.example.plimap.support.RedisContainerConfiguration;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,6 +29,8 @@ class TrackOpenApiIntegrationTest {
 
     private static final String PLACE_TRACK_PATH =
             "/api/v1/places/{placeId}/tracks";
+    private static final String PLACE_TRACK_DETAIL_PATH =
+            "/api/v1/place-tracks/{placeTrackId}";
     private static final String TRACK_SEARCH_PATH = "/api/v1/tracks/search";
     private static final String PLAYBACK_PREPARATION_PATH =
             "/api/v1/tracks/playback-preparations";
@@ -51,6 +55,12 @@ class TrackOpenApiIntegrationTest {
                 "get",
                 "200"
         ))).isEqualTo("ApiResponsePlaceTrackListResult");
+        assertThat(referenceName(responseSchemaReference(
+                openApi,
+                PLACE_TRACK_DETAIL_PATH,
+                "get",
+                "200"
+        ))).isEqualTo("ApiResponsePlaceTrackDetail");
         assertThat(referenceName(responseSchemaReference(
                 openApi,
                 TRACK_SEARCH_PATH,
@@ -82,6 +92,22 @@ class TrackOpenApiIntegrationTest {
         assertThat(referenceName(placeTrackItems)).isEqualTo("PlaceTrackItem");
         JsonNode placeTrackItemSchema = resolveSchema(openApi, placeTrackItems);
         assertThat(placeTrackItemSchema.path("properties").has("pinCount")).isTrue();
+
+        JsonNode placeTrackDetail =
+                responseResultSchema(openApi, PLACE_TRACK_DETAIL_PATH, "get");
+        List<String> placeTrackDetailFields = new ArrayList<>();
+        placeTrackDetail.path("properties").fieldNames()
+                .forEachRemaining(placeTrackDetailFields::add);
+        assertThat(placeTrackDetailFields).containsExactlyInAnyOrder(
+                        "placeTrackId",
+                        "trackId",
+                        "youtubeVideoId",
+                        "title",
+                        "artist",
+                        "albumImageUrl",
+                        "likeCount",
+                        "userLike"
+                );
 
         JsonNode trackSearchResult =
                 responseResultSchema(openApi, TRACK_SEARCH_PATH, "get");
@@ -184,6 +210,42 @@ class TrackOpenApiIntegrationTest {
                 "ApiResponsePlaceTrackListResult",
                 Set.of("PLACE_NOT_FOUND")
         );
+
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_DETAIL_PATH,
+                "get",
+                "400",
+                "ApiResponsePlaceTrackDetail",
+                Set.of(
+                        GeneralErrorCode.TYPE_MISMATCH.getCode(),
+                        GeneralErrorCode.VALIDATION_FAILED.getCode()
+                )
+        );
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_DETAIL_PATH,
+                "get",
+                "401",
+                "ApiResponsePlaceTrackDetail",
+                Set.of(GeneralErrorCode.UNAUTHORIZED.getCode())
+        );
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_DETAIL_PATH,
+                "get",
+                "404",
+                "ApiResponsePlaceTrackDetail",
+                Set.of(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode())
+        );
+        JsonNode placeTrackNotFoundExample = exampleValues(responseContent(
+                openApi,
+                PLACE_TRACK_DETAIL_PATH,
+                "get",
+                "404"
+        ).path("application/json")).getFirst();
+        assertThat(placeTrackNotFoundExample.path("message").asText())
+                .isEqualTo(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getMessage());
     }
 
     private void assertFailureResponse(
