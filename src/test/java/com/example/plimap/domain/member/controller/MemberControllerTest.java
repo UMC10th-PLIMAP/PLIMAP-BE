@@ -141,6 +141,18 @@ class MemberControllerTest {
     }
 
     @Test
+    void 본인의_memberId로_다른_사용자_프로필_조회를_요청하면_400을_반환한다() throws Exception {
+        when(memberQueryService.getOtherProfile(AUTH_MEMBER_ID, AUTH_MEMBER_ID))
+                .thenThrow(new MemberException(MemberErrorCode.CANNOT_VIEW_SELF_PROFILE));
+
+        mockMvc.perform(get("/api/v1/members/{memberId}", AUTH_MEMBER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("MEMBER_400_CANNOT_VIEW_SELF_PROFILE"));
+    }
+
+    @Test
     void 언팔로우에_성공하면_200과_UNFOLLOWED_응답을_반환한다() throws Exception {
         doNothing().when(memberCommandService).unfollow(AUTH_MEMBER_ID, TARGET_MEMBER_ID);
 

@@ -259,4 +259,14 @@ class MemberQueryServiceImplTest {
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
     }
+
+    @Test
+    void 본인의_memberId로_다른_사용자_프로필_조회_API를_호출하면_예외가_발생한다() {
+        // when & then
+        assertThatThrownBy(() -> memberQueryService.getOtherProfile(1L, 1L))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.CANNOT_VIEW_SELF_PROFILE));
+
+        verify(memberRepository, never()).findByIdAndDeletedAtIsNull(any());
+    }
 }

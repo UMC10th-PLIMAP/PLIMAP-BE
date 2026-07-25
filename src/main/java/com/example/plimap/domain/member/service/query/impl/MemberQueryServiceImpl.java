@@ -76,6 +76,10 @@ public class MemberQueryServiceImpl implements MemberQueryService {
 
     @Override
     public MemberResDTO.OtherProfile getOtherProfile(Long viewerId, Long targetMemberId) {
+        if (viewerId.equals(targetMemberId)) {
+            throw new MemberException(MemberErrorCode.CANNOT_VIEW_SELF_PROFILE);
+        }
+
         Member member = getActiveMember(targetMemberId);
         long followerCount = memberFollowRepository.countByIdFollowingId(targetMemberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
