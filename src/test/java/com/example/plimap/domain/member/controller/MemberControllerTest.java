@@ -3,12 +3,14 @@ package com.example.plimap.domain.member.controller;
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
+import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import java.time.Instant;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -34,6 +36,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -92,6 +95,22 @@ class MemberControllerTest {
         Member authenticatedMember = Member.builder().build();
         ReflectionTestUtils.setField(authenticatedMember, "id", AUTH_MEMBER_ID);
         when(memberRepository.findById(AUTH_MEMBER_ID)).thenReturn(Optional.of(authenticatedMember));
+    }
+
+    @Test
+    void 내_프로필_조회에_성공하면_200과_MY_PROFILE_FETCHED_응답을_반환한다() throws Exception {
+        MemberResDTO.MyProfile profile = new MemberResDTO.MyProfile(
+                AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"));
+        when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/members/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_200_MY_PROFILE_FETCHED"))
+                .andExpect(jsonPath("$.result.nickname").value("예림"))
+                .andExpect(jsonPath("$.result.followerCount").value(3))
+                .andExpect(jsonPath("$.result.followingCount").value(5));
     }
 
     @Test

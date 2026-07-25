@@ -39,4 +39,16 @@ public class MemberResDTO {
             Instant updatedAt
     ) {
     }
+
+    public record MyProfile(
+            Long id,
+            String nickname,
+            String name,
+            String introduction,
+            String profileImageObjectKey,
+            long followerCount,
+            long followingCount,
+            Instant onboardingCompletedAt
+    ) {
+    }
 }

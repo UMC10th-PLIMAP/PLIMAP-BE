@@ -1,11 +1,14 @@
 package com.example.plimap.domain.member.service.query.impl;
 
+import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
+import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -20,7 +23,9 @@ import static org.mockito.Mockito.when;
 class MemberQueryServiceImplTest {
 
     private final MemberRepository memberRepository = mock(MemberRepository.class);
-    private final MemberQueryServiceImpl memberQueryService = new MemberQueryServiceImpl(memberRepository);
+    private final MemberFollowRepository memberFollowRepository = mock(MemberFollowRepository.class);
+    private final MemberQueryServiceImpl memberQueryService =
+            new MemberQueryServiceImpl(memberRepository, memberFollowRepository);
 
     @Test
     void 활성_회원을_조회한다() {
@@ -139,5 +144,57 @@ class MemberQueryServiceImplTest {
                 .isEqualTo(NicknameCheckFailReason.FORBIDDEN_WORD);
 
         verify(memberRepository, never()).existsByNicknameIgnoreCaseAndDeletedAtIsNull(any());
+    }
+
+    @Test
+    void 내_프로필을_팔로워_팔로잉_수와_함께_조회한다() {
+        // given
+        Member member = Member.builder()
+                .nickname("예림")
+                .name("이예림")
+                .introduction("소개")
+                .profileImageObjectKey("key")
+                .build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+        when(memberFollowRepository.countByIdFollowingId(1L)).thenReturn(3L);
+        when(memberFollowRepository.countByIdFollowerId(1L)).thenReturn(5L);
+
+        // when
+        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+
+        // then
+        assertThat(result.id()).isEqualTo(1L);
+        assertThat(result.nickname()).isEqualTo("예림");
+        assertThat(result.followerCount()).isEqualTo(3L);
+        assertThat(result.followingCount()).isEqualTo(5L);
+    }
+
+    @Test
+    void 팔로워나_팔로잉이_없으면_0을_반환한다() {
+        // given
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+        when(memberFollowRepository.countByIdFollowingId(1L)).thenReturn(0L);
+        when(memberFollowRepository.countByIdFollowerId(1L)).thenReturn(0L);
+
+        // when
+        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+
+        // then
+        assertThat(result.followerCount()).isZero();
+        assertThat(result.followingCount()).isZero();
+    }
+
+    @Test
+    void 존재하지_않는_회원의_프로필은_조회할_수_없다() {
+        // given
+        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> memberQueryService.getMyProfile(1L))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 }
