@@ -425,9 +425,9 @@ class MemberControllerTest {
     }
 
     @Test
-    void 인증_없이_프로필_이미지를_업로드하면_403을_반환한다() throws Exception {
-        // Bearer 토큰이 없는 상태 변경 요청은 CSRF 검증에서 먼저 막혀 403이 된다
-        // (Bearer 인증 요청만 CSRF 검증에서 제외됨. SecurityConfig 참고).
+    void Bearer_토큰과_CSRF_토큰_없이_프로필_이미지를_업로드하면_CSRF_검증에서_403으로_차단된다() throws Exception {
+        // Bearer 인증 요청만 CSRF 검증에서 제외되므로(SecurityConfig 참고), Bearer 토큰이 없는
+        // 상태 변경 요청은 인증 여부와 무관하게 CSRF 필터에서 먼저 403으로 막힌다.
         MockMultipartFile image = new MockMultipartFile(
                 "image", "profile.webp", "image/webp", "webp-content".getBytes());
 
