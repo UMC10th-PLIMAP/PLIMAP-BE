@@ -60,6 +60,7 @@ class PinControllerTest {
     private static final String ACCESS_TOKEN = "valid-access-token";
     private static final String MY_FEED_ENDPOINT = "/api/v1/feed/members/me";
     private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feed/members/{memberId}";
+    private static final String MY_PIN_ENDPOINT = "/api/v1/pins/members/me";
 
     @Autowired
     private MockMvc mockMvc;
@@ -301,7 +302,7 @@ class PinControllerTest {
 
     @Test
     void 로그인하지_않은채로_내_피드_조회시_401을_반환한다() throws Exception {
-        mockMvc.perform(get("/api/v1/feed/members/me"))
+        mockMvc.perform(get(MEMBER_FEED_ENDPOINT))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -321,6 +322,34 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("MEMBER_FEED_LIST_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("다른 사용자가 작성한 피드 목록이 조회되었습니다."))
+                .andExpect(jsonPath("$.result.hasNext").value(false))
+                .andExpect(jsonPath("$.result.pageSize").value(10));
+    }
+
+    @Test
+    void 내_핀_목록_조회에_성공하면_200을_반환한다() throws Exception {
+        when(pinQueryService.findMyPinList(
+                1L, null, 10
+        )).thenReturn(Pagination.<PinResponse.MyPin>builder()
+                .data(new ArrayList<>())
+                .pageSize(10)
+                .nextCursor(null)
+                .hasNext(false)
+                .build());
+
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+
+        when(memberRepository.findById(1L))
+                .thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(MY_PIN_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MY_PIN_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("내가 작성한 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
     }

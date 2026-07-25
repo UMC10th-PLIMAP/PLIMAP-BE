@@ -96,4 +96,17 @@ public interface PinControllerDocs {
             Integer pageSize,
             @RequestParam(required = false) String cursor
     );
+
+    @Operation(
+            summary = "내가 작성한 PIN 목록 조회",
+            description = "내가 작성한 PIN 목록 조회합니다. (Figma 기준 화면: FD-01-03-b2)"
+    )
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.MyPin>>> getMyPinList(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            @RequestParam(required = false) String cursor
+    );
 }

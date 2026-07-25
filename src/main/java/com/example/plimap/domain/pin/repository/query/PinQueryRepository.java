@@ -14,4 +14,6 @@ public interface PinQueryRepository{
     Map<Long, PlacePinInfo> findPinInfosByPlaceIds(List<Long> placeIds);
 
     Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize);
+
+    Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize);
 }

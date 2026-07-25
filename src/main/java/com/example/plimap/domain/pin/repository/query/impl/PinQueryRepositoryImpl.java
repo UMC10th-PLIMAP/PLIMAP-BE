@@ -5,10 +5,12 @@ import com.example.plimap.domain.pin.dto.CursorInfo;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
+import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.QPin;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
+import com.example.plimap.domain.place.entity.QPlace;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
 import com.querydsl.core.types.Projections;
@@ -23,10 +25,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+
+import static com.example.plimap.domain.pin.entity.QPinTag.pinTag;
+import static com.example.plimap.domain.pin.entity.QTag.tag;
 
 @Repository
 @RequiredArgsConstructor
@@ -161,7 +163,60 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             );
         }
 
-        PinResponse.Feed last = data.get(data.size() - 1);
+        PinResponse.Feed last = data.getLast();
+        String nextCursor = hasNext
+                ? last.createdAt() + "/" + last.pinId()
+                : null;
+
+        return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
+    }
+
+    @Override
+    public Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize) {
+        QPin pin = QPin.pin;
+        QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
+        QTrack track = QTrack.track;
+        QPlace place = QPlace.place;
+        CursorInfo cursorInfo = parseCursor(cursor);
+
+        List<Pin> pins = queryFactory
+                .selectFrom(pin)
+                .join(pin.placeTrack, placeTrack).fetchJoin()
+                .join(placeTrack.track, track).fetchJoin()
+                .join(placeTrack.place, place).fetchJoin()
+                .leftJoin(pin.pinTagList, pinTag).fetchJoin()
+                .leftJoin(pinTag.tag, tag).fetchJoin()
+                .where(
+                        pin.member.id.eq(memberId),
+                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        pin.deletedAt.isNull()
+                )
+                .orderBy(pin.createdAt.desc(), pin.id.desc())
+                .limit(pageSize + 1)
+                .fetch();
+
+        List<PinResponse.MyPin> data = new ArrayList<>(
+                pins.stream()
+                .map(PinConverter::toMyPin)
+                .toList()
+        );
+
+        boolean hasNext = data.size() > pageSize;
+
+        if (hasNext) {
+            data.remove(pageSize.intValue());
+        }
+
+        if (data.isEmpty()) {
+            return PinConverter.toPagination(
+                    data,
+                    null,
+                    false,
+                    pageSize
+            );
+        }
+
+        PinResponse.MyPin last = data.getLast();
         String nextCursor = hasNext
                 ? last.createdAt() + "/" + last.pinId()
                 : null;
