@@ -31,13 +31,17 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
 @EnableConfigurationProperties(OAuthProperties.class)
-@Import(AuthCookieUtil.class)
+@Import({
+        AuthCookieUtil.class,
+        OAuthFrontendRedirectCookieRepository.class
+})
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -67,14 +71,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    public OAuthFrontendRedirectCookieRepository oAuthFrontendRedirectCookieRepository(
-            AuthCookieUtil authCookieUtil,
-            OAuthProperties oAuthProperties
-    ) {
-        return new OAuthFrontendRedirectCookieRepository(authCookieUtil, oAuthProperties);
-    }
-
-    @Bean
     public SecurityFilterChain filterChain(
             HttpSecurity http,
             HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository,
@@ -84,6 +80,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .spa()
                         .csrfTokenRepository(csrfTokenRepository())
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                         // Swagger/Postman은 Bearer 인증을 사용하므로 CSRF 검증에서 제외
                         .ignoringRequestMatchers(new BearerTokenRequestMatcher())
                         // Swagger UI에서 바로 테스트하는 local/dev 전용 임시 API라 CSRF 토큰 없이도 허용
