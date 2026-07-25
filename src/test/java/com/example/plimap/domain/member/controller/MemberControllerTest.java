@@ -241,4 +241,54 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void 팔로워_목록_조회시_pageSize가_50이면_허용된다() throws Exception {
+        Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
+                .data(List.of())
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(50)
+                .build();
+        when(memberQueryService.findFollowers(eq(TARGET_MEMBER_ID), isNull(), eq(50))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
+                        .param("pageSize", "50")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        verify(memberQueryService).findFollowers(TARGET_MEMBER_ID, null, 50);
+    }
+
+    @Test
+    void 팔로워_목록_조회시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
+        String cursor = "2026-01-01T00:00:00Z/3";
+        Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
+                .data(List.of())
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(10)
+                .build();
+        when(memberQueryService.findFollowers(TARGET_MEMBER_ID, cursor, 10)).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
+                        .param("cursor", cursor)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        verify(memberQueryService).findFollowers(TARGET_MEMBER_ID, cursor, 10);
+    }
+
+    @Test
+    void 팔로워_목록_조회시_잘못된_커서면_400을_반환한다() throws Exception {
+        when(memberQueryService.findFollowers(eq(TARGET_MEMBER_ID), eq("invalid-cursor"), eq(10)))
+                .thenThrow(new MemberException(MemberErrorCode.INVALID_CURSOR));
+
+        mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
+                        .param("cursor", "invalid-cursor")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_CURSOR"));
+    }
 }
