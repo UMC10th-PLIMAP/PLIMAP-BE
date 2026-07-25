@@ -43,6 +43,12 @@ public enum PinErrorCode implements BaseErrorCode {
             HttpStatus.BAD_REQUEST,
             "ALREADY_LIKED_PIN",
             "이미 좋아요한 핀입니다."
+    ),
+
+    INVALID_CURSOR(
+            HttpStatus.BAD_REQUEST,
+            "INVALID_CURSOR",
+            "유효하지 않은 커서입니다."
     );
 
     private final HttpStatus status;

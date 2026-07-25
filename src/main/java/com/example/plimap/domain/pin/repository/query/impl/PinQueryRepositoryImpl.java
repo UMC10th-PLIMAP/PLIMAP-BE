@@ -1,11 +1,28 @@
 package com.example.plimap.domain.pin.repository.query.impl;
 
+import com.example.plimap.domain.pin.converter.PinConverter;
+import com.example.plimap.domain.pin.dto.CursorInfo;
+import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.response.PinResponse;
+import com.example.plimap.domain.pin.entity.QPin;
+import com.example.plimap.domain.pin.exception.PinErrorCode;
+import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
+import com.example.plimap.domain.track.entity.QPlaceTrack;
+import com.example.plimap.domain.track.entity.QTrack;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +78,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             """;
 
     private final EntityManager entityManager;
+    private final JPAQueryFactory queryFactory;
 
     @Override
     @SuppressWarnings("unchecked")
@@ -97,5 +115,95 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         }
 
         return result;
+    }
+
+    @Override
+    public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
+        QPin pin = QPin.pin;
+        QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
+        QTrack track = QTrack.track;
+        CursorInfo cursorInfo = parseCursor(cursor);
+
+        List<PinResponse.Feed> data = queryFactory
+                .select(
+                    Projections.constructor(
+                            PinResponse.Feed.class,
+                            pin.id,
+                            track.albumImageUrl,
+                            pin.createdAt
+                    )
+                )
+                .from(pin)
+                .join(pin.placeTrack, placeTrack)
+                .join(placeTrack.track, track)
+                .where(
+                        pin.member.id.eq(memberId),
+                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        pin.isFeedPublic.eq(true),
+                        pin.deletedAt.isNull()
+                )
+                .orderBy(pin.createdAt.desc(), pin.id.desc())
+                .limit(pageSize + 1)
+                .fetch();
+
+        boolean hasNext = data.size() > pageSize;
+
+        if (hasNext) {
+            data.remove(pageSize.intValue());
+        }
+
+        if (data.isEmpty()) {
+            return PinConverter.toPagination(
+                    data,
+                    null,
+                    false,
+                    pageSize
+            );
+        }
+
+        PinResponse.Feed last = data.get(data.size() - 1);
+        String nextCursor = hasNext
+                ? last.createdAt() + "/" + last.pinId()
+                : null;
+
+        return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
+    }
+
+    private CursorInfo parseCursor(String cursor) {
+        if (cursor == null) {
+            return new CursorInfo(null, null);
+        }
+        try {
+            String[] parts = cursor.split("/");
+
+            if (parts.length != 2) {
+                throw new PinException(PinErrorCode.INVALID_CURSOR);
+            }
+
+            Instant createdAt = Instant.parse(parts[0]);
+            long pinId = Long.parseLong(parts[1]);
+
+            return new CursorInfo(createdAt, pinId);
+
+        } catch (DateTimeParseException | NumberFormatException e) {
+            throw new PinException(PinErrorCode.INVALID_CURSOR);
+        }
+    }
+
+    private BooleanExpression cursorCondition(
+            Instant createdAt,
+            Long id
+    ) {
+        QPin pin = QPin.pin;
+
+        if (createdAt == null || id == null) {
+            return null;
+        }
+
+        return pin.createdAt.lt(createdAt)
+                .or(
+                        pin.createdAt.eq(createdAt)
+                                .and(pin.id.lt(id))
+                );
     }
 }

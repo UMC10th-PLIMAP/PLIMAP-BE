@@ -3,6 +3,7 @@ package com.example.plimap.domain.pin.dto.response;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import lombok.Builder;
 
+import java.time.Instant;
 import java.util.List;
 
 public class PinResponse {
@@ -46,5 +47,12 @@ public class PinResponse {
     @Builder
     public record LikeCount(
             Integer likeCount
+    ) {}
+
+    @Builder
+    public record Feed(
+            Long pinId,
+            String albumImageUrl,
+            Instant createdAt
     ) {}
 }

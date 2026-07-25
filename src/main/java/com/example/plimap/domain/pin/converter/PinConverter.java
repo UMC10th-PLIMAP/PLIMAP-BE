@@ -1,10 +1,13 @@
 package com.example.plimap.domain.pin.converter;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.track.entity.Track;
+
+import java.util.List;
 
 public class PinConverter {
 
@@ -54,6 +57,20 @@ public class PinConverter {
     ) {
         return PinResponse.LikeCount.builder()
                 .likeCount(likeCount)
+                .build();
+    }
+
+    public static <T> Pagination<T> toPagination(
+            List<T> data,
+            String nextCursor,
+            Boolean hasNext,
+            Integer pageSize
+    ) {
+        return Pagination.<T>builder()
+                .data(data)
+                .nextCursor(nextCursor)
+                .hasNext(hasNext)
+                .pageSize(pageSize)
                 .build();
     }
 }

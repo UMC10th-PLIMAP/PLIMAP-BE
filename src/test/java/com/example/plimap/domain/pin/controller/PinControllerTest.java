@@ -5,13 +5,14 @@ import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
-import com.example.plimap.domain.pin.service.query.impl.PinQueryServiceImpl;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -28,16 +29,18 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,6 +58,8 @@ class PinControllerTest {
     private static final String PIN_AVAILABILITY_ENDPOINT = "/api/v1/pins/availability";
     private static final String PIN_UPDATE_ENDPOINT = "/api/v1/pins/1";
     private static final String ACCESS_TOKEN = "valid-access-token";
+    private static final String MY_FEED_ENDPOINT = "/api/v1/feed/members/me";
+    private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feed/members/{memberId}";
 
     @Autowired
     private MockMvc mockMvc;
@@ -78,7 +83,7 @@ class PinControllerTest {
     private PinCommandServiceImpl pinCommandService;
 
     @MockitoBean
-    private PinQueryServiceImpl pinQueryService;
+    private PinQueryService pinQueryService;
 
     @MockitoBean
     private OAuthFailureHandler oAuthFailureHandler;
@@ -264,6 +269,60 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.code").value("PIN_NOT_CHANGED"))
                 .andExpect(jsonPath("$.message").value("PIN 수정사항이 없습니다."))
                 .andExpect(jsonPath("$.result").doesNotExist());
+    }
+
+    @Test
+    void 내_피드_조회에_성공하면_200을_반환한다() throws Exception {
+        when(pinQueryService.findFeedListByMemberId(
+                1L, null, 10
+        )).thenReturn(Pagination.<PinResponse.Feed>builder()
+                        .data(new ArrayList<>())
+                        .pageSize(10)
+                        .nextCursor(null)
+                        .hasNext(false)
+                .build());
+
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+
+        when(memberRepository.findById(1L))
+                .thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(MY_FEED_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                        .andDo(print())
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.isSuccess").value(true))
+            .andExpect(jsonPath("$.code").value("MY_FEED_LIST_SEARCH_SUCCESS"))
+            .andExpect(jsonPath("$.message").value("내가 작성한 피드 목록이 조회되었습니다."))
+            .andExpect(jsonPath("$.result.hasNext").value(false))
+            .andExpect(jsonPath("$.result.pageSize").value(10));
+    }
+
+    @Test
+    void 로그인하지_않은채로_내_피드_조회시_401을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/feed/members/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 타인_피드_조회에_성공하면_200을_반환한다() throws Exception {
+        when(pinQueryService.findFeedListByMemberId(
+                1L, null, 10
+        )).thenReturn(Pagination.<PinResponse.Feed>builder()
+                .data(new ArrayList<>())
+                .pageSize(10)
+                .nextCursor(null)
+                .hasNext(false)
+                .build());
+
+        mockMvc.perform(get(MEMBER_FEED_ENDPOINT, 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_FEED_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("다른 사용자가 작성한 피드 목록이 조회되었습니다."))
+                .andExpect(jsonPath("$.result.hasNext").value(false))
+                .andExpect(jsonPath("$.result.pageSize").value(10));
     }
 
 

@@ -2,6 +2,7 @@ package com.example.plimap.domain.pin.controller;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.pin.controller.docs.PinControllerDocs;
+import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.exception.PinSuccessCode;
@@ -10,11 +11,12 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -90,5 +92,35 @@ public class PinController implements PinControllerDocs {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PIN_LIKE_DELETE_SUCCESS, response));
+    }
+
+    @GetMapping("/feed/members/me")
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMyFeedList(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            @RequestParam(required = false) String cursor
+    ) {
+        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(currentMember.getMember().getId(), cursor, pageSize);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.MY_FEED_LIST_SEARCH_SUCCESS, response));
+    }
+
+    @GetMapping("/feed/members/{memberId}")
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMemberFeedList(
+            @PathVariable Long memberId,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            @RequestParam(required = false) String cursor
+    ) {
+        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(memberId, cursor, pageSize);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.MEMBER_FEED_LIST_SEARCH_SUCCESS, response));
     }
 }
