@@ -85,7 +85,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
 
             return new CursorInfo(createdAt, memberId);
         } catch (DateTimeParseException | NumberFormatException e) {
-            throw new MemberException(MemberErrorCode.INVALID_CURSOR);
+            throw new MemberException(MemberErrorCode.INVALID_CURSOR, e);
         }
     }
 
