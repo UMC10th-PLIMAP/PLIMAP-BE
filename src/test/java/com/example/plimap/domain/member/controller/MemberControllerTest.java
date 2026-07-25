@@ -225,4 +225,20 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void 팔로워_목록_조회시_pageSize가_0이면_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
+                        .param("pageSize", "0")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 팔로워_목록_조회시_pageSize가_음수면_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
+                        .param("pageSize", "-1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
 }
