@@ -9,11 +9,8 @@ public final class PlaceTrackResponse {
 
     public record PlaceTrackListResult(
             Long placeId,
-            String placeName,
-            String createdBy,
             double distance,
             boolean isWithinRadius,
-            boolean isBookmarked,
             List<PlaceTrackItem> tracks,
             int page,
             int size,

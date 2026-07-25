@@ -7,8 +7,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.example.plimap.domain.pin.dto.PlacePinInfo;
-import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
@@ -20,7 +18,6 @@ import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 import com.example.plimap.domain.track.enums.PlaceTrackSort;
 import com.example.plimap.domain.track.repository.query.PlaceTrackQueryRepository;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -35,7 +32,6 @@ class PlaceTrackQueryServiceImplTest {
     private static final Long PLACE_ID = 2L;
 
     private final PlaceQueryService placeQueryService = mock(PlaceQueryService.class);
-    private final PinQueryService pinQueryService = mock(PinQueryService.class);
     private final PinLocationValidator pinLocationValidator =
             mock(PinLocationValidator.class);
     private final PlaceTrackQueryRepository placeTrackQueryRepository =
@@ -44,7 +40,6 @@ class PlaceTrackQueryServiceImplTest {
     private final PlaceTrackQueryServiceImpl placeTrackQueryService =
             new PlaceTrackQueryServiceImpl(
                     placeQueryService,
-                    pinQueryService,
                     pinLocationValidator,
                     placeTrackQueryRepository
             );
@@ -59,7 +54,6 @@ class PlaceTrackQueryServiceImplTest {
                 .isSameAs(exception);
 
         verifyNoInteractions(
-                pinQueryService,
                 pinLocationValidator,
                 placeTrackQueryRepository
         );
@@ -69,62 +63,31 @@ class PlaceTrackQueryServiceImplTest {
     void 장소에_곡이_없으면_빈_목록을_반환한다() {
         givenPlaceAndDistance(100.0);
         givenTracks(List.of(), false);
-        when(placeTrackQueryRepository.existsPlaceBookmark(PLACE_ID, MEMBER_ID))
-                .thenReturn(false);
-        when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
-                .thenReturn(Map.of());
 
         PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
 
         assertThat(result.tracks()).isEmpty();
-        assertThat(result.createdBy()).isNull();
         assertThat(result.hasNext()).isFalse();
     }
 
     @Test
-    void 반경_이내이면_좋아요_정보와_북마크를_반환한다() {
+    void 반경_이내이면_좋아요_정보를_반환한다() {
         givenPlaceAndDistance(499.9);
         givenTracks(List.of(track(10L, 5, true)), false);
-        when(placeTrackQueryRepository.existsPlaceBookmark(PLACE_ID, MEMBER_ID))
-                .thenReturn(true);
-        when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
-                .thenReturn(Map.of(PLACE_ID, new PlacePinInfo(true, "냥코")));
 
         PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
 
         assertThat(result.isWithinRadius()).isTrue();
-        assertThat(result.isBookmarked()).isTrue();
-        assertThat(result.createdBy()).isEqualTo("냥코");
         assertThat(result.tracks().getFirst().likeCount()).isEqualTo(5);
         assertThat(result.tracks().getFirst().isLiked()).isTrue();
-    }
-
-    @Test
-    void createdBy는_PinQueryService가_반환한_가장_오래된_활성_PIN_작성자다() {
-        givenPlaceAndDistance(100.0);
-        givenTracks(List.of(track(10L, 5, true)), false);
-        when(placeTrackQueryRepository.existsPlaceBookmark(PLACE_ID, MEMBER_ID))
-                .thenReturn(false);
-        when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
-                .thenReturn(Map.of(
-                        PLACE_ID,
-                        new PlacePinInfo(true, "비공개PIN작성자")
-                ));
-
-        PlaceTrackResponse.PlaceTrackListResult result =
-                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
-
-        assertThat(result.createdBy()).isEqualTo("비공개PIN작성자");
-        verify(pinQueryService).findPinInfosByPlaceIds(List.of(PLACE_ID));
     }
 
     @Test
     void 정확히_500미터이면_반경_이내로_처리한다() {
         givenPlaceAndDistance(500.0);
         givenTracks(List.of(track(10L, 5, true)), false);
-        givenPlaceDetails();
 
         PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
@@ -144,7 +107,6 @@ class PlaceTrackQueryServiceImplTest {
                 ),
                 false
         );
-        givenPlaceDetails();
 
         PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
@@ -164,7 +126,6 @@ class PlaceTrackQueryServiceImplTest {
     void size보다_한_건_더_조회되면_hasNext를_반환한다() {
         givenPlaceAndDistance(100.0);
         givenTracks(List.of(track(10L, 5, true)), true);
-        givenPlaceDetails();
 
         PlaceTrackResponse.PlaceTrackListResult result =
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
@@ -202,13 +163,6 @@ class PlaceTrackQueryServiceImplTest {
                 PageRequest.of(0, 20),
                 hasNext
         ));
-    }
-
-    private void givenPlaceDetails() {
-        when(placeTrackQueryRepository.existsPlaceBookmark(PLACE_ID, MEMBER_ID))
-                .thenReturn(false);
-        when(pinQueryService.findPinInfosByPlaceIds(List.of(PLACE_ID)))
-                .thenReturn(Map.of(PLACE_ID, new PlacePinInfo(true, "냥코")));
     }
 
     private PlaceTrackRequest.List request() {

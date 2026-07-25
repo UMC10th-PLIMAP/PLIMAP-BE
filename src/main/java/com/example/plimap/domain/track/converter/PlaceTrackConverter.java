@@ -13,10 +13,8 @@ public final class PlaceTrackConverter {
 
     public static PlaceTrackResponse.PlaceTrackListResult toListResult(
             Place place,
-            String createdBy,
             double distance,
             boolean withinRadius,
-            boolean bookmarked,
             Slice<PlaceTrackQueryResult> placeTracks
     ) {
         List<PlaceTrackResponse.PlaceTrackItem> tracks = placeTracks.getContent().stream()
@@ -25,11 +23,8 @@ public final class PlaceTrackConverter {
 
         return new PlaceTrackResponse.PlaceTrackListResult(
                 place.getId(),
-                place.getName(),
-                createdBy,
                 distance,
                 withinRadius,
-                bookmarked,
                 tracks,
                 placeTracks.getNumber(),
                 placeTracks.getSize(),

@@ -1,7 +1,5 @@
 package com.example.plimap.domain.track.service.query.impl;
 
-import com.example.plimap.domain.pin.dto.PlacePinInfo;
-import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
@@ -11,8 +9,6 @@ import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 import com.example.plimap.domain.track.repository.query.PlaceTrackQueryRepository;
 import com.example.plimap.domain.track.service.query.PlaceTrackQueryService;
-import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +24,6 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
     private static final double ACCESSIBLE_RADIUS_METERS = 500.0;
 
     private final PlaceQueryService placeQueryService;
-    private final PinQueryService pinQueryService;
     private final PinLocationValidator pinLocationValidator;
     private final PlaceTrackQueryRepository placeTrackQueryRepository;
 
@@ -50,16 +45,10 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
                         request.sort(),
                         pageable
                 );
-        boolean bookmarked =
-                placeTrackQueryRepository.existsPlaceBookmark(placeId, memberId);
-        String createdBy = findFirstPinCreatorNickname(placeId);
-
         return PlaceTrackConverter.toListResult(
                 place,
-                createdBy,
                 distance,
                 withinRadius,
-                bookmarked,
                 placeTracks
         );
     }
@@ -73,10 +62,4 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
         );
     }
 
-    private String findFirstPinCreatorNickname(Long placeId) {
-        Map<Long, PlacePinInfo> pinInfos =
-                pinQueryService.findPinInfosByPlaceIds(List.of(placeId));
-        PlacePinInfo pinInfo = pinInfos.get(placeId);
-        return pinInfo == null ? null : pinInfo.firstPinCreatorNickname();
-    }
 }

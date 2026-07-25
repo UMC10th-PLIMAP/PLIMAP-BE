@@ -70,7 +70,18 @@ class TrackOpenApiIntegrationTest {
                 .path("properties")
                 .path("tracks")
                 .path("items");
+        assertThat(placeTrackResult.path("properties").has("placeName")).isFalse();
+        assertThat(placeTrackResult.path("properties").has("createdBy")).isFalse();
+        assertThat(placeTrackResult.path("properties").has("isBookmarked")).isFalse();
+        assertThat(placeTrackResult.path("properties").has("placeId")).isTrue();
+        assertThat(placeTrackResult.path("properties").has("distance")).isTrue();
+        assertThat(placeTrackResult.path("properties").has("isWithinRadius")).isTrue();
+        assertThat(placeTrackResult.path("properties").has("page")).isTrue();
+        assertThat(placeTrackResult.path("properties").has("size")).isTrue();
+        assertThat(placeTrackResult.path("properties").has("hasNext")).isTrue();
         assertThat(referenceName(placeTrackItems)).isEqualTo("PlaceTrackItem");
+        JsonNode placeTrackItemSchema = resolveSchema(openApi, placeTrackItems);
+        assertThat(placeTrackItemSchema.path("properties").has("pinCount")).isTrue();
 
         JsonNode trackSearchResult =
                 responseResultSchema(openApi, TRACK_SEARCH_PATH, "get");
