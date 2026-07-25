@@ -106,7 +106,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
     @Transactional
     public void unfollow(Long followerId, Long followingId) {
         if (followerId.equals(followingId)) {
-            throw new MemberException(MemberErrorCode.CANNOT_FOLLOW_SELF);
+            throw new MemberException(MemberErrorCode.CANNOT_UNFOLLOW_SELF);
         }
 
         MemberFollowId id = new MemberFollowId(followerId, followingId);

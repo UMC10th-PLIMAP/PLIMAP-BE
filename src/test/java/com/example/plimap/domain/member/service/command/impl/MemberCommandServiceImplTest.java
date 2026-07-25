@@ -278,7 +278,7 @@ class MemberCommandServiceImplTest {
     void 자기_자신을_언팔로우하면_예외가_발생한다() {
         assertThatThrownBy(() -> memberCommandService.unfollow(MEMBER_ID, MEMBER_ID))
                 .isInstanceOfSatisfying(MemberException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.CANNOT_FOLLOW_SELF));
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.CANNOT_UNFOLLOW_SELF));
 
         verify(memberFollowRepository, never()).existsById(any());
     }
