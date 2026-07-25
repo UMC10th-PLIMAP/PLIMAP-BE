@@ -28,9 +28,11 @@ cookie:
   same-site: None
 
 plimap:
+  # Swagger/OpenAPI 접근 허용 Origin
   swagger:
     access:
       public-origin: ${PUBLIC_BASE_URL}
+  # Dev 테스트 토큰 발급 보안 키
   auth:
     test-token:
       issue-key-required: true
