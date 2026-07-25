@@ -5,6 +5,7 @@ import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollowId;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
@@ -39,7 +40,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
 
     @Override
     public Member getActiveMember(Long memberId) {
-        return memberRepository.findByIdAndDeletedAtIsNull(memberId)
+        return memberRepository.findByIdAndStatusAndDeletedAtIsNull(memberId, MemberStatus.ACTIVE)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 

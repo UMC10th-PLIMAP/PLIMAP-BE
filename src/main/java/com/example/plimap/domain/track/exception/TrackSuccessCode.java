@@ -9,6 +9,11 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum TrackSuccessCode implements BaseSuccessCode {
 
+    PLACE_TRACK_DETAIL_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_TRACK_DETAIL_SUCCESS",
+            "장소 노래 상세 정보가 조회되었습니다."
+    ),
     TRACK_SEARCH_SUCCESS(
             HttpStatus.OK,
             "TRACK_SEARCH_SUCCESS",
@@ -23,6 +28,16 @@ public enum TrackSuccessCode implements BaseSuccessCode {
             HttpStatus.OK,
             "PLACE_TRACK_LIST_SUCCESS",
             "장소별 곡 목록 조회에 성공했습니다."
+    ),
+    PLACE_TRACK_LIKE_PUT_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_TRACK_LIKE_PUT_SUCCESS",
+            "장소별 곡 좋아요 등록에 성공했습니다."
+    ),
+    PLACE_TRACK_LIKE_DELETE_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_TRACK_LIKE_DELETE_SUCCESS",
+            "장소별 곡 좋아요 삭제에 성공했습니다."
     );
 
     private final HttpStatus status;

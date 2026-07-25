@@ -34,7 +34,7 @@ class CustomOAuthServiceIntegrationTest {
     @Test
     void 기존_회원의_LAZY_프록시는_트랜잭션_종료_후에도_isOnboarded_조회가_가능하다() {
         Member member = memberRepository.saveAndFlush(Member.builder().build());
-        member.completeOnboarding("예림", null);
+        member.completeOnboarding("예림");
         memberRepository.saveAndFlush(member);
         socialAccountRepository.saveAndFlush(
                 SocialAccount.create(member, AuthProvider.KAKAO, "kakao-subject", "test@example.com"));

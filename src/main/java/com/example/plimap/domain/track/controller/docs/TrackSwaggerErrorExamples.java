@@ -29,6 +29,24 @@ final class TrackSwaggerErrorExamples {
             }
             """;
 
+    static final String PLACE_TRACK_DETAIL_TYPE_MISMATCH = """
+            {
+              "isSuccess": false,
+              "code": "COMMON_400_TYPE_MISMATCH",
+              "message": "요청 값의 타입이 올바르지 않습니다.",
+              "result": null
+            }
+            """;
+
+    static final String PLACE_TRACK_DETAIL_VALIDATION_FAILED = """
+            {
+              "isSuccess": false,
+              "code": "COMMON_400_VALIDATION_FAILED",
+              "message": "장소 노래 ID는 양수여야 합니다.",
+              "result": null
+            }
+            """;
+
     static final String UNAUTHORIZED = """
             {
               "isSuccess": false,
@@ -88,6 +106,33 @@ final class TrackSwaggerErrorExamples {
               "isSuccess": false,
               "code": "PLACE_NOT_FOUND",
               "message": "장소를 찾을 수 없습니다.",
+              "result": null
+            }
+            """;
+
+    static final String PLACE_TRACK_NOT_FOUND = """
+            {
+              "isSuccess": false,
+              "code": "PLACE_TRACK_NOT_FOUND",
+              "message": "존재하지 않는 placeTrack 입니다.",
+              "result": null
+            }
+            """;
+
+    static final String PLACE_TRACK_ALREADY_LIKED = """
+            {
+              "isSuccess": false,
+              "code": "PLACE_TRACK_ALREADY_LIKED",
+              "message": "이미 좋아요를 등록한 장소별 곡입니다.",
+              "result": null
+            }
+            """;
+
+    static final String PLACE_TRACK_LIKE_NOT_FOUND = """
+            {
+              "isSuccess": false,
+              "code": "PLACE_TRACK_LIKE_NOT_FOUND",
+              "message": "장소별 곡 좋아요를 찾을 수 없습니다.",
               "result": null
             }
             """;

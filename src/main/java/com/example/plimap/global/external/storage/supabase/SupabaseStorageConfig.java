@@ -12,7 +12,7 @@ import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.json.JsonMapper;
 
-@Profile("dev")
+@Profile({"dev", "local", "test"})
 @Configuration
 @EnableConfigurationProperties(ProfileImageStorageProperties.class)
 public class SupabaseStorageConfig {
@@ -49,7 +49,7 @@ public class SupabaseStorageConfig {
     ) {
         if (properties.provider() != ProfileImageStorageProperties.Provider.SUPABASE) {
             throw new IllegalStateException(
-                    "The dev profile requires the SUPABASE profile image storage provider."
+                    "The dev/local/test profiles require the SUPABASE profile image storage provider."
             );
         }
 

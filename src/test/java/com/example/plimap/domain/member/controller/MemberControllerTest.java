@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -33,6 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
@@ -41,6 +43,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -399,5 +402,61 @@ class MemberControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_CURSOR"));
+    }
+
+    @Test
+    void 프로필_이미지_업로드에_성공하면_200과_PROFILE_IMAGE_UPLOADED_응답을_반환한다() throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "image", "profile.webp", "image/webp", "webp-content".getBytes());
+        MemberResDTO.ProfileImage result = new MemberResDTO.ProfileImage(
+                "members/1/new.webp",
+                "https://project.supabase.co/storage/v1/object/public/profile-images/members/1/new.webp"
+        );
+        when(memberCommandService.uploadProfileImage(eq(AUTH_MEMBER_ID), any())).thenReturn(result);
+
+        mockMvc.perform(multipart("/api/v1/members/me/profile-image")
+                        .file(image)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_200_PROFILE_IMAGE_UPLOADED"))
+                .andExpect(jsonPath("$.result.objectKey").value("members/1/new.webp"))
+                .andExpect(jsonPath("$.result.imageUrl").value(result.imageUrl()));
+    }
+
+    @Test
+    void Bearer_토큰과_CSRF_토큰_없이_프로필_이미지를_업로드하면_CSRF_검증에서_403으로_차단된다() throws Exception {
+        // Bearer 인증 요청만 CSRF 검증에서 제외되므로(SecurityConfig 참고), Bearer 토큰이 없는
+        // 상태 변경 요청은 인증 여부와 무관하게 CSRF 필터에서 먼저 403으로 막힌다.
+        MockMultipartFile image = new MockMultipartFile(
+                "image", "profile.webp", "image/webp", "webp-content".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/members/me/profile-image").file(image))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void image_파트_없이_프로필_이미지_업로드를_요청하면_400을_반환한다() throws Exception {
+        mockMvc.perform(multipart("/api/v1/members/me/profile-image")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400_MISSING_PARAMETER"))
+                .andExpect(jsonPath("$.result").doesNotExist());
+    }
+
+    @Test
+    void 유효하지_않은_프로필_이미지면_400을_반환한다() throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "image", "profile.png", "image/png", "not-webp".getBytes());
+        doThrow(new MemberException(MemberErrorCode.INVALID_PROFILE_IMAGE))
+                .when(memberCommandService).uploadProfileImage(eq(AUTH_MEMBER_ID), any());
+
+        mockMvc.perform(multipart("/api/v1/members/me/profile-image")
+                        .file(image)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_PROFILE_IMAGE"));
     }
 }
