@@ -15,6 +15,7 @@ import com.example.plimap.global.external.kakao.KakaoClientException;
 import com.example.plimap.global.external.kakao.KakaoClientTimeoutException;
 import com.example.plimap.global.external.kakao.KakaoPlaceSearchClient;
 import com.example.plimap.global.external.kakao.dto.KakaoPlaceSearchResponse;
+import com.example.plimap.global.util.GeoDistanceCalculator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,7 +33,6 @@ import org.springframework.validation.annotation.Validated;
 public class PlaceQueryServiceImpl implements PlaceQueryService {
 
     private static final String KAKAO_PROVIDER = "KAKAO";
-    private static final double EARTH_RADIUS_METERS = 6_371_000.0;
     private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null, 0L);
 
     private final PlaceRepository placeRepository;
@@ -105,7 +105,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     ) {
         Place place = history.getPlace();
         PlacePinInfo pinInfo = pinInfosByPlaceId.getOrDefault(place.getId(), NO_PIN_INFO);
-        double distance = calculateDistance(
+        double distance = GeoDistanceCalculator.calculateMeters(
                 userLatitude,
                 userLongitude,
                 history.getLocation().getY(),
@@ -126,27 +126,6 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 pinInfo.firstPinCreatorNickname(),
                 history.getSelectedAt()
         );
-    }
-
-    private double calculateDistance(
-            double latitude1,
-            double longitude1,
-            double latitude2,
-            double longitude2
-    ) {
-        double latitudeDelta = Math.toRadians(latitude2 - latitude1);
-        double longitudeDelta = Math.toRadians(longitude2 - longitude1);
-        double haversine = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
-                + Math.cos(Math.toRadians(latitude1))
-                * Math.cos(Math.toRadians(latitude2))
-                * Math.sin(longitudeDelta / 2)
-                * Math.sin(longitudeDelta / 2);
-        haversine = Math.min(1.0, Math.max(0.0, haversine));
-        double angularDistance = 2 * Math.atan2(
-                Math.sqrt(haversine),
-                Math.sqrt(1 - haversine)
-        );
-        return EARTH_RADIUS_METERS * angularDistance;
     }
 
     @Override
