@@ -46,6 +46,40 @@ public final class PlaceResponse {
     ) {
     }
 
+    public record Selection(
+            @Schema(description = "장소 ID", example = "1")
+            Long placeId,
+            @Schema(description = "장소명", example = "한강")
+            String placeName,
+            @Schema(description = "축약하지 않은 전체 지번 주소", example = "서울특별시 영등포구 여의도동")
+            String address,
+            @Schema(
+                    description = "축약하지 않은 전체 도로명 주소. 없는 경우 null이며 address를 사용",
+                    example = "서울특별시 영등포구 여의동로",
+                    nullable = true
+            )
+            String roadAddress,
+            @Schema(description = "장소 생성 출처", example = "PLACE_SEARCH")
+            PlaceSource source,
+            @Schema(description = "사용자 현재 위치 기준 거리(m)", example = "470")
+            Integer distanceMeters,
+            @Schema(description = "사용자가 500m 이내에 있는지 여부", example = "true")
+            boolean withinAccessRange,
+            @Schema(description = "활성 PIN 존재 여부", example = "true")
+            boolean hasPin,
+            @Schema(
+                    description = "최초 활성 PIN 작성자 닉네임",
+                    example = "홍길동",
+                    nullable = true
+            )
+            String firstPinCreatorNickname,
+            @Schema(description = "활성 PIN 개수", example = "3")
+            Long pinCount,
+            @Schema(description = "인증 사용자의 장소 북마크 여부", example = "false")
+            boolean bookmarkedByMe
+    ) {
+    }
+
     public record MapSelection(
             @Schema(description = "장소 ID", example = "12")
             Long placeId,
