@@ -283,7 +283,8 @@ class PlaceTrackControllerTest {
         mockMvc.perform(authenticatedGet(LIKED_TRACKS_ENDPOINT))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("PLACE_TRACK200_3"))
+                .andExpect(jsonPath("$.code").value(
+                        TrackSuccessCode.LIKED_PLACE_TRACK_LIST_SUCCESS.getCode()))
                 .andExpect(jsonPath("$.message")
                         .value("좋아요한 곡 목록 조회에 성공했습니다."))
                 .andExpect(jsonPath("$.result.tracks[0].placeTrackId").value(10))
