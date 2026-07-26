@@ -29,6 +29,4 @@ public interface PinRepository extends JpaRepository<Pin, Long> {
         where p.id = :pinId
     """)
     void decreaseLikeCount(Long pinId);
-
-    boolean existsPinByMemberAndPlace(Member member, Place place);
 }

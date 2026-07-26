@@ -233,7 +233,7 @@ class PinQueryServiceImplTest {
     @Test
     void 내가_핀을_등록했다면_true를_반환한다() {
         // given
-        when(pinRepository.existsPinByMemberAndPlace(member, place))
+        when(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
                 .thenReturn(true);
 
         // when
@@ -246,7 +246,7 @@ class PinQueryServiceImplTest {
     @Test
     void 팔로우한_사람이_핀을_등록했다면_true를_반환한다() {
         // given
-        when(pinRepository.existsPinByMemberAndPlace(member, place))
+        when(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
                 .thenReturn(false);
         when(pinQueryRepository.existsPinByMemberFollowAndPlace(anyLong(), anyLong()))
                 .thenReturn(true);
@@ -261,7 +261,7 @@ class PinQueryServiceImplTest {
     @Test
     void 둘_다_핀을_등록하지_않았다면_false를_반환한다() {
         // given
-        when(pinRepository.existsPinByMemberAndPlace(member, place))
+        when(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
                 .thenReturn(false);
         when(pinQueryRepository.existsPinByMemberFollowAndPlace(anyLong(), anyLong()))
                 .thenReturn(false);

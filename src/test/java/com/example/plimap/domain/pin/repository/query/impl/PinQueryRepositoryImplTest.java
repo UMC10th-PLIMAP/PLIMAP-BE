@@ -1,6 +1,8 @@
 package com.example.plimap.domain.pin.repository.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.entity.MemberFollow;
+import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
@@ -61,6 +63,9 @@ class PinQueryRepositoryImplTest {
     private PlaceTrackRepository placeTrackRepository;
 
     @Autowired
+    private MemberFollowRepository memberFollowIdRepository;
+
+    @Autowired
     EntityManager entityManager;
 
     Pin pin1, pin2, pin3;
@@ -68,12 +73,12 @@ class PinQueryRepositoryImplTest {
     private Place place2;
     private Place place3;
     private Place place4;
-    Member member2;
+    Member member1, member2;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @BeforeEach
     void setup() {
-        Member member1 = createMember("이서윤", "이서");
+        member1 = createMember("이서윤", "이서");
         member2 = createMember("홍길동", "동길");
 
         place1 = createPlace(
@@ -136,6 +141,8 @@ class PinQueryRepositoryImplTest {
         Pin pin4 = createPin(member2, place4, placeTrack3);
 
         memberRepository.saveAll(List.of(member1, member2));
+        MemberFollow memberFollow = MemberFollow.create(member1, member2);
+        memberFollowIdRepository.save(memberFollow);
         placeRepository.saveAll(List.of(place1, place2, place3, place4));
         trackRepository.saveAll(List.of(track, track2));
         placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3));
@@ -254,6 +261,18 @@ class PinQueryRepositoryImplTest {
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();
+    }
+
+    @Test
+    void 팔로우한_사용자가_해당_장소에_핀을_등록했다면_true를_반환한다() {
+        Boolean response = pinQueryRepository.existsPinByMemberFollowAndPlace(member1.getId(), place4.getId());
+        assertThat(response).isTrue();
+    }
+
+    @Test
+    void 팔로우한_사용자가_해당_장소에_핀을_등록하지_않았다면_false를_반환한다() {
+        Boolean response = pinQueryRepository.existsPinByMemberFollowAndPlace(member1.getId(), place3.getId());
+        assertThat(response).isFalse();
     }
 
     private Member createMember(String name, String nickname) {

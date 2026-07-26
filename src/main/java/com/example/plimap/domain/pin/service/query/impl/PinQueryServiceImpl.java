@@ -75,7 +75,7 @@ public class PinQueryServiceImpl implements PinQueryService {
 
     @Override
     public Boolean validatePlacePinAccessByMember(Member member, Place place) {
-        return pinRepository.existsPinByMemberAndPlace(member, place)
+        return pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place)
                 || pinQueryRepository.existsPinByMemberFollowAndPlace(member.getId(), place.getId());
     }
 }

@@ -137,7 +137,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .where(
                         pin.member.id.eq(memberId),
                         cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
-                        pin.deletedAt.isNull()
+                        pin.deletedAt.isNull(),
+                        pin.isFeedPublic.eq(true)
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
@@ -265,7 +266,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .where(
                         memberFollow.follower.id.eq(memberId),
                         pin.place.id.eq(placeId),
-                        pin.deletedAt.isNull()
+                        pin.deletedAt.isNull(),
+                        place.deletedAt.isNull(),
+                        member.deletedAt.isNull()
                 )
                 .fetchFirst() != null;
     }
