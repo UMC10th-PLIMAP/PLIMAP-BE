@@ -106,6 +106,18 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
         );
     }
 
+    @Override
+    @Transactional
+    public void deleteSearchHistory(Long memberId, Long historyId) {
+        int deletedCount = placeSearchHistoryRepository.deleteByIdAndMemberId(
+                historyId,
+                memberId
+        );
+        if (deletedCount == 0) {
+            throw new PlaceException(PlaceErrorCode.PLACE_SEARCH_HISTORY_NOT_FOUND);
+        }
+    }
+
     private void saveSearchHistory(Long memberId, Long placeId) {
         placeLockRepository.acquirePlaceSearchHistoryLock(memberId);
         placeSearchHistoryRepository.upsert(memberId, placeId);

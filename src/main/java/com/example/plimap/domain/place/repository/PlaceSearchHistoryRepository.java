@@ -1,13 +1,25 @@
 package com.example.plimap.domain.place.repository;
 
 import com.example.plimap.domain.place.entity.PlaceSearchHistory;
+import java.util.List;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface PlaceSearchHistoryRepository
-        extends JpaRepository<PlaceSearchHistory, Long> {
+public interface PlaceSearchHistoryRepository extends JpaRepository<PlaceSearchHistory, Long> {
+
+    @EntityGraph(attributePaths = "place")
+    List<PlaceSearchHistory> findTop5ByMemberIdOrderBySelectedAtDescIdDesc(Long memberId);
+
+    @Modifying
+    @Query("DELETE FROM PlaceSearchHistory history "
+            + "WHERE history.id = :historyId AND history.memberId = :memberId")
+    int deleteByIdAndMemberId(
+            @Param("historyId") Long historyId,
+            @Param("memberId") Long memberId
+    );
 
     @Modifying
     @Query(value = """
