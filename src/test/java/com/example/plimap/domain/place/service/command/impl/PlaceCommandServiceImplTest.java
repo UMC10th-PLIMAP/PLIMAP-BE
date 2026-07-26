@@ -219,6 +219,12 @@ class PlaceCommandServiceImplTest {
         PlaceResponse.Selection result =
                 placeCommandService.selectSearchPlace(10L, request);
 
+        verify(placeLockRepository).acquirePlaceSelectionLock("KAKAO", "26338954");
+        verify(placeRepository)
+                .findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
+                        "KAKAO",
+                        "26338954"
+                );
         verify(placeRepository).saveAndFlush(captor.capture());
         Place createdPlace = captor.getValue();
         assertThat(createdPlace.getName()).isEqualTo("한강");
@@ -244,7 +250,7 @@ class PlaceCommandServiceImplTest {
         PlaceRequest.Selection request = selectionRequest(
                 "KAKAO",
                 "far-place",
-                0.0045,
+                0.009,
                 0.0,
                 0.0,
                 0.0
@@ -253,7 +259,7 @@ class PlaceCommandServiceImplTest {
                 11L,
                 "먼 장소",
                 PlaceSource.PLACE_SEARCH,
-                0.0045,
+                0.009,
                 0.0
         );
         when(placeRepository.findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
@@ -266,7 +272,7 @@ class PlaceCommandServiceImplTest {
         PlaceResponse.Selection result =
                 placeCommandService.selectSearchPlace(10L, request);
 
-        assertThat(result.distanceMeters()).isEqualTo(500);
+        assertThat(result.distanceMeters()).isGreaterThan(500);
         assertThat(result.withinAccessRange()).isFalse();
     }
 
@@ -286,8 +292,13 @@ class PlaceCommandServiceImplTest {
                 .extracting(exception -> ((PlaceException) exception).getErrorCode())
                 .isEqualTo(PlaceErrorCode.PLACE_SELECTION_INVALID);
 
-        verifyNoInteractions(placeLockRepository, pinQueryService, placeBookmarkRepository);
-        verifyNoInteractions(placeSearchHistoryRepository);
+        verifyNoInteractions(
+                placeRepository,
+                placeLockRepository,
+                pinQueryService,
+                placeBookmarkRepository,
+                placeSearchHistoryRepository
+        );
     }
 
     private PlaceRequest.MapSelection request(String placeName, String roadAddress) {

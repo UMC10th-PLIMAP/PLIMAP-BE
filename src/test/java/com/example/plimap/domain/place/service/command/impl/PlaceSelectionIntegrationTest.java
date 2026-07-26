@@ -3,9 +3,10 @@ package com.example.plimap.domain.place.service.command.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
+import com.example.plimap.domain.place.exception.PlaceException;
+import com.example.plimap.domain.place.service.command.PlaceCommandService;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,9 +33,10 @@ class PlaceSelectionIntegrationTest {
     private static final int REQUEST_COUNT = 8;
     private static final long MEMBER_ID = 900_001L;
     private static final long OTHER_MEMBER_ID = 900_002L;
+    private static final String TEST_PROVIDER_PLACE_ID_PREFIX = "place-selection-test-";
 
     @Autowired
-    private PlaceCommandServiceImpl placeCommandService;
+    private PlaceCommandService placeCommandService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -76,16 +78,14 @@ class PlaceSelectionIntegrationTest {
                 SELECT COUNT(*)
                 FROM place
                 WHERE place_provider = 'KAKAO'
-                  AND provider_place_id = '26338954'
-                """, Long.class);
-        Long historyCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM place_search_history",
-                Long.class
-        );
+                  AND provider_place_id = ?
+                """, Long.class, testProviderPlaceId("26338954"));
+        Long historyCount = historyCount(MEMBER_ID);
         Map<String, Object> storedHistory = jdbcTemplate.queryForMap("""
                 SELECT member_id, place_id
                 FROM place_search_history
-                """);
+                WHERE member_id = ?
+                """, MEMBER_ID);
 
         assertThat(second.placeId()).isEqualTo(first.placeId());
         assertThat(first.source().name()).isEqualTo("PLACE_SEARCH");
@@ -101,7 +101,7 @@ class PlaceSelectionIntegrationTest {
                 .containsEntry("address", "서울특별시 영등포구 여의도동")
                 .containsEntry("road_address", "서울특별시 영등포구 여의동로")
                 .containsEntry("place_provider", "KAKAO")
-                .containsEntry("provider_place_id", "26338954")
+                .containsEntry("provider_place_id", testProviderPlaceId("26338954"))
                 .containsEntry("source", "PLACE_SEARCH");
         assertThat(((Number) storedPlace.get("longitude")).doubleValue()).isEqualTo(126.9326);
         assertThat(((Number) storedPlace.get("latitude")).doubleValue()).isEqualTo(37.5283);
@@ -130,15 +130,15 @@ class PlaceSelectionIntegrationTest {
                 SELECT COUNT(*)
                 FROM place
                 WHERE place_provider = 'KAKAO'
-                  AND provider_place_id = 'soft-deleted-place'
-                """, Long.class);
+                  AND provider_place_id = ?
+                """, Long.class, testProviderPlaceId("soft-deleted-place"));
         Long activeCount = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
                 FROM place
                 WHERE place_provider = 'KAKAO'
-                  AND provider_place_id = 'soft-deleted-place'
+                  AND provider_place_id = ?
                   AND deleted_at IS NULL
-                """, Long.class);
+                """, Long.class, testProviderPlaceId("soft-deleted-place"));
         Object deletedAt = jdbcTemplate.queryForObject(
                 "SELECT deleted_at FROM place WHERE id = ?",
                 Object.class,
@@ -177,9 +177,9 @@ class PlaceSelectionIntegrationTest {
                     SELECT COUNT(*)
                     FROM place
                     WHERE place_provider = 'KAKAO'
-                      AND provider_place_id = 'concurrent-place'
+                      AND provider_place_id = ?
                       AND deleted_at IS NULL
-                    """, Long.class);
+                    """, Long.class, testProviderPlaceId("concurrent-place"));
 
             assertThat(placeIds).containsOnly(placeIds.getFirst());
             assertThat(activeCount).isEqualTo(1L);
@@ -190,7 +190,7 @@ class PlaceSelectionIntegrationTest {
     }
 
     @Test
-    void samePlaceReselectionUpdatesSelectedAtWithoutAddingRow() {
+    void 동일_장소를_재선택하면_행을_추가하지_않고_selectedAt을_갱신한다() {
         PlaceRequest.Selection request = request("reselected-place");
         placeCommandService.selectSearchPlace(MEMBER_ID, request);
         Long historyId = jdbcTemplate.queryForObject(
@@ -217,7 +217,7 @@ class PlaceSelectionIntegrationTest {
     }
 
     @Test
-    void sixthDifferentPlaceRemovesOldestAndKeepsLatestFive() {
+    void 서로_다른_여섯_장소를_선택하면_최신_다섯_개만_유지한다() {
         for (int index = 1; index <= 6; index++) {
             placeCommandService.selectSearchPlace(MEMBER_ID, request("place-" + index));
         }
@@ -232,11 +232,17 @@ class PlaceSelectionIntegrationTest {
 
         assertThat(providerPlaceIds)
                 .hasSize(5)
-                .containsExactly("place-6", "place-5", "place-4", "place-3", "place-2");
+                .containsExactly(
+                        testProviderPlaceId("place-6"),
+                        testProviderPlaceId("place-5"),
+                        testProviderPlaceId("place-4"),
+                        testProviderPlaceId("place-3"),
+                        testProviderPlaceId("place-2")
+                );
     }
 
     @Test
-    void searchHistoriesAreSeparatedByMember() {
+    void 최근_검색_이력은_회원별로_분리한다() {
         PlaceRequest.Selection request = request("shared-place");
 
         PlaceResponse.Selection first =
@@ -250,7 +256,7 @@ class PlaceSelectionIntegrationTest {
     }
 
     @Test
-    void failedSelectionDoesNotStoreSearchHistory() {
+    void 장소_선택에_실패하면_최근_검색_이력을_저장하지_않는다() {
         PlaceRequest.Selection invalid = new PlaceRequest.Selection(
                 "NAVER",
                 "invalid-place",
@@ -271,7 +277,7 @@ class PlaceSelectionIntegrationTest {
     }
 
     @Test
-    void concurrentDifferentSelectionsKeepAtMostFiveUniqueHistories() throws Exception {
+    void 서로_다른_장소를_동시에_선택해도_중복_없이_최대_다섯_개만_유지한다() throws Exception {
         int selectionCount = 8;
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(selectionCount);
@@ -311,7 +317,7 @@ class PlaceSelectionIntegrationTest {
     private PlaceRequest.Selection request(String providerPlaceId) {
         return new PlaceRequest.Selection(
                 "KAKAO",
-                providerPlaceId,
+                testProviderPlaceId(providerPlaceId),
                 "한강",
                 "공원",
                 "서울특별시 영등포구 여의도동",
@@ -324,9 +330,21 @@ class PlaceSelectionIntegrationTest {
     }
 
     private void clearPlaces() {
-        jdbcTemplate.update("DELETE FROM place_search_history");
-        jdbcTemplate.update("DELETE FROM place_bookmark");
-        jdbcTemplate.update("DELETE FROM place");
+        jdbcTemplate.update(
+                "DELETE FROM place_search_history WHERE member_id IN (?, ?)",
+                MEMBER_ID,
+                OTHER_MEMBER_ID
+        );
+        jdbcTemplate.update(
+                "DELETE FROM place_bookmark WHERE member_id IN (?, ?)",
+                MEMBER_ID,
+                OTHER_MEMBER_ID
+        );
+        jdbcTemplate.update("""
+                DELETE FROM place
+                WHERE place_provider = 'KAKAO'
+                  AND provider_place_id LIKE ?
+                """, TEST_PROVIDER_PLACE_ID_PREFIX + "%");
     }
 
     private void insertMembers() {
@@ -350,5 +368,9 @@ class PlaceSelectionIntegrationTest {
                 FROM place_search_history
                 WHERE member_id = ?
                 """, Long.class, memberId);
+    }
+
+    private String testProviderPlaceId(String providerPlaceId) {
+        return TEST_PROVIDER_PLACE_ID_PREFIX + providerPlaceId;
     }
 }
