@@ -160,8 +160,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .limit(pageSize + 1)
                 .fetch();
 
-        List<PinResponse.Feed> data = pins.stream()
-                .map(PinConverter::toFeed).toList();
+        List<PinResponse.Feed> data = new ArrayList<>(pins.stream()
+                .map(PinConverter::toFeed).toList());
 
         boolean hasNext = data.size() > pageSize;
 
