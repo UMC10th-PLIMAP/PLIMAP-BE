@@ -84,4 +84,24 @@ public class Place extends SoftDeleteEntity {
                 .build();
     }
 
+    public static Place createPlaceSearch(
+            String name,
+            String category,
+            String address,
+            String roadAddress,
+            String placeProvider,
+            String providerPlaceId,
+            Point location) {
+        return Place.builder()
+                .name(name)
+                .category(category)
+                .address(address)
+                .roadAddress(roadAddress)
+                .placeProvider(placeProvider)
+                .providerPlaceId(providerPlaceId)
+                .source(PlaceSource.PLACE_SEARCH)
+                .location(location)
+                .build();
+    }
+
 }
