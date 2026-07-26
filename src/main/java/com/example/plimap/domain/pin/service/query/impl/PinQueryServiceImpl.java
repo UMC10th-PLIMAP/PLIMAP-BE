@@ -14,6 +14,7 @@ import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
+import com.example.plimap.domain.place.entity.Place;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,5 +71,11 @@ public class PinQueryServiceImpl implements PinQueryService {
     @Override
     public Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize) {
         return pinQueryRepository.findMyPinList(memberId, cursor, pageSize);
+    }
+
+    @Override
+    public Boolean validatePlacePinAccessByMember(Member member, Place place) {
+        return pinRepository.existsPinByMemberAndPlace(member, place)
+                || pinQueryRepository.existsPinByMemberFollowAndPlace(member.getId(), place.getId());
     }
 }

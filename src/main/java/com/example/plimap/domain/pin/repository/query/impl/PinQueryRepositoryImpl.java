@@ -1,5 +1,8 @@
 package com.example.plimap.domain.pin.repository.query.impl;
 
+import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.entity.QMember;
+import com.example.plimap.domain.member.entity.QMemberFollow;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.CursorInfo;
 import com.example.plimap.domain.pin.dto.Pagination;
@@ -10,6 +13,7 @@ import com.example.plimap.domain.pin.entity.QPin;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
+import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.QPlace;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
@@ -243,6 +247,27 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 : null;
 
         return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
+    }
+
+    @Override
+    public Boolean existsPinByMemberFollowAndPlace(Long memberId, Long placeId) {
+        QPin pin = QPin.pin;
+        QMember member = QMember.member;
+        QPlace place = QPlace.place;
+        QMemberFollow memberFollow = QMemberFollow.memberFollow;
+
+        return queryFactory
+                .selectOne()
+                .from(memberFollow)
+                .join(memberFollow.following, member)
+                .join(pin).on(pin.member.eq(member))
+                .join(place).on(pin.place.eq(place))
+                .where(
+                        memberFollow.follower.id.eq(memberId),
+                        pin.place.id.eq(placeId),
+                        pin.deletedAt.isNull()
+                )
+                .fetchFirst() != null;
     }
 
     private CursorInfo parseCursor(String cursor) {

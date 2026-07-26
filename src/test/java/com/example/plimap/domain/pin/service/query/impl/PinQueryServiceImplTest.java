@@ -1,6 +1,7 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -27,6 +28,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -54,17 +56,24 @@ class PinQueryServiceImplTest {
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
-    Member member;
+    Member member, member2;
     Place place;
     Tag tag1, tag2, tag3, tag4, tag5;
     PlaceTrack placeTrack;
-
+    MemberFollow memberFollow;
 
     @BeforeEach
     void setup() {
         member = Member.builder()
                 .name("이서윤")
                 .nickname("이서")
+                .introduction("안녕하세요")
+                .profileImageObjectKey("image_url")
+                .build();
+
+        member2 = Member.builder()
+                .name("홍길동")
+                .nickname("동길")
                 .introduction("안녕하세요")
                 .profileImageObjectKey("image_url")
                 .build();
@@ -118,6 +127,10 @@ class PinQueryServiceImplTest {
         );
 
         placeTrack = PlaceTrack.create(place, track);
+
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(member2, "id", 2L);
+        ReflectionTestUtils.setField(place, "id", 1L);
     }
 
 
@@ -215,5 +228,48 @@ class PinQueryServiceImplTest {
     void 빈_장소_아이디목록_입력시_빈_Map을_반환한다() {
         Map<Long, PlacePinInfo> result = pinQueryService.findPinInfosByPlaceIds(List.of());
         assertThat(result).isEqualTo(Collections.emptyMap());
+    }
+
+    @Test
+    void 내가_핀을_등록했다면_true를_반환한다() {
+        // given
+        when(pinRepository.existsPinByMemberAndPlace(member, place))
+                .thenReturn(true);
+
+        // when
+        boolean result = pinQueryService.validatePlacePinAccessByMember(member, place);
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void 팔로우한_사람이_핀을_등록했다면_true를_반환한다() {
+        // given
+        when(pinRepository.existsPinByMemberAndPlace(member, place))
+                .thenReturn(false);
+        when(pinQueryRepository.existsPinByMemberFollowAndPlace(anyLong(), anyLong()))
+                .thenReturn(true);
+
+        // when
+        boolean result = pinQueryService.validatePlacePinAccessByMember(member, place);
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void 둘_다_핀을_등록하지_않았다면_false를_반환한다() {
+        // given
+        when(pinRepository.existsPinByMemberAndPlace(member, place))
+                .thenReturn(false);
+        when(pinQueryRepository.existsPinByMemberFollowAndPlace(anyLong(), anyLong()))
+                .thenReturn(false);
+
+        // when
+        boolean result = pinQueryService.validatePlacePinAccessByMember(member, place);
+
+        // then
+        assertThat(result).isFalse();
     }
 }
