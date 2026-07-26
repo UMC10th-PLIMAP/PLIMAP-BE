@@ -10,6 +10,7 @@ import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
+import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.lock.PlaceLockRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.command.PlaceCommandService;
@@ -37,6 +38,7 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
 
     private final PlaceRepository placeRepository;
     private final PlaceBookmarkRepository placeBookmarkRepository;
+    private final PlaceSearchHistoryRepository placeSearchHistoryRepository;
     private final PlaceQueryRepository placeQueryRepository;
     private final PlaceLockRepository placeLockRepository;
     private final PinQueryService pinQueryService;
@@ -87,6 +89,7 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
         boolean bookmarkedByMe = placeBookmarkRepository.existsById(
                 new PlaceBookmarkId(place.getId(), memberId)
         );
+        saveSearchHistory(memberId, place.getId());
 
         return new PlaceResponse.Selection(
                 place.getId(),
@@ -101,6 +104,12 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                 pinCount,
                 bookmarkedByMe
         );
+    }
+
+    private void saveSearchHistory(Long memberId, Long placeId) {
+        placeLockRepository.acquirePlaceSearchHistoryLock(memberId);
+        placeSearchHistoryRepository.upsert(memberId, placeId);
+        placeSearchHistoryRepository.deleteExcessByMemberId(memberId);
     }
 
     private Place createMapSelection(PlaceRequest.MapSelection request) {

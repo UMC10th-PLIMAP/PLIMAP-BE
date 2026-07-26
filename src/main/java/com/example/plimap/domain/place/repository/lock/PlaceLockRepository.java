@@ -5,4 +5,6 @@ public interface PlaceLockRepository {
     void acquireMapSelectionLock();
 
     void acquirePlaceSelectionLock(String provider, String providerPlaceId);
+
+    void acquirePlaceSearchHistoryLock(Long memberId);
 }

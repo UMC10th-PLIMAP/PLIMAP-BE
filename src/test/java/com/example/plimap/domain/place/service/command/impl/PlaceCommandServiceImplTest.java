@@ -21,6 +21,7 @@ import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
+import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.lock.PlaceLockRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import java.util.Map;
@@ -42,6 +43,8 @@ class PlaceCommandServiceImplTest {
     private final PlaceRepository placeRepository = mock(PlaceRepository.class);
     private final PlaceBookmarkRepository placeBookmarkRepository =
             mock(PlaceBookmarkRepository.class);
+    private final PlaceSearchHistoryRepository placeSearchHistoryRepository =
+            mock(PlaceSearchHistoryRepository.class);
     private final PlaceQueryRepository placeQueryRepository = mock(PlaceQueryRepository.class);
     private final PlaceLockRepository placeLockRepository = mock(PlaceLockRepository.class);
     private final PinQueryService pinQueryService = mock(PinQueryService.class);
@@ -53,6 +56,7 @@ class PlaceCommandServiceImplTest {
         placeCommandService = new PlaceCommandServiceImpl(
                 placeRepository,
                 placeBookmarkRepository,
+                placeSearchHistoryRepository,
                 placeQueryRepository,
                 placeLockRepository,
                 pinQueryService
@@ -180,6 +184,9 @@ class PlaceCommandServiceImplTest {
                         "KAKAO",
                         "26338954"
                 );
+        verify(placeLockRepository).acquirePlaceSearchHistoryLock(10L);
+        verify(placeSearchHistoryRepository).upsert(10L, 7L);
+        verify(placeSearchHistoryRepository).deleteExcessByMemberId(10L);
         verify(placeRepository, never()).saveAndFlush(any(Place.class));
     }
 
@@ -280,6 +287,7 @@ class PlaceCommandServiceImplTest {
                 .isEqualTo(PlaceErrorCode.PLACE_SELECTION_INVALID);
 
         verifyNoInteractions(placeLockRepository, pinQueryService, placeBookmarkRepository);
+        verifyNoInteractions(placeSearchHistoryRepository);
     }
 
     private PlaceRequest.MapSelection request(String placeName, String roadAddress) {
