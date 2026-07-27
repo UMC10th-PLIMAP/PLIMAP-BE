@@ -61,6 +61,7 @@ class PinControllerTest {
     private static final String MY_FEED_ENDPOINT = "/api/v1/feed/members/me";
     private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feed/members/{memberId}";
     private static final String MY_PIN_ENDPOINT = "/api/v1/pins/members/me";
+    private static final String PLACE_TRACK_PIN_ENDPOINT = "/api/v1/place-tracks/{placeTrackId}/pins";
 
     @Autowired
     private MockMvc mockMvc;
@@ -354,6 +355,33 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.result.pageSize").value(10));
     }
 
+    @Test
+    void 특정_장소_노래의_핀_목록_조회에_성공하면_200을_반환한다() throws Exception {
+        when(pinQueryService.findPinListByPlaceTrackId(
+                1L, null, 10, 1L
+        )).thenReturn(Pagination.<PinResponse.PinDetail>builder()
+                .data(new ArrayList<>())
+                .pageSize(10)
+                .nextCursor(null)
+                .hasNext(false)
+                .build());
+
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+
+        when(memberRepository.findById(1L))
+                .thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(PLACE_TRACK_PIN_ENDPOINT, 1L)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("특정 장소 노래의 핀 목록이 조회되었습니다."))
+                .andExpect(jsonPath("$.result.hasNext").value(false))
+                .andExpect(jsonPath("$.result.pageSize").value(10));
+    }
 
     private String validCreateRequest() {
         return """

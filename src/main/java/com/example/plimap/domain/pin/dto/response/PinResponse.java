@@ -68,4 +68,18 @@ public class PinResponse {
             String staticCreatedAt,
             Instant createdAt
     ) {}
+
+    @Builder
+    public record PinDetail(
+            Long pinId,
+            String writerNickname,
+            String writerProfileImage,
+            String introduction,
+            List<String> tags,
+            Integer clipStartMs,
+            Integer likeCount,
+            Boolean userLike,
+            String staticCreatedAt,
+            Instant createdAt
+    ) {}
 }

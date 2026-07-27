@@ -71,4 +71,9 @@ public class PinQueryServiceImpl implements PinQueryService {
     public Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize) {
         return pinQueryRepository.findMyPinList(memberId, cursor, pageSize);
     }
+
+    @Override
+    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackId(Long memberId, String cursor, Integer pageSize, Long placeTrackId) {
+        return pinQueryRepository.findPinListByPlaceTrackId(memberId, cursor, pageSize, placeTrackId);
+    }
 }
