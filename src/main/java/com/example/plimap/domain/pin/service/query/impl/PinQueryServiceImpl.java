@@ -78,4 +78,8 @@ public class PinQueryServiceImpl implements PinQueryService {
         return pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place)
                 || pinQueryRepository.existsPinByMemberFollowAndPlace(member.getId(), place.getId());
     }
+      
+    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackId(Long memberId, String cursor, Integer pageSize, Long placeTrackId) {
+        return pinQueryRepository.findPinListByPlaceTrackId(memberId, cursor, pageSize, placeTrackId);
+    }
 }

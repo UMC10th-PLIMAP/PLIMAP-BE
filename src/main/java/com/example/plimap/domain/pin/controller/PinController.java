@@ -138,4 +138,20 @@ public class PinController implements PinControllerDocs {
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.MY_PIN_LIST_SEARCH_SUCCESS, response));
     }
+
+    @GetMapping("/place-tracks/{placeTrackId}/pins")
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.PinDetail>>> getPlaceTrackPinList(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            @RequestParam(required = false) String cursor,
+            @PathVariable Long placeTrackId
+    ) {
+        Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackId(currentMember.getMember().getId(), cursor, pageSize, placeTrackId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS, response));
+    }
 }
