@@ -24,6 +24,11 @@ public enum PlaceErrorCode implements BaseErrorCode {
             "PLACE_SELECTION_INVALID",
             "장소 선택 정보가 올바르지 않습니다."
     ),
+    PLACE_SEARCH_HISTORY_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "PLACE_SEARCH_HISTORY_NOT_FOUND",
+            "최근 검색 이력을 찾을 수 없습니다."
+    ),
     PLACE_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "PLACE_NOT_FOUND",

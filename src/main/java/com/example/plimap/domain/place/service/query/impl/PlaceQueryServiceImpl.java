@@ -5,14 +5,17 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.place.entity.PlaceSearchHistory;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceRepository;
+import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.global.external.kakao.KakaoClientException;
 import com.example.plimap.global.external.kakao.KakaoClientTimeoutException;
 import com.example.plimap.global.external.kakao.KakaoPlaceSearchClient;
 import com.example.plimap.global.external.kakao.dto.KakaoPlaceSearchResponse;
+import com.example.plimap.global.util.GeoDistanceCalculator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,9 +33,10 @@ import org.springframework.validation.annotation.Validated;
 public class PlaceQueryServiceImpl implements PlaceQueryService {
 
     private static final String KAKAO_PROVIDER = "KAKAO";
-    private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null,0L);
+    private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null, 0L);
 
     private final PlaceRepository placeRepository;
+    private final PlaceSearchHistoryRepository placeSearchHistoryRepository;
     private final KakaoPlaceSearchClient kakaoPlaceSearchClient;
     private final PinQueryService pinQueryService;
 
@@ -56,6 +60,72 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                         pinInfosByPlaceId
                 ))
                 .toList());
+    }
+
+    @Override
+    public PlaceResponse.SearchHistoryResult getSearchHistories(
+            Long memberId,
+            double latitude,
+            double longitude
+    ) {
+        List<PlaceSearchHistory> activeHistories = placeSearchHistoryRepository
+                .findTop5ByMemberIdOrderBySelectedAtDescIdDesc(memberId)
+                .stream()
+                .filter(history -> history.getPlace() != null)
+                .filter(history -> !history.getPlace().isDeleted())
+                .toList();
+
+        if (activeHistories.isEmpty()) {
+            return new PlaceResponse.SearchHistoryResult(List.of());
+        }
+
+        List<Long> placeIds = activeHistories.stream()
+                .map(history -> history.getPlace().getId())
+                .distinct()
+                .toList();
+        Map<Long, PlacePinInfo> pinInfosByPlaceId =
+                pinQueryService.findPinInfosByPlaceIds(placeIds);
+
+        List<PlaceResponse.SearchHistoryItem> items = activeHistories.stream()
+                .map(history -> toSearchHistoryItem(
+                        history,
+                        latitude,
+                        longitude,
+                        pinInfosByPlaceId
+                ))
+                .toList();
+        return new PlaceResponse.SearchHistoryResult(items);
+    }
+
+    private PlaceResponse.SearchHistoryItem toSearchHistoryItem(
+            PlaceSearchHistory history,
+            double userLatitude,
+            double userLongitude,
+            Map<Long, PlacePinInfo> pinInfosByPlaceId
+    ) {
+        Place place = history.getPlace();
+        PlacePinInfo pinInfo = pinInfosByPlaceId.getOrDefault(place.getId(), NO_PIN_INFO);
+        double distance = GeoDistanceCalculator.calculateMeters(
+                userLatitude,
+                userLongitude,
+                history.getLocation().getY(),
+                history.getLocation().getX()
+        );
+
+        return new PlaceResponse.SearchHistoryItem(
+                history.getId(),
+                place.getId(),
+                history.getPlaceName(),
+                history.getCategory(),
+                history.getAddress(),
+                place.getRoadAddress(),
+                history.getLocation().getY(),
+                history.getLocation().getX(),
+                Math.toIntExact(Math.round(distance)),
+                pinInfo.hasPin(),
+                pinInfo.firstPinCreatorNickname(),
+                history.getSelectedAt()
+        );
     }
 
     @Override

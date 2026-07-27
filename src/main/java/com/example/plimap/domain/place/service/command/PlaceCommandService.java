@@ -11,4 +11,6 @@ public interface PlaceCommandService {
             Long memberId,
             PlaceRequest.Selection request
     );
+
+    void deleteSearchHistory(Long memberId, Long historyId);
 }
