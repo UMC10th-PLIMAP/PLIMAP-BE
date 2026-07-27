@@ -3,6 +3,7 @@ package com.example.plimap.domain.place.dto.response;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.Instant;
 import java.util.List;
 
 public final class PlaceResponse {
@@ -43,6 +44,48 @@ public final class PlaceResponse {
             boolean hasPin,
             @Schema(description = "최초 PIN 작성자 닉네임", example = "홍길동", nullable = true)
             String firstPinCreatorNickname
+    ) {
+    }
+
+    public record SearchHistoryResult(
+            @Schema(description = "최근 검색 장소 목록")
+            List<SearchHistoryItem> items
+    ) {
+
+        public SearchHistoryResult {
+            items = List.copyOf(items);
+        }
+    }
+
+    public record SearchHistoryItem(
+            @Schema(description = "최근 검색 이력 ID", example = "10")
+            Long historyId,
+            @Schema(description = "장소 ID", example = "1")
+            Long placeId,
+            @Schema(description = "장소명", example = "한강")
+            String placeName,
+            @Schema(description = "장소 카테고리", example = "공원", nullable = true)
+            String category,
+            @Schema(description = "전체 지번 주소", example = "서울특별시 영등포구 여의도동")
+            String address,
+            @Schema(
+                    description = "전체 도로명 주소. 없는 경우 null",
+                    example = "서울특별시 영등포구 여의동로",
+                    nullable = true
+            )
+            String roadAddress,
+            @Schema(description = "장소 위도", example = "37.5283")
+            Double latitude,
+            @Schema(description = "장소 경도", example = "126.9326")
+            Double longitude,
+            @Schema(description = "사용자 현재 위치 기준 거리(m)", example = "470")
+            Integer distanceMeters,
+            @Schema(description = "활성 PIN 존재 여부", example = "true")
+            boolean hasPin,
+            @Schema(description = "최초 활성 PIN 작성자 닉네임", nullable = true)
+            String firstPinCreatorNickname,
+            @Schema(description = "최근 장소 선택 시각", example = "2026-07-05T12:30:00Z")
+            Instant selectedAt
     ) {
     }
 

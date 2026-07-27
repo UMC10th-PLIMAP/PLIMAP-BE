@@ -17,6 +17,7 @@ import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceRepository;
+import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.service.query.impl.PlaceQueryServiceImpl;
 import com.example.plimap.global.external.kakao.KakaoClientException;
 import com.example.plimap.global.external.kakao.KakaoClientTimeoutException;
@@ -38,6 +39,9 @@ class PlaceQueryServiceImplTest {
     private PlaceRepository placeRepository;
 
     @Mock
+    private PlaceSearchHistoryRepository placeSearchHistoryRepository;
+
+    @Mock
     private KakaoPlaceSearchClient kakaoPlaceSearchClient;
 
     @Mock
@@ -49,6 +53,7 @@ class PlaceQueryServiceImplTest {
     void setUp() {
         placeQueryService = new PlaceQueryServiceImpl(
                 placeRepository,
+                placeSearchHistoryRepository,
                 kakaoPlaceSearchClient,
                 pinQueryService
         );
