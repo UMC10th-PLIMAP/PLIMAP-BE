@@ -16,4 +16,6 @@ public interface PinQueryRepository{
     Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize);
 
     Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize);
+
+    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackId(Long memberId, String cursor, Integer pageSize, Long placeTrackId);
 }
