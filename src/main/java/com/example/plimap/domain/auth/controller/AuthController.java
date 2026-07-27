@@ -75,11 +75,9 @@ public class AuthController implements AuthControllerDocs {
 
     @Override
     @GetMapping("/terms")
-    public ApiResponse<List<TermsResDTO.Item>> getActiveTerms() {
-        List<TermsResDTO.Item> result = termsQueryService.getActiveTerms().stream()
-                .map(TermsResDTO.Item::from)
-                .toList();
-        return ApiResponse.success(TermsSuccessCode.ACTIVE_TERMS_RETRIEVED, result);
+    public ApiResponse<List<TermsResDTO.Result>> getTermsAgreementStatus(@AuthenticationPrincipal AuthMember authMember) {
+        List<TermsResDTO.Result> result = termsQueryService.findTermsAgreementStatus(authMember.getMember().getId());
+        return ApiResponse.success(TermsSuccessCode.TERMS_AGREEMENT_STATUS_RETRIEVED, result);
     }
 
     @Override
