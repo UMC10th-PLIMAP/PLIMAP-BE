@@ -10,6 +10,12 @@ public interface PlaceQueryService {
 
     PlaceResponse.SearchResult searchPlaces(@Valid PlaceRequest.Search request);
 
+    PlaceResponse.SearchHistoryResult getSearchHistories(
+            Long memberId,
+            double latitude,
+            double longitude
+    );
+
     Place getActivePlace(Long placeId);
 
     Optional<Place> findActivePlaceByProviderAndProviderPlaceId(
