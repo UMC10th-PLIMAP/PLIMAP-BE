@@ -265,14 +265,38 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 팔로우한_사용자가_해당_장소에_핀을_등록했다면_true를_반환한다() {
-        Boolean response = pinQueryRepository.existsPinByMemberFollowAndPlace(member1.getId(), place4.getId());
-        assertThat(response).isTrue();
+        // given
+        memberFollowIdRepository.save(
+                MemberFollow.create(member1, member2)
+        );
+
+        // when
+        Boolean result =
+                pinQueryRepository.existsPinByMemberFollowAndPlace(
+                        member1.getId(),
+                        place2.getId()
+                );
+
+        // then
+        assertThat(result).isTrue();
     }
 
     @Test
     void 팔로우한_사용자가_해당_장소에_핀을_등록하지_않았다면_false를_반환한다() {
-        Boolean response = pinQueryRepository.existsPinByMemberFollowAndPlace(member1.getId(), place3.getId());
-        assertThat(response).isFalse();
+        // given
+        memberFollowIdRepository.save(
+                MemberFollow.create(member1, member2)
+        );
+
+        // when
+        Boolean result =
+                pinQueryRepository.existsPinByMemberFollowAndPlace(
+                        member1.getId(),
+                        place3.getId()
+                );
+
+        // then
+        assertThat(result).isFalse();
     }
 
     private Member createMember(String name, String nickname) {
