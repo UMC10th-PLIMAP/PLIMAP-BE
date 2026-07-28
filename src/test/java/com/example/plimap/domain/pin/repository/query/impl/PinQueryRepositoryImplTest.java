@@ -13,6 +13,9 @@ import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.repository.PlaceRepository;
+import com.example.plimap.domain.report.entity.Report;
+import com.example.plimap.domain.report.enums.ReportCategory;
+import com.example.plimap.domain.report.repository.ReportRepository;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
@@ -66,14 +69,19 @@ class PinQueryRepositoryImplTest {
     private MemberFollowRepository memberFollowIdRepository;
 
     @Autowired
+    private ReportRepository reportRepository;
+
+    @Autowired
     EntityManager entityManager;
 
-    Pin pin1, pin2, pin3;
+    Pin pin1, pin2, pin3, pin4, pin5;
     private Place place1;
     private Place place2;
     private Place place3;
     private Place place4;
     Member member1, member2;
+    Report report;
+    PlaceTrack placeTrack1, placeTrack3;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @BeforeEach
@@ -131,14 +139,17 @@ class PinQueryRepositoryImplTest {
                 null
         );
 
-        PlaceTrack placeTrack1 = PlaceTrack.create(place1, track);
+        placeTrack1 = PlaceTrack.create(place1, track);
         PlaceTrack placeTrack2 = PlaceTrack.create(place2, track);
-        PlaceTrack placeTrack3 = PlaceTrack.create(place4, track2);
+        placeTrack3 = PlaceTrack.create(place4, track2);
 
         pin1 = createPin(member1, place1, placeTrack1);
         pin2 = createPin(member2, place1, placeTrack1);
         pin3 = createPin(member2, place2, placeTrack2);
-        Pin pin4 = createPin(member2, place4, placeTrack3);
+        pin4 = createPin(member2, place4, placeTrack3);
+        pin5 = createPin(member1, place4, placeTrack3);
+
+        report = Report.createPinReport(member2 ,pin5, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null);
 
         memberRepository.saveAll(List.of(member1, member2));
         MemberFollow memberFollow = MemberFollow.create(member1, member2);
@@ -146,7 +157,8 @@ class PinQueryRepositoryImplTest {
         placeRepository.saveAll(List.of(place1, place2, place3, place4));
         trackRepository.saveAll(List.of(track, track2));
         placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3));
-        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4));
+        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5));
+        reportRepository.save(report);
 
         entityManager.flush();
         entityManager.clear();
@@ -243,7 +255,6 @@ class PinQueryRepositoryImplTest {
         assertThat(response.hasNext()).isTrue();
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
         String nextCursor = response.nextCursor();
-        System.out.println(nextCursor);
         Pagination<PinResponse.MyPin> response2 = pinQueryRepository.findMyPinList(member2.getId(), nextCursor, 2 );
 
         assertThat(response2.data().size()).isEqualTo(1);
@@ -297,6 +308,50 @@ class PinQueryRepositoryImplTest {
 
         // then
         assertThat(result).isFalse();
+        Boolean response = pinQueryRepository.existsPinByMemberFollowAndPlace(member1.getId(), place3.getId());
+        assertThat(response).isFalse();
+
+    }
+
+    @Test
+    void 특정_장소에_대한_핀_목록을_커서기반_페이지네이션으로_조회한다() {
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), null, 1 , placeTrack1.getId());
+
+        assertThat(response.data().size()).isEqualTo(1);
+        assertThat(response.hasNext()).isTrue();
+        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin2.getId());
+        String nextCursor = response.nextCursor();
+        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), nextCursor, 2, placeTrack1.getId());
+
+        assertThat(response2.data().size()).isEqualTo(1);
+        assertThat(response2.hasNext()).isFalse();
+        assertThat(response2.nextCursor()).isNull();
+    }
+
+    @Test
+    void 내가_신고한_핀은_제외하고_조회한다() {
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), null, 5 , placeTrack3.getId());
+
+        assertThat(response.data().size()).isEqualTo(1);
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.nextCursor()).isNull();
+
+        assertThat(response.data())
+                .extracting(PinResponse.PinDetail::pinId)
+                .doesNotContain(pin5.getId())
+                .containsExactly(pin4.getId());
+    }
+
+    @Test
+    void 전달한_커서_기반으로_특정_장소에_대한_핀_목록을_조회한다() {
+        String cursor = "%s/%d".formatted(
+                pin2.getCreatedAt(),
+                pin2.getId()
+        );
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), cursor, 2, placeTrack1.getId());
+        assertThat(response.data().size()).isEqualTo(1);
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.nextCursor()).isNull();
     }
 
     private Member createMember(String name, String nickname) {

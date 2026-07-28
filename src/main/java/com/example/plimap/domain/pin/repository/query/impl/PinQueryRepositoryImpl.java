@@ -16,6 +16,7 @@ import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.QPlace;
+import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
 import com.querydsl.core.types.Projections;
@@ -87,6 +88,15 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     private final EntityManager entityManager;
     private final JPAQueryFactory queryFactory;
 
+    QPin pin = QPin.pin;
+    QPinLike pinLike = QPinLike.pinLike;
+    QMember member = QMember.member;
+    QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
+    QTrack track = QTrack.track;
+    QPlace place = QPlace.place;
+    QMemberFollow memberFollow = QMemberFollow.memberFollow;
+    QReport report = QReport.report;
+
     @Override
     @SuppressWarnings("unchecked")
     public Optional<Double> findNearestActivePinWithin20m(
@@ -126,10 +136,6 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     @Override
     public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
-        QPin pin = QPin.pin;
-        QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
-        QPlace place = QPlace.place;
-        QTrack track = QTrack.track;
         CursorInfo cursorInfo = parseCursor(cursor);
 
         List<Long> pinIds = queryFactory
@@ -190,10 +196,6 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     @Override
     public Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize) {
-        QPin pin = QPin.pin;
-        QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
-        QTrack track = QTrack.track;
-        QPlace place = QPlace.place;
         CursorInfo cursorInfo = parseCursor(cursor);
 
         List<Long> pinIds = queryFactory
@@ -253,10 +255,6 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     @Override
     public Boolean existsPinByMemberFollowAndPlace(Long memberId, Long placeId) {
-        QPin pin = QPin.pin;
-        QMember member = QMember.member;
-        QPlace place = QPlace.place;
-        QMemberFollow memberFollow = QMemberFollow.memberFollow;
 
         return queryFactory
                 .selectOne()
@@ -275,19 +273,21 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     } 
   
     public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackId(Long memberId, String cursor, Integer pageSize, Long placeTrackId) {
-        QPin pin = QPin.pin;
-        QPinLike pinLike = QPinLike.pinLike;
-        QMember member = QMember.member;
-        QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
         CursorInfo cursorInfo = parseCursor(cursor);
 
         List<Long> pinIds = queryFactory
                 .select(pin.id)
                 .from(pin)
+                .leftJoin(report)
+                .on(
+                        report.reportedPin.eq(pin),
+                        report.reporter.id.eq(memberId)
+                )
                 .where(
                         cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
                         pin.deletedAt.isNull(),
-                        pin.placeTrack.id.eq(placeTrackId)
+                        pin.placeTrack.id.eq(placeTrackId),
+                        report.id.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
