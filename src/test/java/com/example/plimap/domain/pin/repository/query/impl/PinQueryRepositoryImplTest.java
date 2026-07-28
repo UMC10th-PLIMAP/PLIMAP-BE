@@ -1,6 +1,8 @@
 package com.example.plimap.domain.pin.repository.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.entity.MemberFollow;
+import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
@@ -61,6 +63,9 @@ class PinQueryRepositoryImplTest {
     private PlaceTrackRepository placeTrackRepository;
 
     @Autowired
+    private MemberFollowRepository memberFollowIdRepository;
+
+    @Autowired
     EntityManager entityManager;
 
     Pin pin1, pin2, pin3;
@@ -68,13 +73,12 @@ class PinQueryRepositoryImplTest {
     private Place place2;
     private Place place3;
     private Place place4;
-    PlaceTrack placeTrack1;
-    Member member2;
+    Member member1, member2;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @BeforeEach
     void setup() {
-        Member member1 = createMember("이서윤", "이서");
+        member1 = createMember("이서윤", "이서");
         member2 = createMember("홍길동", "동길");
 
         place1 = createPlace(
@@ -127,7 +131,7 @@ class PinQueryRepositoryImplTest {
                 null
         );
 
-        placeTrack1 = PlaceTrack.create(place1, track);
+        PlaceTrack placeTrack1 = PlaceTrack.create(place1, track);
         PlaceTrack placeTrack2 = PlaceTrack.create(place2, track);
         PlaceTrack placeTrack3 = PlaceTrack.create(place4, track2);
 
@@ -137,6 +141,8 @@ class PinQueryRepositoryImplTest {
         Pin pin4 = createPin(member2, place4, placeTrack3);
 
         memberRepository.saveAll(List.of(member1, member2));
+        MemberFollow memberFollow = MemberFollow.create(member1, member2);
+        memberFollowIdRepository.save(memberFollow);
         placeRepository.saveAll(List.of(place1, place2, place3, place4));
         trackRepository.saveAll(List.of(track, track2));
         placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3));
@@ -237,6 +243,7 @@ class PinQueryRepositoryImplTest {
         assertThat(response.hasNext()).isTrue();
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
         String nextCursor = response.nextCursor();
+        System.out.println(nextCursor);
         Pagination<PinResponse.MyPin> response2 = pinQueryRepository.findMyPinList(member2.getId(), nextCursor, 2 );
 
         assertThat(response2.data().size()).isEqualTo(1);
@@ -257,30 +264,39 @@ class PinQueryRepositoryImplTest {
     }
 
     @Test
-    void 특정_장소에_대한_핀_목록을_커서기반_페이지네이션으로_조회한다() {
-        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), null, 1 , placeTrack1.getId());
+    void 팔로우한_사용자가_해당_장소에_핀을_등록했다면_true를_반환한다() {
+        // given
+        memberFollowIdRepository.save(
+                MemberFollow.create(member1, member2)
+        );
 
-        assertThat(response.data().size()).isEqualTo(1);
-        assertThat(response.hasNext()).isTrue();
-        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin2.getId());
-        String nextCursor = response.nextCursor();
-        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), nextCursor, 2, placeTrack1.getId());
+        // when
+        Boolean result =
+                pinQueryRepository.existsPinByMemberFollowAndPlace(
+                        member1.getId(),
+                        place2.getId()
+                );
 
-        assertThat(response2.data().size()).isEqualTo(1);
-        assertThat(response2.hasNext()).isFalse();
-        assertThat(response2.nextCursor()).isNull();
+        // then
+        assertThat(result).isTrue();
     }
 
     @Test
-    void 전달한_커서_기반으로_특정_장소에_대한_핀_목록을_조회한다() {
-        String cursor = "%s/%d".formatted(
-                pin2.getCreatedAt(),
-                pin2.getId()
+    void 팔로우한_사용자가_해당_장소에_핀을_등록하지_않았다면_false를_반환한다() {
+        // given
+        memberFollowIdRepository.save(
+                MemberFollow.create(member1, member2)
         );
-        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), cursor, 2, placeTrack1.getId());
-        assertThat(response.data().size()).isEqualTo(1);
-        assertThat(response.hasNext()).isFalse();
-        assertThat(response.nextCursor()).isNull();
+
+        // when
+        Boolean result =
+                pinQueryRepository.existsPinByMemberFollowAndPlace(
+                        member1.getId(),
+                        place3.getId()
+                );
+
+        // then
+        assertThat(result).isFalse();
     }
 
     private Member createMember(String name, String nickname) {
