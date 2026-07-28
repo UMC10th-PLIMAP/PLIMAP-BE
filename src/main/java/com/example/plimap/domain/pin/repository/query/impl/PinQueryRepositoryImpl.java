@@ -11,15 +11,16 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.QPin;
 import com.example.plimap.domain.pin.entity.QPinLike;
+import com.example.plimap.domain.pin.enums.SortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
-import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.QPlace;
 import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
-import com.querydsl.core.types.Projections;
+import com.example.plimap.domain.track.enums.PlaceTrackSort;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -28,13 +29,13 @@ import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 
+import static com.example.plimap.domain.pin.entity.QPin.pin;
 import static com.example.plimap.domain.pin.entity.QPinTag.pinTag;
 import static com.example.plimap.domain.pin.entity.QTag.tag;
+import static com.example.plimap.domain.track.entity.QPlaceTrack.placeTrack;
 
 @Repository
 @RequiredArgsConstructor
@@ -136,20 +137,24 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     @Override
     public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
-        CursorInfo cursorInfo = parseCursor(cursor);
+        CursorInfo cursorInfo = parseCursor(cursor, null);
 
         List<Long> pinIds = queryFactory
                 .select(pin.id)
                 .from(pin)
                 .where(
                         pin.member.id.eq(memberId),
-                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        cursorCondition(cursorInfo, null),
                         pin.deletedAt.isNull(),
                         pin.isFeedPublic.eq(true)
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
+
+        if (pinIds.isEmpty()) {
+            return emptyPagination(pageSize);
+        }
 
         List<Pin> pins = queryFactory
                 .selectDistinct(pin)
@@ -160,7 +165,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .where(
                         pin.member.id.eq(memberId),
                         pin.id.in(pinIds),
-                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        cursorCondition(cursorInfo, null),
                         pin.isFeedPublic.eq(true),
                         pin.deletedAt.isNull()
                 )
@@ -170,6 +175,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
         List<PinResponse.Feed> data = new ArrayList<>(pins.stream()
                 .map(PinConverter::toFeed).toList());
+
 
         boolean hasNext = data.size() > pageSize;
 
@@ -186,6 +192,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             );
         }
 
+
         PinResponse.Feed last = data.getLast();
         String nextCursor = hasNext
                 ? last.createdAt() + "/" + last.pinId()
@@ -196,19 +203,23 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     @Override
     public Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize) {
-        CursorInfo cursorInfo = parseCursor(cursor);
+        CursorInfo cursorInfo = parseCursor(cursor, null);
 
         List<Long> pinIds = queryFactory
                 .select(pin.id)
                 .from(pin)
                 .where(
                         pin.member.id.eq(memberId),
-                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        cursorCondition(cursorInfo, null),
                         pin.deletedAt.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
+
+        if (pinIds.isEmpty()) {
+            return emptyPagination(pageSize);
+        }
 
         boolean hasNext = pinIds.size() > pageSize;
 
@@ -271,9 +282,11 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 )
                 .fetchFirst() != null;
     } 
-  
-    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackId(Long memberId, String cursor, Integer pageSize, Long placeTrackId) {
-        CursorInfo cursorInfo = parseCursor(cursor);
+
+    @Override
+    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, SortType sortType, Long placeTrackId) {
+        sortType = sortType == null? SortType.LATEST : sortType;
+        CursorInfo cursorInfo = parseCursor(cursor, sortType);
 
         List<Long> pinIds = queryFactory
                 .select(pin.id)
@@ -284,14 +297,18 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         report.reporter.id.eq(memberId)
                 )
                 .where(
-                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        cursorCondition(cursorInfo, sortType),
                         pin.deletedAt.isNull(),
                         pin.placeTrack.id.eq(placeTrackId),
                         report.id.isNull()
                 )
-                .orderBy(pin.createdAt.desc(), pin.id.desc())
+                .orderBy(getOrders(sortType))
                 .limit(pageSize + 1)
                 .fetch();
+
+        if (pinIds.isEmpty()) {
+            return emptyPagination(pageSize);
+        }
 
         boolean hasNext = pinIds.size() > pageSize;
 
@@ -311,7 +328,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         placeTrack.deletedAt.isNull(),
                         pin.deletedAt.isNull()
                 )
-                .orderBy(pin.createdAt.desc(), pin.id.desc())
+                .orderBy(getOrders(sortType))
                 .fetch();
 
         List<Long> likedPinIds = queryFactory
@@ -345,15 +362,18 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
         PinResponse.PinDetail last = data.getLast();
         String nextCursor = hasNext
-                ? last.createdAt() + "/" + last.pinId()
+                ? (sortType.equals(SortType.POPULAR)
+                    ? last.likeCount() + "/" + last.pinId()
+                    : last.createdAt() + "/" + last.pinId()
+                )
                 : null;
 
         return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
     }
 
-    private CursorInfo parseCursor(String cursor) {
+    private CursorInfo parseCursor(String cursor, SortType sortType) {
         if (cursor == null) {
-            return new CursorInfo(null, null);
+            return new CursorInfo(null, null, null);
         }
         try {
             String[] parts = cursor.split("/");
@@ -362,10 +382,18 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 throw new PinException(PinErrorCode.INVALID_CURSOR);
             }
 
-            Instant createdAt = Instant.parse(parts[0]);
+            Instant createdAt = null;
+            Integer like = null;
+            if (sortType == SortType.POPULAR) {
+                like = Integer.parseInt(parts[0]);
+            }
+            else {
+                createdAt = Instant.parse(parts[0]);
+            }
             long pinId = Long.parseLong(parts[1]);
 
-            return new CursorInfo(createdAt, pinId);
+
+            return new CursorInfo(createdAt, pinId, like);
 
         } catch (DateTimeParseException | NumberFormatException e) {
             throw new PinException(PinErrorCode.INVALID_CURSOR);
@@ -373,19 +401,56 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     private BooleanExpression cursorCondition(
-            Instant createdAt,
-            Long id
+            CursorInfo cursorInfo,
+            SortType sortType
     ) {
-        QPin pin = QPin.pin;
+        sortType = sortType == null? SortType.LATEST : sortType;
+        return switch (sortType) {
+            case LATEST -> {
+                if (cursorInfo.createdAt() == null || cursorInfo.pinId() == null) {
+                    yield null;
+                }
 
-        if (createdAt == null || id == null) {
-            return null;
-        }
+                yield pin.createdAt.lt(cursorInfo.createdAt())
+                        .or(
+                                pin.createdAt.eq(cursorInfo.createdAt())
+                                        .and(pin.id.lt(cursorInfo.pinId()))
+                        );
+            }
 
-        return pin.createdAt.lt(createdAt)
-                .or(
-                        pin.createdAt.eq(createdAt)
-                                .and(pin.id.lt(id))
-                );
+            case POPULAR -> {
+                if (cursorInfo.likeCount() == null || cursorInfo.pinId() == null) {
+                    yield null;
+                }
+
+                yield pin.likeCount.lt(cursorInfo.likeCount())
+                        .or(
+                                pin.likeCount.eq(cursorInfo.likeCount())
+                                        .and(pin.id.lt(cursorInfo.pinId()))
+                        );
+            }
+        };
+    }
+
+    private OrderSpecifier<?>[] getOrders(SortType sortType) {
+        return switch (sortType) {
+            case LATEST -> new OrderSpecifier[]{
+                    pin.createdAt.desc(),
+                    pin.id.desc()
+            };
+            case POPULAR -> new OrderSpecifier[]{
+                    pin.likeCount.desc(),
+                    pin.id.desc()
+            };
+        };
+    }
+
+    public static <T> Pagination<T> emptyPagination(Integer pageSize) {
+        return new Pagination<>(
+                List.of(),
+                null,
+                false,
+                pageSize
+        );
     }
 }

@@ -5,6 +5,7 @@ import com.example.plimap.domain.pin.controller.docs.PinControllerDocs;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
+import com.example.plimap.domain.pin.enums.SortType;
 import com.example.plimap.domain.pin.exception.PinSuccessCode;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
@@ -14,6 +15,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -147,9 +149,11 @@ public class PinController implements PinControllerDocs {
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,
             @RequestParam(required = false) String cursor,
-            @PathVariable Long placeTrackId
-    ) {
-        Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackId(currentMember.getMember().getId(), cursor, pageSize, placeTrackId);
+            @RequestParam(required = false, defaultValue = "LATEST")
+            SortType sortType,
+            @PathVariable Long placeTrackId,
+            Sort sort) {
+        Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackIdAndSortType(currentMember.getMember().getId(), cursor, pageSize, sortType, placeTrackId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS, response));

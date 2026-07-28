@@ -8,6 +8,7 @@ import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
+import com.example.plimap.domain.pin.enums.SortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.PinRepository;
@@ -78,8 +79,9 @@ public class PinQueryServiceImpl implements PinQueryService {
         return pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place)
                 || pinQueryRepository.existsPinByMemberFollowAndPlace(member.getId(), place.getId());
     }
-      
-    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackId(Long memberId, String cursor, Integer pageSize, Long placeTrackId) {
-        return pinQueryRepository.findPinListByPlaceTrackId(memberId, cursor, pageSize, placeTrackId);
+
+    @Override
+    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, SortType sortType, Long placeTrackId) {
+        return pinQueryRepository.findPinListByPlaceTrackIdAndSortType(memberId, cursor, pageSize, sortType, placeTrackId);
     }
 }
