@@ -330,16 +330,37 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 내가_신고한_핀은_제외하고_조회한다() {
-        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(member2.getId(), null, 5 , placeTrack3.getId());
+        // given
+        Long reportedId = member2.getId();
 
+        // when
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(reportedId, null, 5 , placeTrack3.getId());
+
+        // then
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();
-
         assertThat(response.data())
                 .extracting(PinResponse.PinDetail::pinId)
                 .doesNotContain(pin5.getId())
                 .containsExactly(pin4.getId());
+    }
+
+    @Test
+    void 다른_회원이_신고한_핀은_제외하고_조회한다() {
+        // given
+        Long nonReportedId = member1.getId();
+
+        // when
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackId(nonReportedId, null, 5 , placeTrack3.getId());
+
+        // then
+        assertThat(response.data().size()).isEqualTo(2);
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.nextCursor()).isNull();
+        assertThat(response.data())
+                .extracting(PinResponse.PinDetail::pinId)
+                .containsExactly(pin5.getId(), pin4.getId());
     }
 
     @Test
