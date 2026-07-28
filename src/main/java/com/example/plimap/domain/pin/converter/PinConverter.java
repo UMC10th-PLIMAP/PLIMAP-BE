@@ -104,6 +104,24 @@ public class PinConverter {
                 .build();
     }
 
+    public static PinResponse.PinDetail toPinDetail(
+            Pin pin,
+            Boolean userLike
+    ) {
+        return PinResponse.PinDetail.builder()
+                .pinId(pin.getId())
+                .writerNickname(pin.getMember().getNickname())
+                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .introduction(pin.getIntroduction())
+                .tags(pin.getPinTagList().stream().map(pinTag -> pinTag.getTag().getName()).toList())
+                .clipStartMs(pin.getClipStartMs())
+                .likeCount(pin.getLikeCount())
+                .userLike(userLike)
+                .staticCreatedAt(parseCreatedAt(pin.getCreatedAt(), Instant.now()))
+                .createdAt(pin.getCreatedAt())
+                .build();
+    }
+
     public static String parseCreatedAt(
             Instant createdAt,
             Instant now

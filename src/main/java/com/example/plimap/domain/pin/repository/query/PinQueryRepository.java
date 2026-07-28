@@ -20,4 +20,6 @@ public interface PinQueryRepository{
     Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize);
 
     Boolean existsPinByMemberFollowAndPlace(Long memberId, Long placeId);
+  
+    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackId(Long memberId, String cursor, Integer pageSize, Long placeTrackId);
 }

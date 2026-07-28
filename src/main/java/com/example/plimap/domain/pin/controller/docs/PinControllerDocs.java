@@ -109,4 +109,18 @@ public interface PinControllerDocs {
             Integer pageSize,
             @RequestParam(required = false) String cursor
     );
+
+    @Operation(
+            summary = "특정 장소 노래의 PIN 목록 조회",
+            description = "특정 장소 노래의 PIN 목록을 조회합니다. (Figma 기준 화면: PN-01-03)"
+    )
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.PinDetail>>> getPlaceTrackPinList(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            @RequestParam(required = false) String cursor,
+            @PathVariable Long placeTrackId
+    );
 }

@@ -14,6 +14,11 @@ public enum PlaceSuccessCode implements BaseSuccessCode {
             "PLACE_SEARCH_HISTORY_LIST_SUCCESS",
             "최근 검색 장소 목록 조회에 성공했습니다."
     ),
+    PLACE_SEARCH_HISTORY_DELETE_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_SEARCH_HISTORY_DELETE_SUCCESS",
+            "최근 검색 장소 삭제에 성공했습니다."
+    ),
     PLACE_SEARCH_SUCCESS(
             HttpStatus.OK,
             "PLACE_SEARCH_SUCCESS",

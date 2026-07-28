@@ -1,5 +1,6 @@
 package com.example.plimap.domain.place.controller;
 
+import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.place.controller.docs.PlaceControllerDocs;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
@@ -9,8 +10,11 @@ import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,6 +43,59 @@ public class PlaceController implements PlaceControllerDocs {
         return ResponseEntity
                 .status(PlaceSuccessCode.PLACE_SEARCH_SUCCESS.getStatus())
                 .body(ApiResponse.success(PlaceSuccessCode.PLACE_SEARCH_SUCCESS, result));
+    }
+
+    @Override
+    @PostMapping("/selections")
+    public ResponseEntity<ApiResponse<PlaceResponse.Selection>> selectSearchPlace(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestBody PlaceRequest.Selection request
+    ) {
+        PlaceResponse.Selection result = placeCommandService.selectSearchPlace(
+                currentMember.getMember().getId(),
+                request
+        );
+        return ResponseEntity
+                .status(PlaceSuccessCode.PLACE_SELECTION_SUCCESS.getStatus())
+                .body(ApiResponse.success(PlaceSuccessCode.PLACE_SELECTION_SUCCESS, result));
+    }
+
+    @Override
+    @GetMapping("/search-histories")
+    public ResponseEntity<ApiResponse<PlaceResponse.SearchHistoryResult>> getSearchHistories(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude
+    ) {
+        PlaceResponse.SearchHistoryResult result = placeQueryService.getSearchHistories(
+                currentMember.getMember().getId(),
+                latitude,
+                longitude
+        );
+        return ResponseEntity
+                .status(PlaceSuccessCode.PLACE_SEARCH_HISTORY_LIST_SUCCESS.getStatus())
+                .body(ApiResponse.success(
+                        PlaceSuccessCode.PLACE_SEARCH_HISTORY_LIST_SUCCESS,
+                        result
+                ));
+    }
+
+    @Override
+    @DeleteMapping("/search-histories/{historyId}")
+    public ResponseEntity<ApiResponse<Void>> deleteSearchHistory(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long historyId
+    ) {
+        placeCommandService.deleteSearchHistory(
+                currentMember.getMember().getId(),
+                historyId
+        );
+        return ResponseEntity
+                .status(PlaceSuccessCode.PLACE_SEARCH_HISTORY_DELETE_SUCCESS.getStatus())
+                .body(ApiResponse.success(
+                        PlaceSuccessCode.PLACE_SEARCH_HISTORY_DELETE_SUCCESS,
+                        null
+                ));
     }
 
     @Override
