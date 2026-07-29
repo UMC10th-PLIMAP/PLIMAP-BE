@@ -52,5 +52,9 @@ public class TermsResDTO {
                     agreement.getAgreedAt()
             );
         }
+
+        public static Result notAgreed(Terms terms) {
+            return new Result(terms.getType(), false, null);
+        }
     }
 }

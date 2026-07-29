@@ -35,9 +35,9 @@ public interface AuthControllerDocs {
     ApiResponse<MemberResDTO.Onboarding> onboarding(AuthMember authMember, MemberReqDTO.Onboarding request);
 
     @Operation(
-            summary = "활성 약관 목록 조회",
+            summary = "약관 동의 여부 조회",
             description = """
-                    현재 활성화된 약관 목록을 조회합니다.
+                    현재 활성화된 약관 유형별로, 로그인한 회원이 동의했는지 여부와 동의 일시를 조회합니다.
 
                     **약관 유형(type)**
                     - SERVICE (필수): 플리맵 이용약관
@@ -51,18 +51,18 @@ public interface AuthControllerDocs {
             content = @Content(examples = @ExampleObject(value = """
                     {
                       "isSuccess": true,
-                      "code": "TERMS_200_ACTIVE_TERMS_RETRIEVED",
-                      "message": "활성 약관 목록을 조회했습니다.",
+                      "code": "TERMS_200_AGREEMENT_STATUS_RETRIEVED",
+                      "message": "약관 동의 여부를 조회했습니다.",
                       "result": [
-                        { "type": "SERVICE", "version": "v1", "required": true },
-                        { "type": "PRIVACY", "version": "v1", "required": true },
-                        { "type": "LOCATION", "version": "v1", "required": true },
-                        { "type": "MARKETING", "version": "v1", "required": false }
+                        { "type": "SERVICE", "agreed": true, "agreedAt": "2026-07-13T07:19:16.301Z" },
+                        { "type": "PRIVACY", "agreed": true, "agreedAt": "2026-07-13T07:19:16.301Z" },
+                        { "type": "LOCATION", "agreed": false, "agreedAt": null },
+                        { "type": "MARKETING", "agreed": false, "agreedAt": null }
                       ]
                     }
                     """))
     )
-    ApiResponse<List<TermsResDTO.Item>> getActiveTerms();
+    ApiResponse<List<TermsResDTO.Result>> getTermsAgreementStatus(AuthMember authMember);
 
     @Operation(
             summary = "약관 동의",
