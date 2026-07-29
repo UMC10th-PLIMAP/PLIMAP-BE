@@ -8,12 +8,14 @@ import com.example.plimap.domain.member.exception.TermsErrorCode;
 import com.example.plimap.domain.member.exception.TermsException;
 import com.example.plimap.domain.member.repository.MemberTermsAgreementRepository;
 import com.example.plimap.domain.member.repository.TermsRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -56,7 +58,9 @@ class TermsQueryServiceImplTest {
     }
 
     @Test
-    void 회원이_동의한_약관은_동의여부가_true로_조회된다() {
+    void 회원이_동의한_약관은_동의여부와_동의일시가_함께_조회된다() {
+        // given
+        Instant agreedAt = Instant.parse("2026-07-14T06:49:44Z");
         Terms agreedTerms = mock(Terms.class);
         Terms notAgreedTerms = mock(Terms.class);
         when(agreedTerms.getId()).thenReturn(1L);
@@ -68,27 +72,36 @@ class TermsQueryServiceImplTest {
         MemberTermsAgreement agreement = mock(MemberTermsAgreement.class);
         when(agreement.getTerms()).thenReturn(agreedTerms);
         when(agreement.isAgreed()).thenReturn(true);
+        when(agreement.getAgreedAt()).thenReturn(agreedAt);
         when(memberTermsAgreementRepository.findAllByMember_Id(1L)).thenReturn(List.of(agreement));
 
+        // when
         List<TermsResDTO.Result> result = termsQueryService.findTermsAgreementStatus(1L);
 
+        // then
         assertThat(result)
-                .extracting(TermsResDTO.Result::agreed)
-                .containsExactly(true, false);
+                .extracting(TermsResDTO.Result::type, TermsResDTO.Result::agreed, TermsResDTO.Result::agreedAt)
+                .containsExactly(
+                        tuple(TermsType.SERVICE, true, agreedAt),
+                        tuple(TermsType.MARKETING, false, null)
+                );
     }
 
     @Test
-    void 동의_내역이_없는_회원은_모든_약관이_동의여부_false로_조회된다() {
+    void 동의_내역이_없는_회원은_모든_약관이_동의여부_false이고_동의일시가_없다() {
+        // given
         Terms terms = mock(Terms.class);
         when(terms.getId()).thenReturn(1L);
         when(terms.getType()).thenReturn(TermsType.SERVICE);
         when(termsRepository.findAllByActiveTrueOrderByTypeAsc()).thenReturn(List.of(terms));
         when(memberTermsAgreementRepository.findAllByMember_Id(1L)).thenReturn(List.of());
 
+        // when
         List<TermsResDTO.Result> result = termsQueryService.findTermsAgreementStatus(1L);
 
+        // then
         assertThat(result)
-                .extracting(TermsResDTO.Result::agreed)
-                .containsExactly(false);
+                .extracting(TermsResDTO.Result::type, TermsResDTO.Result::agreed, TermsResDTO.Result::agreedAt)
+                .containsExactly(tuple(TermsType.SERVICE, false, null));
     }
 }
