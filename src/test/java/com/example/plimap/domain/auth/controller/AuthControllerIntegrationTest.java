@@ -21,6 +21,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -153,9 +155,40 @@ class AuthControllerIntegrationTest {
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("TERMS_200_AGREEMENT_STATUS_RETRIEVED"))
+                .andExpect(jsonPath("$.result[*].type").value(contains("LOCATION", "MARKETING", "PRIVACY", "SERVICE")))
                 .andExpect(jsonPath("$.result[?(@.type == 'SERVICE')].agreed").value(true))
                 .andExpect(jsonPath("$.result[?(@.type == 'SERVICE')].agreedAt").exists())
-                .andExpect(jsonPath("$.result[?(@.type == 'MARKETING')].agreed").value(false));
+                .andExpect(jsonPath("$.result[?(@.type == 'MARKETING')].agreed").value(false))
+                .andExpect(jsonPath("$.result[1].agreedAt").value(nullValue()));
+    }
+
+    @Test
+    void 약관_동의_여부_조회는_다른_회원의_동의_이력을_노출하지_않는다() throws Exception {
+        // given
+        String agreedMemberToken = issueAccessToken();
+        mockMvc.perform(post("/api/v1/auth/terms")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + agreedMemberToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "agreements": [
+                                    { "type": "SERVICE", "agreed": true },
+                                    { "type": "PRIVACY", "agreed": true },
+                                    { "type": "LOCATION", "agreed": true }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        String otherMemberToken = issueAccessToken();
+
+        // when
+        var result = mockMvc.perform(get("/api/v1/auth/terms")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + otherMemberToken));
+
+        // then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.result[?(@.agreed == true)]").isEmpty());
     }
 
     @Test
