@@ -129,8 +129,8 @@ class AuthControllerIntegrationTest {
 
     @Test
     void 약관_동의_여부를_조회하면_동의한_약관은_true_동의하지_않은_약관은_false로_응답한다() throws Exception {
+        // given
         String accessToken = issueAccessToken();
-
         mockMvc.perform(post("/api/v1/auth/terms")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -145,9 +145,12 @@ class AuthControllerIntegrationTest {
                                 """))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/v1/auth/terms")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
-                .andExpect(status().isOk())
+        // when
+        var result = mockMvc.perform(get("/api/v1/auth/terms")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
+
+        // then
+        result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("TERMS_200_AGREEMENT_STATUS_RETRIEVED"))
                 .andExpect(jsonPath("$.result[?(@.type == 'SERVICE')].agreed").value(true))
