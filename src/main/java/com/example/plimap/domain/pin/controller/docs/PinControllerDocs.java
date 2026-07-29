@@ -125,6 +125,6 @@ public interface PinControllerDocs {
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false, defaultValue = "LATEST")
             PinSortType pinSortType,
-            @PathVariable Long placeTrackId,
-            Sort sort);
+            @PathVariable Long placeTrackId
+    );
 }

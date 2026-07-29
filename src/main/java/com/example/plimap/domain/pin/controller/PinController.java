@@ -151,8 +151,8 @@ public class PinController implements PinControllerDocs {
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false, defaultValue = "LATEST")
             PinSortType pinSortType,
-            @PathVariable Long placeTrackId,
-            Sort sort) {
+            @PathVariable Long placeTrackId
+    ) {
         Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackIdAndSortType(currentMember.getMember().getId(), cursor, pageSize, pinSortType, placeTrackId);
         return ResponseEntity
                 .status(HttpStatus.OK)
