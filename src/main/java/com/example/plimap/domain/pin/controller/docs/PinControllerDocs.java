@@ -4,7 +4,7 @@ import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
-import com.example.plimap.domain.pin.enums.SortType;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -124,7 +124,7 @@ public interface PinControllerDocs {
             Integer pageSize,
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false, defaultValue = "LATEST")
-            SortType sortType,
+            PinSortType pinSortType,
             @PathVariable Long placeTrackId,
             Sort sort);
 }

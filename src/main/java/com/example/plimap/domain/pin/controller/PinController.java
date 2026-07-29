@@ -5,7 +5,7 @@ import com.example.plimap.domain.pin.controller.docs.PinControllerDocs;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
-import com.example.plimap.domain.pin.enums.SortType;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinSuccessCode;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
@@ -150,10 +150,10 @@ public class PinController implements PinControllerDocs {
             Integer pageSize,
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false, defaultValue = "LATEST")
-            SortType sortType,
+            PinSortType pinSortType,
             @PathVariable Long placeTrackId,
             Sort sort) {
-        Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackIdAndSortType(currentMember.getMember().getId(), cursor, pageSize, sortType, placeTrackId);
+        Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackIdAndSortType(currentMember.getMember().getId(), cursor, pageSize, pinSortType, placeTrackId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS, response));

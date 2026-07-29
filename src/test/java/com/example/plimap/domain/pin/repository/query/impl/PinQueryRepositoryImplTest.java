@@ -8,7 +8,7 @@ import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
-import com.example.plimap.domain.pin.enums.SortType;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.place.entity.Place;
@@ -32,10 +32,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -319,7 +317,7 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 특정_장소에_대한_핀_목록을_좋아요순으로_페이지네이션으로_조회한다() {
-        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), null, 1 , SortType.POPULAR, placeTrack1.getId());
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), null, 1 , PinSortType.POPULAR, placeTrack1.getId());
 
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isTrue();
@@ -327,7 +325,7 @@ class PinQueryRepositoryImplTest {
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin1.getId());
         String nextCursor = response.nextCursor();
 
-        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), nextCursor, 2, SortType.POPULAR, placeTrack1.getId());
+        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), nextCursor, 2, PinSortType.POPULAR, placeTrack1.getId());
         assertThat(response2.data().size()).isEqualTo(1);
         assertThat(response2.hasNext()).isFalse();
         assertThat(response2.data().getFirst().pinId()).isEqualTo(pin2.getId());
@@ -336,13 +334,13 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 특정_장소에_대한_핀_목록을_최신순으로_페이지네이션으로_조회한다() {
-        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), null, 1 , SortType.LATEST, placeTrack1.getId());
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), null, 1 , PinSortType.LATEST, placeTrack1.getId());
 
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isTrue();
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin2.getId());
         String nextCursor = response.nextCursor();
-        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), nextCursor, 2, SortType.LATEST, placeTrack1.getId());
+        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), nextCursor, 2, PinSortType.LATEST, placeTrack1.getId());
 
         assertThat(response2.data().size()).isEqualTo(1);
         assertThat(response2.hasNext()).isFalse();
@@ -368,12 +366,12 @@ class PinQueryRepositoryImplTest {
     }
 
     @Test
-    void 다른_회원이_신고한_핀은_제외하고_조회한다() {
+    void 다른_회원이_신고한_핀은_포함하여_조회한다() {
         // given
         Long nonReportedId = member1.getId();
 
         // when
-        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(nonReportedId, null, 5 ,  SortType.POPULAR, placeTrack3.getId());
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(nonReportedId, null, 5 ,  PinSortType.POPULAR, placeTrack3.getId());
 
         // then
         assertThat(response.data().size()).isEqualTo(2);

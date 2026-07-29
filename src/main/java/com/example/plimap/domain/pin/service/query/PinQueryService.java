@@ -6,7 +6,7 @@ import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
-import com.example.plimap.domain.pin.enums.SortType;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.place.entity.Place;
 
 import java.util.List;
@@ -26,5 +26,5 @@ public interface PinQueryService {
 
     Boolean validatePlacePinAccessByMember(Member member, Place place);
 
-    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, SortType sortType, Long placeTrackId);
+    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId);
 }

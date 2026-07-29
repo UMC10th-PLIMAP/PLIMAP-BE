@@ -9,7 +9,7 @@ import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
-import com.example.plimap.domain.pin.enums.SortType;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
@@ -359,7 +359,7 @@ class PinControllerTest {
     @Test
     void 특정_장소_노래의_핀_목록_조회에_성공하면_200을_반환한다() throws Exception {
         when(pinQueryService.findPinListByPlaceTrackIdAndSortType(
-                1L, null, 10, SortType.LATEST, 1L
+                1L, null, 10, PinSortType.LATEST, 1L
         )).thenReturn(Pagination.<PinResponse.PinDetail>builder()
                 .data(new ArrayList<>())
                 .pageSize(10)

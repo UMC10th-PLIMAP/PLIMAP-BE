@@ -1,11 +1,9 @@
 package com.example.plimap.domain.pin.repository.query;
 
-import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
-import com.example.plimap.domain.pin.enums.SortType;
-import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.pin.enums.PinSortType;
 
 import java.util.List;
 import java.util.Map;
@@ -22,5 +20,5 @@ public interface PinQueryRepository{
 
     Boolean existsPinByMemberFollowAndPlace(Long memberId, Long placeId);
 
-    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, SortType sortType, Long placeTrackId);
+    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId);
 }

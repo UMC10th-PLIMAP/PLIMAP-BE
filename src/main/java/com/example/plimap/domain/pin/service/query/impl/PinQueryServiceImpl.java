@@ -8,7 +8,7 @@ import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
-import com.example.plimap.domain.pin.enums.SortType;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.PinRepository;
@@ -81,7 +81,7 @@ public class PinQueryServiceImpl implements PinQueryService {
     }
 
     @Override
-    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, SortType sortType, Long placeTrackId) {
-        return pinQueryRepository.findPinListByPlaceTrackIdAndSortType(memberId, cursor, pageSize, sortType, placeTrackId);
+    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId) {
+        return pinQueryRepository.findPinListByPlaceTrackIdAndSortType(memberId, cursor, pageSize, pinSortType, placeTrackId);
     }
 }
