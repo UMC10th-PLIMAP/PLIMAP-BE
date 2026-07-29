@@ -53,6 +53,8 @@ public class PinResponse {
     public record Feed(
             Long pinId,
             String albumImageUrl,
+            Double latitude,
+            Double longitude,
             Instant createdAt
     ) {}
 
