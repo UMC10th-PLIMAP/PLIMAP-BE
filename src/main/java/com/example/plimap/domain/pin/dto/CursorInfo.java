@@ -4,5 +4,6 @@ import java.time.Instant;
 
 public record CursorInfo(
         Instant createdAt,
-        Long pinId
+        Long pinId,
+        Integer likeCount
 ) { }
