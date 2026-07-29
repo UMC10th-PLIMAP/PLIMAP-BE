@@ -1,6 +1,8 @@
 package com.example.plimap.domain.pin.repository.query.impl;
 
+import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.QMember;
+import com.example.plimap.domain.member.entity.QMemberFollow;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.CursorInfo;
 import com.example.plimap.domain.pin.dto.Pagination;
@@ -12,6 +14,7 @@ import com.example.plimap.domain.pin.entity.QPinLike;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
+import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.QPlace;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
@@ -125,23 +128,32 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
         QPin pin = QPin.pin;
         QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
+        QPlace place = QPlace.place;
         QTrack track = QTrack.track;
         CursorInfo cursorInfo = parseCursor(cursor);
 
-        List<PinResponse.Feed> data = queryFactory
-                .select(
-                    Projections.constructor(
-                            PinResponse.Feed.class,
-                            pin.id,
-                            track.albumImageUrl,
-                            pin.createdAt
-                    )
+        List<Long> pinIds = queryFactory
+                .select(pin.id)
+                .from(pin)
+                .where(
+                        pin.member.id.eq(memberId),
+                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        pin.deletedAt.isNull(),
+                        pin.isFeedPublic.eq(true)
                 )
+                .orderBy(pin.createdAt.desc(), pin.id.desc())
+                .limit(pageSize + 1)
+                .fetch();
+
+        List<Pin> pins = queryFactory
+                .selectDistinct(pin)
                 .from(pin)
                 .join(pin.placeTrack, placeTrack)
                 .join(placeTrack.track, track)
+                .join(placeTrack.place, place)
                 .where(
                         pin.member.id.eq(memberId),
+                        pin.id.in(pinIds),
                         cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
                         pin.isFeedPublic.eq(true),
                         pin.deletedAt.isNull()
@@ -149,6 +161,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
+
+        List<PinResponse.Feed> data = new ArrayList<>(pins.stream()
+                .map(PinConverter::toFeed).toList());
 
         boolean hasNext = data.size() > pageSize;
 
@@ -237,6 +252,28 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     @Override
+    public Boolean existsPinByMemberFollowAndPlace(Long memberId, Long placeId) {
+        QPin pin = QPin.pin;
+        QMember member = QMember.member;
+        QPlace place = QPlace.place;
+        QMemberFollow memberFollow = QMemberFollow.memberFollow;
+
+        return queryFactory
+                .selectOne()
+                .from(memberFollow)
+                .join(memberFollow.following, member)
+                .join(pin).on(pin.member.eq(member))
+                .join(place).on(pin.place.eq(place))
+                .where(
+                        memberFollow.follower.id.eq(memberId),
+                        pin.place.id.eq(placeId),
+                        pin.deletedAt.isNull(),
+                        place.deletedAt.isNull(),
+                        member.deletedAt.isNull()
+                )
+                .fetchFirst() != null;
+    } 
+  
     public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackId(Long memberId, String cursor, Integer pageSize, Long placeTrackId) {
         QPin pin = QPin.pin;
         QPinLike pinLike = QPinLike.pinLike;
