@@ -12,6 +12,13 @@ import com.example.plimap.domain.member.exception.MemberSuccessCode;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.security.AuthCookieUtil;
+import com.example.plimap.global.security.JwtUtil;
+import com.example.plimap.global.security.RefreshTokenService;
+import com.example.plimap.global.security.TokenBlacklistService;
+import com.example.plimap.global.security.TokenResolver;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -35,6 +42,10 @@ public class MemberController implements MemberControllerDocs {
 
     private final MemberQueryService memberQueryService;
     private final MemberCommandService memberCommandService;
+    private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
+    private final RefreshTokenService refreshTokenService;
+    private final AuthCookieUtil authCookieUtil;
 
     @Override
     @GetMapping("/nickname/check")
@@ -125,5 +136,25 @@ public class MemberController implements MemberControllerDocs {
         Pagination<MemberResDTO.FollowingItem> response =
                 memberQueryService.findFollowing(authMember.getMember().getId(), memberId, cursor, pageSize);
         return ApiResponse.success(MemberSuccessCode.FOLLOWING_FETCHED, response);
+    }
+
+    @Override
+    @DeleteMapping("/me")
+    public ApiResponse<Void> withdraw(
+            @AuthenticationPrincipal AuthMember authMember,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        memberCommandService.withdraw(authMember.getMember().getId());
+
+        String token = TokenResolver.resolve(request);
+        if (token != null && jwtUtil.isValid(token)) {
+            tokenBlacklistService.blacklist(jwtUtil.getJti(token), jwtUtil.getRemainingExpiry(token));
+            refreshTokenService.delete(jwtUtil.getMemberId(token));
+        }
+        authCookieUtil.clearCookie(response, "accessToken");
+        authCookieUtil.clearCookie(response, "refreshToken");
+
+        return ApiResponse.success(MemberSuccessCode.WITHDRAWN, null);
     }
 }
