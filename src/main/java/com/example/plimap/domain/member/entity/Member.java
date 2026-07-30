@@ -64,9 +64,9 @@ public class Member extends SoftDeleteEntity {
     private Integer reportCount = 0;
 
     @Builder
-    public Member(String nickname, String name, String introduction,
-                  String profileImageObjectKey, MemberStatus status,
-                  AuthProvider joinProvider, MemberRole role) {
+    private Member(String nickname, String name, String introduction,
+                    String profileImageObjectKey, MemberStatus status,
+                    AuthProvider joinProvider, MemberRole role) {
         this.nickname = nickname;
         this.name = name;
         this.introduction = introduction;
@@ -74,6 +74,12 @@ public class Member extends SoftDeleteEntity {
         this.status = status != null ? status : MemberStatus.ACTIVE;
         this.joinProvider = joinProvider;
         this.role = role != null ? role : MemberRole.USER;
+    }
+
+    public static Member create(AuthProvider joinProvider) {
+        return Member.builder()
+                .joinProvider(joinProvider)
+                .build();
     }
 
     public boolean isOnboarded() {
