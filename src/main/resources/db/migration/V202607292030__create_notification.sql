@@ -24,5 +24,5 @@ CREATE TABLE notification
         )
 );
 
-CREATE INDEX idx_notification_recipient_created_at
+CREATE INDEX idx_notification_recipient_latest
     ON notification (recipient_id, created_at DESC, id DESC);
