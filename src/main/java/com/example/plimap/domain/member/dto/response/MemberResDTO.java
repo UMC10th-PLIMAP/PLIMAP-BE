@@ -1,5 +1,6 @@
 package com.example.plimap.domain.member.dto.response;
 
+import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import lombok.Builder;
 import lombok.Getter;
@@ -87,6 +88,13 @@ public class MemberResDTO {
     public record ProfileImage(
             String objectKey,
             String imageUrl
+    ) {
+    }
+
+    public record AdminMe(
+            Long id,
+            String nickname,
+            MemberRole role
     ) {
     }
 }

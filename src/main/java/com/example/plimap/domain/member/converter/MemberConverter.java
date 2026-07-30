@@ -78,6 +78,10 @@ public class MemberConverter {
         return new MemberResDTO.ProfileImage(objectKey, imageUrl.toString());
     }
 
+    public static MemberResDTO.AdminMe toAdminMe(Member member) {
+        return new MemberResDTO.AdminMe(member.getId(), member.getNickname(), member.getRole());
+    }
+
     public static <T> Pagination<T> toPagination(List<T> data, String nextCursor, Boolean hasNext, Integer pageSize) {
         return Pagination.<T>builder()
                 .data(data)
