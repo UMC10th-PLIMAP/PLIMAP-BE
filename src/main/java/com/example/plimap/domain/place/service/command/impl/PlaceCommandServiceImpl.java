@@ -95,7 +95,9 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                     retryRegion
             );
         }
-        Place place = persistedPlace.orElseThrow();
+        Place place = persistedPlace.orElseThrow(
+                () -> new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND)
+        );
 
         PlacePinInfo pinInfo = findPinInfo(place.getId());
         long pinCount = pinInfo.pinCount() == null ? 0L : pinInfo.pinCount();

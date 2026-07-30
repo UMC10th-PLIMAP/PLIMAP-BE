@@ -289,6 +289,45 @@ class PlaceCommandServiceImplTest {
     }
 
     @Test
+    void 재시도_후에도_장소를_확정하지_못하면_PLACE_NOT_FOUND를_던진다() {
+        PlaceRequest.Selection request = selectionRequest(
+                "KAKAO",
+                "26338954",
+                37.5283,
+                126.9326,
+                37.5283,
+                126.9326
+        );
+        Place existingPlace = place(
+                7L,
+                "삭제 예정 장소",
+                PlaceSource.PLACE_SEARCH,
+                37.5283,
+                126.9326
+        );
+        when(placeRepository.findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
+                "KAKAO",
+                "26338954"
+        )).thenReturn(
+                Optional.of(existingPlace),
+                Optional.empty(),
+                Optional.empty()
+        );
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenReturn(null);
+
+        assertThatThrownBy(() -> placeCommandService.selectSearchPlace(10L, request))
+                .isInstanceOf(PlaceException.class)
+                .extracting(exception -> ((PlaceException) exception).getErrorCode())
+                .isEqualTo(PlaceErrorCode.PLACE_NOT_FOUND);
+
+        verify(placeLockRepository, times(2))
+                .acquirePlaceSelectionLock("KAKAO", "26338954");
+        verify(placeRepository, never()).saveAndFlush(any(Place.class));
+        verifyNoInteractions(pinQueryService);
+    }
+
+    @Test
     void 활성_검색_장소가_없으면_PLACE_SEARCH_장소를_새로_생성한다() {
         PlaceRequest.Selection request = selectionRequest(
                 " KAKAO ",
