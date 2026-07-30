@@ -158,4 +158,14 @@ public class PinController implements PinControllerDocs {
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS, response));
     }
+
+    @GetMapping("/pins/{pinId}")
+    public ResponseEntity<ApiResponse<PinResponse.PinPreview>> getPinPreview(
+            @PathVariable Long pinId
+    ) {
+        PinResponse.PinPreview response = pinQueryService.getPinPreview(pinId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.PIN_SEARCH_SUCCESS, response));
+    }
 }

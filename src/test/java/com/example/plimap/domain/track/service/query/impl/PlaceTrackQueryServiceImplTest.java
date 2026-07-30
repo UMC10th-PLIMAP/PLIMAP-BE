@@ -12,6 +12,7 @@ import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
+import com.example.plimap.domain.track.dto.LikedPlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.PlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
@@ -57,6 +58,58 @@ class PlaceTrackQueryServiceImplTest {
                     placeTrackLikeRepository,
                     placeTrackQueryRepository
             );
+
+    @Test
+    void 좋아요한_장소별_곡_목록과_페이지_정보를_반환한다() {
+        PageRequest pageable = PageRequest.of(0, 2);
+        when(placeTrackQueryRepository.findLikedPlaceTracks(
+                MEMBER_ID,
+                pageable
+        )).thenReturn(new SliceImpl<>(
+                List.of(
+                        likedTrack(20L, "두 번째 곡", 12),
+                        likedTrack(10L, "첫 번째 곡", 5)
+                ),
+                pageable,
+                true
+        ));
+
+        PlaceTrackResponse.LikedPlaceTrackListResult result =
+                placeTrackQueryService.getLikedPlaceTracks(MEMBER_ID, 0, 2);
+
+        assertThat(result.tracks())
+                .extracting(PlaceTrackResponse.LikedPlaceTrackItem::placeTrackId)
+                .containsExactly(20L, 10L);
+        assertThat(result.tracks().getFirst().trackName()).isEqualTo("두 번째 곡");
+        assertThat(result.tracks().getFirst().artistName()).isEqualTo("아티스트");
+        assertThat(result.tracks().getFirst().artworkUrl())
+                .isEqualTo("https://image.example/20");
+        assertThat(result.tracks().getFirst().likeCount()).isEqualTo(12);
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(2);
+        assertThat(result.hasNext()).isTrue();
+        verify(placeTrackQueryRepository).findLikedPlaceTracks(
+                MEMBER_ID,
+                pageable
+        );
+    }
+
+    @Test
+    void 좋아요한_장소별_곡이_없으면_빈_목록을_반환한다() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(placeTrackQueryRepository.findLikedPlaceTracks(
+                MEMBER_ID,
+                pageable
+        )).thenReturn(new SliceImpl<>(List.of(), pageable, false));
+
+        PlaceTrackResponse.LikedPlaceTrackListResult result =
+                placeTrackQueryService.getLikedPlaceTracks(MEMBER_ID, 0, 20);
+
+        assertThat(result.tracks()).isEmpty();
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(20);
+        assertThat(result.hasNext()).isFalse();
+    }
 
     @Test
     void 장소_노래_상세와_사용자_좋아요를_반환한다() {
@@ -279,6 +332,20 @@ class PlaceTrackQueryServiceImplTest {
                 1,
                 likeCount,
                 liked
+        );
+    }
+
+    private LikedPlaceTrackQueryResult likedTrack(
+            Long id,
+            String trackName,
+            int likeCount
+    ) {
+        return new LikedPlaceTrackQueryResult(
+                id,
+                trackName,
+                "아티스트",
+                "https://image.example/" + id,
+                likeCount
         );
     }
 
