@@ -18,6 +18,7 @@ import com.example.plimap.domain.place.service.query.PlaceLocationMetadataServic
 import com.example.plimap.global.util.GeoDistanceCalculator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,6 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
 
     private static final String KAKAO_PROVIDER = "KAKAO";
     private static final int ACCESS_RANGE_METERS = 500;
-    private static final double MAP_SELECTION_REUSE_DISTANCE_METERS = 20.0;
     private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null, 0L);
 
     private final PlaceRepository placeRepository;
@@ -44,7 +44,7 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
         Place existingPlace = placeQueryRepository.findNearestActiveMapSelectionWithin(
                         request.latitude(),
                         request.longitude(),
-                        MAP_SELECTION_REUSE_DISTANCE_METERS
+                        PlacePersistenceService.MAP_SELECTION_REUSE_DISTANCE_METERS
                 )
                 .orElse(null);
         if (existingPlace != null) {
@@ -78,11 +78,24 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                         request.longitude()
                 )
                 : null;
-        Place place = placePersistenceService.persistSearchSelection(
+        Optional<Place> persistedPlace = placePersistenceService.persistSearchSelection(
                 memberId,
                 request,
                 region
         );
+        if (persistedPlace.isEmpty()) {
+            PlaceAdministrativeRegion retryRegion =
+                    placeLocationMetadataService.getAdministrativeRegion(
+                            request.latitude(),
+                            request.longitude()
+                    );
+            persistedPlace = placePersistenceService.persistSearchSelection(
+                    memberId,
+                    request,
+                    retryRegion
+            );
+        }
+        Place place = persistedPlace.orElseThrow();
 
         PlacePinInfo pinInfo = findPinInfo(place.getId());
         long pinCount = pinInfo.pinCount() == null ? 0L : pinInfo.pinCount();

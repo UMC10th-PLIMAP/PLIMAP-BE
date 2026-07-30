@@ -217,6 +217,78 @@ class PlaceCommandServiceImplTest {
     }
 
     @Test
+    void 사전_조회한_장소가_잠금_전에_삭제되면_트랜잭션_밖에서_메타데이터를_조회하고_재시도한다() {
+        PlaceRequest.Selection request = selectionRequest(
+                "KAKAO",
+                "26338954",
+                37.5283,
+                126.9326,
+                37.5283,
+                126.9326
+        );
+        Place existingPlace = place(
+                7L,
+                "삭제 예정 장소",
+                PlaceSource.PLACE_SEARCH,
+                37.5283,
+                126.9326
+        );
+        Place persistedPlace = place(
+                9L,
+                "새 장소",
+                PlaceSource.PLACE_SEARCH,
+                37.5283,
+                126.9326
+        );
+        when(placeRepository.findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
+                "KAKAO",
+                "26338954"
+        )).thenReturn(
+                Optional.of(existingPlace),
+                Optional.empty(),
+                Optional.empty()
+        );
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenReturn(administrativeRegion());
+        when(placeRepository.saveAndFlush(any(Place.class))).thenReturn(persistedPlace);
+        when(pinQueryService.findPinInfosByPlaceIds(java.util.List.of(9L)))
+                .thenReturn(Map.of());
+
+        PlaceResponse.Selection result =
+                placeCommandService.selectSearchPlace(10L, request);
+
+        InOrder flow = inOrder(
+                placeRepository,
+                placeLockRepository,
+                placeLocationMetadataService
+        );
+        flow.verify(placeRepository)
+                .findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
+                        "KAKAO",
+                        "26338954"
+                );
+        flow.verify(placeLockRepository)
+                .acquirePlaceSelectionLock("KAKAO", "26338954");
+        flow.verify(placeRepository)
+                .findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
+                        "KAKAO",
+                        "26338954"
+                );
+        flow.verify(placeLocationMetadataService)
+                .getAdministrativeRegion(37.5283, 126.9326);
+        flow.verify(placeLockRepository)
+                .acquirePlaceSelectionLock("KAKAO", "26338954");
+        flow.verify(placeRepository)
+                .findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
+                        "KAKAO",
+                        "26338954"
+                );
+        assertThat(result.placeId()).isEqualTo(9L);
+        verify(placeRepository).saveAndFlush(any(Place.class));
+        verify(placeSearchHistoryRepository).upsert(10L, 9L);
+    }
+
+    @Test
     void 활성_검색_장소가_없으면_PLACE_SEARCH_장소를_새로_생성한다() {
         PlaceRequest.Selection request = selectionRequest(
                 " KAKAO ",

@@ -3,12 +3,11 @@ package com.example.plimap.domain.place.service.command.impl;
 import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.entity.Place;
-import com.example.plimap.domain.place.exception.PlaceErrorCode;
-import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.lock.PlaceLockRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -21,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 class PlacePersistenceService {
 
-    private static final double MAP_SELECTION_REUSE_DISTANCE_METERS = 20.0;
+    static final double MAP_SELECTION_REUSE_DISTANCE_METERS = 20.0;
     private static final GeometryFactory GEOMETRY_FACTORY =
             new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -45,7 +44,7 @@ class PlacePersistenceService {
     }
 
     @Transactional
-    public Place persistSearchSelection(
+    public Optional<Place> persistSearchSelection(
             Long memberId,
             PlaceRequest.Selection request,
             PlaceAdministrativeRegion region
@@ -54,18 +53,15 @@ class PlacePersistenceService {
                 request.provider(),
                 request.providerPlaceId()
         );
-        Place place = placeRepository
+        Optional<Place> place = placeRepository
                 .findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
                         request.provider(),
                         request.providerPlaceId()
                 )
-                .orElseGet(() -> {
-                    if (region == null) {
-                        throw new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND);
-                    }
-                    return createPlaceSearch(request, region);
-                });
-        saveSearchHistory(memberId, place.getId());
+                .or(() -> region == null
+                        ? Optional.empty()
+                        : Optional.of(createPlaceSearch(request, region)));
+        place.ifPresent(foundPlace -> saveSearchHistory(memberId, foundPlace.getId()));
         return place;
     }
 
