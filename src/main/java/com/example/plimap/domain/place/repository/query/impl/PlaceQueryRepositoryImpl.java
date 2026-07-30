@@ -35,6 +35,29 @@ public class PlaceQueryRepositoryImpl implements PlaceQueryRepository {
                      p.id
             LIMIT 1
             """;
+    private static final String NEAREST_ACTIVE_PROVIDER_PLACE_SEARCH_QUERY = """
+            SELECT p.*
+            FROM place p
+            WHERE p.deleted_at IS NULL
+              AND p.source = 'PLACE_SEARCH'
+              AND p.place_provider IS NOT NULL
+              AND p.provider_place_id IS NOT NULL
+              AND ST_DWithin(
+                    p.location,
+                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                    :distanceMeters + :prefilterToleranceMeters
+                  )
+              AND ST_Distance(
+                    p.location,
+                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
+                  ) <= :distanceMeters
+            ORDER BY ST_Distance(
+                         p.location,
+                         ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
+                     ),
+                     p.id
+            LIMIT 1
+            """;
 
     private final EntityManager entityManager;
 
@@ -50,7 +73,26 @@ public class PlaceQueryRepositoryImpl implements PlaceQueryRepository {
                 .setParameter("longitude", longitude)
                 .setParameter("distanceMeters", distanceMeters)
                 .setParameter("prefilterToleranceMeters", DISTANCE_PREFILTER_TOLERANCE_METERS)
-                .getResultStream()
+                .getResultList()
+                .stream()
+                .findFirst();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Optional<Place> findNearestActiveProviderPlaceSearchWithin(
+            double latitude,
+            double longitude,
+            double distanceMeters
+    ) {
+        return entityManager
+                .createNativeQuery(NEAREST_ACTIVE_PROVIDER_PLACE_SEARCH_QUERY, Place.class)
+                .setParameter("latitude", latitude)
+                .setParameter("longitude", longitude)
+                .setParameter("distanceMeters", distanceMeters)
+                .setParameter("prefilterToleranceMeters", DISTANCE_PREFILTER_TOLERANCE_METERS)
+                .getResultList()
+                .stream()
                 .findFirst();
     }
 }

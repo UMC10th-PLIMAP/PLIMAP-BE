@@ -2,6 +2,7 @@ package com.example.plimap.domain.place.service.command.impl;
 
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
@@ -11,17 +12,13 @@ import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
-import com.example.plimap.domain.place.repository.lock.PlaceLockRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.command.PlaceCommandService;
+import com.example.plimap.domain.place.service.query.PlaceLocationMetadataService;
 import com.example.plimap.global.util.GeoDistanceCalculator;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,49 +30,59 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
     private static final int ACCESS_RANGE_METERS = 500;
     private static final double MAP_SELECTION_REUSE_DISTANCE_METERS = 20.0;
     private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null, 0L);
-    private static final GeometryFactory GEOMETRY_FACTORY =
-            new GeometryFactory(new PrecisionModel(), 4326);
 
     private final PlaceRepository placeRepository;
     private final PlaceBookmarkRepository placeBookmarkRepository;
     private final PlaceSearchHistoryRepository placeSearchHistoryRepository;
     private final PlaceQueryRepository placeQueryRepository;
-    private final PlaceLockRepository placeLockRepository;
+    private final PlacePersistenceService placePersistenceService;
+    private final PlaceLocationMetadataService placeLocationMetadataService;
     private final PinQueryService pinQueryService;
 
     @Override
-    @Transactional
     public PlaceResponse.MapSelection confirmMapSelection(PlaceRequest.MapSelection request) {
-        placeLockRepository.acquireMapSelectionLock();
-
-        Place place = placeQueryRepository.findNearestActiveMapSelectionWithin(
+        Place existingPlace = placeQueryRepository.findNearestActiveMapSelectionWithin(
                         request.latitude(),
                         request.longitude(),
                         MAP_SELECTION_REUSE_DISTANCE_METERS
                 )
-                .orElseGet(() -> createMapSelection(request));
+                .orElse(null);
+        if (existingPlace != null) {
+            return PlaceResponse.MapSelection.from(existingPlace);
+        }
 
+        PlaceAdministrativeRegion region =
+                placeLocationMetadataService.getAdministrativeRegion(
+                        request.latitude(),
+                        request.longitude()
+                );
+        Place place = placePersistenceService.createOrReuseMapSelection(request, region);
         return PlaceResponse.MapSelection.from(place);
     }
 
     @Override
-    @Transactional
     public PlaceResponse.Selection selectSearchPlace(
             Long memberId,
             PlaceRequest.Selection request
     ) {
         validateSelectionRequest(request);
-        placeLockRepository.acquirePlaceSelectionLock(
-                request.provider(),
-                request.providerPlaceId()
-        );
-
-        Place place = placeRepository
+        Place existingPlace = placeRepository
                 .findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
                         request.provider(),
                         request.providerPlaceId()
                 )
-                .orElseGet(() -> createPlaceSearch(request));
+                .orElse(null);
+        PlaceAdministrativeRegion region = existingPlace == null
+                ? placeLocationMetadataService.getAdministrativeRegion(
+                        request.latitude(),
+                        request.longitude()
+                )
+                : null;
+        Place place = placePersistenceService.persistSearchSelection(
+                memberId,
+                request,
+                region
+        );
 
         PlacePinInfo pinInfo = findPinInfo(place.getId());
         long pinCount = pinInfo.pinCount() == null ? 0L : pinInfo.pinCount();
@@ -89,8 +96,6 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
         boolean bookmarkedByMe = placeBookmarkRepository.existsById(
                 new PlaceBookmarkId(place.getId(), memberId)
         );
-        saveSearchHistory(memberId, place.getId());
-
         return new PlaceResponse.Selection(
                 place.getId(),
                 place.getName(),
@@ -116,43 +121,6 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
         if (deletedCount == 0) {
             throw new PlaceException(PlaceErrorCode.PLACE_SEARCH_HISTORY_NOT_FOUND);
         }
-    }
-
-    private void saveSearchHistory(Long memberId, Long placeId) {
-        placeLockRepository.acquirePlaceSearchHistoryLock(memberId);
-        placeSearchHistoryRepository.upsert(memberId, placeId);
-        placeSearchHistoryRepository.deleteExcessByMemberId(memberId);
-    }
-
-    private Place createMapSelection(PlaceRequest.MapSelection request) {
-        Point location = GEOMETRY_FACTORY.createPoint(new Coordinate(
-                request.longitude(),
-                request.latitude()
-        ));
-        Place place = Place.createMapSelection(
-                resolvePlaceName(request),
-                request.address(),
-                request.roadAddress(),
-                location
-        );
-        return placeRepository.save(place);
-    }
-
-    private Place createPlaceSearch(PlaceRequest.Selection request) {
-        Point location = GEOMETRY_FACTORY.createPoint(new Coordinate(
-                request.longitude(),
-                request.latitude()
-        ));
-        Place place = Place.createPlaceSearch(
-                request.placeName(),
-                request.category(),
-                request.address(),
-                request.roadAddress(),
-                request.provider(),
-                request.providerPlaceId(),
-                location
-        );
-        return placeRepository.saveAndFlush(place);
     }
 
     private PlacePinInfo findPinInfo(Long placeId) {
@@ -194,13 +162,4 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
         return value != null && Double.isFinite(value) && value >= -180 && value <= 180;
     }
 
-    private String resolvePlaceName(PlaceRequest.MapSelection request) {
-        if (request.placeName() != null) {
-            return request.placeName();
-        }
-        if (request.roadAddress() != null) {
-            return request.roadAddress();
-        }
-        return request.address();
-    }
 }
