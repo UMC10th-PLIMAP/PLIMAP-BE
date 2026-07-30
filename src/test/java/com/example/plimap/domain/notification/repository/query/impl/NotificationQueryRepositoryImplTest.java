@@ -29,11 +29,12 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -64,6 +65,9 @@ class NotificationQueryRepositoryImplTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Member recipient;
     private Member actor;
@@ -155,20 +159,75 @@ class NotificationQueryRepositoryImplTest {
 
     @Test
     void 뒤에_빈_구간이_붙은_잘못된_커서는_예외가_발생한다() {
-        // when & then
-        assertThatThrownBy(() ->
-                notificationQueryRepository.findNotifications(recipient.getId(), "2026-01-01T00:00:00Z/1/", 10))
-                .isInstanceOfSatisfying(NotificationException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
+        // given
+        String cursor = "2026-01-01T00:00:00Z/1/";
+
+        // when
+        Throwable thrown = catchThrowable(() ->
+                notificationQueryRepository.findNotifications(recipient.getId(), cursor, 10));
+
+        // then
+        assertThat(thrown).isInstanceOfSatisfying(NotificationException.class, exception ->
+                assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
     }
 
     @Test
-    void id가_0_이하인_커서는_예외가_발생한다() {
-        // when & then
-        assertThatThrownBy(() ->
-                notificationQueryRepository.findNotifications(recipient.getId(), "2026-01-01T00:00:00Z/0", 10))
-                .isInstanceOfSatisfying(NotificationException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
+    void id가_0인_커서는_예외가_발생한다() {
+        // given
+        String cursor = "2026-01-01T00:00:00Z/0";
+
+        // when
+        Throwable thrown = catchThrowable(() ->
+                notificationQueryRepository.findNotifications(recipient.getId(), cursor, 10));
+
+        // then
+        assertThat(thrown).isInstanceOfSatisfying(NotificationException.class, exception ->
+                assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
+    }
+
+    @Test
+    void id가_음수인_커서는_예외가_발생한다() {
+        // given
+        String cursor = "2026-01-01T00:00:00Z/-1";
+
+        // when
+        Throwable thrown = catchThrowable(() ->
+                notificationQueryRepository.findNotifications(recipient.getId(), cursor, 10));
+
+        // then
+        assertThat(thrown).isInstanceOfSatisfying(NotificationException.class, exception ->
+                assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
+    }
+
+    @Test
+    void 생성_시각이_같으면_id_내림차순으로_보조_정렬하고_페이지_간_누락이나_중복이_없다() {
+        // given
+        Member tieRecipient = memberRepository.save(createMember("동시받는이", "동시받는이닉네임"));
+        String sameCreatedAt = "2026-07-01T00:00:00Z";
+        Long tieId1 = insertFollowNotification(tieRecipient.getId(), actor.getId(), sameCreatedAt);
+        Long tieId2 = insertFollowNotification(tieRecipient.getId(), actor.getId(), sameCreatedAt);
+        Long tieId3 = insertFollowNotification(tieRecipient.getId(), actor.getId(), sameCreatedAt);
+
+        // when
+        Pagination<NotificationResDTO.Item> firstPage =
+                notificationQueryRepository.findNotifications(tieRecipient.getId(), null, 1);
+        Pagination<NotificationResDTO.Item> secondPage =
+                notificationQueryRepository.findNotifications(tieRecipient.getId(), firstPage.nextCursor(), 1);
+        Pagination<NotificationResDTO.Item> thirdPage =
+                notificationQueryRepository.findNotifications(tieRecipient.getId(), secondPage.nextCursor(), 1);
+
+        // then
+        assertThat(firstPage.data())
+                .extracting(NotificationResDTO.Item::notificationId)
+                .containsExactly(tieId3);
+        assertThat(secondPage.data())
+                .extracting(NotificationResDTO.Item::notificationId)
+                .containsExactly(tieId2);
+        assertThat(thirdPage.data())
+                .extracting(NotificationResDTO.Item::notificationId)
+                .containsExactly(tieId1);
+        assertThat(thirdPage.hasNext()).isFalse();
+        assertThat(thirdPage.nextCursor()).isNull();
     }
 
     @Test
@@ -189,5 +248,13 @@ class NotificationQueryRepositoryImplTest {
                 .introduction("안녕하세요")
                 .profileImageObjectKey("image_url")
                 .build();
+    }
+
+    private Long insertFollowNotification(Long recipientId, Long actorId, String createdAt) {
+        return jdbcTemplate.queryForObject("""
+                INSERT INTO notification (recipient_id, actor_id, pin_id, type, created_at, updated_at)
+                VALUES (?, ?, NULL, 'FOLLOW', ?::timestamptz, ?::timestamptz)
+                RETURNING id
+                """, Long.class, recipientId, actorId, createdAt, createdAt);
     }
 }
