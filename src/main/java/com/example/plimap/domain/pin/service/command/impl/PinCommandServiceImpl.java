@@ -8,6 +8,8 @@ import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.PinLike;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
+import com.example.plimap.domain.pin.event.PinCreatedEvent;
+import com.example.plimap.domain.pin.event.PinLikedEvent;
 import com.example.plimap.domain.pin.exception.*;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
@@ -21,6 +23,7 @@ import com.example.plimap.domain.track.dto.request.TrackCommand;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.service.command.TrackCommandService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +44,7 @@ public class PinCommandServiceImpl implements PinCommandService {
     private final PinLocationValidator pinLocationValidator;
     private final TagQueryService tagQueryService;
     private final PinLikeRepository pinLikeRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public PinResponse.Summary createPin(Member currentMember, PinRequest.Create request) {
@@ -63,6 +67,8 @@ public class PinCommandServiceImpl implements PinCommandService {
         List<PinTag> pinTags = toPinTags(request.tags(), pin);
 
         pinTagRepository.saveAll(pinTags);
+
+        eventPublisher.publishEvent(new PinCreatedEvent(pin.getId(), currentMember.getId()));
 
         return PinConverter.toSummary(currentMember, pin, placeTrack.getTrack(), place.getId());
     }
@@ -133,6 +139,9 @@ public class PinCommandServiceImpl implements PinCommandService {
             throw new PinLikeException(PinErrorCode.ALREADY_LIKED_PIN);
         }
         pinRepository.increaseLikeCount(pinId);
+
+        eventPublisher.publishEvent(new PinLikedEvent(pinId, pin.getMember().getId(), currentMember.getId()));
+
         return PinConverter.toLikeCount(pin.getLikeCount());
     }
 
