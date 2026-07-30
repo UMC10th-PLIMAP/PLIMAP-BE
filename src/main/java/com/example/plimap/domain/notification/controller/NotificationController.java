@@ -13,7 +13,6 @@ import jakarta.validation.constraints.Min;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -47,7 +46,7 @@ public class NotificationController implements NotificationControllerDocs {
         Pagination<NotificationResDTO.Item> response =
                 notificationQueryService.findNotifications(currentMember.getMember().getId(), cursor, pageSize);
         return ResponseEntity
-                .status(HttpStatus.OK)
+                .status(NotificationSuccessCode.NOTIFICATIONS_RETRIEVED.getStatus())
                 .body(ApiResponse.success(NotificationSuccessCode.NOTIFICATIONS_RETRIEVED, response));
     }
 
