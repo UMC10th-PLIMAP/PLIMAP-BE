@@ -4,6 +4,7 @@ import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
@@ -42,6 +43,13 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     public Member getActiveMember(Long memberId) {
         return memberRepository.findByIdAndStatusAndDeletedAtIsNull(memberId, MemberStatus.ACTIVE)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Override
+    public List<Member> findAllFollowers(Long memberId) {
+        return memberFollowRepository.findAllByIdFollowingId(memberId).stream()
+                .map(MemberFollow::getFollower)
+                .toList();
     }
 
     @Override
