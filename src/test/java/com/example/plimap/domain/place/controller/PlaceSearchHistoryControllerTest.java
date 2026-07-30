@@ -15,6 +15,7 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
@@ -93,6 +94,7 @@ class PlaceSearchHistoryControllerTest {
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
         Member member = mock(Member.class);
         when(member.getId()).thenReturn(1L);
+        when(member.getRole()).thenReturn(MemberRole.USER);
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
     }
 
