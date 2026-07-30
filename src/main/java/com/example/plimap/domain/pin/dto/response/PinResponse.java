@@ -19,7 +19,7 @@ public class PinResponse {
 
             String introduction,
 
-            String previewUrl,
+            String  youtubeVideoId,
 
             Integer clipStartMs
     ) {}
@@ -53,6 +53,8 @@ public class PinResponse {
     public record Feed(
             Long pinId,
             String albumImageUrl,
+            Double latitude,
+            Double longitude,
             Instant createdAt
     ) {}
 
@@ -67,5 +69,32 @@ public class PinResponse {
             List<String> tags,
             String staticCreatedAt,
             Instant createdAt
+    ) {}
+
+    @Builder
+    public record PinDetail(
+            Long pinId,
+            String writerNickname,
+            String writerProfileImage,
+            String introduction,
+            List<String> tags,
+            Integer clipStartMs,
+            Integer likeCount,
+            Boolean userLike,
+            String staticCreatedAt,
+            Instant createdAt
+    ) {}
+
+    @Builder
+    public record PinPreview(
+            Long placeId,
+            Double latitude,
+            Double longitude,
+            String writerNickname,
+            String writerProfileImage,
+            String introduction,
+            String albumImageUrl,
+            String youtubeVideoId,
+            Integer clipStartMs
     ) {}
 }

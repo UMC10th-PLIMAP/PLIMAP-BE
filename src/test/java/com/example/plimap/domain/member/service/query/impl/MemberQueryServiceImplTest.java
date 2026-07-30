@@ -4,6 +4,7 @@ import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollowId;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
@@ -37,19 +38,22 @@ class MemberQueryServiceImplTest {
     void 활성_회원을_조회한다() {
         // given
         Member member = Member.builder().nickname("회원").build();
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
 
         // when
         Member result = memberQueryService.getActiveMember(1L);
 
         // then
         assertThat(result).isSameAs(member);
+        verify(memberRepository).findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE);
     }
 
     @Test
-    void 존재하지_않거나_삭제된_회원은_조회할_수_없다() {
+    void 존재하지_않거나_비활성_또는_삭제된_회원은_조회할_수_없다() {
         // given
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> memberQueryService.getActiveMember(1L))
@@ -168,7 +172,8 @@ class MemberQueryServiceImplTest {
                 .profileImageObjectKey("key")
                 .build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
         when(memberFollowRepository.countByIdFollowingId(1L)).thenReturn(3L);
         when(memberFollowRepository.countByIdFollowerId(1L)).thenReturn(5L);
 
@@ -187,7 +192,8 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
         when(memberFollowRepository.countByIdFollowingId(1L)).thenReturn(0L);
         when(memberFollowRepository.countByIdFollowerId(1L)).thenReturn(0L);
 
@@ -202,7 +208,8 @@ class MemberQueryServiceImplTest {
     @Test
     void 존재하지_않는_회원의_프로필은_조회할_수_없다() {
         // given
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> memberQueryService.getMyProfile(1L))
@@ -215,7 +222,8 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("상대방").build();
         ReflectionTestUtils.setField(member, "id", 2L);
-        when(memberRepository.findByIdAndDeletedAtIsNull(2L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(2L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
         when(memberFollowRepository.countByIdFollowingId(2L)).thenReturn(3L);
         when(memberFollowRepository.countByIdFollowerId(2L)).thenReturn(5L);
         when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
@@ -235,7 +243,8 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("상대방").build();
         ReflectionTestUtils.setField(member, "id", 2L);
-        when(memberRepository.findByIdAndDeletedAtIsNull(2L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(2L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
         when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(true);
 
         // when
@@ -250,7 +259,8 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("상대방").build();
         ReflectionTestUtils.setField(member, "id", 2L);
-        when(memberRepository.findByIdAndDeletedAtIsNull(2L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(2L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
         when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
 
         // when
@@ -263,7 +273,8 @@ class MemberQueryServiceImplTest {
     @Test
     void 존재하지_않거나_탈퇴한_회원의_프로필은_조회할_수_없다() {
         // given
-        when(memberRepository.findByIdAndDeletedAtIsNull(2L)).thenReturn(Optional.empty());
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(2L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> memberQueryService.getOtherProfile(1L, 2L))
@@ -278,7 +289,8 @@ class MemberQueryServiceImplTest {
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.CANNOT_VIEW_SELF_PROFILE));
 
-        verify(memberRepository, never()).findByIdAndDeletedAtIsNull(any());
+        verify(memberRepository, never())
+                .findByIdAndStatusAndDeletedAtIsNull(any(), any());
     }
 
     @Test
@@ -286,7 +298,8 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
 
         MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "key", Instant.now(), true);
         Pagination<MemberResDTO.FollowerItem> page =
@@ -309,7 +322,8 @@ class MemberQueryServiceImplTest {
     @Test
     void 존재하지_않는_회원의_팔로워_목록은_조회할_수_없다() {
         // given
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> memberQueryService.findFollowers(99L, 1L, null, 10))
@@ -324,7 +338,8 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
 
         MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "key", Instant.now(), true);
         Pagination<MemberResDTO.FollowingItem> page =
@@ -347,7 +362,8 @@ class MemberQueryServiceImplTest {
     @Test
     void 존재하지_않는_회원의_팔로잉_목록은_조회할_수_없다() {
         // given
-        when(memberRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> memberQueryService.findFollowing(99L, 1L, null, 10))

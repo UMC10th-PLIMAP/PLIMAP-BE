@@ -61,6 +61,18 @@ public enum PinSuccessCode implements BaseSuccessCode {
         HttpStatus.OK,
         "MY_PIN_LIST_SEARCH_SUCCESS",
         "내가 작성한 핀 목록이 조회되었습니다."
+    ),
+
+    PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS",
+            "특정 장소 노래의 핀 목록이 조회되었습니다."
+    ),
+
+    PIN_SEARCH_SUCCESS(
+            HttpStatus.OK,
+            "PIN_SEARCH_SUCCESS",
+            "핀이 조회되었습니다."
     );
 
     private final HttpStatus status;

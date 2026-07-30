@@ -3,6 +3,7 @@ package com.example.plimap.domain.pin.repository;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.track.entity.PlaceTrack;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

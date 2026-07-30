@@ -52,6 +52,9 @@ public class Pin extends SoftDeleteEntity {
     @OrderBy("displayOrder ASC")
     private List<PinTag> pinTagList = new ArrayList<>();
 
+    @OneToMany(mappedBy = "pin", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PinLike> pinLikeList = new ArrayList<>();
+
     @Builder
     private Pin(Member member, Place place, PlaceTrack placeTrack, String introduction, Integer clipStartMs, boolean isFeedPublic) {
         this.member = member;

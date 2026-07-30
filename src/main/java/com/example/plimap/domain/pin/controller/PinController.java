@@ -5,6 +5,7 @@ import com.example.plimap.domain.pin.controller.docs.PinControllerDocs;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinSuccessCode;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
@@ -14,6 +15,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -137,5 +139,33 @@ public class PinController implements PinControllerDocs {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.MY_PIN_LIST_SEARCH_SUCCESS, response));
+    }
+
+    @GetMapping("/place-tracks/{placeTrackId}/pins")
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.PinDetail>>> getPlaceTrackPinList(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false, defaultValue = "LATEST")
+            PinSortType pinSortType,
+            @PathVariable Long placeTrackId
+    ) {
+        Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackIdAndSortType(currentMember.getMember().getId(), cursor, pageSize, pinSortType, placeTrackId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS, response));
+    }
+
+    @GetMapping("/pins/{pinId}")
+    public ResponseEntity<ApiResponse<PinResponse.PinPreview>> getPinPreview(
+            @PathVariable Long pinId
+    ) {
+        PinResponse.PinPreview response = pinQueryService.getPinPreview(pinId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.PIN_SEARCH_SUCCESS, response));
     }
 }

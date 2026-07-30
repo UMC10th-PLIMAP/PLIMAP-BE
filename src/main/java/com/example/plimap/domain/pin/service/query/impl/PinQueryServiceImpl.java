@@ -8,12 +8,14 @@ import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
+import com.example.plimap.domain.place.entity.Place;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,5 +72,24 @@ public class PinQueryServiceImpl implements PinQueryService {
     @Override
     public Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize) {
         return pinQueryRepository.findMyPinList(memberId, cursor, pageSize);
+    }
+
+    @Override
+    public Boolean validatePlacePinAccessByMember(Member member, Place place) {
+        return pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place)
+                || pinQueryRepository.existsPinByMemberFollowAndPlace(member.getId(), place.getId());
+    }
+
+    @Override
+    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId) {
+        return pinQueryRepository.findPinListByPlaceTrackIdAndSortType(memberId, cursor, pageSize, pinSortType, placeTrackId);
+    }
+
+    @Override
+    public PinResponse.PinPreview getPinPreview(Long pinId) {
+        Pin pin = pinQueryRepository.getPinPreview(pinId)
+                .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
+
+        return PinConverter.toPinPreview(pin);
     }
 }

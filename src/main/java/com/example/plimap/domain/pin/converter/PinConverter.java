@@ -26,7 +26,7 @@ public class PinConverter {
                 .writerProfileImage(member.getProfileImageObjectKey())
                 .introduction(pin.getIntroduction())
                 .clipStartMs(pin.getClipStartMs())
-                .previewUrl(track.getPreviewUrl())
+                .youtubeVideoId(pin.getPlaceTrack().getTrack().getProviderTrackId())
                 .build();
     }
 
@@ -92,6 +92,36 @@ public class PinConverter {
                 .build();
     }
 
+    public static PinResponse.Feed toFeed(
+        Pin pin
+    ) {
+        return PinResponse.Feed.builder()
+                .pinId(pin.getId())
+                .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
+                .latitude(pin.getPlace().getLocation().getY())
+                .longitude(pin.getPlace().getLocation().getX())
+                .createdAt(pin.getCreatedAt())
+                .build();
+    }
+
+    public static PinResponse.PinDetail toPinDetail(
+            Pin pin,
+            Boolean userLike
+    ) {
+        return PinResponse.PinDetail.builder()
+                .pinId(pin.getId())
+                .writerNickname(pin.getMember().getNickname())
+                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .introduction(pin.getIntroduction())
+                .tags(pin.getPinTagList().stream().map(pinTag -> pinTag.getTag().getName()).toList())
+                .clipStartMs(pin.getClipStartMs())
+                .likeCount(pin.getLikeCount())
+                .userLike(userLike)
+                .staticCreatedAt(parseCreatedAt(pin.getCreatedAt(), Instant.now()))
+                .createdAt(pin.getCreatedAt())
+                .build();
+    }
+
     public static String parseCreatedAt(
             Instant createdAt,
             Instant now
@@ -114,5 +144,21 @@ public class PinConverter {
             return "%d개월 전".formatted(gap.toDays()/30);
         }
         return "%d년 전".formatted(gap.toDays()/365);
+    }
+
+    public static PinResponse.PinPreview toPinPreview(
+        Pin pin
+    ) {
+        return PinResponse.PinPreview.builder()
+                .placeId(pin.getPlace().getId())
+                .latitude(pin.getPlace().getLocation().getY())
+                .longitude(pin.getPlace().getLocation().getX())
+                .writerNickname(pin.getMember().getNickname())
+                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .introduction(pin.getIntroduction())
+                .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
+                .youtubeVideoId(pin.getPlaceTrack().getTrack().getProviderTrackId())
+                .clipStartMs(pin.getClipStartMs())
+                .build();
     }
 }

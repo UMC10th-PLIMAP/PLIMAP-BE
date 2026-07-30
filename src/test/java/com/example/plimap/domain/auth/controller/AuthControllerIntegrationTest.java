@@ -128,6 +128,37 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void 약관_동의_여부를_조회하면_동의한_약관은_true_동의하지_않은_약관은_false로_응답한다() throws Exception {
+        // given
+        String accessToken = issueAccessToken();
+        mockMvc.perform(post("/api/v1/auth/terms")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "agreements": [
+                                    { "type": "SERVICE", "agreed": true },
+                                    { "type": "PRIVACY", "agreed": true },
+                                    { "type": "LOCATION", "agreed": true }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        // when
+        var result = mockMvc.perform(get("/api/v1/auth/terms")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
+
+        // then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("TERMS_200_AGREEMENT_STATUS_RETRIEVED"))
+                .andExpect(jsonPath("$.result[?(@.type == 'SERVICE')].agreed").value(true))
+                .andExpect(jsonPath("$.result[?(@.type == 'SERVICE')].agreedAt").exists())
+                .andExpect(jsonPath("$.result[?(@.type == 'MARKETING')].agreed").value(false));
+    }
+
+    @Test
     void 로그아웃하면_쿠키가_삭제되고_해당_토큰은_이후_요청에서_거부된다() throws Exception {
         String accessToken = issueAccessToken();
 

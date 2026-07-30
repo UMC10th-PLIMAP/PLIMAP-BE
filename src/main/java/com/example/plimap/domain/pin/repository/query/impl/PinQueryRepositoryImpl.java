@@ -1,5 +1,7 @@
 package com.example.plimap.domain.pin.repository.query.impl;
 
+import com.example.plimap.domain.member.entity.QMember;
+import com.example.plimap.domain.member.entity.QMemberFollow;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.CursorInfo;
 import com.example.plimap.domain.pin.dto.Pagination;
@@ -7,23 +9,24 @@ import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.QPin;
+import com.example.plimap.domain.pin.entity.QPinLike;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.place.entity.QPlace;
+import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 
@@ -82,6 +85,15 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     private final EntityManager entityManager;
     private final JPAQueryFactory queryFactory;
 
+    QPin pin = QPin.pin;
+    QPinLike pinLike = QPinLike.pinLike;
+    QMember member = QMember.member;
+    QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
+    QTrack track = QTrack.track;
+    QPlace place = QPlace.place;
+    QMemberFollow memberFollow = QMemberFollow.memberFollow;
+    QReport report = QReport.report;
+
     @Override
     @SuppressWarnings("unchecked")
     public Optional<Double> findNearestActivePinWithin20m(
@@ -121,32 +133,45 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     @Override
     public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
-        QPin pin = QPin.pin;
-        QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
-        QTrack track = QTrack.track;
-        CursorInfo cursorInfo = parseCursor(cursor);
+        CursorInfo cursorInfo = parseCursor(cursor, null);
 
-        List<PinResponse.Feed> data = queryFactory
-                .select(
-                    Projections.constructor(
-                            PinResponse.Feed.class,
-                            pin.id,
-                            track.albumImageUrl,
-                            pin.createdAt
-                    )
+        List<Long> pinIds = queryFactory
+                .select(pin.id)
+                .from(pin)
+                .where(
+                        pin.member.id.eq(memberId),
+                        cursorCondition(cursorInfo, null),
+                        pin.deletedAt.isNull(),
+                        pin.isFeedPublic.eq(true)
                 )
+                .orderBy(pin.createdAt.desc(), pin.id.desc())
+                .limit(pageSize + 1)
+                .fetch();
+
+        if (pinIds.isEmpty()) {
+            return emptyPagination(pageSize);
+        }
+
+        List<Pin> pins = queryFactory
+                .selectDistinct(pin)
                 .from(pin)
                 .join(pin.placeTrack, placeTrack)
                 .join(placeTrack.track, track)
+                .join(placeTrack.place, place)
                 .where(
                         pin.member.id.eq(memberId),
-                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        pin.id.in(pinIds),
+                        cursorCondition(cursorInfo, null),
                         pin.isFeedPublic.eq(true),
                         pin.deletedAt.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
+
+        List<PinResponse.Feed> data = new ArrayList<>(pins.stream()
+                .map(PinConverter::toFeed).toList());
+
 
         boolean hasNext = data.size() > pageSize;
 
@@ -163,6 +188,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             );
         }
 
+
         PinResponse.Feed last = data.getLast();
         String nextCursor = hasNext
                 ? last.createdAt() + "/" + last.pinId()
@@ -173,23 +199,23 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     @Override
     public Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize) {
-        QPin pin = QPin.pin;
-        QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
-        QTrack track = QTrack.track;
-        QPlace place = QPlace.place;
-        CursorInfo cursorInfo = parseCursor(cursor);
+        CursorInfo cursorInfo = parseCursor(cursor, null);
 
         List<Long> pinIds = queryFactory
                 .select(pin.id)
                 .from(pin)
                 .where(
                         pin.member.id.eq(memberId),
-                        cursorCondition(cursorInfo.createdAt(), cursorInfo.pinId()),
+                        cursorCondition(cursorInfo, null),
                         pin.deletedAt.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
+
+        if (pinIds.isEmpty()) {
+            return emptyPagination(pageSize);
+        }
 
         boolean hasNext = pinIds.size() > pageSize;
 
@@ -234,9 +260,135 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
     }
 
-    private CursorInfo parseCursor(String cursor) {
+    @Override
+    public Boolean existsPinByMemberFollowAndPlace(Long memberId, Long placeId) {
+
+        return queryFactory
+                .selectOne()
+                .from(memberFollow)
+                .join(memberFollow.following, member)
+                .join(pin).on(pin.member.eq(member))
+                .join(place).on(pin.place.eq(place))
+                .where(
+                        memberFollow.follower.id.eq(memberId),
+                        pin.place.id.eq(placeId),
+                        pin.deletedAt.isNull(),
+                        place.deletedAt.isNull(),
+                        member.deletedAt.isNull()
+                )
+                .fetchFirst() != null;
+    } 
+
+    @Override
+    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId) {
+        pinSortType = pinSortType == null? PinSortType.LATEST : pinSortType;
+        CursorInfo cursorInfo = parseCursor(cursor, pinSortType);
+
+        List<Long> pinIds = queryFactory
+                .select(pin.id)
+                .from(pin)
+                .leftJoin(report)
+                .on(
+                        report.reportedPin.eq(pin),
+                        report.reporter.id.eq(memberId)
+                )
+                .where(
+                        cursorCondition(cursorInfo, pinSortType),
+                        pin.deletedAt.isNull(),
+                        pin.placeTrack.id.eq(placeTrackId),
+                        report.id.isNull()
+                )
+                .orderBy(getOrders(pinSortType))
+                .limit(pageSize + 1)
+                .fetch();
+
+        if (pinIds.isEmpty()) {
+            return emptyPagination(pageSize);
+        }
+
+        boolean hasNext = pinIds.size() > pageSize;
+
+        if (hasNext) {
+            pinIds.remove(pageSize.intValue());
+        }
+
+        List<Pin> pins = queryFactory
+                .selectDistinct(pin)
+                .from(pin)
+                .join(pin.placeTrack, placeTrack).fetchJoin()
+                .join(pin.member, member).fetchJoin()
+                .leftJoin(pin.pinTagList, pinTag).fetchJoin()
+                .leftJoin(pinTag.tag, tag).fetchJoin()
+                .where(
+                        pin.id.in(pinIds),
+                        placeTrack.deletedAt.isNull(),
+                        pin.deletedAt.isNull()
+                )
+                .orderBy(getOrders(pinSortType))
+                .fetch();
+
+        List<Long> likedPinIds = queryFactory
+                .select(pinLike.pin.id)
+                .from(pinLike)
+                .where(
+                        pinLike.member.id.eq(memberId),
+                        pinLike.pin.id.in(pinIds)
+                )
+                .fetch();
+
+        Set<Long> likedPinIdSet = new HashSet<>(likedPinIds);
+
+        List<PinResponse.PinDetail> data = pins.stream()
+                .map(p ->
+                        PinConverter.toPinDetail(
+                                p,
+                                likedPinIdSet.contains(p.getId())
+                        )
+                )
+                .toList();
+
+        if (data.isEmpty()) {
+            return PinConverter.toPagination(
+                    data,
+                    null,
+                    false,
+                    pageSize
+            );
+        }
+
+        PinResponse.PinDetail last = data.getLast();
+        String nextCursor = hasNext
+                ? (pinSortType.equals(PinSortType.POPULAR)
+                    ? last.likeCount() + "/" + last.pinId()
+                    : last.createdAt() + "/" + last.pinId()
+                )
+                : null;
+
+        return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
+    }
+
+    @Override
+    public Optional<Pin> getPinPreview(Long pinId) {
+        return Optional.ofNullable(queryFactory
+                .select(pin)
+                .from(pin)
+                .join(pin.member, member).fetchJoin()
+                .join(pin.place, place).fetchJoin()
+                .join(pin.placeTrack, placeTrack).fetchJoin()
+                .join(placeTrack.track, track).fetchJoin()
+                .where(
+                        pin.id.eq(pinId),
+                        pin.deletedAt.isNull(),
+                        placeTrack.deletedAt.isNull(),
+                        place.deletedAt.isNull()
+                )
+                .fetchOne()
+        );
+    }
+
+    private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {
         if (cursor == null) {
-            return new CursorInfo(null, null);
+            return new CursorInfo(null, null, null);
         }
         try {
             String[] parts = cursor.split("/");
@@ -245,10 +397,18 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 throw new PinException(PinErrorCode.INVALID_CURSOR);
             }
 
-            Instant createdAt = Instant.parse(parts[0]);
+            Instant createdAt = null;
+            Integer like = null;
+            if (pinSortType == PinSortType.POPULAR) {
+                like = Integer.parseInt(parts[0]);
+            }
+            else {
+                createdAt = Instant.parse(parts[0]);
+            }
             long pinId = Long.parseLong(parts[1]);
 
-            return new CursorInfo(createdAt, pinId);
+
+            return new CursorInfo(createdAt, pinId, like);
 
         } catch (DateTimeParseException | NumberFormatException e) {
             throw new PinException(PinErrorCode.INVALID_CURSOR);
@@ -256,19 +416,56 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     private BooleanExpression cursorCondition(
-            Instant createdAt,
-            Long id
+            CursorInfo cursorInfo,
+            PinSortType pinSortType
     ) {
-        QPin pin = QPin.pin;
+        pinSortType = pinSortType == null? PinSortType.LATEST : pinSortType;
+        return switch (pinSortType) {
+            case LATEST -> {
+                if (cursorInfo.createdAt() == null || cursorInfo.pinId() == null) {
+                    yield null;
+                }
 
-        if (createdAt == null || id == null) {
-            return null;
-        }
+                yield pin.createdAt.lt(cursorInfo.createdAt())
+                        .or(
+                                pin.createdAt.eq(cursorInfo.createdAt())
+                                        .and(pin.id.lt(cursorInfo.pinId()))
+                        );
+            }
 
-        return pin.createdAt.lt(createdAt)
-                .or(
-                        pin.createdAt.eq(createdAt)
-                                .and(pin.id.lt(id))
-                );
+            case POPULAR -> {
+                if (cursorInfo.likeCount() == null || cursorInfo.pinId() == null) {
+                    yield null;
+                }
+
+                yield pin.likeCount.lt(cursorInfo.likeCount())
+                        .or(
+                                pin.likeCount.eq(cursorInfo.likeCount())
+                                        .and(pin.id.lt(cursorInfo.pinId()))
+                        );
+            }
+        };
+    }
+
+    private OrderSpecifier<?>[] getOrders(PinSortType pinSortType) {
+        return switch (pinSortType) {
+            case LATEST -> new OrderSpecifier[]{
+                    pin.createdAt.desc(),
+                    pin.id.desc()
+            };
+            case POPULAR -> new OrderSpecifier[]{
+                    pin.likeCount.desc(),
+                    pin.id.desc()
+            };
+        };
+    }
+
+    public static <T> Pagination<T> emptyPagination(Integer pageSize) {
+        return new Pagination<>(
+                List.of(),
+                null,
+                false,
+                pageSize
+        );
     }
 }

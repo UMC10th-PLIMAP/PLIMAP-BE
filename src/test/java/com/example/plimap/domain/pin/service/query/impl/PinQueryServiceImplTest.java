@@ -27,6 +27,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -54,17 +55,24 @@ class PinQueryServiceImplTest {
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
-    Member member;
+    Member member, member2;
     Place place;
     Tag tag1, tag2, tag3, tag4, tag5;
     PlaceTrack placeTrack;
-
+    Pin pin;
 
     @BeforeEach
     void setup() {
         member = Member.builder()
                 .name("이서윤")
                 .nickname("이서")
+                .introduction("안녕하세요")
+                .profileImageObjectKey("image_url")
+                .build();
+
+        member2 = Member.builder()
+                .name("홍길동")
+                .nickname("동길")
                 .introduction("안녕하세요")
                 .profileImageObjectKey("image_url")
                 .build();
@@ -118,18 +126,26 @@ class PinQueryServiceImplTest {
         );
 
         placeTrack = PlaceTrack.create(place, track);
+
+        pin = Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .clipStartMs(0)
+                .introduction("테스트 PIN")
+                .isFeedPublic(true)
+                .build();
+
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(member2, "id", 2L);
+        ReflectionTestUtils.setField(place, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
     }
 
 
     @Test
     void 활성_PIN을_조회한다() {
         // given
-        Pin pin = Pin.builder()
-                .member(member)
-                .clipStartMs(0)
-                .introduction("테스트 PIN")
-                .isFeedPublic(true)
-                .build();
         when(pinRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(pin));
 
         // when
@@ -215,5 +231,68 @@ class PinQueryServiceImplTest {
     void 빈_장소_아이디목록_입력시_빈_Map을_반환한다() {
         Map<Long, PlacePinInfo> result = pinQueryService.findPinInfosByPlaceIds(List.of());
         assertThat(result).isEqualTo(Collections.emptyMap());
+    }
+
+    @Test
+    void 내가_핀을_등록했다면_true를_반환한다() {
+        // given
+        when(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
+                .thenReturn(true);
+
+        // when
+        boolean result = pinQueryService.validatePlacePinAccessByMember(member, place);
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void 팔로우한_사람이_핀을_등록했다면_true를_반환한다() {
+        // given
+        when(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
+                .thenReturn(false);
+        when(pinQueryRepository.existsPinByMemberFollowAndPlace(anyLong(), anyLong()))
+                .thenReturn(true);
+
+        // when
+        boolean result = pinQueryService.validatePlacePinAccessByMember(member, place);
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void 둘_다_핀을_등록하지_않았다면_false를_반환한다() {
+        // given
+        when(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
+                .thenReturn(false);
+        when(pinQueryRepository.existsPinByMemberFollowAndPlace(anyLong(), anyLong()))
+                .thenReturn(false);
+
+        // when
+        boolean result = pinQueryService.validatePlacePinAccessByMember(member, place);
+
+        // then
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void 핀_상세조회에_성공한다() {
+        // given
+        when(pinQueryRepository.getPinPreview(anyLong()))
+                .thenReturn(Optional.ofNullable(pin));
+
+        // when
+        PinResponse.PinPreview result = pinQueryService.getPinPreview(pin.getId());
+
+        // then
+        assertThat(result.introduction()).isEqualTo(pin.getIntroduction());
+        assertThat(result.clipStartMs()).isEqualTo(pin.getClipStartMs());
+        assertThat(result.writerNickname()).isEqualTo(pin.getMember().getNickname());
+        assertThat(result.writerProfileImage()).isEqualTo(pin.getMember().getProfileImageObjectKey());
+        assertThat(result.placeId()).isEqualTo(pin.getPlace().getId());
+        assertThat(result.latitude()).isEqualTo(pin.getPlace().getLocation().getY());
+        assertThat(result.longitude()).isEqualTo(pin.getPlace().getLocation().getX());
+        assertThat(result.albumImageUrl()).isEqualTo(pin.getPlaceTrack().getTrack().getAlbumImageUrl());
     }
 }

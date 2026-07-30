@@ -4,11 +4,13 @@ import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -108,5 +110,29 @@ public interface PinControllerDocs {
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,
             @RequestParam(required = false) String cursor
+    );
+
+    @Operation(
+            summary = "특정 장소 노래의 PIN 목록 조회",
+            description = "특정 장소 노래의 PIN 목록을 조회합니다. (Figma 기준 화면: PN-01-03)"
+    )
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.PinDetail>>> getPlaceTrackPinList(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false, defaultValue = "LATEST")
+            PinSortType pinSortType,
+            @PathVariable Long placeTrackId
+    );
+
+    @Operation(
+            summary = "PIN 상세 보기",
+            description = "특정 PIN을 조회합니다. 대표핀 대신 해당 핀의 미리보기를 보여줘야할 때 사용한다.(Figma 기준 화면: FD-01-04)"
+    )
+    public ResponseEntity<ApiResponse<PinResponse.PinPreview>> getPinPreview(
+            @PathVariable Long pinId
     );
 }

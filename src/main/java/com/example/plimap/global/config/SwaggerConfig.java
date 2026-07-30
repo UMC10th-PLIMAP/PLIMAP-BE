@@ -12,6 +12,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SwaggerConfig {
 
+    public static final String TEST_TOKEN_ISSUE_KEY_SCHEME = "DEV TEST TOKEN KEY";
+    public static final String TEST_TOKEN_ISSUE_KEY_HEADER = "X-Dev-Token-Key";
+
     @Bean
     public OpenAPI swagger() {
         Info info = new Info()
@@ -27,7 +30,11 @@ public class SwaggerConfig {
                         .name(securityScheme)
                         .type(SecurityScheme.Type.HTTP)
                         .scheme("bearer")
-                        .bearerFormat("JWT"));
+                        .bearerFormat("JWT"))
+                .addSecuritySchemes(TEST_TOKEN_ISSUE_KEY_SCHEME, new SecurityScheme()
+                        .type(SecurityScheme.Type.APIKEY)
+                        .in(SecurityScheme.In.HEADER)
+                        .name(TEST_TOKEN_ISSUE_KEY_HEADER));
 
         return new OpenAPI()
                 .info(info)
