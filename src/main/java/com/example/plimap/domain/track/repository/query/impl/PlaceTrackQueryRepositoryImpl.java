@@ -11,6 +11,7 @@ import com.example.plimap.domain.track.enums.PlaceTrackSort;
 import com.example.plimap.domain.track.repository.query.PlaceTrackQueryRepository;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.NumberExpression;
@@ -35,14 +36,15 @@ public class PlaceTrackQueryRepositoryImpl implements PlaceTrackQueryRepository 
             Long memberId,
             Pageable pageable
     ) {
-        List<Tuple> rows = queryFactory
-                .select(
+        List<LikedPlaceTrackQueryResult> rows = queryFactory
+                .select(Projections.constructor(
+                        LikedPlaceTrackQueryResult.class,
                         placeTrack.id,
                         track.title,
                         track.artistName,
                         track.albumImageUrl,
                         placeTrack.likeCount
-                )
+                ))
                 .from(placeTrackLike)
                 .join(placeTrackLike.placeTrack, placeTrack)
                 .join(placeTrack.track, track)
@@ -61,18 +63,8 @@ public class PlaceTrackQueryRepositoryImpl implements PlaceTrackQueryRepository 
 
         boolean hasNext = rows.size() > pageable.getPageSize();
         int contentSize = hasNext ? pageable.getPageSize() : rows.size();
-        List<LikedPlaceTrackQueryResult> content = new ArrayList<>(contentSize);
-
-        for (int index = 0; index < contentSize; index++) {
-            Tuple row = rows.get(index);
-            content.add(new LikedPlaceTrackQueryResult(
-                    row.get(placeTrack.id),
-                    row.get(track.title),
-                    row.get(track.artistName),
-                    row.get(track.albumImageUrl),
-                    row.get(placeTrack.likeCount)
-            ));
-        }
+        List<LikedPlaceTrackQueryResult> content =
+                new ArrayList<>(rows.subList(0, contentSize));
 
         return new SliceImpl<>(content, pageable, hasNext);
     }
