@@ -47,7 +47,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
 
     @Override
     public List<Member> findAllFollowers(Long memberId) {
-        return memberFollowRepository.findAllByIdFollowingId(memberId).stream()
+        return memberFollowRepository.findAllByIdFollowingId(memberId, MemberStatus.ACTIVE).stream()
                 .map(MemberFollow::getFollower)
                 .toList();
     }
