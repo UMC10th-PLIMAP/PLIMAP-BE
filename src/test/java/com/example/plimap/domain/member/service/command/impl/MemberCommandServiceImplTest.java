@@ -15,6 +15,7 @@ import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.example.plimap.global.external.storage.ProfileImageStorageException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -43,6 +44,7 @@ class MemberCommandServiceImplTest {
     private final MemberRepository memberRepository = mock(MemberRepository.class);
     private final MemberFollowRepository memberFollowRepository = mock(MemberFollowRepository.class);
     private final MemberQueryService memberQueryService = mock(MemberQueryService.class);
+    private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private final ProfileImageStorage profileImageStorage = mock(ProfileImageStorage.class);
     private final ProfileImageObjectKeyGenerator profileImageObjectKeyGenerator =
             mock(ProfileImageObjectKeyGenerator.class);
@@ -55,6 +57,7 @@ class MemberCommandServiceImplTest {
                 memberRepository,
                 memberFollowRepository,
                 memberQueryService,
+                eventPublisher,
                 profileImageStorage,
                 profileImageObjectKeyGenerator
         );
