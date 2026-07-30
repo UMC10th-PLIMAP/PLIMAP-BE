@@ -56,6 +56,7 @@ com.example.plimap/
 │   ├── place/                      # 장소·위치·검색 기록
 │   ├── track/                      # 음악·장소별 곡·하트·북마크
 │   ├── report/                     # 회원·PIN 신고 접수
+│   ├── admin/                      # 관리자 전용 API
 │   └── pin/                        # PIN 핵심 도메인
 │       ├── controller/             # REST API 컨트롤러
 │       │   └── docs/               # Swagger 문서용 인터페이스/설명
@@ -90,7 +91,7 @@ com.example.plimap/
 └── PlimapApplication
 ```
 
-> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report` 도메인도 동일한 내부 패키지 구조를 따릅니다.
+> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report`, `admin` 도메인도 동일한 내부 패키지 구조를 따릅니다. 다만 `admin`은 자체 엔티티를 갖지 않고 다른 도메인(주로 `member`)의 데이터를 관리자 관점에서 조회·조작하므로 `entity`, `repository` 패키지는 필요할 때만 추가합니다.
 
 ## Domain Structure
 
@@ -144,6 +145,13 @@ PLIMAP의 PIN 핵심 도메인을 담당합니다.
 - 공개 PIN 신고 접수
 - 자기 대상·중복·비공개 PIN 신고 제한
 - 관리자 조회·처리·제재 기능은 담당하지 않음
+
+### 7. Admin
+
+관리자 전용 기능을 담당합니다. `Member.role`이 `ADMIN`인 계정만 `/api/v1/admin/**` 경로에 접근할 수 있습니다(`SecurityConfig`의 `hasAuthority("ADMIN")`).
+
+- 관리자 로그인 게이트(현재 로그인한 계정의 관리자 권한 확인)
+- 향후 회원 벌점·정지 처리, 신고 누적 게시물 조회 등 관리자 전용 기능 추가 예정
 
 ## Partial CQRS
 
