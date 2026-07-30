@@ -110,6 +110,7 @@ public final class PlaceResponse {
     ) {
     }
 
+    @Schema(name = "PlaceSelectionResponse")
     public record Selection(
             @Schema(description = "장소 ID", example = "1")
             Long placeId,
@@ -123,7 +124,11 @@ public final class PlaceResponse {
                     nullable = true
             )
             String roadAddress,
-            @Schema(description = "장소 생성 출처", example = "PLACE_SEARCH")
+            @Schema(
+                    description = "장소 생성 출처",
+                    example = "PLACE_SEARCH",
+                    allowableValues = {"PLACE_SEARCH", "ADDRESS_SEARCH", "MAP_SELECTION"}
+            )
             PlaceSource source,
             @Schema(description = "사용자 현재 위치 기준 거리(m)", example = "470")
             Integer distanceMeters,

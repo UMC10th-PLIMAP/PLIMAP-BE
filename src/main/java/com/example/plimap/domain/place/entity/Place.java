@@ -55,6 +55,9 @@ public class Place extends SoftDeleteEntity {
     @Column(name = "provider_place_id", length = 255)
     private String providerPlaceId;
 
+    @Column(name = "normalized_address", length = 255)
+    private String normalizedAddress;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false, length = 20)
     private PlaceSource source;
@@ -74,6 +77,7 @@ public class Place extends SoftDeleteEntity {
             String eupMyeonDong,
             String placeProvider,
             String providerPlaceId,
+            String normalizedAddress,
             PlaceSource source,
             Point location) {
         this.name = name;
@@ -86,6 +90,7 @@ public class Place extends SoftDeleteEntity {
         this.eupMyeonDong = eupMyeonDong;
         this.placeProvider = placeProvider;
         this.providerPlaceId = providerPlaceId;
+        this.normalizedAddress = normalizedAddress;
         this.source = source;
         this.location = location;
     }
@@ -167,6 +172,32 @@ public class Place extends SoftDeleteEntity {
                 .placeProvider(placeProvider)
                 .providerPlaceId(providerPlaceId)
                 .source(PlaceSource.PLACE_SEARCH)
+                .location(location)
+                .build();
+    }
+
+    public static Place createAddressSearch(
+            String name,
+            String address,
+            String roadAddress,
+            String normalizedAddress,
+            String administrativeRegionCode,
+            String sido,
+            String sigungu,
+            String eupMyeonDong,
+            String placeProvider,
+            Point location) {
+        return Place.builder()
+                .name(name)
+                .address(address)
+                .roadAddress(roadAddress)
+                .normalizedAddress(normalizedAddress)
+                .administrativeRegionCode(administrativeRegionCode)
+                .sido(sido)
+                .sigungu(sigungu)
+                .eupMyeonDong(eupMyeonDong)
+                .placeProvider(placeProvider)
+                .source(PlaceSource.ADDRESS_SEARCH)
                 .location(location)
                 .build();
     }
