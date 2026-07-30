@@ -181,6 +181,7 @@ class PlaceControllerTest {
     void 장소_검색에_성공하면_명세_응답을_반환한다() throws Exception {
         when(placeQueryService.searchPlaces(any())).thenReturn(new PlaceResponse.SearchResult(
                 java.util.List.of(new PlaceResponse.SearchItem(
+                        "PLACE",
                         "KAKAO",
                         "26338954",
                         "한강",
@@ -204,6 +205,7 @@ class PlaceControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PLACE_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("장소 검색에 성공했습니다."))
+                .andExpect(jsonPath("$.result.items[0].resultType").value("PLACE"))
                 .andExpect(jsonPath("$.result.items[0].provider").value("KAKAO"))
                 .andExpect(jsonPath("$.result.items[0].providerPlaceId").value("26338954"))
                 .andExpect(jsonPath("$.result.items[0].placeName").value("한강"))
@@ -219,6 +221,49 @@ class PlaceControllerTest {
                 .andExpect(jsonPath("$.result.items[0].hasPin").value(true))
                 .andExpect(jsonPath("$.result.items[0].firstPinCreatorNickname")
                         .value("홍길동"));
+    }
+
+    @Test
+    void 주소_검색에_성공하면_ADDRESS_JSON_계약을_반환한다() throws Exception {
+        when(placeQueryService.searchPlaces(any())).thenReturn(new PlaceResponse.SearchResult(
+                java.util.List.of(new PlaceResponse.SearchItem(
+                        "ADDRESS",
+                        "KAKAO",
+                        null,
+                        "서울특별시 영등포구 여의동로 330",
+                        null,
+                        "서울특별시 영등포구 여의도동 84",
+                        "서울특별시 영등포구 여의동로 330",
+                        37.5283,
+                        126.9326,
+                        470,
+                        false,
+                        null
+                ))
+        ));
+
+        mockMvc.perform(get(SEARCH_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("keyword", "여의도동 84")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.items[0].resultType").value("ADDRESS"))
+                .andExpect(jsonPath("$.result.items[0].provider").value("KAKAO"))
+                .andExpect(jsonPath("$.result.items[0].providerPlaceId").value(nullValue()))
+                .andExpect(jsonPath("$.result.items[0].placeName")
+                        .value("서울특별시 영등포구 여의동로 330"))
+                .andExpect(jsonPath("$.result.items[0].category").value(nullValue()))
+                .andExpect(jsonPath("$.result.items[0].address")
+                        .value("서울특별시 영등포구 여의도동 84"))
+                .andExpect(jsonPath("$.result.items[0].roadAddress")
+                        .value("서울특별시 영등포구 여의동로 330"))
+                .andExpect(jsonPath("$.result.items[0].latitude").value(37.5283))
+                .andExpect(jsonPath("$.result.items[0].longitude").value(126.9326))
+                .andExpect(jsonPath("$.result.items[0].distanceMeters").value(470))
+                .andExpect(jsonPath("$.result.items[0].hasPin").value(false))
+                .andExpect(jsonPath("$.result.items[0].firstPinCreatorNickname")
+                        .value(nullValue()));
     }
 
     @Test
