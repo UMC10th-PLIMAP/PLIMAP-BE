@@ -18,6 +18,7 @@ import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
+import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.query.impl.PlaceQueryServiceImpl;
 import com.example.plimap.global.external.kakao.KakaoClientException;
 import com.example.plimap.global.external.kakao.KakaoClientTimeoutException;
@@ -42,6 +43,9 @@ class PlaceQueryServiceImplTest {
     private PlaceSearchHistoryRepository placeSearchHistoryRepository;
 
     @Mock
+    private PlaceQueryRepository placeQueryRepository;
+
+    @Mock
     private KakaoPlaceSearchClient kakaoPlaceSearchClient;
 
     @Mock
@@ -54,6 +58,7 @@ class PlaceQueryServiceImplTest {
         placeQueryService = new PlaceQueryServiceImpl(
                 placeRepository,
                 placeSearchHistoryRepository,
+                placeQueryRepository,
                 kakaoPlaceSearchClient,
                 pinQueryService
         );
@@ -93,6 +98,24 @@ class PlaceQueryServiceImplTest {
         ));
         verify(pinQueryService).findPinInfosByPlaceIds(List.of(12L));
         verify(placeRepository, never()).save(any());
+    }
+
+    @Test
+    void 활성_provider_PLACE_SEARCH_장소를_20m_이내에서_조회한다() {
+        Place expected = mock(Place.class);
+        when(placeQueryRepository.findNearestActiveProviderPlaceSearchWithin(
+                37.5283,
+                126.9326,
+                20.0
+        )).thenReturn(Optional.of(expected));
+
+        Optional<Place> result =
+                placeQueryService.findNearestActiveProviderPlaceSearchWithin(
+                        37.5283,
+                        126.9326
+                );
+
+        assertThat(result).contains(expected);
     }
 
     @Test

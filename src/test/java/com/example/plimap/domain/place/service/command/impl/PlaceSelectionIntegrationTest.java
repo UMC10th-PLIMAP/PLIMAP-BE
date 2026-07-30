@@ -2,10 +2,14 @@ package com.example.plimap.domain.place.service.command.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.Mockito.when;
 
+import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.exception.PlaceException;
+import com.example.plimap.domain.place.service.query.PlaceLocationMetadataService;
 import com.example.plimap.domain.place.service.command.PlaceCommandService;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import java.util.ArrayList;
@@ -24,6 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -41,8 +46,18 @@ class PlaceSelectionIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @MockitoBean
+    private PlaceLocationMetadataService placeLocationMetadataService;
+
     @BeforeEach
     void setUp() {
+        when(placeLocationMetadataService.getAdministrativeRegion(anyDouble(), anyDouble()))
+                .thenReturn(new PlaceAdministrativeRegion(
+                        "1156054000",
+                        "서울특별시",
+                        "영등포구",
+                        "여의동"
+                ));
         clearPlaces();
         clearMembers();
         insertMembers();
@@ -66,6 +81,10 @@ class PlaceSelectionIntegrationTest {
                        category,
                        address,
                        road_address,
+                       administrative_region_code,
+                       sido,
+                       sigungu,
+                       eup_myeon_dong,
                        place_provider,
                        provider_place_id,
                        source,
@@ -100,6 +119,10 @@ class PlaceSelectionIntegrationTest {
                 .containsEntry("category", "공원")
                 .containsEntry("address", "서울특별시 영등포구 여의도동")
                 .containsEntry("road_address", "서울특별시 영등포구 여의동로")
+                .containsEntry("administrative_region_code", "1156054000")
+                .containsEntry("sido", "서울특별시")
+                .containsEntry("sigungu", "영등포구")
+                .containsEntry("eup_myeon_dong", "여의동")
                 .containsEntry("place_provider", "KAKAO")
                 .containsEntry("provider_place_id", testProviderPlaceId("26338954"))
                 .containsEntry("source", "PLACE_SEARCH");

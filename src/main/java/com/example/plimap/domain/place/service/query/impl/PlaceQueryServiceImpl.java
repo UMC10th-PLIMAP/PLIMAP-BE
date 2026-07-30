@@ -10,6 +10,7 @@ import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
+import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.global.external.kakao.KakaoClientException;
 import com.example.plimap.global.external.kakao.KakaoClientTimeoutException;
@@ -33,10 +34,12 @@ import org.springframework.validation.annotation.Validated;
 public class PlaceQueryServiceImpl implements PlaceQueryService {
 
     private static final String KAKAO_PROVIDER = "KAKAO";
+    private static final double PROVIDER_PLACE_SEARCH_DISTANCE_METERS = 20.0;
     private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null, 0L);
 
     private final PlaceRepository placeRepository;
     private final PlaceSearchHistoryRepository placeSearchHistoryRepository;
+    private final PlaceQueryRepository placeQueryRepository;
     private final KakaoPlaceSearchClient kakaoPlaceSearchClient;
     private final PinQueryService pinQueryService;
 
@@ -142,6 +145,18 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
         return placeRepository.findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
                 placeProvider,
                 providerPlaceId
+        );
+    }
+
+    @Override
+    public Optional<Place> findNearestActiveProviderPlaceSearchWithin(
+            double latitude,
+            double longitude
+    ) {
+        return placeQueryRepository.findNearestActiveProviderPlaceSearchWithin(
+                latitude,
+                longitude,
+                PROVIDER_PLACE_SEARCH_DISTANCE_METERS
         );
     }
 

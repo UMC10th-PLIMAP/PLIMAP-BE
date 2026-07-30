@@ -10,4 +10,10 @@ public interface PlaceQueryRepository {
             double longitude,
             double distanceMeters
     );
+
+    Optional<Place> findNearestActiveProviderPlaceSearchWithin(
+            double latitude,
+            double longitude,
+            double distanceMeters
+    );
 }
