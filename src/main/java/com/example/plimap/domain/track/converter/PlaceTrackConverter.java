@@ -39,16 +39,21 @@ public final class PlaceTrackConverter {
             Place place,
             double distance,
             boolean withinRadius,
+            boolean trackDetailAccessible,
             Slice<PlaceTrackQueryResult> placeTracks
     ) {
         List<PlaceTrackResponse.PlaceTrackItem> tracks = placeTracks.getContent().stream()
-                .map(placeTrack -> toItem(placeTrack, withinRadius))
+                .map(placeTrack -> toItem(
+                        placeTrack,
+                        trackDetailAccessible
+                ))
                 .toList();
 
         return new PlaceTrackResponse.PlaceTrackListResult(
                 place.getId(),
                 distance,
                 withinRadius,
+                trackDetailAccessible,
                 tracks,
                 placeTracks.getNumber(),
                 placeTracks.getSize(),
@@ -58,7 +63,7 @@ public final class PlaceTrackConverter {
 
     private static PlaceTrackResponse.PlaceTrackItem toItem(
             PlaceTrackQueryResult placeTrack,
-            boolean withinRadius
+            boolean trackDetailAccessible
     ) {
         return new PlaceTrackResponse.PlaceTrackItem(
                 placeTrack.placeTrackId(),
@@ -66,8 +71,8 @@ public final class PlaceTrackConverter {
                 placeTrack.artistName(),
                 placeTrack.artworkUrl(),
                 placeTrack.pinCount(),
-                withinRadius ? placeTrack.likeCount() : null,
-                withinRadius ? placeTrack.liked() : null
+                trackDetailAccessible ? placeTrack.likeCount() : null,
+                placeTrack.liked()
         );
     }
 }
