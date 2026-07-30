@@ -4,6 +4,7 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -37,14 +38,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = SecurityIntegrationTest.TestController.class)
+@WebMvcTest(controllers = {
+        SecurityIntegrationTest.TestController.class,
+        SecurityIntegrationTest.AdminTestController.class
+})
 @Import({
         SecurityConfig.class,
         CorsConfig.class,
         SecurityErrorResponseHandler.class,
         AuthCookieUtil.class,
         HttpCookieOAuth2AuthorizationRequestRepository.class,
-        SecurityIntegrationTest.TestController.class
+        SecurityIntegrationTest.TestController.class,
+        SecurityIntegrationTest.AdminTestController.class
 })
 @ActiveProfiles("test")
 class SecurityIntegrationTest {
@@ -52,6 +57,7 @@ class SecurityIntegrationTest {
     private static final String ALLOWED_ORIGIN = "http://localhost:5173";
     private static final String DEV_ORIGIN = "https://dev.plimap.kr";
     private static final String PROTECTED_PATH = "/api/v1/security-test";
+    private static final String ADMIN_PATH = "/api/v1/admin/security-test";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -210,6 +216,24 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void 관리자_전용_경로는_일반_회원이면_거부한다() throws Exception {
+        mockMvc.perform(get(ADMIN_PATH)
+                        .cookie(new Cookie("accessToken", ACCESS_TOKEN)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void 관리자_전용_경로는_관리자_회원이면_허용한다() throws Exception {
+        Member admin = Member.builder().role(MemberRole.ADMIN).build();
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(admin));
+
+        mockMvc.perform(get(ADMIN_PATH)
+                        .cookie(new Cookie("accessToken", ACCESS_TOKEN)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("admin-ok"));
+    }
+
+    @Test
     void 허용되지_않은_Origin의_Preflight를_차단한다() throws Exception {
         mockMvc.perform(options(PROTECTED_PATH)
                         .header(HttpHeaders.ORIGIN, "https://attacker.example")
@@ -240,6 +264,16 @@ class SecurityIntegrationTest {
         @PostMapping
         public ResponseEntity<String> post() {
             return ResponseEntity.ok("ok");
+        }
+    }
+
+    @RestController
+    @RequestMapping("/api/v1/admin/security-test")
+    public static class AdminTestController {
+
+        @GetMapping
+        public ResponseEntity<String> get() {
+            return ResponseEntity.ok("admin-ok");
         }
     }
 }
