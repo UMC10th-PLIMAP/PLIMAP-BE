@@ -24,6 +24,50 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 public interface PlaceTrackControllerDocs {
 
     @Operation(
+            summary = "좋아요한 장소별 곡 목록 조회",
+            description = "현재 사용자가 좋아요한 활성 장소별 곡 목록을 조회합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "좋아요한 장소별 곡 목록 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "페이지 조건 검증 실패",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponseLikedPlaceTrackListResult"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples
+                                        .PLACE_TRACK_VALIDATION_FAILED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponseLikedPlaceTrackListResult"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    ))
+    })
+    ResponseEntity<ApiResponse<PlaceTrackResponse.LikedPlaceTrackListResult>>
+            getLikedPlaceTracks(
+                    @AuthenticationPrincipal AuthMember currentMember,
+                    @Parameter(description = "페이지 번호(0 이상)")
+                    @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.")
+                    int page,
+                    @Parameter(description = "페이지 크기(1~200)")
+                    @Min(value = 1, message = "페이지 크기는 1개 이상이어야 합니다.")
+                    @Max(value = 200, message = "페이지 크기는 200개 이하여야 합니다.")
+                    int size
+            );
+
+    @Operation(
             summary = "장소별 곡 목록 조회",
             description = "장소 정보와 해당 장소의 활성 PIN에 등록된 곡 목록을 조회합니다."
     )

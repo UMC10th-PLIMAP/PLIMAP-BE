@@ -75,4 +75,25 @@ public final class PlaceTrackResponse {
             );
         }
     }
+
+    public record LikedPlaceTrackListResult(
+            List<LikedPlaceTrackItem> tracks,
+            int page,
+            int size,
+            boolean hasNext
+    ) {
+
+        public LikedPlaceTrackListResult {
+            tracks = List.copyOf(tracks);
+        }
+    }
+
+    public record LikedPlaceTrackItem(
+            Long placeTrackId,
+            String trackName,
+            String artistName,
+            String artworkUrl,
+            Integer likeCount
+    ) {
+    }
 }

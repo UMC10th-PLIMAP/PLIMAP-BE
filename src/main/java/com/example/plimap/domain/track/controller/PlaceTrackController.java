@@ -31,6 +31,29 @@ public class PlaceTrackController implements PlaceTrackControllerDocs {
     private final PlaceTrackQueryService placeTrackQueryService;
 
     @Override
+    @GetMapping("/place-tracks/likes")
+    public ResponseEntity<ApiResponse<PlaceTrackResponse.LikedPlaceTrackListResult>>
+            getLikedPlaceTracks(
+                    @AuthenticationPrincipal AuthMember currentMember,
+                    @RequestParam(defaultValue = "0") int page,
+                    @RequestParam(defaultValue = "20") int size
+            ) {
+        PlaceTrackResponse.LikedPlaceTrackListResult result =
+                placeTrackQueryService.getLikedPlaceTracks(
+                        currentMember.getMember().getId(),
+                        page,
+                        size
+                );
+
+        return ResponseEntity
+                .status(TrackSuccessCode.LIKED_PLACE_TRACK_LIST_SUCCESS.getStatus())
+                .body(ApiResponse.success(
+                        TrackSuccessCode.LIKED_PLACE_TRACK_LIST_SUCCESS,
+                        result
+                ));
+    }
+
+    @Override
     @GetMapping("/places/{placeId}/tracks")
     public ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackListResult>> getPlaceTracks(
             @AuthenticationPrincipal AuthMember currentMember,

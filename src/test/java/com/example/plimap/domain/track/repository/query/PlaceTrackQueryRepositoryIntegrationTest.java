@@ -2,6 +2,7 @@ package com.example.plimap.domain.track.repository.query;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.plimap.domain.track.dto.LikedPlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.PlaceTrackQueryResult;
 import com.example.plimap.domain.track.enums.PlaceTrackSort;
 import com.example.plimap.support.PostgisContainerConfiguration;
@@ -212,6 +213,161 @@ class PlaceTrackQueryRepositoryIntegrationTest {
         assertThat(secondPage.hasNext()).isFalse();
     }
 
+    @Test
+    void 현재_사용자가_좋아요한_PlaceTrack만_최신_좋아요순으로_조회한다() {
+        Long older = insertPlaceTrack(5, "오래된 좋아요 곡");
+        Long newer = insertPlaceTrack(12, "최근 좋아요 곡");
+        Long otherMemberLiked = insertPlaceTrack(20, "다른 사용자 곡");
+        insertPlaceTrackLike(
+                older,
+                memberId,
+                "2026-07-23T00:01:00Z"
+        );
+        insertPlaceTrackLike(
+                newer,
+                memberId,
+                "2026-07-23T00:02:00Z"
+        );
+        insertPlaceTrackLike(
+                otherMemberLiked,
+                otherMemberId,
+                "2026-07-23T00:03:00Z"
+        );
+
+        Slice<LikedPlaceTrackQueryResult> result = findLiked(0, 20);
+
+        assertThat(result.getContent())
+                .extracting(LikedPlaceTrackQueryResult::placeTrackId)
+                .containsExactly(newer, older);
+        LikedPlaceTrackQueryResult first = result.getContent().getFirst();
+        assertThat(first.trackName()).isEqualTo("최근 좋아요 곡");
+        assertThat(first.artistName()).isEqualTo("아티스트");
+        assertThat(first.artworkUrl()).isEqualTo("https://image/최근 좋아요 곡");
+        assertThat(first.likeCount()).isEqualTo(12);
+    }
+
+    @Test
+    void 좋아요한_PlaceTrack이_없으면_빈_Slice를_반환한다() {
+        Slice<LikedPlaceTrackQueryResult> result = findLiked(0, 20);
+
+        assertThat(result.getContent()).isEmpty();
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    void 좋아요를_취소한_PlaceTrack은_목록에_반환하지_않는다() {
+        Long placeTrackId = insertPlaceTrack(3, "좋아요 취소 곡");
+        insertPlaceTrackLike(
+                placeTrackId,
+                memberId,
+                "2026-07-23T00:01:00Z"
+        );
+        jdbcTemplate.update("""
+                DELETE FROM place_track_like
+                WHERE place_track_id = ?
+                  AND member_id = ?
+                """,
+                placeTrackId,
+                memberId
+        );
+
+        Slice<LikedPlaceTrackQueryResult> result = findLiked(0, 20);
+
+        assertThat(result.getContent()).isEmpty();
+    }
+
+    @Test
+    void 삭제된_PlaceTrack은_좋아요_목록에서_제외한다() {
+        Long active = insertPlaceTrack(3, "활성 좋아요 곡");
+        Long deleted = insertPlaceTrack(4, "삭제된 좋아요 곡");
+        insertPlaceTrackLike(active, memberId, "2026-07-23T00:01:00Z");
+        insertPlaceTrackLike(deleted, memberId, "2026-07-23T00:02:00Z");
+        deletePlaceTrack(deleted);
+
+        Slice<LikedPlaceTrackQueryResult> result = findLiked(0, 20);
+
+        assertThat(result.getContent())
+                .extracting(LikedPlaceTrackQueryResult::placeTrackId)
+                .containsExactly(active);
+    }
+
+    @Test
+    void 삭제된_Place의_PlaceTrack은_좋아요_목록에서_제외한다() {
+        Long placeTrackId = insertPlaceTrack(3, "삭제 장소의 곡");
+        insertPlaceTrackLike(
+                placeTrackId,
+                memberId,
+                "2026-07-23T00:01:00Z"
+        );
+        jdbcTemplate.update(
+                "UPDATE place SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?",
+                placeId
+        );
+
+        Slice<LikedPlaceTrackQueryResult> result = findLiked(0, 20);
+
+        assertThat(result.getContent()).isEmpty();
+    }
+
+    @Test
+    void 동일한_Track의_서로_다른_PlaceTrack을_각각_반환한다() {
+        Long trackId = insertTrack("공통 곡");
+        Long otherPlaceId = insertPlace("다른 테스트 장소");
+        Long firstPlaceTrack = insertPlaceTrack(placeId, trackId, 2);
+        Long secondPlaceTrack = insertPlaceTrack(otherPlaceId, trackId, 7);
+        insertPlaceTrackLike(
+                firstPlaceTrack,
+                memberId,
+                "2026-07-23T00:01:00Z"
+        );
+        insertPlaceTrackLike(
+                secondPlaceTrack,
+                memberId,
+                "2026-07-23T00:02:00Z"
+        );
+
+        Slice<LikedPlaceTrackQueryResult> result = findLiked(0, 20);
+
+        assertThat(result.getContent())
+                .extracting(LikedPlaceTrackQueryResult::placeTrackId)
+                .containsExactly(secondPlaceTrack, firstPlaceTrack);
+        assertThat(result.getContent())
+                .extracting(LikedPlaceTrackQueryResult::trackName)
+                .containsExactly("공통 곡", "공통 곡");
+        assertThat(result.getContent())
+                .extracting(LikedPlaceTrackQueryResult::likeCount)
+                .containsExactly(7, 2);
+    }
+
+    @Test
+    void 좋아요_목록은_size보다_한_건_더_조회해_hasNext를_계산한다() {
+        Long oldest = insertPlaceTrack(1, "첫 번째 좋아요");
+        Long middle = insertPlaceTrack(2, "두 번째 좋아요");
+        Long newest = insertPlaceTrack(3, "세 번째 좋아요");
+        insertPlaceTrackLike(oldest, memberId, "2026-07-23T00:01:00Z");
+        insertPlaceTrackLike(middle, memberId, "2026-07-23T00:02:00Z");
+        insertPlaceTrackLike(newest, memberId, "2026-07-23T00:03:00Z");
+
+        Slice<LikedPlaceTrackQueryResult> firstPage = findLiked(0, 2);
+        Slice<LikedPlaceTrackQueryResult> secondPage = findLiked(1, 2);
+
+        assertThat(firstPage.getContent())
+                .extracting(LikedPlaceTrackQueryResult::placeTrackId)
+                .containsExactly(newest, middle);
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(secondPage.getContent())
+                .extracting(LikedPlaceTrackQueryResult::placeTrackId)
+                .containsExactly(oldest);
+        assertThat(secondPage.hasNext()).isFalse();
+    }
+
+    private Slice<LikedPlaceTrackQueryResult> findLiked(int page, int size) {
+        return placeTrackQueryRepository.findLikedPlaceTracks(
+                memberId,
+                PageRequest.of(page, size)
+        );
+    }
+
     private Slice<PlaceTrackQueryResult> find(
             PlaceTrackSort sort,
             int page,
@@ -234,20 +390,29 @@ class PlaceTrackQueryRepositoryIntegrationTest {
     }
 
     private Long insertPlace() {
+        return insertPlace("테스트 장소");
+    }
+
+    private Long insertPlace(String placeName) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO place (name, address, source, location)
                 VALUES (
-                    '테스트 장소',
+                    ?,
                     '테스트 주소',
                     'MAP_SELECTION',
                     ST_SetSRID(ST_MakePoint(127.0, 37.0), 4326)::geography
                 )
                 RETURNING id
-                """, Long.class);
+                """, Long.class, placeName);
     }
 
     private Long insertPlaceTrack(int likeCount, String title) {
-        Long trackId = jdbcTemplate.queryForObject("""
+        Long trackId = insertTrack(title);
+        return insertPlaceTrack(placeId, trackId, likeCount);
+    }
+
+    private Long insertTrack(String title) {
+        return jdbcTemplate.queryForObject("""
                 INSERT INTO track (
                     provider,
                     provider_track_id,
@@ -258,11 +423,18 @@ class PlaceTrackQueryRepositoryIntegrationTest {
                 VALUES ('YOUTUBE', ?, ?, '아티스트', ?)
                 RETURNING id
                 """, Long.class, "video-" + title, title, "https://image/" + title);
+    }
+
+    private Long insertPlaceTrack(
+            Long targetPlaceId,
+            Long trackId,
+            int likeCount
+    ) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO place_track (place_id, track_id, like_count)
                 VALUES (?, ?, ?)
                 RETURNING id
-                """, Long.class, placeId, trackId, likeCount);
+                """, Long.class, targetPlaceId, trackId, likeCount);
     }
 
     private void insertPin(
@@ -298,6 +470,25 @@ class PlaceTrackQueryRepositoryIntegrationTest {
                 "INSERT INTO place_track_like (place_track_id, member_id) VALUES (?, ?)",
                 placeTrackId,
                 likedMemberId
+        );
+    }
+
+    private void insertPlaceTrackLike(
+            Long placeTrackId,
+            Long likedMemberId,
+            String createdAt
+    ) {
+        jdbcTemplate.update("""
+                INSERT INTO place_track_like (
+                    place_track_id,
+                    member_id,
+                    created_at
+                )
+                VALUES (?, ?, ?)
+                """,
+                placeTrackId,
+                likedMemberId,
+                OffsetDateTime.parse(createdAt)
         );
     }
 

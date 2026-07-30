@@ -4,6 +4,7 @@ import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.converter.PlaceTrackConverter;
+import com.example.plimap.domain.track.dto.LikedPlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.PlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
@@ -34,6 +35,22 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
     private final PlaceTrackRepository placeTrackRepository;
     private final PlaceTrackLikeRepository placeTrackLikeRepository;
     private final PlaceTrackQueryRepository placeTrackQueryRepository;
+
+    @Override
+    public PlaceTrackResponse.LikedPlaceTrackListResult getLikedPlaceTracks(
+            Long memberId,
+            int page,
+            int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Slice<LikedPlaceTrackQueryResult> placeTracks =
+                placeTrackQueryRepository.findLikedPlaceTracks(
+                        memberId,
+                        pageable
+                );
+
+        return PlaceTrackConverter.toLikedListResult(placeTracks);
+    }
 
     @Override
     public PlaceTrackResponse.PlaceTrackDetail getPlaceTrackDetail(
