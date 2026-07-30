@@ -21,7 +21,11 @@ public class NotificationEmitterRegistry {
     private final Map<Long, List<SseEmitter>> emittersByMemberId = new ConcurrentHashMap<>();
 
     public void save(Long memberId, SseEmitter emitter) {
-        emittersByMemberId.computeIfAbsent(memberId, id -> new CopyOnWriteArrayList<>()).add(emitter);
+        emittersByMemberId.compute(memberId, (id, emitters) -> {
+            List<SseEmitter> target = emitters != null ? emitters : new CopyOnWriteArrayList<>();
+            target.add(emitter);
+            return target;
+        });
     }
 
     public void delete(Long memberId, SseEmitter emitter) {
