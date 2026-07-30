@@ -1,7 +1,6 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -60,7 +59,7 @@ class PinQueryServiceImplTest {
     Place place;
     Tag tag1, tag2, tag3, tag4, tag5;
     PlaceTrack placeTrack;
-    MemberFollow memberFollow;
+    Pin pin;
 
     @BeforeEach
     void setup() {
@@ -128,21 +127,25 @@ class PinQueryServiceImplTest {
 
         placeTrack = PlaceTrack.create(place, track);
 
+        pin = Pin.builder()
+                .member(member)
+                .place(place)
+                .placeTrack(placeTrack)
+                .clipStartMs(0)
+                .introduction("테스트 PIN")
+                .isFeedPublic(true)
+                .build();
+
         ReflectionTestUtils.setField(member, "id", 1L);
         ReflectionTestUtils.setField(member2, "id", 2L);
         ReflectionTestUtils.setField(place, "id", 1L);
+        ReflectionTestUtils.setField(pin, "id", 1L);
     }
 
 
     @Test
     void 활성_PIN을_조회한다() {
         // given
-        Pin pin = Pin.builder()
-                .member(member)
-                .clipStartMs(0)
-                .introduction("테스트 PIN")
-                .isFeedPublic(true)
-                .build();
         when(pinRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(pin));
 
         // when
@@ -271,5 +274,23 @@ class PinQueryServiceImplTest {
 
         // then
         assertThat(result).isFalse();
+    }
+
+    @Test
+    void 핀_상세조회에_성공한다() {
+        // given
+        when(pinQueryRepository.getPinPreview(anyLong()))
+                .thenReturn(Optional.ofNullable(pin));
+
+        // when
+        PinResponse.PinPreview result = pinQueryService.getPinPreview(pin.getId());
+
+        // then
+        assertThat(result.introduction()).isEqualTo(pin.getIntroduction());
+        assertThat(result.clipStartMs()).isEqualTo(pin.getClipStartMs());
+        assertThat(result.writerNickname()).isEqualTo(pin.getMember().getNickname());
+        assertThat(result.writerProfileImage()).isEqualTo(pin.getMember().getProfileImageObjectKey());
+        assertThat(result.placeId()).isEqualTo(pin.getPlace().getId());
+        assertThat(result.youtubeVideoId()).isEqualTo(pin.getPlaceTrack().getTrack().getProviderTrackId());
     }
 }

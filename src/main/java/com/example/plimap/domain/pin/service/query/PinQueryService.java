@@ -27,4 +27,6 @@ public interface PinQueryService {
     Boolean validatePlacePinAccessByMember(Member member, Place place);
 
     Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId);
+
+    PinResponse.PinPreview getPinPreview(Long pinId);
 }

@@ -19,7 +19,7 @@ public class PinResponse {
 
             String introduction,
 
-            String previewUrl,
+            String  youtubeVideoId,
 
             Integer clipStartMs
     ) {}
@@ -83,5 +83,18 @@ public class PinResponse {
             Boolean userLike,
             String staticCreatedAt,
             Instant createdAt
+    ) {}
+
+    @Builder
+    public record PinPreview(
+            Long placeId,
+            Double latitude,
+            Double longitude,
+            String writerNickname,
+            String writerProfileImage,
+            String introduction,
+            String albumImageUrl,
+            String youtubeVideoId,
+            Integer clipStartMs
     ) {}
 }
