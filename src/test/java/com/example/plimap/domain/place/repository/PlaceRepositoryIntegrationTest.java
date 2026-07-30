@@ -47,6 +47,10 @@ class PlaceRepositoryIntegrationTest {
 
         assertThat(foundPlace.getId()).isEqualTo(savedPlace.getId());
         assertThat(foundPlace.getCategory()).isEqualTo("음식점 > 카페");
+        assertThat(foundPlace.getAdministrativeRegionCode()).isEqualTo("1168010100");
+        assertThat(foundPlace.getSido()).isEqualTo("서울특별시");
+        assertThat(foundPlace.getSigungu()).isEqualTo("강남구");
+        assertThat(foundPlace.getEupMyeonDong()).isEqualTo("역삼동");
         assertThat(foundPlace.getLocation().getSRID()).isEqualTo(4326);
         assertThat(foundPlace.getLocation().getX()).isEqualTo(127.1234);
         assertThat(foundPlace.getLocation().getY()).isEqualTo(37.5678);
@@ -92,6 +96,10 @@ class PlaceRepositoryIntegrationTest {
                 .category("음식점 > 카페")
                 .address("서울특별시 테스트구")
                 .roadAddress("서울특별시 테스트구 테스트로 1")
+                .administrativeRegionCode("1168010100")
+                .sido("서울특별시")
+                .sigungu("강남구")
+                .eupMyeonDong("역삼동")
                 .placeProvider("KAKAO")
                 .providerPlaceId(providerPlaceId)
                 .source(PlaceSource.PLACE_SEARCH)

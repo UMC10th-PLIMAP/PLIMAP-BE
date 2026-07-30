@@ -1,9 +1,12 @@
 package com.example.plimap.domain.place.service.command.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
+import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
+import com.example.plimap.domain.place.service.query.PlaceLocationMetadataService;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,10 +19,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -34,9 +39,17 @@ class PlaceMapSelectionConcurrencyIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private PlacePersistenceService placePersistenceService;
+
+    @MockitoBean
+    private PlaceLocationMetadataService placeLocationMetadataService;
+
     @BeforeEach
     void setUp() {
         jdbcTemplate.update("DELETE FROM place");
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenReturn(new PlaceAdministrativeRegion(null, null, null, null));
     }
 
     @AfterEach
@@ -46,6 +59,8 @@ class PlaceMapSelectionConcurrencyIntegrationTest {
 
     @Test
     void 동시_요청에서도_MAP_SELECTION_장소를_하나만_생성한다() throws Exception {
+        assertThat(AopUtils.isAopProxy(placePersistenceService)).isTrue();
+
         PlaceRequest.MapSelection request = new PlaceRequest.MapSelection(
                 37.5283,
                 126.9326,

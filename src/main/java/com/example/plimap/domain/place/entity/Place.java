@@ -37,6 +37,18 @@ public class Place extends SoftDeleteEntity {
     @Column(name = "road_address", length = 255)
     private String roadAddress;
 
+    @Column(name = "administrative_region_code", length = 20)
+    private String administrativeRegionCode;
+
+    @Column(name = "sido", length = 100)
+    private String sido;
+
+    @Column(name = "sigungu", length = 100)
+    private String sigungu;
+
+    @Column(name = "eup_myeon_dong", length = 100)
+    private String eupMyeonDong;
+
     @Column(name = "place_provider", length = 30)
     private String placeProvider;
 
@@ -56,6 +68,10 @@ public class Place extends SoftDeleteEntity {
             String category,
             String address,
             String roadAddress,
+            String administrativeRegionCode,
+            String sido,
+            String sigungu,
+            String eupMyeonDong,
             String placeProvider,
             String providerPlaceId,
             PlaceSource source,
@@ -64,6 +80,10 @@ public class Place extends SoftDeleteEntity {
         this.category = category;
         this.address = address;
         this.roadAddress = roadAddress;
+        this.administrativeRegionCode = administrativeRegionCode;
+        this.sido = sido;
+        this.sigungu = sigungu;
+        this.eupMyeonDong = eupMyeonDong;
         this.placeProvider = placeProvider;
         this.providerPlaceId = providerPlaceId;
         this.source = source;
@@ -75,10 +95,26 @@ public class Place extends SoftDeleteEntity {
             String address,
             String roadAddress,
             Point location) {
+        return createMapSelection(name, address, roadAddress, null, null, null, null, location);
+    }
+
+    public static Place createMapSelection(
+            String name,
+            String address,
+            String roadAddress,
+            String administrativeRegionCode,
+            String sido,
+            String sigungu,
+            String eupMyeonDong,
+            Point location) {
         return Place.builder()
                 .name(name)
                 .address(address)
                 .roadAddress(roadAddress)
+                .administrativeRegionCode(administrativeRegionCode)
+                .sido(sido)
+                .sigungu(sigungu)
+                .eupMyeonDong(eupMyeonDong)
                 .source(PlaceSource.MAP_SELECTION)
                 .location(location)
                 .build();
@@ -92,11 +128,42 @@ public class Place extends SoftDeleteEntity {
             String placeProvider,
             String providerPlaceId,
             Point location) {
+        return createPlaceSearch(
+                name,
+                category,
+                address,
+                roadAddress,
+                null,
+                null,
+                null,
+                null,
+                placeProvider,
+                providerPlaceId,
+                location
+        );
+    }
+
+    public static Place createPlaceSearch(
+            String name,
+            String category,
+            String address,
+            String roadAddress,
+            String administrativeRegionCode,
+            String sido,
+            String sigungu,
+            String eupMyeonDong,
+            String placeProvider,
+            String providerPlaceId,
+            Point location) {
         return Place.builder()
                 .name(name)
                 .category(category)
                 .address(address)
                 .roadAddress(roadAddress)
+                .administrativeRegionCode(administrativeRegionCode)
+                .sido(sido)
+                .sigungu(sigungu)
+                .eupMyeonDong(eupMyeonDong)
                 .placeProvider(placeProvider)
                 .providerPlaceId(providerPlaceId)
                 .source(PlaceSource.PLACE_SEARCH)
