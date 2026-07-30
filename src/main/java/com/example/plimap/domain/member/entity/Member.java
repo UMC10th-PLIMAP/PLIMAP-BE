@@ -1,6 +1,9 @@
 package com.example.plimap.domain.member.entity;
 
+import com.example.plimap.domain.auth.enums.AuthProvider;
+import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.global.entity.SoftDeleteEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -39,14 +42,38 @@ public class Member extends SoftDeleteEntity {
     @Column(name = "onboarding_completed_at")
     private Instant onboardingCompletedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "join_provider", length = 20)
+    private AuthProvider joinProvider;
+
+    @Column(name = "penalty_point", nullable = false)
+    private Integer penaltyPoint = 0;
+
+    @Column(name = "suspended_until")
+    private Instant suspendedUntil;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "withdrawal_reason", length = 20)
+    private WithdrawalReason withdrawalReason;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    private MemberRole role;
+
+    @Column(name = "report_count", nullable = false)
+    private Integer reportCount = 0;
+
     @Builder
     public Member(String nickname, String name, String introduction,
-                  String profileImageObjectKey, MemberStatus status) {
+                  String profileImageObjectKey, MemberStatus status,
+                  AuthProvider joinProvider, MemberRole role) {
         this.nickname = nickname;
         this.name = name;
         this.introduction = introduction;
         this.profileImageObjectKey = profileImageObjectKey;
         this.status = status != null ? status : MemberStatus.ACTIVE;
+        this.joinProvider = joinProvider;
+        this.role = role != null ? role : MemberRole.USER;
     }
 
     public boolean isOnboarded() {

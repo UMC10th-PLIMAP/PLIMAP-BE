@@ -13,6 +13,7 @@ public class MemberConverter {
 
     public static Member toMember(OAuthDTO dto) {
         return Member.builder()
+                .joinProvider(dto.getProvider())
                 .build();
     }
 

@@ -33,6 +33,9 @@ public class Pin extends SoftDeleteEntity {
     @Column(name = "like_count", nullable = false)
     private Integer likeCount = 0;
 
+    @Column(name = "report_count", nullable = false)
+    private Integer reportCount = 0;
+
     @Column(name = "is_feed_public", nullable = false)
     private boolean isFeedPublic;
 
