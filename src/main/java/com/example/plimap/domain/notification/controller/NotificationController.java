@@ -8,7 +8,6 @@ import com.example.plimap.domain.notification.exception.NotificationSuccessCode;
 import com.example.plimap.domain.notification.service.query.NotificationQueryService;
 import com.example.plimap.domain.notification.sse.NotificationEmitterRegistry;
 import com.example.plimap.global.apiPayload.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.io.IOException;
@@ -28,7 +27,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/notifications")
-@Tag(name = "Notification", description = "알림 관련 API")
 public class NotificationController implements NotificationControllerDocs {
 
     private static final long SSE_TIMEOUT_MILLIS = 30L * 60 * 1000;
