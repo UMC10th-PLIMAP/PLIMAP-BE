@@ -9,7 +9,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface MemberFollowRepository extends JpaRepository<MemberFollow, MemberFollowId> {
 
-    @Query("SELECT mf FROM MemberFollow mf JOIN FETCH mf.follower WHERE mf.id.followingId = :followingId")
+    @Query("""
+            SELECT mf FROM MemberFollow mf JOIN FETCH mf.follower
+            WHERE mf.id.followingId = :followingId
+            AND mf.follower.deletedAt IS NULL
+            """)
     List<MemberFollow> findAllByIdFollowingId(@Param("followingId") Long followingId);
 
     long deleteByIdFollowerIdAndIdFollowingId(Long followerId, Long followingId);
