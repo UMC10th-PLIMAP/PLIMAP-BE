@@ -6,6 +6,8 @@ import com.example.plimap.domain.notification.dto.Pagination;
 import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
 import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.enums.NotificationType;
+import com.example.plimap.domain.notification.exception.NotificationErrorCode;
+import com.example.plimap.domain.notification.exception.NotificationException;
 import com.example.plimap.domain.notification.repository.NotificationRepository;
 import com.example.plimap.domain.notification.repository.query.NotificationQueryRepository;
 import com.example.plimap.domain.pin.entity.Pin;
@@ -31,6 +33,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -148,6 +151,24 @@ class NotificationQueryRepositoryImplTest {
                 .filteredOn(item -> item.type() == NotificationType.PIN_LIKED)
                 .extracting(NotificationResDTO.Item::pinId)
                 .doesNotContainNull();
+    }
+
+    @Test
+    void 뒤에_빈_구간이_붙은_잘못된_커서는_예외가_발생한다() {
+        // when & then
+        assertThatThrownBy(() ->
+                notificationQueryRepository.findNotifications(recipient.getId(), "2026-01-01T00:00:00Z/1/", 10))
+                .isInstanceOfSatisfying(NotificationException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
+    }
+
+    @Test
+    void id가_0_이하인_커서는_예외가_발생한다() {
+        // when & then
+        assertThatThrownBy(() ->
+                notificationQueryRepository.findNotifications(recipient.getId(), "2026-01-01T00:00:00Z/0", 10))
+                .isInstanceOfSatisfying(NotificationException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
     }
 
     @Test

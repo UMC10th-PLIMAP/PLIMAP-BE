@@ -71,13 +71,16 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
         }
 
         try {
-            String[] parts = cursor.split("/");
+            String[] parts = cursor.split("/", -1);
             if (parts.length != 2) {
                 throw new NotificationException(NotificationErrorCode.INVALID_CURSOR);
             }
 
             Instant createdAt = Instant.parse(parts[0]);
             long id = Long.parseLong(parts[1]);
+            if (id <= 0) {
+                throw new NotificationException(NotificationErrorCode.INVALID_CURSOR);
+            }
 
             return new Cursor(createdAt, id);
         } catch (DateTimeParseException | NumberFormatException e) {
