@@ -76,10 +76,15 @@ public class Member extends SoftDeleteEntity {
         this.role = role != null ? role : MemberRole.USER;
     }
 
-    public static Member create(AuthProvider joinProvider) {
+    public static Member create(AuthProvider joinProvider, MemberRole role) {
         return Member.builder()
                 .joinProvider(joinProvider)
+                .role(role)
                 .build();
+    }
+
+    public void grantAdmin() {
+        this.role = MemberRole.ADMIN;
     }
 
     public boolean isOnboarded() {
