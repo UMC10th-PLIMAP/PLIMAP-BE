@@ -155,6 +155,11 @@ public class PinCommandServiceImpl implements PinCommandService {
         return PinConverter.toLikeCount(pin.getLikeCount());
     }
 
+    @Override
+    public void increaseReportCount(Long pinId) {
+        pinRepository.increaseReportCount(pinId);
+    }
+
     private Pin getPin(Long id) {
         return pinRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));

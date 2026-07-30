@@ -216,4 +216,10 @@ public class MemberCommandServiceImpl implements MemberCommandService {
             throw new MemberException(MemberErrorCode.NOT_FOLLOWING);
         }
     }
+
+    @Override
+    @Transactional
+    public void increaseReportCount(Long memberId) {
+        memberRepository.increaseReportCount(memberId);
+    }
 }

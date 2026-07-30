@@ -29,4 +29,12 @@ public interface PinRepository extends JpaRepository<Pin, Long> {
         where p.id = :pinId
     """)
     void decreaseLikeCount(Long pinId);
+
+    @Modifying
+    @Query("""
+        update Pin p
+        set p.reportCount = p.reportCount + 1
+        where p.id = :pinId
+    """)
+    void increaseReportCount(Long pinId);
 }
