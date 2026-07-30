@@ -12,9 +12,11 @@ import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
+import com.example.plimap.global.external.kakao.KakaoAddressSearchClient;
 import com.example.plimap.global.external.kakao.KakaoClientException;
 import com.example.plimap.global.external.kakao.KakaoClientTimeoutException;
 import com.example.plimap.global.external.kakao.KakaoPlaceSearchClient;
+import com.example.plimap.global.external.kakao.dto.KakaoAddressSearchResponse;
 import com.example.plimap.global.external.kakao.dto.KakaoPlaceSearchResponse;
 import com.example.plimap.global.util.GeoDistanceCalculator;
 import java.util.List;
@@ -34,12 +36,16 @@ import org.springframework.validation.annotation.Validated;
 public class PlaceQueryServiceImpl implements PlaceQueryService {
 
     private static final String KAKAO_PROVIDER = "KAKAO";
+    private static final String ADDRESS_RESULT_TYPE = "ADDRESS";
+    private static final String PLACE_RESULT_TYPE = "PLACE";
+    private static final int MAX_SEARCH_RESULTS = 15;
     private static final double PROVIDER_PLACE_SEARCH_DISTANCE_METERS = 20.0;
     private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null, 0L);
 
     private final PlaceRepository placeRepository;
     private final PlaceSearchHistoryRepository placeSearchHistoryRepository;
     private final PlaceQueryRepository placeQueryRepository;
+    private final KakaoAddressSearchClient kakaoAddressSearchClient;
     private final KakaoPlaceSearchClient kakaoPlaceSearchClient;
     private final PinQueryService pinQueryService;
 
@@ -47,7 +53,12 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     public PlaceResponse.SearchResult searchPlaces(PlaceRequest.Search request) {
         validateSearchRequest(request);
 
-        KakaoPlaceSearchResponse kakaoResponse = searchKakao(request);
+        KakaoAddressSearchResponse addressResponse = searchKakaoAddress(request.keyword());
+        if (!addressResponse.documents().isEmpty()) {
+            return toAddressSearchResult(addressResponse, request);
+        }
+
+        KakaoPlaceSearchResponse kakaoResponse = searchKakaoPlace(request);
         if (kakaoResponse.documents().isEmpty()) {
             return new PlaceResponse.SearchResult(List.of());
         }
@@ -169,7 +180,17 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
         }
     }
 
-    private KakaoPlaceSearchResponse searchKakao(PlaceRequest.Search request) {
+    private KakaoAddressSearchResponse searchKakaoAddress(String keyword) {
+        try {
+            return kakaoAddressSearchClient.search(keyword);
+        } catch (KakaoClientTimeoutException exception) {
+            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT, exception);
+        } catch (KakaoClientException exception) {
+            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR, exception);
+        }
+    }
+
+    private KakaoPlaceSearchResponse searchKakaoPlace(PlaceRequest.Search request) {
         try {
             return kakaoPlaceSearchClient.search(
                     request.keyword(),
@@ -181,6 +202,80 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
         } catch (KakaoClientException exception) {
             throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR, exception);
         }
+    }
+
+    private PlaceResponse.SearchResult toAddressSearchResult(
+            KakaoAddressSearchResponse response,
+            PlaceRequest.Search request
+    ) {
+        try {
+            List<PlaceResponse.SearchItem> items = response.documents().stream()
+                    .limit(MAX_SEARCH_RESULTS)
+                    .map(document -> toAddressSearchItem(document, request))
+                    .toList();
+            return new PlaceResponse.SearchResult(items);
+        } catch (RuntimeException exception) {
+            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR, exception);
+        }
+    }
+
+    private PlaceResponse.SearchItem toAddressSearchItem(
+            KakaoAddressSearchResponse.Document document,
+            PlaceRequest.Search request
+    ) {
+        Objects.requireNonNull(document);
+        String address = resolveAddress(document);
+        String roadAddress = normalize(document.roadAddress() == null
+                ? null
+                : document.roadAddress().addressName());
+        double latitude = parseCoordinate(document.y(), -90.0, 90.0);
+        double longitude = parseCoordinate(document.x(), -180.0, 180.0);
+        double distance = GeoDistanceCalculator.calculateMeters(
+                request.latitude(),
+                request.longitude(),
+                latitude,
+                longitude
+        );
+
+        return new PlaceResponse.SearchItem(
+                ADDRESS_RESULT_TYPE,
+                KAKAO_PROVIDER,
+                null,
+                roadAddress != null ? roadAddress : address,
+                null,
+                address,
+                roadAddress,
+                latitude,
+                longitude,
+                Math.toIntExact(Math.round(distance)),
+                false,
+                null
+        );
+    }
+
+    private String resolveAddress(KakaoAddressSearchResponse.Document document) {
+        String nestedAddress = document.address() == null
+                ? null
+                : normalize(document.address().addressName());
+        String address = nestedAddress != null
+                ? nestedAddress
+                : normalize(document.addressName());
+        return Objects.requireNonNull(address);
+    }
+
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.strip();
+    }
+
+    private double parseCoordinate(String value, double minimum, double maximum) {
+        double coordinate = Double.parseDouble(Objects.requireNonNull(value));
+        if (!Double.isFinite(coordinate) || coordinate < minimum || coordinate > maximum) {
+            throw new IllegalArgumentException("Invalid Kakao coordinate");
+        }
+        return coordinate;
     }
 
     private Map<String, Long> findActivePlaceIds(KakaoPlaceSearchResponse response) {
@@ -239,6 +334,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 : pinInfosByPlaceId.getOrDefault(placeId, NO_PIN_INFO);
 
         return new PlaceResponse.SearchItem(
+                PLACE_RESULT_TYPE,
                 KAKAO_PROVIDER,
                 document.id(),
                 document.placeName(),

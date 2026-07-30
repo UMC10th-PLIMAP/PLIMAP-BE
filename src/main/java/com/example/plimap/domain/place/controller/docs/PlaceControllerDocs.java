@@ -20,7 +20,8 @@ public interface PlaceControllerDocs {
 
     @Operation(
             summary = "장소 검색",
-            description = "Kakao Local REST API를 통해 키워드와 현재 위치를 기준으로 장소를 검색합니다. "
+            description = "Kakao Local REST API로 주소를 먼저 검색하고, 주소 결과가 없으면 "
+                    + "키워드와 현재 위치를 기준으로 장소를 검색합니다. "
                     + "검색 결과는 저장하지 않습니다. "
                     + "(Figma 기준 화면: MP-02-01, MP-02-01-b, PN-02-01, PN-02-01-b)"
     )
@@ -36,10 +37,10 @@ public interface PlaceControllerDocs {
                     description = "인증 실패"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "502",
-                    description = "Kakao 장소 검색 연동 실패"),
+                    description = "Kakao 주소 또는 장소 검색 연동 실패"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "504",
-                    description = "Kakao 장소 검색 응답 지연")
+                    description = "Kakao 주소 또는 장소 검색 응답 지연")
     })
     ResponseEntity<ApiResponse<PlaceResponse.SearchResult>> searchPlaces(
             @Parameter(description = "검색어", required = true, example = "한강")
