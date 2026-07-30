@@ -379,7 +379,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .where(
                         pin.id.eq(pinId),
                         pin.deletedAt.isNull(),
-                        placeTrack.deletedAt.isNull()
+                        placeTrack.deletedAt.isNull(),
+                        place.deletedAt.isNull()
                 )
                 .fetchOne()
         );

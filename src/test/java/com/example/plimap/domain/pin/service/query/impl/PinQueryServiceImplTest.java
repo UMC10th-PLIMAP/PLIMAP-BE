@@ -291,6 +291,8 @@ class PinQueryServiceImplTest {
         assertThat(result.writerNickname()).isEqualTo(pin.getMember().getNickname());
         assertThat(result.writerProfileImage()).isEqualTo(pin.getMember().getProfileImageObjectKey());
         assertThat(result.placeId()).isEqualTo(pin.getPlace().getId());
-        assertThat(result.youtubeVideoId()).isEqualTo(pin.getPlaceTrack().getTrack().getProviderTrackId());
+        assertThat(result.latitude()).isEqualTo(pin.getPlace().getLocation().getY());
+        assertThat(result.longitude()).isEqualTo(pin.getPlace().getLocation().getX());
+        assertThat(result.albumImageUrl()).isEqualTo(pin.getPlaceTrack().getTrack().getAlbumImageUrl());
     }
 }
