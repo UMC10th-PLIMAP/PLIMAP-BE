@@ -394,6 +394,20 @@ class PinQueryRepositoryImplTest {
         assertThat(response.nextCursor()).isNull();
     }
 
+    @Test
+    void 존재하는_핀이면_조회된다() {
+        Optional<Pin> result = pinQueryRepository.getPinPreview(pin1.getId());
+
+        assertThat(result).isPresent();
+    }
+
+    @Test
+    void 존재하지_않는_핀이면_Optional_empty를_반환한다() {
+        Optional<Pin> result = pinQueryRepository.getPinPreview(999L);
+
+        assertThat(result).isEmpty();
+    }
+
     private Member createMember(String name, String nickname) {
         return Member.builder()
                 .name(name)

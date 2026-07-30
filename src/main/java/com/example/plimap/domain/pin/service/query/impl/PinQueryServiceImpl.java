@@ -84,4 +84,12 @@ public class PinQueryServiceImpl implements PinQueryService {
     public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId) {
         return pinQueryRepository.findPinListByPlaceTrackIdAndSortType(memberId, cursor, pageSize, pinSortType, placeTrackId);
     }
+
+    @Override
+    public PinResponse.PinPreview getPinPreview(Long pinId) {
+        Pin pin = pinQueryRepository.getPinPreview(pinId)
+                .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
+
+        return PinConverter.toPinPreview(pin);
+    }
 }
