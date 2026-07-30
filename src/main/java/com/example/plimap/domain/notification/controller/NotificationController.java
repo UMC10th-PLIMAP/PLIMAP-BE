@@ -28,7 +28,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequestMapping("/api/v1/notifications")
 public class NotificationController implements NotificationControllerDocs {
 
-    private static final long SSE_TIMEOUT_MILLIS = 30L * 60 * 1000;
+    // Cloud Run dev 환경의 요청 타임아웃(60초)보다 먼저 정상 종료되도록 여유를 두고 설정한다.
+    // 이후 재연결은 클라이언트(EventSource)의 자동 재연결에 맡긴다.
+    private static final long SSE_TIMEOUT_MILLIS = 50L * 1000;
 
     private final NotificationQueryService notificationQueryService;
     private final NotificationEmitterRegistry notificationEmitterRegistry;
