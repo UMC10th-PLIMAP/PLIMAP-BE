@@ -4,10 +4,13 @@ import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import java.util.List;
 
 public interface MemberQueryService {
 
     Member getActiveMember(Long memberId);
+
+    List<Member> findAllFollowers(Long memberId);
 
     boolean isNicknameAvailable(String nickname);
 
