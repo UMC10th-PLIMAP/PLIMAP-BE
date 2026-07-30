@@ -281,6 +281,7 @@ class PlaceSelectionIntegrationTest {
     @Test
     void 장소_선택에_실패하면_최근_검색_이력을_저장하지_않는다() {
         PlaceRequest.Selection invalid = new PlaceRequest.Selection(
+                "PLACE",
                 "NAVER",
                 "invalid-place",
                 "invalid",
@@ -339,6 +340,7 @@ class PlaceSelectionIntegrationTest {
 
     private PlaceRequest.Selection request(String providerPlaceId) {
         return new PlaceRequest.Selection(
+                "PLACE",
                 "KAKAO",
                 testProviderPlaceId(providerPlaceId),
                 "한강",
