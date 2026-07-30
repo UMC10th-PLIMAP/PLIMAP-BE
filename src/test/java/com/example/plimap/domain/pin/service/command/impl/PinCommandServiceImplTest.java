@@ -6,6 +6,8 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.PinLike;
 import com.example.plimap.domain.pin.entity.Tag;
+import com.example.plimap.domain.pin.event.PinCreatedEvent;
+import com.example.plimap.domain.pin.event.PinLikedEvent;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.exception.PinLikeException;
 import com.example.plimap.domain.pin.exception.TagErrorCode;
@@ -28,6 +30,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -168,6 +171,8 @@ class PinCommandServiceImplTest {
     // createPin 테스트
     @Test
     void 핀_생성에_성공한다() {
+        ReflectionTestUtils.setField(member, "id", 1L);
+
         PinRequest.Create request = new PinRequest.Create(
                 37.5267894104045,
                 127.021265055462,
@@ -192,6 +197,10 @@ class PinCommandServiceImplTest {
                 .isEqualTo(member.getNickname());
         verify(pinRepository).save(any(Pin.class));
         verify(pinTagRepository).saveAll(anyList());
+
+        ArgumentCaptor<PinCreatedEvent> eventCaptor = ArgumentCaptor.forClass(PinCreatedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().authorId()).isEqualTo(1L);
     }
 
     @Test
@@ -337,6 +346,12 @@ class PinCommandServiceImplTest {
 
         verify(pinLikeRepository).save(any(PinLike.class));
         verify(pinRepository).increaseLikeCount(1L);
+
+        ArgumentCaptor<PinLikedEvent> eventCaptor = ArgumentCaptor.forClass(PinLikedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().pinId()).isEqualTo(1L);
+        assertThat(eventCaptor.getValue().pinOwnerId()).isEqualTo(pin.getMember().getId());
+        assertThat(eventCaptor.getValue().likerId()).isEqualTo(member.getId());
     }
 
     @Test
