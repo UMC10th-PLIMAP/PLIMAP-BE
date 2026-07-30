@@ -26,7 +26,7 @@ public class PinConverter {
                 .writerProfileImage(member.getProfileImageObjectKey())
                 .introduction(pin.getIntroduction())
                 .clipStartMs(pin.getClipStartMs())
-                .previewUrl(track.getPreviewUrl())
+                .youtubeVideoId(pin.getPlaceTrack().getTrack().getProviderTrackId())
                 .build();
     }
 
@@ -144,5 +144,21 @@ public class PinConverter {
             return "%d개월 전".formatted(gap.toDays()/30);
         }
         return "%d년 전".formatted(gap.toDays()/365);
+    }
+
+    public static PinResponse.PinPreview toPinPreview(
+        Pin pin
+    ) {
+        return PinResponse.PinPreview.builder()
+                .placeId(pin.getPlace().getId())
+                .latitude(pin.getPlace().getLocation().getY())
+                .longitude(pin.getPlace().getLocation().getX())
+                .writerNickname(pin.getMember().getNickname())
+                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .introduction(pin.getIntroduction())
+                .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
+                .youtubeVideoId(pin.getPlaceTrack().getTrack().getProviderTrackId())
+                .clipStartMs(pin.getClipStartMs())
+                .build();
     }
 }

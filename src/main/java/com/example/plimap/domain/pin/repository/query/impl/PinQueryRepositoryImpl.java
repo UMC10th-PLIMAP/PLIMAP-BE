@@ -19,6 +19,7 @@ import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -364,6 +365,25 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 : null;
 
         return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
+    }
+
+    @Override
+    public Optional<Pin> getPinPreview(Long pinId) {
+        return Optional.ofNullable(queryFactory
+                .select(pin)
+                .from(pin)
+                .join(pin.member, member).fetchJoin()
+                .join(pin.place, place).fetchJoin()
+                .join(pin.placeTrack, placeTrack).fetchJoin()
+                .join(placeTrack.track, track).fetchJoin()
+                .where(
+                        pin.id.eq(pinId),
+                        pin.deletedAt.isNull(),
+                        placeTrack.deletedAt.isNull(),
+                        place.deletedAt.isNull()
+                )
+                .fetchOne()
+        );
     }
 
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {

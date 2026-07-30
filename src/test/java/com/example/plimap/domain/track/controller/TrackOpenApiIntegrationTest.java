@@ -33,6 +33,8 @@ class TrackOpenApiIntegrationTest {
             "/api/v1/place-tracks/{placeTrackId}";
     private static final String PLACE_TRACK_LIKE_PATH =
             "/api/v1/place-tracks/{placeTrackId}/likes";
+    private static final String LIKED_PLACE_TRACK_LIST_PATH =
+            "/api/v1/place-tracks/likes";
     private static final String TRACK_SEARCH_PATH = "/api/v1/tracks/search";
     private static final String PLAYBACK_PREPARATION_PATH =
             "/api/v1/tracks/playback-preparations";
@@ -69,6 +71,12 @@ class TrackOpenApiIntegrationTest {
                 "put",
                 "200"
         ))).isEqualTo("ApiResponsePlaceTrackLikeResult");
+        assertThat(referenceName(responseSchemaReference(
+                openApi,
+                LIKED_PLACE_TRACK_LIST_PATH,
+                "get",
+                "200"
+        ))).isEqualTo("ApiResponseLikedPlaceTrackListResult");
         assertThat(referenceName(responseSchemaReference(
                 openApi,
                 PLACE_TRACK_LIKE_PATH,
@@ -131,6 +139,27 @@ class TrackOpenApiIntegrationTest {
         assertThat(placeTrackLikeFields).containsExactlyInAnyOrder(
                 "placeTrackId",
                 "isLiked",
+                "likeCount"
+        );
+
+        JsonNode likedPlaceTrackList =
+                responseResultSchema(openApi, LIKED_PLACE_TRACK_LIST_PATH, "get");
+        JsonNode likedPlaceTrackItems = likedPlaceTrackList
+                .path("properties")
+                .path("tracks")
+                .path("items");
+        assertThat(referenceName(likedPlaceTrackItems))
+                .isEqualTo("LikedPlaceTrackItem");
+        JsonNode likedPlaceTrackItemSchema =
+                resolveSchema(openApi, likedPlaceTrackItems);
+        List<String> likedPlaceTrackFields = new ArrayList<>();
+        likedPlaceTrackItemSchema.path("properties").fieldNames()
+                .forEachRemaining(likedPlaceTrackFields::add);
+        assertThat(likedPlaceTrackFields).containsExactlyInAnyOrder(
+                "placeTrackId",
+                "trackName",
+                "artistName",
+                "artworkUrl",
                 "likeCount"
         );
 
@@ -329,6 +358,22 @@ class TrackOpenApiIntegrationTest {
                         TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode(),
                         TrackErrorCode.PLACE_TRACK_LIKE_NOT_FOUND.getCode()
                 )
+        );
+        assertFailureResponse(
+                openApi,
+                LIKED_PLACE_TRACK_LIST_PATH,
+                "get",
+                "400",
+                "ApiResponseLikedPlaceTrackListResult",
+                Set.of(GeneralErrorCode.VALIDATION_FAILED.getCode())
+        );
+        assertFailureResponse(
+                openApi,
+                LIKED_PLACE_TRACK_LIST_PATH,
+                "get",
+                "401",
+                "ApiResponseLikedPlaceTrackListResult",
+                Set.of(GeneralErrorCode.UNAUTHORIZED.getCode())
         );
     }
 

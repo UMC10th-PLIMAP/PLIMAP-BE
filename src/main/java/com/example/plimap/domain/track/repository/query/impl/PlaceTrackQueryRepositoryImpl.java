@@ -5,11 +5,13 @@ import static com.example.plimap.domain.track.entity.QPlaceTrack.placeTrack;
 import static com.example.plimap.domain.track.entity.QPlaceTrackLike.placeTrackLike;
 import static com.example.plimap.domain.track.entity.QTrack.track;
 
+import com.example.plimap.domain.track.dto.LikedPlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.PlaceTrackQueryResult;
 import com.example.plimap.domain.track.enums.PlaceTrackSort;
 import com.example.plimap.domain.track.repository.query.PlaceTrackQueryRepository;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.NumberExpression;
@@ -28,6 +30,44 @@ import org.springframework.stereotype.Repository;
 public class PlaceTrackQueryRepositoryImpl implements PlaceTrackQueryRepository {
 
     private final JPAQueryFactory queryFactory;
+
+    @Override
+    public Slice<LikedPlaceTrackQueryResult> findLikedPlaceTracks(
+            Long memberId,
+            Pageable pageable
+    ) {
+        List<LikedPlaceTrackQueryResult> rows = queryFactory
+                .select(Projections.constructor(
+                        LikedPlaceTrackQueryResult.class,
+                        placeTrack.id,
+                        track.title,
+                        track.artistName,
+                        track.albumImageUrl,
+                        placeTrack.likeCount
+                ))
+                .from(placeTrackLike)
+                .join(placeTrackLike.placeTrack, placeTrack)
+                .join(placeTrack.track, track)
+                .where(
+                        placeTrackLike.id.memberId.eq(memberId),
+                        placeTrack.deletedAt.isNull(),
+                        placeTrack.place.deletedAt.isNull()
+                )
+                .orderBy(
+                        placeTrackLike.createdAt.desc(),
+                        placeTrack.id.desc()
+                )
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize() + 1L)
+                .fetch();
+
+        boolean hasNext = rows.size() > pageable.getPageSize();
+        int contentSize = hasNext ? pageable.getPageSize() : rows.size();
+        List<LikedPlaceTrackQueryResult> content =
+                new ArrayList<>(rows.subList(0, contentSize));
+
+        return new SliceImpl<>(content, pageable, hasNext);
+    }
 
     @Override
     public Slice<PlaceTrackQueryResult> findPlaceTracks(
