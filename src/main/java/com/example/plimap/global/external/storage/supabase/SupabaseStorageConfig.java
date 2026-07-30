@@ -36,7 +36,7 @@ public class SupabaseStorageConfig {
         return RestClient.builder()
                 .requestFactory(requestFactory)
                 .configureMessageConverters(converters ->
-                        converters.withJsonConverter(jacksonConverter)
+                        converters.registerDefaults().withJsonConverter(jacksonConverter)
                 )
                 .build();
     }
