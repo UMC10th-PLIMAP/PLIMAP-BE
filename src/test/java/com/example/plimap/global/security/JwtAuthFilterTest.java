@@ -1,6 +1,7 @@
 package com.example.plimap.global.security;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
@@ -37,6 +38,7 @@ class JwtAuthFilterTest {
     @Test
     void 유효하고_블랙리스트에_없는_토큰이면_인증에_성공한다() throws Exception {
         Member member = mock(Member.class);
+        when(member.getRole()).thenReturn(MemberRole.USER);
         when(jwtUtil.isValid(TOKEN)).thenReturn(true);
         when(jwtUtil.isAccessToken(TOKEN)).thenReturn(true);
         when(jwtUtil.getJti(TOKEN)).thenReturn(JTI);

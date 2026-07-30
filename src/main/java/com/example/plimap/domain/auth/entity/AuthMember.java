@@ -3,10 +3,11 @@ package com.example.plimap.domain.auth.entity;
 import com.example.plimap.domain.member.entity.Member;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 @Getter
 public class AuthMember implements UserDetails {
@@ -19,7 +20,8 @@ public class AuthMember implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList();
+        // Member는 매 요청 DB에서 새로 조회되므로(JwtAuthFilter), role 변경이 재로그인 없이 즉시 반영된다.
+        return List.of(new SimpleGrantedAuthority(member.getRole().name()));
     }
 
     @Override
