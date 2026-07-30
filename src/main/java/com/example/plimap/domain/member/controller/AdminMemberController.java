@@ -2,7 +2,6 @@ package com.example.plimap.domain.member.controller;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.member.controller.docs.AdminMemberControllerDocs;
-import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.exception.MemberSuccessCode;
 import com.example.plimap.global.apiPayload.ApiResponse;
@@ -22,7 +21,7 @@ public class AdminMemberController implements AdminMemberControllerDocs {
     public ApiResponse<MemberResDTO.AdminMe> getAdminMe(@AuthenticationPrincipal AuthMember authMember) {
         return ApiResponse.success(
                 MemberSuccessCode.ADMIN_ME_FETCHED,
-                MemberConverter.toAdminMe(authMember.getMember())
+                MemberResDTO.AdminMe.from(authMember.getMember())
         );
     }
 }

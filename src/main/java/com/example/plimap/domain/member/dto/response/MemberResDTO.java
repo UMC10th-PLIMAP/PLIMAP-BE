@@ -1,5 +1,6 @@
 package com.example.plimap.domain.member.dto.response;
 
+import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import lombok.Builder;
@@ -96,5 +97,8 @@ public class MemberResDTO {
             String nickname,
             MemberRole role
     ) {
+        public static AdminMe from(Member member) {
+            return new AdminMe(member.getId(), member.getNickname(), member.getRole());
+        }
     }
 }
