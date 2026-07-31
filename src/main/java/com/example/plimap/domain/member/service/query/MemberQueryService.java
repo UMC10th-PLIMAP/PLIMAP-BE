@@ -14,6 +14,8 @@ public interface MemberQueryService {
 
     boolean isNicknameAvailable(String nickname);
 
+    boolean isNicknameForbidden(String nickname);
+
     NicknameCheckFailReason checkNicknameFailReason(String nickname);
 
     MemberResDTO.MyProfile getMyProfile(Long memberId);

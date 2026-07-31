@@ -107,6 +107,21 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
+    void 닉네임이_금칙어이면_예외가_발생한다() {
+        Member member = mock(Member.class);
+        when(member.isOnboarded()).thenReturn(false);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberQueryService.isNicknameForbidden("플리맵사용자1")).thenReturn(true);
+
+        assertThatThrownBy(() -> memberCommandService.completeOnboarding(MEMBER_ID, onboarding("플리맵사용자1")))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_FORBIDDEN_WORD));
+
+        verify(memberQueryService, never()).isNicknameAvailable(any());
+        verify(member, never()).completeOnboarding(any());
+    }
+
+    @Test
     void 정상_요청이면_온보딩을_완료하고_회원을_반환한다() {
         Member member = mock(Member.class);
         when(member.isOnboarded()).thenReturn(false);
@@ -154,6 +169,21 @@ class MemberCommandServiceImplTest {
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
 
+        verify(member, never()).updateProfile(any(), any(), any());
+    }
+
+    @Test
+    void 프로필_수정_시_닉네임을_금칙어로_변경하면_예외가_발생한다() {
+        Member member = mock(Member.class);
+        when(member.getNickname()).thenReturn("기존닉네임");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberQueryService.isNicknameForbidden("플리맵사용자1")).thenReturn(true);
+
+        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile("플리맵사용자1", null, null)))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_FORBIDDEN_WORD));
+
+        verify(memberQueryService, never()).isNicknameAvailable(any());
         verify(member, never()).updateProfile(any(), any(), any());
     }
 

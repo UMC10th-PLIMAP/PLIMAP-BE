@@ -56,6 +56,9 @@ public class MemberCommandServiceImpl implements MemberCommandService {
             throw new MemberException(MemberErrorCode.ALREADY_ONBOARDED);
         }
 
+        if (memberQueryService.isNicknameForbidden(request.getNickname())) {
+            throw new MemberException(MemberErrorCode.NICKNAME_FORBIDDEN_WORD);
+        }
         if (!memberQueryService.isNicknameAvailable(request.getNickname())) {
             throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE);
         }
@@ -80,8 +83,13 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
         boolean nicknameChanged = request.nickname() != null
                 && !request.nickname().equalsIgnoreCase(member.getNickname());
-        if (nicknameChanged && !memberQueryService.isNicknameAvailable(request.nickname())) {
-            throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE);
+        if (nicknameChanged) {
+            if (memberQueryService.isNicknameForbidden(request.nickname())) {
+                throw new MemberException(MemberErrorCode.NICKNAME_FORBIDDEN_WORD);
+            }
+            if (!memberQueryService.isNicknameAvailable(request.nickname())) {
+                throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE);
+            }
         }
 
         try {
