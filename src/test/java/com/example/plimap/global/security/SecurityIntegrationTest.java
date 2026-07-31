@@ -4,6 +4,7 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.global.config.CorsConfig;
@@ -88,7 +89,7 @@ class SecurityIntegrationTest {
         when(jwtUtil.isAccessToken(ACCESS_TOKEN)).thenReturn(true);
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
         when(jwtUtil.getJti(ACCESS_TOKEN)).thenReturn("test-jti");
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
         when(tokenBlacklistService.isBlacklisted("test-jti")).thenReturn(false);
     }
 
@@ -225,7 +226,7 @@ class SecurityIntegrationTest {
     @Test
     void 관리자_전용_경로는_관리자_회원이면_허용한다() throws Exception {
         Member admin = Member.builder().role(MemberRole.ADMIN).build();
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(admin));
 
         mockMvc.perform(get(ADMIN_PATH)
                         .cookie(new Cookie("accessToken", ACCESS_TOKEN)))

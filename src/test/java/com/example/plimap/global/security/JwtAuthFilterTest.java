@@ -2,6 +2,7 @@ package com.example.plimap.global.security;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberRole;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
@@ -44,11 +45,27 @@ class JwtAuthFilterTest {
         when(jwtUtil.getJti(TOKEN)).thenReturn(JTI);
         when(tokenBlacklistService.isBlacklisted(JTI)).thenReturn(false);
         when(jwtUtil.getMemberId(TOKEN)).thenReturn(MEMBER_ID);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
 
         jwtAuthFilter.doFilter(request(TOKEN), mock(HttpServletResponse.class), mock(FilterChain.class));
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
+
+    @Test
+    void 탈퇴한_회원의_토큰이면_블랙리스트에_없어도_인증하지_않는다() throws Exception {
+        when(jwtUtil.isValid(TOKEN)).thenReturn(true);
+        when(jwtUtil.isAccessToken(TOKEN)).thenReturn(true);
+        when(jwtUtil.getJti(TOKEN)).thenReturn(JTI);
+        when(tokenBlacklistService.isBlacklisted(JTI)).thenReturn(false);
+        when(jwtUtil.getMemberId(TOKEN)).thenReturn(MEMBER_ID);
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        jwtAuthFilter.doFilter(request(TOKEN), mock(HttpServletResponse.class), mock(FilterChain.class));
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -61,7 +78,7 @@ class JwtAuthFilterTest {
         jwtAuthFilter.doFilter(request(TOKEN), mock(HttpServletResponse.class), mock(FilterChain.class));
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        verify(memberRepository, never()).findById(MEMBER_ID);
+        verify(memberRepository, never()).findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE);
     }
 
     @Test

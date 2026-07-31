@@ -468,7 +468,7 @@ class MemberCommandServiceImplTest {
                 .profileImageObjectKey("old-key")
                 .build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
 
         memberCommandService.withdraw(MEMBER_ID);
 
@@ -490,7 +490,7 @@ class MemberCommandServiceImplTest {
     void 탈퇴_시_프로필_이미지가_없으면_스토리지_삭제를_호출하지_않는다() {
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
 
         memberCommandService.withdraw(MEMBER_ID);
 
@@ -499,7 +499,8 @@ class MemberCommandServiceImplTest {
 
     @Test
     void 존재하지_않는_회원을_탈퇴시키면_예외가_발생한다() {
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.empty());
+        when(memberQueryService.getActiveMember(MEMBER_ID))
+                .thenThrow(new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         assertThatThrownBy(() -> memberCommandService.withdraw(MEMBER_ID))
                 .isInstanceOfSatisfying(MemberException.class, exception ->

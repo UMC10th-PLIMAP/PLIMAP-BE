@@ -222,8 +222,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
     @Override
     @Transactional
     public void withdraw(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Member member = memberQueryService.getActiveMember(memberId);
         String oldProfileImageKey = member.getProfileImageObjectKey();
 
         member.withdrawVoluntarily();

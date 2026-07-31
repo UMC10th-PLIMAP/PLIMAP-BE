@@ -12,6 +12,7 @@ import com.example.plimap.domain.member.dto.request.TermsReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.dto.response.TermsResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.exception.MemberSuccessCode;
@@ -118,7 +119,7 @@ public class AuthController implements AuthControllerDocs {
             throw new AuthException(AuthErrorCode.REFRESH_TOKEN_MISMATCH);
         }
 
-        Member member = memberRepository.findById(memberId)
+        Member member = memberRepository.findByIdAndStatusAndDeletedAtIsNull(memberId, MemberStatus.ACTIVE)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
         AuthMember authMember = new AuthMember(member);
 
