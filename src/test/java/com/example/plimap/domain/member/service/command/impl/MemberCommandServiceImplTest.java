@@ -509,6 +509,21 @@ class MemberCommandServiceImplTest {
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 
+    @Test
+    void 마스킹_닉네임이_다른_활성_회원의_닉네임과_겹치면_닉네임_중복_예외로_변환한다() {
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
+        doThrow(new DataIntegrityViolationException("duplicate"))
+                .when(memberRepository).saveAndFlush(any(Member.class));
+
+        assertThatThrownBy(() -> memberCommandService.withdraw(MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
+
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
     private MockMultipartFile webpFile() {
         return new MockMultipartFile("image", "profile.webp", "image/webp", WEBP_CONTENT);
     }

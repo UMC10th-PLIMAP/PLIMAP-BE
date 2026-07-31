@@ -231,7 +231,13 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         memberFollowRepository.deleteByIdFollowingId(memberId);
         socialAccountCommandService.deleteByMemberId(memberId);
 
-        memberRepository.saveAndFlush(member);
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            // 마스킹 닉네임("플리맵사용자{id}")이 다른 활성 회원이 실제로 사용 중인 닉네임과
+            // 우연히 겹치는 경우 DB의 대소문자 무시 유니크 인덱스(uk_member_nickname_ci)에서 걸러진다.
+            throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE, e);
+        }
 
         // 탈퇴 트랜잭션 커밋 전에 스토리지 객체를 지우면, 커밋 실패(롤백) 시 DB는 여전히
         // oldProfileImageKey를 가리키는데 실제 객체는 이미 삭제된 상태가 된다. 실제 삭제는
