@@ -11,6 +11,7 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSearchHistory;
+import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
@@ -39,6 +40,9 @@ class PlaceSearchHistoryQueryServiceTest {
     private PlaceRepository placeRepository;
 
     @Mock
+    private PlaceBookmarkRepository placeBookmarkRepository;
+
+    @Mock
     private PlaceSearchHistoryRepository placeSearchHistoryRepository;
 
     @Mock
@@ -59,6 +63,7 @@ class PlaceSearchHistoryQueryServiceTest {
     void setUp() {
         placeQueryService = new PlaceQueryServiceImpl(
                 placeRepository,
+                placeBookmarkRepository,
                 placeSearchHistoryRepository,
                 placeQueryRepository,
                 kakaoAddressSearchClient,
