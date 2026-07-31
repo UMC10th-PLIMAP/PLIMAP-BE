@@ -6,5 +6,7 @@ public interface PlaceLockRepository {
 
     void acquirePlaceSelectionLock(String provider, String providerPlaceId);
 
+    void acquireAddressSelectionLock(String normalizedAddress);
+
     void acquirePlaceSearchHistoryLock(Long memberId);
 }

@@ -57,8 +57,10 @@ public interface PlaceControllerDocs {
 
     @Operation(
             summary = "검색 장소 선택",
-            description = "Kakao 장소 검색 결과를 활성 PLACE_SEARCH Place와 매핑하거나 "
-                    + "새 Place로 생성하고 주소·거리·PIN·북마크 정보를 반환합니다. "
+            description = "Kakao 장소 또는 주소 검색 결과를 PLACE_SEARCH/ADDRESS_SEARCH "
+                    + "Place와 매핑하거나 새 Place로 생성하고 주소·거리·PIN·북마크 정보를 "
+                    + "반환합니다. ADDRESS는 providerPlaceId/category가 null이며 전체 지번 "
+                    + "주소 기준으로 재사용합니다. "
                     + "선택 성공 시 인증 사용자의 최근 검색 장소 이력을 저장합니다. "
                     + "(Figma 기준 화면: MP-02-02-a, MP-02-02-b, MP-02-02-c, "
                     + "MP-02-02-d, PN-02-03-a)"

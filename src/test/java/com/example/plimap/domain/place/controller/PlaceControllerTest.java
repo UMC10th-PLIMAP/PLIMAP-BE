@@ -453,6 +453,7 @@ class PlaceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "resultType": "PLACE",
                                   "provider": "KAKAO",
                                   "providerPlaceId": "26338954",
                                   "placeName": "한강",
@@ -508,6 +509,7 @@ class PlaceControllerTest {
     private String validSelectionRequest() {
         return """
                 {
+                  "resultType": "PLACE",
                   "provider": "KAKAO",
                   "providerPlaceId": "26338954",
                   "placeName": "한강",
