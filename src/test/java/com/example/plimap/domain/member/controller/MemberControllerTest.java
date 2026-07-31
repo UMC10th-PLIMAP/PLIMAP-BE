@@ -15,8 +15,10 @@ import java.time.Instant;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
+import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.example.plimap.global.security.JwtUtil;
+import com.example.plimap.global.security.RefreshTokenService;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
 import com.example.plimap.global.security.TokenBlacklistService;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,6 +83,12 @@ class MemberControllerTest {
 
     @MockitoBean
     private TokenBlacklistService tokenBlacklistService;
+
+    @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
+    @MockitoBean
+    private AuthCookieUtil authCookieUtil;
 
     @MockitoBean
     private HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
@@ -186,6 +194,25 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("MEMBER_404_NOT_FOLLOWING"))
                 .andExpect(jsonPath("$.message").value("팔로우 중이 아닌 사용자입니다."))
                 .andExpect(jsonPath("$.result").doesNotExist());
+    }
+
+    @Test
+    void 회원_탈퇴에_성공하면_200과_WITHDRAWN_응답을_반환하고_토큰을_무효화한다() throws Exception {
+        doNothing().when(memberCommandService).withdraw(AUTH_MEMBER_ID);
+        when(jwtUtil.getRemainingExpiry(ACCESS_TOKEN)).thenReturn(java.time.Duration.ofHours(1));
+
+        mockMvc.perform(delete("/api/v1/members/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_200_WITHDRAWN"))
+                .andExpect(jsonPath("$.result").doesNotExist());
+
+        verify(memberCommandService).withdraw(AUTH_MEMBER_ID);
+        verify(tokenBlacklistService).blacklist(eq("test-jti"), any());
+        verify(refreshTokenService).delete(AUTH_MEMBER_ID);
+        verify(authCookieUtil).clearCookie(any(), eq("accessToken"));
+        verify(authCookieUtil).clearCookie(any(), eq("refreshToken"));
     }
 
     @Test

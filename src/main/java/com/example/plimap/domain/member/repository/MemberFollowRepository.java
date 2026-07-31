@@ -22,6 +22,10 @@ public interface MemberFollowRepository extends JpaRepository<MemberFollow, Memb
 
     long deleteByIdFollowerIdAndIdFollowingId(Long followerId, Long followingId);
 
+    long deleteByIdFollowerId(Long followerId);
+
+    long deleteByIdFollowingId(Long followingId);
+
     long countByIdFollowerId(Long followerId);
 
     long countByIdFollowingId(Long followingId);
