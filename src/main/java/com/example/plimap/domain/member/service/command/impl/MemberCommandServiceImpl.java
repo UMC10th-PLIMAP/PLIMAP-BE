@@ -8,6 +8,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.event.MemberFollowedEvent;
+import com.example.plimap.domain.member.event.MemberWithdrawnEvent;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
@@ -232,12 +233,9 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
         memberRepository.saveAndFlush(member);
 
-        if (oldProfileImageKey != null) {
-            try {
-                profileImageStorage.delete(oldProfileImageKey);
-            } catch (ProfileImageStorageException e) {
-                log.warn("탈퇴 처리 중 프로필 이미지 삭제 실패: objectKey={}", oldProfileImageKey, e);
-            }
-        }
+        // 탈퇴 트랜잭션 커밋 전에 스토리지 객체를 지우면, 커밋 실패(롤백) 시 DB는 여전히
+        // oldProfileImageKey를 가리키는데 실제 객체는 이미 삭제된 상태가 된다. 실제 삭제는
+        // MemberEventListener가 이 트랜잭션이 커밋된 뒤에만 수행한다.
+        eventPublisher.publishEvent(new MemberWithdrawnEvent(memberId, oldProfileImageKey));
     }
 }

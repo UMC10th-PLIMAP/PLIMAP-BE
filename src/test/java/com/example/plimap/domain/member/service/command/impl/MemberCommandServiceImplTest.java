@@ -8,6 +8,7 @@ import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.WithdrawalReason;
+import com.example.plimap.domain.member.event.MemberWithdrawnEvent;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
@@ -483,18 +484,19 @@ class MemberCommandServiceImplTest {
         verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
         verify(memberFollowRepository).deleteByIdFollowingId(MEMBER_ID);
         verify(socialAccountCommandService).deleteByMemberId(MEMBER_ID);
-        verify(profileImageStorage).delete("old-key");
+        verify(profileImageStorage, never()).delete(any());
+        verify(eventPublisher).publishEvent(new MemberWithdrawnEvent(MEMBER_ID, "old-key"));
     }
 
     @Test
-    void 탈퇴_시_프로필_이미지가_없으면_스토리지_삭제를_호출하지_않는다() {
+    void 탈퇴_시_프로필_이미지가_없으면_objectKey가_null인_이벤트를_발행한다() {
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
         when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
 
         memberCommandService.withdraw(MEMBER_ID);
 
-        verify(profileImageStorage, never()).delete(any());
+        verify(eventPublisher).publishEvent(new MemberWithdrawnEvent(MEMBER_ID, null));
     }
 
     @Test
