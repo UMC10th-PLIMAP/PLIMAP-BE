@@ -7,6 +7,18 @@ ALTER TABLE member
     ADD COLUMN role              VARCHAR(20) NOT NULL DEFAULT 'USER',
     ADD COLUMN report_count      INTEGER     NOT NULL DEFAULT 0;
 
+-- report_count는 컬럼 추가 시점 이전에 이미 쌓여있던 report 테이블의 신고 이력을 backfill한다.
+-- 이후 신규 신고 건은 애플리케이션에서 +1씩 증가시킨다(Phase 2).
+UPDATE member m
+SET report_count = r.cnt
+FROM (
+    SELECT reported_member_id, COUNT(*) AS cnt
+    FROM report
+    WHERE reported_member_id IS NOT NULL
+    GROUP BY reported_member_id
+) r
+WHERE m.id = r.reported_member_id;
+
 -- CHECK 제약은 NOT VALID로만 추가한다. VALIDATE CONSTRAINT는 같은 트랜잭션(Flyway 스크립트)에
 -- 넣으면 이 ALTER TABLE이 잡은 락이 커밋 전까지 유지되어 무의미해지므로 다음 마이그레이션으로 분리한다.
 ALTER TABLE member
