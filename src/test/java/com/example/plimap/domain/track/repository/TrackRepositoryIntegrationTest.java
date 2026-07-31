@@ -139,6 +139,50 @@ class TrackRepositoryIntegrationTest {
     }
 
     @Test
+    void 회원이_특정_장소의_활성_PlaceTrack을_좋아요하면_true를_반환한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("active-place-like-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+        Member member = saveMember();
+        placeTrackLikeRepository.saveAndFlush(
+                PlaceTrackLike.create(placeTrack, member.getId())
+        );
+        entityManager.clear();
+
+        boolean exists = placeTrackLikeRepository
+                .existsByIdMemberIdAndPlaceTrackPlaceIdAndPlaceTrackDeletedAtIsNull(
+                        member.getId(),
+                        place.getId()
+                );
+
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    void 좋아요한_PlaceTrack이_삭제되면_false를_반환한다() {
+        Place place = savePlace();
+        Track track = trackRepository.save(track("deleted-place-like-video-id"));
+        PlaceTrack placeTrack =
+                placeTrackRepository.saveAndFlush(PlaceTrack.create(place, track));
+        Member member = saveMember();
+        placeTrackLikeRepository.saveAndFlush(
+                PlaceTrackLike.create(placeTrack, member.getId())
+        );
+        placeTrack.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        boolean exists = placeTrackLikeRepository
+                .existsByIdMemberIdAndPlaceTrackPlaceIdAndPlaceTrackDeletedAtIsNull(
+                        member.getId(),
+                        place.getId()
+                );
+
+        assertThat(exists).isFalse();
+    }
+
+    @Test
     void 좋아요_변경용_조회는_활성_Place와_PlaceTrack을_반환한다() {
         Place place = savePlace();
         Track track = trackRepository.save(track("active-like-target-video-id"));

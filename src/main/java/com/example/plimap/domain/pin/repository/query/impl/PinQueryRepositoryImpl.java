@@ -19,7 +19,6 @@ import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
 import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -384,6 +383,23 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 )
                 .fetchOne()
         );
+    }
+
+    @Override
+    public boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId) {
+            return queryFactory
+                    .selectOne()
+                    .from(pin)
+                    .join(pin.member, member)
+                    .join(pin.place, place)
+                    .where(
+                            place.id.eq(placeId),
+                            member.id.eq(memberId),
+                            pin.deletedAt.isNull(),
+                            member.deletedAt.isNull(),
+                            place.deletedAt.isNull()
+                    )
+                    .fetchFirst() != null;
     }
 
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {
