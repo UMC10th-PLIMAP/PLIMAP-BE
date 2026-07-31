@@ -86,7 +86,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 place.getRoadAddress(),
                 place.getLocation().getY(),
                 place.getLocation().getX(),
-                Math.toIntExact(Math.round(distance)),
+                roundToMeters(distance),
                 distance <= ACCESS_RANGE_METERS + DISTANCE_COMPARISON_EPSILON_METERS,
                 pinInfo.hasPin(),
                 pinInfo.pinCount(),
@@ -181,7 +181,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 place.getRoadAddress(),
                 history.getLocation().getY(),
                 history.getLocation().getX(),
-                Math.toIntExact(Math.round(distance)),
+                roundToMeters(distance),
                 pinInfo.hasPin(),
                 pinInfo.firstPinCreatorNickname(),
                 history.getSelectedAt()
@@ -293,7 +293,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 roadAddress,
                 latitude,
                 longitude,
-                Math.toIntExact(Math.round(distance)),
+                roundToMeters(distance),
                 false,
                 null
         );
@@ -322,6 +322,10 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
             throw new IllegalArgumentException("Invalid Kakao coordinate");
         }
         return coordinate;
+    }
+
+    private int roundToMeters(double distanceMeters) {
+        return Math.toIntExact(Math.round(distanceMeters));
     }
 
     private Map<String, Long> findActivePlaceIds(KakaoPlaceSearchResponse response) {
