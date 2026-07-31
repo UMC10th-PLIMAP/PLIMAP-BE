@@ -12,7 +12,7 @@ import com.example.plimap.global.apiPayload.ApiResponse;
 import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.RefreshTokenService;
-import com.example.plimap.global.security.TokenBlacklistService;
+import com.example.plimap.global.security.SessionInvalidationService;
 import jakarta.servlet.http.Cookie;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -23,6 +23,7 @@ import org.springframework.security.web.csrf.CsrfToken;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AuthControllerTest {
@@ -30,6 +31,7 @@ class AuthControllerTest {
     private final MemberRepository memberRepository = mock(MemberRepository.class);
     private final JwtUtil jwtUtil = mock(JwtUtil.class);
     private final RefreshTokenService refreshTokenService = mock(RefreshTokenService.class);
+    private final SessionInvalidationService sessionInvalidationService = mock(SessionInvalidationService.class);
 
     private final AuthController controller = new AuthController(
             mock(MemberCommandService.class),
@@ -37,9 +39,9 @@ class AuthControllerTest {
             mock(TermsCommandService.class),
             memberRepository,
             jwtUtil,
-            mock(TokenBlacklistService.class),
             refreshTokenService,
-            mock(AuthCookieUtil.class)
+            mock(AuthCookieUtil.class),
+            sessionInvalidationService
     );
 
     @Test
@@ -52,6 +54,18 @@ class AuthControllerTest {
         assertThat(response.getIsSuccess()).isTrue();
         assertThat(response.getCode()).isEqualTo("AUTH_200_CSRF_TOKEN_ISSUED");
         assertThat(response.getResult().token()).isEqualTo("masked-csrf-token");
+    }
+
+    @Test
+    void 로그아웃하면_세션_무효화를_위임한다() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        ApiResponse<Void> apiResponse = controller.logout(request, response);
+
+        assertThat(apiResponse.getIsSuccess()).isTrue();
+        assertThat(apiResponse.getCode()).isEqualTo("MEMBER_200_LOGOUT");
+        verify(sessionInvalidationService).invalidate(request, response);
     }
 
     @Test

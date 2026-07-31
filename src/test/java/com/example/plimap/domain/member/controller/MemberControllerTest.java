@@ -21,6 +21,7 @@ import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRe
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.RefreshTokenService;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
+import com.example.plimap.global.security.SessionInvalidationService;
 import com.example.plimap.global.security.TokenBlacklistService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -99,6 +100,9 @@ class MemberControllerTest {
 
     @MockitoBean
     private MemberQueryService memberQueryService;
+
+    @MockitoBean
+    private SessionInvalidationService sessionInvalidationService;
 
     @BeforeEach
     void setUp() {
@@ -199,9 +203,8 @@ class MemberControllerTest {
     }
 
     @Test
-    void 회원_탈퇴에_성공하면_200과_WITHDRAWN_응답을_반환하고_토큰을_무효화한다() throws Exception {
+    void 회원_탈퇴에_성공하면_200과_WITHDRAWN_응답을_반환하고_세션을_무효화한다() throws Exception {
         doNothing().when(memberCommandService).withdraw(AUTH_MEMBER_ID);
-        when(jwtUtil.getRemainingExpiry(ACCESS_TOKEN)).thenReturn(java.time.Duration.ofHours(1));
 
         mockMvc.perform(delete("/api/v1/members/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
@@ -211,10 +214,7 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.result").doesNotExist());
 
         verify(memberCommandService).withdraw(AUTH_MEMBER_ID);
-        verify(tokenBlacklistService).blacklist(eq("test-jti"), any());
-        verify(refreshTokenService).delete(AUTH_MEMBER_ID);
-        verify(authCookieUtil).clearCookie(any(), eq("accessToken"));
-        verify(authCookieUtil).clearCookie(any(), eq("refreshToken"));
+        verify(sessionInvalidationService).invalidate(any(), any());
     }
 
     @Test
@@ -228,7 +228,6 @@ class MemberControllerTest {
         when(tokenBlacklistService.isBlacklisted(otherDeviceJti)).thenReturn(false);
 
         doNothing().when(memberCommandService).withdraw(AUTH_MEMBER_ID);
-        when(jwtUtil.getRemainingExpiry(ACCESS_TOKEN)).thenReturn(java.time.Duration.ofHours(1));
 
         mockMvc.perform(delete("/api/v1/members/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
