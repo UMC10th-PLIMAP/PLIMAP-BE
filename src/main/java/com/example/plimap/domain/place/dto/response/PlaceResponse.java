@@ -22,17 +22,38 @@ public final class PlaceResponse {
     }
 
     public record SearchItem(
+            @Schema(
+                    description = "검색 결과 유형",
+                    example = "PLACE",
+                    allowableValues = {"PLACE", "ADDRESS"}
+            )
+            String resultType,
             @Schema(description = "장소 검색 provider", example = "KAKAO")
             String provider,
-            @Schema(description = "provider가 제공하는 장소 ID", example = "26338954")
+            @Schema(
+                    description = "provider가 제공하는 장소 ID. ADDRESS 결과는 null",
+                    example = "26338954",
+                    nullable = true
+            )
             String providerPlaceId,
-            @Schema(description = "장소명", example = "한강")
+            @Schema(
+                    description = "장소명. ADDRESS 결과는 roadAddress, address 순으로 결정",
+                    example = "한강"
+            )
             String placeName,
-            @Schema(description = "장소 카테고리", example = "여행 > 관광,명소 > 공원")
+            @Schema(
+                    description = "장소 카테고리. ADDRESS 결과는 null",
+                    example = "여행 > 관광,명소 > 공원",
+                    nullable = true
+            )
             String category,
             @Schema(description = "지번 주소", example = "서울특별시 영등포구 여의도동")
             String address,
-            @Schema(description = "도로명 주소", example = "서울특별시 영등포구 여의동로")
+            @Schema(
+                    description = "도로명 주소. 없는 경우 null",
+                    example = "서울특별시 영등포구 여의동로",
+                    nullable = true
+            )
             String roadAddress,
             @Schema(description = "장소 위도", example = "37.5283")
             Double latitude,
@@ -89,6 +110,7 @@ public final class PlaceResponse {
     ) {
     }
 
+    @Schema(name = "PlaceSelectionResponse")
     public record Selection(
             @Schema(description = "장소 ID", example = "1")
             Long placeId,
@@ -102,7 +124,11 @@ public final class PlaceResponse {
                     nullable = true
             )
             String roadAddress,
-            @Schema(description = "장소 생성 출처", example = "PLACE_SEARCH")
+            @Schema(
+                    description = "장소 생성 출처",
+                    example = "PLACE_SEARCH",
+                    allowableValues = {"PLACE_SEARCH", "ADDRESS_SEARCH", "MAP_SELECTION"}
+            )
             PlaceSource source,
             @Schema(description = "사용자 현재 위치 기준 거리(m)", example = "470")
             Integer distanceMeters,

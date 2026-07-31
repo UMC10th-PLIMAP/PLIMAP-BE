@@ -6,6 +6,7 @@ import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
+import com.example.plimap.domain.member.event.MemberFollowedEvent;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
@@ -37,6 +39,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
     private final MemberRepository memberRepository;
     private final MemberFollowRepository memberFollowRepository;
     private final MemberQueryService memberQueryService;
+    private final ApplicationEventPublisher eventPublisher;
     private final ProfileImageStorage profileImageStorage;
     private final ProfileImageObjectKeyGenerator profileImageObjectKeyGenerator;
 
@@ -197,6 +200,8 @@ public class MemberCommandServiceImpl implements MemberCommandService {
             // 복합 PK(pk_member_follow)에서 최종적으로 걸러진다.
             throw new MemberException(MemberErrorCode.ALREADY_FOLLOWING, e);
         }
+
+        eventPublisher.publishEvent(new MemberFollowedEvent(followerId, followingId));
     }
 
     @Override

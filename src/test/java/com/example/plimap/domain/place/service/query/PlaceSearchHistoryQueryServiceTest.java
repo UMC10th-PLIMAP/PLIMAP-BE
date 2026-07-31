@@ -13,7 +13,9 @@ import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSearchHistory;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
+import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.query.impl.PlaceQueryServiceImpl;
+import com.example.plimap.global.external.kakao.KakaoAddressSearchClient;
 import com.example.plimap.global.external.kakao.KakaoPlaceSearchClient;
 import java.time.Instant;
 import java.util.List;
@@ -40,6 +42,12 @@ class PlaceSearchHistoryQueryServiceTest {
     private PlaceSearchHistoryRepository placeSearchHistoryRepository;
 
     @Mock
+    private PlaceQueryRepository placeQueryRepository;
+
+    @Mock
+    private KakaoAddressSearchClient kakaoAddressSearchClient;
+
+    @Mock
     private KakaoPlaceSearchClient kakaoPlaceSearchClient;
 
     @Mock
@@ -52,6 +60,8 @@ class PlaceSearchHistoryQueryServiceTest {
         placeQueryService = new PlaceQueryServiceImpl(
                 placeRepository,
                 placeSearchHistoryRepository,
+                placeQueryRepository,
+                kakaoAddressSearchClient,
                 kakaoPlaceSearchClient,
                 pinQueryService
         );

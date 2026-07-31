@@ -22,4 +22,9 @@ public interface PlaceQueryService {
             String placeProvider,
             String providerPlaceId
     );
+
+    Optional<Place> findNearestActiveProviderPlaceSearchWithin(
+            double latitude,
+            double longitude
+    );
 }

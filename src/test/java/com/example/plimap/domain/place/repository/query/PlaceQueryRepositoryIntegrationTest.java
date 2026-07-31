@@ -77,6 +77,53 @@ class PlaceQueryRepositoryIntegrationTest {
         assertThat(result.getProviderPlaceId()).isNull();
     }
 
+    @Test
+    void 정확히_20m인_활성_provider_PLACE_SEARCH_장소를_조회한다() {
+        Long placeId = insertSearchPlace("exactly-twenty", 20.0, 90.0, false);
+        Double actualDistance = distanceFrom(placeId);
+
+        Place result = placeQueryRepository
+                .findNearestActiveProviderPlaceSearchWithin(
+                        LATITUDE,
+                        LONGITUDE,
+                        actualDistance
+                )
+                .orElseThrow();
+
+        assertThat(actualDistance).isCloseTo(20.0, within(0.001));
+        assertThat(result.getId()).isEqualTo(placeId);
+    }
+
+    @Test
+    void 활성_provider_PLACE_SEARCH_중_가장_가깝고_id가_작은_장소를_우선한다() {
+        insertSearchPlace("farther", 15.0, 0.0, false);
+        Long firstAtTenMeters = insertSearchPlace("first-nearest", 10.0, 90.0, false);
+        insertSearchPlace("second-nearest", 10.0, 270.0, false);
+        insertSearchPlace("deleted", 2.0, 0.0, true);
+        insertMapSelection(1.0, 0.0, false);
+
+        Place result = placeQueryRepository
+                .findNearestActiveProviderPlaceSearchWithin(LATITUDE, LONGITUDE, 20.0)
+                .orElseThrow();
+
+        assertThat(result.getId()).isEqualTo(firstAtTenMeters);
+        assertThat(result.getPlaceProvider()).isEqualTo("KAKAO");
+        assertThat(result.getProviderPlaceId()).isEqualTo("first-nearest");
+    }
+
+    @Test
+    void 이십미터를_초과한_provider_PLACE_SEARCH_장소는_조회하지_않는다() {
+        insertSearchPlace("outside", 20.01, 0.0, false);
+
+        assertThat(placeQueryRepository
+                .findNearestActiveProviderPlaceSearchWithin(
+                        LATITUDE,
+                        LONGITUDE,
+                        20.0
+                ))
+                .isEmpty();
+    }
+
     private Long insertMapSelection(double distanceMeters, double bearingDegrees, boolean deleted) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO place (
@@ -102,6 +149,15 @@ class PlaceQueryRepositoryIntegrationTest {
     }
 
     private Long insertSearchPlace(double distanceMeters) {
+        return insertSearchPlace("provider-place-id", distanceMeters, 0.0, false);
+    }
+
+    private Long insertSearchPlace(
+            String providerPlaceId,
+            double distanceMeters,
+            double bearingDegrees,
+            boolean deleted
+    ) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO place (
                     name,
@@ -109,21 +165,40 @@ class PlaceQueryRepositoryIntegrationTest {
                     place_provider,
                     provider_place_id,
                     source,
-                    location
+                    location,
+                    deleted_at
                 )
                 VALUES (
                     '검색 장소',
                     '지번 주소',
                     'KAKAO',
-                    'provider-place-id',
+                    ?,
                     'PLACE_SEARCH',
                     ST_Project(
                         ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
                         ?,
-                        radians(0)
-                    )
+                        radians(?)
+                    ),
+                    CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END
                 )
                 RETURNING id
-                """, Long.class, LONGITUDE, LATITUDE, distanceMeters);
+                """, Long.class,
+                providerPlaceId,
+                LONGITUDE,
+                LATITUDE,
+                distanceMeters,
+                bearingDegrees,
+                deleted);
+    }
+
+    private Double distanceFrom(Long placeId) {
+        return jdbcTemplate.queryForObject("""
+                SELECT ST_Distance(
+                    location,
+                    ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography
+                )
+                FROM place
+                WHERE id = ?
+                """, Double.class, LONGITUDE, LATITUDE, placeId);
     }
 }

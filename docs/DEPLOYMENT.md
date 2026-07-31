@@ -159,6 +159,8 @@ Cloud Run은 외부에서 접속한 `dev.plimap.kr` host와 HTTPS protocol을 �
 
 Cloud Run은 프론트와 API 연동을 위해 `ingress=all`, 인증 없는 공개 접근을 유지합니다. 일반 API, OAuth와 health 경로는 원본 URL에서도 기존 동작을 유지하지만, Swagger UI와 OpenAPI 경로는 forwarded host가 `dev.plimap.kr`인 요청에만 응답합니다. Cloud Run 원본 host의 동일 경로는 `404 Not Found`를 반환합니다.
 
+**SSE(알림 실시간 구독)와 Request timeout**: `GET /api/v1/notifications/subscribe`는 요청 하나를 계속 열어두는 방식이라 Request timeout(60초)의 영향을 그대로 받습니다. `--concurrency=40`, `--max-instances=2`로 동시 처리 가능한 요청이 최대 80개뿐이라, 연결을 오래 유지하는 대신 서버가 약 50초마다(Cloud Run이 강제 종료하기 전에) 스트림을 정상 종료하고 클라이언트(`EventSource`)의 자동 재연결에 맡기는 방식을 택했습니다. Request timeout을 늘리는 대신 이 방식을 쓴 것은, 접속자가 늘어날 때 SSE 연결이 동시 처리 슬롯을 오래 붙잡아 일반 API 요청을 밀어내는 상황을 피하기 위해서입니다.
+
 Cloud Run 원본 URL은 고정 문서값으로 관리하지 않고 서비스 상태에서 조회합니다.
 
 ```powershell
