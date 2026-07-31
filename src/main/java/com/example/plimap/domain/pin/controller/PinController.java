@@ -105,7 +105,8 @@ public class PinController implements PinControllerDocs {
             Integer pageSize,
             @RequestParam(required = false) String cursor
     ) {
-        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(currentMember.getMember().getId(), cursor, pageSize);
+        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(
+                currentMember.getMember().getId(), currentMember.getMember().getId(), cursor, pageSize);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.MY_FEED_LIST_SEARCH_SUCCESS, response));
@@ -113,6 +114,7 @@ public class PinController implements PinControllerDocs {
 
     @GetMapping("/feed/members/{memberId}")
     public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMemberFeedList(
+            @AuthenticationPrincipal AuthMember currentMember,
             @PathVariable Long memberId,
             @RequestParam(required = false, defaultValue = "10")
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
@@ -120,7 +122,9 @@ public class PinController implements PinControllerDocs {
             Integer pageSize,
             @RequestParam(required = false) String cursor
     ) {
-        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(memberId, cursor, pageSize);
+        // 이 경로는 SecurityConfig에서 인증 없이도 허용되므로 currentMember가 null일 수 있다.
+        Long viewerId = currentMember != null ? currentMember.getMember().getId() : null;
+        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(memberId, viewerId, cursor, pageSize);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.MEMBER_FEED_LIST_SEARCH_SUCCESS, response));
@@ -161,9 +165,10 @@ public class PinController implements PinControllerDocs {
 
     @GetMapping("/pins/{pinId}")
     public ResponseEntity<ApiResponse<PinResponse.PinPreview>> getPinPreview(
+            @AuthenticationPrincipal AuthMember currentMember,
             @PathVariable Long pinId
     ) {
-        PinResponse.PinPreview response = pinQueryService.getPinPreview(pinId);
+        PinResponse.PinPreview response = pinQueryService.getPinPreview(pinId, currentMember.getMember().getId());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PIN_SEARCH_SUCCESS, response));

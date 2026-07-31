@@ -21,6 +21,7 @@ import com.example.plimap.domain.track.entity.QTrack;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ import static com.example.plimap.domain.pin.entity.QTag.tag;
 public class PinQueryRepositoryImpl implements PinQueryRepository {
     private static final double DISTANCE_METERS = 20.0;
     private static final double DISTANCE_PREFILTER_TOLERANCE_METERS = 0.001;
+    private static final int REPORT_HIDE_THRESHOLD = 10;
     private static final String NEAREST_ACTIVE_PIN_WITHIN_20M_QUERY = """
             SELECT ST_Distance(
                               pl.location,
@@ -132,7 +134,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     @Override
-    public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
+    public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, Long viewerId, String cursor, Integer pageSize) {
         CursorInfo cursorInfo = parseCursor(cursor, null);
 
         List<Long> pinIds = queryFactory
@@ -142,7 +144,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pin.member.id.eq(memberId),
                         cursorCondition(cursorInfo, null),
                         pin.deletedAt.isNull(),
-                        pin.isFeedPublic.eq(true)
+                        pin.isFeedPublic.eq(true),
+                        pin.reportCount.lt(REPORT_HIDE_THRESHOLD),
+                        notReportedByViewer(viewerId)
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
@@ -207,7 +211,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .where(
                         pin.member.id.eq(memberId),
                         cursorCondition(cursorInfo, null),
-                        pin.deletedAt.isNull()
+                        pin.deletedAt.isNull(),
+                        pin.reportCount.lt(REPORT_HIDE_THRESHOLD)
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
@@ -296,7 +301,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         cursorCondition(cursorInfo, pinSortType),
                         pin.deletedAt.isNull(),
                         pin.placeTrack.id.eq(placeTrackId),
-                        report.id.isNull()
+                        report.id.isNull(),
+                        pin.reportCount.lt(REPORT_HIDE_THRESHOLD)
                 )
                 .orderBy(getOrders(pinSortType))
                 .limit(pageSize + 1)
@@ -368,7 +374,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     @Override
-    public Optional<Pin> getPinPreview(Long pinId) {
+    public Optional<Pin> getPinPreview(Long pinId, Long viewerId) {
         return Optional.ofNullable(queryFactory
                 .select(pin)
                 .from(pin)
@@ -380,10 +386,23 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pin.id.eq(pinId),
                         pin.deletedAt.isNull(),
                         placeTrack.deletedAt.isNull(),
-                        place.deletedAt.isNull()
+                        place.deletedAt.isNull(),
+                        pin.reportCount.lt(REPORT_HIDE_THRESHOLD),
+                        notReportedByViewer(viewerId)
                 )
                 .fetchOne()
         );
+    }
+
+    private BooleanExpression notReportedByViewer(Long viewerId) {
+        if (viewerId == null) {
+            return null;
+        }
+        return JPAExpressions
+                .selectOne()
+                .from(report)
+                .where(report.reportedPin.eq(pin), report.reporter.id.eq(viewerId))
+                .notExists();
     }
 
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {

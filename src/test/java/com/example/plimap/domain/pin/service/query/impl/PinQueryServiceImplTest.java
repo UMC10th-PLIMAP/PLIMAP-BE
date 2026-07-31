@@ -279,11 +279,11 @@ class PinQueryServiceImplTest {
     @Test
     void 핀_상세조회에_성공한다() {
         // given
-        when(pinQueryRepository.getPinPreview(anyLong()))
+        when(pinQueryRepository.getPinPreview(anyLong(), any()))
                 .thenReturn(Optional.ofNullable(pin));
 
         // when
-        PinResponse.PinPreview result = pinQueryService.getPinPreview(pin.getId());
+        PinResponse.PinPreview result = pinQueryService.getPinPreview(pin.getId(), 1L);
 
         // then
         assertThat(result.introduction()).isEqualTo(pin.getIntroduction());

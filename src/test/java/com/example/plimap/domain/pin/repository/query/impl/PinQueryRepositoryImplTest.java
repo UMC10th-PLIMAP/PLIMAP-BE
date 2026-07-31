@@ -224,13 +224,13 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 피드정보를_커서기반_페이지네이션으로_조회한다() {
-        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, 2 );
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, null, 2 );
 
         assertThat(response.data().size()).isEqualTo(2);
         assertThat(response.hasNext()).isTrue();
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
         String nextCursor = response.nextCursor();
-        Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member2.getId(), nextCursor, 2 );
+        Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, nextCursor, 2 );
 
         assertThat(response2.data().size()).isEqualTo(1);
         assertThat(response2.hasNext()).isFalse();
@@ -243,7 +243,7 @@ class PinQueryRepositoryImplTest {
                 pin3.getCreatedAt(),
                 pin3.getId()
         );
-        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), cursor, 2 );
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, cursor, 2 );
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();
@@ -383,6 +383,80 @@ class PinQueryRepositoryImplTest {
     }
 
     @Test
+    void 피드_조회시_내가_신고한_핀은_제외된다() {
+        Pagination<PinResponse.Feed> response =
+                pinQueryRepository.findFeedListByMemberId(member1.getId(), member2.getId(), null, 10);
+
+        assertThat(response.data())
+                .extracting(PinResponse.Feed::pinId)
+                .doesNotContain(pin5.getId())
+                .contains(pin1.getId());
+    }
+
+    @Test
+    void 피드_조회시_다른_사람이_신고한_핀은_보인다() {
+        Pagination<PinResponse.Feed> response =
+                pinQueryRepository.findFeedListByMemberId(member1.getId(), member1.getId(), null, 10);
+
+        assertThat(response.data())
+                .extracting(PinResponse.Feed::pinId)
+                .contains(pin5.getId());
+    }
+
+    @Test
+    void 피드_조회시_신고누적_10회_이상인_핀은_전원에게_숨겨진다() {
+        increaseReportCount(pin1, 10);
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<PinResponse.Feed> response =
+                pinQueryRepository.findFeedListByMemberId(member1.getId(), null, null, 10);
+
+        assertThat(response.data())
+                .extracting(PinResponse.Feed::pinId)
+                .doesNotContain(pin1.getId());
+    }
+
+    @Test
+    void 내_핀_목록에서_신고누적_10회_이상인_핀은_본인에게도_숨겨진다() {
+        increaseReportCount(pin1, 10);
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<PinResponse.MyPin> response =
+                pinQueryRepository.findMyPinList(member1.getId(), null, 10);
+
+        assertThat(response.data())
+                .extracting(PinResponse.MyPin::pinId)
+                .doesNotContain(pin1.getId());
+    }
+
+    @Test
+    void 미리보기_조회시_내가_신고한_핀은_숨겨진다() {
+        Optional<Pin> result = pinQueryRepository.getPinPreview(pin5.getId(), member2.getId());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void 미리보기_조회시_다른_사람이_신고한_핀은_보인다() {
+        Optional<Pin> result = pinQueryRepository.getPinPreview(pin5.getId(), member1.getId());
+
+        assertThat(result).isPresent();
+    }
+
+    @Test
+    void 미리보기_조회시_신고누적_10회_이상인_핀은_전원에게_숨겨진다() {
+        increaseReportCount(pin1, 10);
+        entityManager.flush();
+        entityManager.clear();
+
+        Optional<Pin> result = pinQueryRepository.getPinPreview(pin1.getId(), member1.getId());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void 전달한_커서_기반으로_특정_장소에_대한_핀_목록을_조회한다() {
         String cursor = "%s/%d".formatted(
                 pin2.getCreatedAt(),
@@ -396,14 +470,14 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 존재하는_핀이면_조회된다() {
-        Optional<Pin> result = pinQueryRepository.getPinPreview(pin1.getId());
+        Optional<Pin> result = pinQueryRepository.getPinPreview(pin1.getId(), null);
 
         assertThat(result).isPresent();
     }
 
     @Test
     void 존재하지_않는_핀이면_Optional_empty를_반환한다() {
-        Optional<Pin> result = pinQueryRepository.getPinPreview(999L);
+        Optional<Pin> result = pinQueryRepository.getPinPreview(999L, null);
 
         assertThat(result).isEmpty();
     }
@@ -440,6 +514,12 @@ class PinQueryRepositoryImplTest {
     private void increaseLike(Pin pin, int count) {
         for (int i = 0; i < count; i++) {
             pinRepository.increaseLikeCount(pin.getId());
+        }
+    }
+
+    private void increaseReportCount(Pin pin, int count) {
+        for (int i = 0; i < count; i++) {
+            pinRepository.increaseReportCount(pin.getId());
         }
     }
 }

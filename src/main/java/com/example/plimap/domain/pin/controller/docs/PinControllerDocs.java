@@ -88,9 +88,10 @@ public interface PinControllerDocs {
 
     @Operation(
             summary = "타인 피드 목록 조회",
-            description = "타인 피드 목록을 조회합니다. (Figma 기준 화면: FD-02-01)"
+            description = "타인 피드 목록을 조회합니다. 인증 없이도 호출 가능하지만, 인증된 상태로 호출하면 내가 신고한 PIN은 목록에서 제외됩니다. (Figma 기준 화면: FD-02-01)"
     )
     public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMemberFeedList(
+            @AuthenticationPrincipal AuthMember currentMember,
             @PathVariable Long memberId,
             @RequestParam(required = false, defaultValue = "10")
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
@@ -133,6 +134,7 @@ public interface PinControllerDocs {
             description = "특정 PIN을 조회합니다. 대표핀 대신 해당 핀의 미리보기를 보여줘야할 때 사용한다.(Figma 기준 화면: FD-01-04)"
     )
     public ResponseEntity<ApiResponse<PinResponse.PinPreview>> getPinPreview(
+            @AuthenticationPrincipal AuthMember currentMember,
             @PathVariable Long pinId
     );
 }

@@ -65,8 +65,8 @@ public class PinQueryServiceImpl implements PinQueryService {
     }
 
     @Override
-    public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
-        return pinQueryRepository.findFeedListByMemberId(memberId, cursor, pageSize);
+    public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, Long viewerId, String cursor, Integer pageSize) {
+        return pinQueryRepository.findFeedListByMemberId(memberId, viewerId, cursor, pageSize);
     }
 
     @Override
@@ -86,8 +86,8 @@ public class PinQueryServiceImpl implements PinQueryService {
     }
 
     @Override
-    public PinResponse.PinPreview getPinPreview(Long pinId) {
-        Pin pin = pinQueryRepository.getPinPreview(pinId)
+    public PinResponse.PinPreview getPinPreview(Long pinId, Long viewerId) {
+        Pin pin = pinQueryRepository.getPinPreview(pinId, viewerId)
                 .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
 
         return PinConverter.toPinPreview(pin);
