@@ -121,6 +121,7 @@ class PlaceTrackControllerTest {
                 .andExpect(jsonPath("$.result.createdBy").doesNotExist())
                 .andExpect(jsonPath("$.result.isBookmarked").doesNotExist())
                 .andExpect(jsonPath("$.result.isWithinRadius").value(true))
+                .andExpect(jsonPath("$.result.isTrackDetailAccessible").value(true))
                 .andExpect(jsonPath("$.result.tracks[0].placeTrackId").value(10))
                 .andExpect(jsonPath("$.result.tracks[0].pinCount").value(1))
                 .andExpect(jsonPath("$.result.tracks[0].likeCount").value(5));
@@ -588,6 +589,7 @@ class PlaceTrackControllerTest {
         return new PlaceTrackResponse.PlaceTrackListResult(
                 1L,
                 100.0,
+                true,
                 true,
                 List.of(new PlaceTrackResponse.PlaceTrackItem(
                         10L,

@@ -108,6 +108,8 @@ class TrackOpenApiIntegrationTest {
         assertThat(placeTrackResult.path("properties").has("placeId")).isTrue();
         assertThat(placeTrackResult.path("properties").has("distance")).isTrue();
         assertThat(placeTrackResult.path("properties").has("isWithinRadius")).isTrue();
+        assertThat(placeTrackResult.path("properties")
+                .has("isTrackDetailAccessible")).isTrue();
         assertThat(placeTrackResult.path("properties").has("page")).isTrue();
         assertThat(placeTrackResult.path("properties").has("size")).isTrue();
         assertThat(placeTrackResult.path("properties").has("hasNext")).isTrue();
