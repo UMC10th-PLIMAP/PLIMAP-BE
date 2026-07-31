@@ -6,4 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PlaceTrackLikeRepository
         extends JpaRepository<PlaceTrackLike, PlaceTrackLikeId> {
+
+    boolean existsByIdMemberIdAndPlaceTrackPlaceIdAndPlaceTrackDeletedAtIsNull(
+            Long memberId,
+            Long placeId
+    );
 }
