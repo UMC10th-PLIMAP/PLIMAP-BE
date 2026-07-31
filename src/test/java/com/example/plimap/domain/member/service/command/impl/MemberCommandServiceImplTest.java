@@ -1,13 +1,10 @@
 package com.example.plimap.domain.member.service.command.impl;
 
-import com.example.plimap.domain.auth.service.command.SocialAccountCommandService;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
-import com.example.plimap.domain.member.enums.MemberStatus;
-import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
@@ -51,8 +48,6 @@ class MemberCommandServiceImplTest {
     private final ProfileImageStorage profileImageStorage = mock(ProfileImageStorage.class);
     private final ProfileImageObjectKeyGenerator profileImageObjectKeyGenerator =
             mock(ProfileImageObjectKeyGenerator.class);
-    private final SocialAccountCommandService socialAccountCommandService =
-            mock(SocialAccountCommandService.class);
 
     private MemberCommandServiceImpl memberCommandService;
 
@@ -64,8 +59,7 @@ class MemberCommandServiceImplTest {
                 memberQueryService,
                 eventPublisher,
                 profileImageStorage,
-                profileImageObjectKeyGenerator,
-                socialAccountCommandService
+                profileImageObjectKeyGenerator
         );
     }
 
@@ -458,52 +452,6 @@ class MemberCommandServiceImplTest {
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_PROFILE_IMAGE));
 
         verify(profileImageStorage, never()).upload(any(), any(), any());
-    }
-
-    @Test
-    void 회원_탈퇴에_성공하면_닉네임을_마스킹하고_연관_데이터를_정리한다() {
-        Member member = Member.builder()
-                .nickname("예림")
-                .introduction("소개")
-                .profileImageObjectKey("old-key")
-                .build();
-        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
-
-        memberCommandService.withdraw(MEMBER_ID);
-
-        assertThat(member.getNickname()).isEqualTo("플리맵사용자" + MEMBER_ID);
-        assertThat(member.getWithdrawnNickname()).isEqualTo("예림");
-        assertThat(member.getIntroduction()).isNull();
-        assertThat(member.getProfileImageObjectKey()).isNull();
-        assertThat(member.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
-        assertThat(member.getWithdrawalReason()).isEqualTo(WithdrawalReason.VOLUNTARY);
-        assertThat(member.isDeleted()).isTrue();
-
-        verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
-        verify(memberFollowRepository).deleteByIdFollowingId(MEMBER_ID);
-        verify(socialAccountCommandService).deleteByMemberId(MEMBER_ID);
-        verify(profileImageStorage).delete("old-key");
-    }
-
-    @Test
-    void 탈퇴_시_프로필_이미지가_없으면_스토리지_삭제를_호출하지_않는다() {
-        Member member = Member.builder().nickname("예림").build();
-        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
-
-        memberCommandService.withdraw(MEMBER_ID);
-
-        verify(profileImageStorage, never()).delete(any());
-    }
-
-    @Test
-    void 존재하지_않는_회원을_탈퇴시키면_예외가_발생한다() {
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> memberCommandService.withdraw(MEMBER_ID))
-                .isInstanceOfSatisfying(MemberException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 
     private MockMultipartFile webpFile() {

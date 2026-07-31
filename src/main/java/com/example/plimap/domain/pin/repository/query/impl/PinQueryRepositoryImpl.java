@@ -58,7 +58,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     private static final String SEARCH_FIRST_PIN_CREATOR_NICKNAME_QUERY = """
             SELECT DISTINCT ON (pl.id)
                    pl.id,
-                   CASE WHEN m.status = 'WITHDRAWN' THEN '플리맵사용자' ELSE m.nickname END,
+                   m.nickname,
                    p.id,
                    COALESCE(pc.pin_count, 0) AS pin_count
             FROM place pl

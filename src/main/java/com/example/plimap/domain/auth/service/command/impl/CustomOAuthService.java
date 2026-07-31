@@ -6,13 +6,9 @@ import com.example.plimap.domain.auth.dto.OAuthDTO;
 import com.example.plimap.domain.auth.entity.OAuthMember;
 import com.example.plimap.domain.auth.entity.SocialAccount;
 import com.example.plimap.domain.auth.enums.AuthProvider;
-import com.example.plimap.domain.auth.exception.WithdrawnMemberAuthenticationException;
 import com.example.plimap.domain.auth.repository.SocialAccountRepository;
-import com.example.plimap.domain.member.AdminEmailPolicy;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.enums.MemberRole;
-import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberRepository;
@@ -95,16 +91,6 @@ public class CustomOAuthService extends DefaultOAuth2UserService {
                 .findByProviderAndProviderSubject(provider, dto.getProviderSubject())
                 .map(SocialAccount::getMember)
                 .orElseGet(() -> createMemberWithSocialAccount(provider, dto));
-        // 벌점 4점 누적으로 자동 탈퇴된 회원은 SocialAccount가 유지되어 여기서 발견되므로 재가입을 차단한다.
-        // 자발적 탈퇴는 SocialAccount를 하드 삭제하므로 이 분기에 도달하지 않고 새 회원으로 처리된다.
-        if (member.getWithdrawalReason() == WithdrawalReason.PENALTY) {
-            throw new WithdrawnMemberAuthenticationException();
-        }
-        // 관리자 이메일 정책이 나중에 추가되거나 가입 이후 반영된 경우를 대비해,
-        // 신규 가입 시점뿐 아니라 기존 회원 로그인 시에도 매번 승격 여부를 확인한다.
-        if (AdminEmailPolicy.isAdminEmail(dto.getEmail()) && member.getRole() != MemberRole.ADMIN) {
-            member.grantAdmin();
-        }
         // SocialAccount.member는 LAZY라 기존 회원 로그인 시 프록시 상태로 반환되는데,
         // OAuthSuccessHandler는 세션이 닫힌 뒤(트랜잭션 밖)에 member.isOnboarded()를 읽으므로
         // 세션이 살아있는 지금 초기화해둔다.

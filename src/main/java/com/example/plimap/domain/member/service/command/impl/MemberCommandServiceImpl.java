@@ -1,6 +1,5 @@
 package com.example.plimap.domain.member.service.command.impl;
 
-import com.example.plimap.domain.auth.service.command.SocialAccountCommandService;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
@@ -43,7 +42,6 @@ public class MemberCommandServiceImpl implements MemberCommandService {
     private final ApplicationEventPublisher eventPublisher;
     private final ProfileImageStorage profileImageStorage;
     private final ProfileImageObjectKeyGenerator profileImageObjectKeyGenerator;
-    private final SocialAccountCommandService socialAccountCommandService;
 
     @Override
     @Transactional
@@ -216,29 +214,6 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         long deletedCount = memberFollowRepository.deleteByIdFollowerIdAndIdFollowingId(followerId, followingId);
         if (deletedCount == 0) {
             throw new MemberException(MemberErrorCode.NOT_FOLLOWING);
-        }
-    }
-
-    @Override
-    @Transactional
-    public void withdraw(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-        String oldProfileImageKey = member.getProfileImageObjectKey();
-
-        member.withdrawVoluntarily();
-        memberFollowRepository.deleteByIdFollowerId(memberId);
-        memberFollowRepository.deleteByIdFollowingId(memberId);
-        socialAccountCommandService.deleteByMemberId(memberId);
-
-        memberRepository.saveAndFlush(member);
-
-        if (oldProfileImageKey != null) {
-            try {
-                profileImageStorage.delete(oldProfileImageKey);
-            } catch (ProfileImageStorageException e) {
-                log.warn("탈퇴 처리 중 프로필 이미지 삭제 실패: objectKey={}", oldProfileImageKey, e);
-            }
         }
     }
 }

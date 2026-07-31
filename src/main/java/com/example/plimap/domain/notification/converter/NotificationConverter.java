@@ -14,7 +14,7 @@ public class NotificationConverter {
                 notification.getId(),
                 notification.getType(),
                 notification.getActor().getId(),
-                notification.getActor().getDisplayNickname(),
+                notification.getActor().getNickname(),
                 notification.getActor().getProfileImageObjectKey(),
                 notification.getPin() != null ? notification.getPin().getId() : null,
                 notification.isRead(),
