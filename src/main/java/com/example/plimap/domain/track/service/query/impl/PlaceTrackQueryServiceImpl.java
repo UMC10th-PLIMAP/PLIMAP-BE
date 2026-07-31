@@ -1,5 +1,8 @@
 package com.example.plimap.domain.track.service.query.impl;
 
+import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
@@ -30,6 +33,8 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
 
     private static final double ACCESSIBLE_RADIUS_METERS = 500.0;
 
+    private final MemberQueryService memberQueryService;
+    private final PinQueryService pinQueryService;
     private final PlaceQueryService placeQueryService;
     private final PinLocationValidator pinLocationValidator;
     private final PlaceTrackRepository placeTrackRepository;
@@ -78,6 +83,12 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
         Place place = placeQueryService.getActivePlace(placeId);
         double distance = calculateDistance(request, place);
         boolean withinRadius = distance <= ACCESSIBLE_RADIUS_METERS;
+        boolean trackDetailAccessible = isTrackDetailAccessible(
+                memberId,
+                placeId,
+                place,
+                withinRadius
+        );
         Pageable pageable = PageRequest.of(request.page(), request.size());
 
         Slice<PlaceTrackQueryResult> placeTracks =
@@ -91,7 +102,34 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
                 place,
                 distance,
                 withinRadius,
+                trackDetailAccessible,
                 placeTracks
+        );
+    }
+
+    private boolean isTrackDetailAccessible(
+            Long memberId,
+            Long placeId,
+            Place place,
+            boolean withinRadius
+    ) {
+        if (withinRadius) {
+            return true;
+        }
+
+        boolean likedPlaceTrack =
+                placeTrackLikeRepository
+                        .existsByIdMemberIdAndPlaceTrackPlaceIdAndPlaceTrackDeletedAtIsNull(
+                                memberId,
+                                placeId
+                        );
+        if (likedPlaceTrack) {
+            return true;
+        }
+
+        Member member = memberQueryService.getActiveMember(memberId);
+        return Boolean.TRUE.equals(
+                pinQueryService.validatePlacePinAccessByMember(member, place)
         );
     }
 
