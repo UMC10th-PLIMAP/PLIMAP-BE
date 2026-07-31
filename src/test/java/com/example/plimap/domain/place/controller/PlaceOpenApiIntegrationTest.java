@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class PlaceOpenApiIntegrationTest {
 
     private static final String PLACE_SEARCH_PATH = "/api/v1/places/search";
+    private static final String PLACE_SELECTION_PATH = "/api/v1/places/selections";
 
     @Autowired
     private MockMvc mockMvc;
@@ -63,6 +64,41 @@ class PlaceOpenApiIntegrationTest {
                 .contains("없는 경우 null");
     }
 
+    @Test
+    void 장소_선택_OpenAPI는_ADDRESS_요청과_응답_계약을_노출한다() throws Exception {
+        String responseBody = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode openApi = objectMapper.readTree(responseBody);
+
+        JsonNode operation = openApi
+                .path("paths")
+                .path(PLACE_SELECTION_PATH)
+                .path("post");
+        assertThat(operation.path("description").asText())
+                .contains("ADDRESS_SEARCH")
+                .contains("전체 지번 주소 기준");
+
+        JsonNode selectionSchema = findSelectionRequestSchema(openApi);
+        JsonNode properties = selectionSchema.path("properties");
+        assertThat(enumValues(properties.path("resultType")))
+                .containsExactlyInAnyOrder("PLACE", "ADDRESS");
+        assertThat(properties.path("providerPlaceId").path("description").asText())
+                .contains("ADDRESS이면 null");
+        assertThat(properties.path("category").path("description").asText())
+                .contains("ADDRESS이면 null");
+
+        JsonNode responseSchema = findSelectionResponseSchema(openApi);
+        assertThat(enumValues(responseSchema.path("properties").path("source")))
+                .containsExactlyInAnyOrder(
+                        "PLACE_SEARCH",
+                        "ADDRESS_SEARCH",
+                        "MAP_SELECTION"
+                );
+    }
+
     private JsonNode findSearchItemSchema(JsonNode openApi) {
         for (Map.Entry<String, JsonNode> entry :
                 openApi.path("components").path("schemas").properties()) {
@@ -75,6 +111,33 @@ class PlaceOpenApiIntegrationTest {
             }
         }
         throw new AssertionError("Place search item schema not found");
+    }
+
+    private JsonNode findSelectionRequestSchema(JsonNode openApi) {
+        for (Map.Entry<String, JsonNode> entry :
+                openApi.path("components").path("schemas").properties()) {
+            JsonNode properties = entry.getValue().path("properties");
+            if (properties.has("resultType")
+                    && properties.has("providerPlaceId")
+                    && properties.has("userLatitude")
+                    && properties.has("userLongitude")) {
+                return entry.getValue();
+            }
+        }
+        throw new AssertionError("Place selection request schema not found");
+    }
+
+    private JsonNode findSelectionResponseSchema(JsonNode openApi) {
+        for (Map.Entry<String, JsonNode> entry :
+                openApi.path("components").path("schemas").properties()) {
+            JsonNode properties = entry.getValue().path("properties");
+            if (properties.has("source")
+                    && properties.has("withinAccessRange")
+                    && properties.has("bookmarkedByMe")) {
+                return entry.getValue();
+            }
+        }
+        throw new AssertionError("Place selection response schema not found");
     }
 
     private List<String> enumValues(JsonNode schema) {

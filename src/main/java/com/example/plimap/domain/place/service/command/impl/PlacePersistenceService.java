@@ -3,6 +3,7 @@ package com.example.plimap.domain.place.service.command.impl;
 import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.lock.PlaceLockRepository;
@@ -44,7 +45,7 @@ class PlacePersistenceService {
     }
 
     @Transactional
-    public Optional<Place> persistSearchSelection(
+    public Optional<Place> persistPlaceSearchSelection(
             Long memberId,
             PlaceRequest.Selection request,
             PlaceAdministrativeRegion region
@@ -61,6 +62,30 @@ class PlacePersistenceService {
                 .or(() -> region == null
                         ? Optional.empty()
                         : Optional.of(createPlaceSearch(request, region)));
+        place.ifPresent(foundPlace -> saveSearchHistory(memberId, foundPlace.getId()));
+        return place;
+    }
+
+    @Transactional
+    public Optional<Place> persistAddressSearchSelection(
+            Long memberId,
+            PlaceRequest.Selection request,
+            String normalizedAddress,
+            PlaceAdministrativeRegion region
+    ) {
+        placeLockRepository.acquireAddressSelectionLock(normalizedAddress);
+        Optional<Place> place = placeRepository
+                .findBySourceAndNormalizedAddressAndDeletedAtIsNull(
+                        PlaceSource.ADDRESS_SEARCH,
+                        normalizedAddress
+                )
+                .or(() -> region == null
+                        ? Optional.empty()
+                        : Optional.of(createAddressSearch(
+                                request,
+                                normalizedAddress,
+                                region
+                        )));
         place.ifPresent(foundPlace -> saveSearchHistory(memberId, foundPlace.getId()));
         return place;
     }
@@ -108,6 +133,26 @@ class PlacePersistenceService {
         return placeRepository.saveAndFlush(place);
     }
 
+    private Place createAddressSearch(
+            PlaceRequest.Selection request,
+            String normalizedAddress,
+            PlaceAdministrativeRegion region
+    ) {
+        Place place = Place.createAddressSearch(
+                resolveAddressSearchPlaceName(request),
+                request.address(),
+                request.roadAddress(),
+                normalizedAddress,
+                region.code(),
+                region.sido(),
+                region.sigungu(),
+                region.eupMyeonDong(),
+                request.provider(),
+                point(request.latitude(), request.longitude())
+        );
+        return placeRepository.saveAndFlush(place);
+    }
+
     private Point point(double latitude, double longitude) {
         return GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
     }
@@ -120,5 +165,9 @@ class PlacePersistenceService {
             return request.roadAddress();
         }
         return request.address();
+    }
+
+    private String resolveAddressSearchPlaceName(PlaceRequest.Selection request) {
+        return request.roadAddress() != null ? request.roadAddress() : request.address();
     }
 }

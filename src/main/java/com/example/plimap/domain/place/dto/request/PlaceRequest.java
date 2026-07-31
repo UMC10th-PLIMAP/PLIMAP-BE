@@ -23,6 +23,10 @@ public final class PlaceRequest {
         return value.strip();
     }
 
+    private static String preserveOrNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
     public record Search(
             String keyword,
             @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)
@@ -38,17 +42,36 @@ public final class PlaceRequest {
         }
     }
 
+    @Schema(name = "PlaceSelectionRequest")
     public record Selection(
+            @Schema(
+                    description = "검색 결과 유형",
+                    example = "PLACE",
+                    allowableValues = {"PLACE", "ADDRESS"}
+            )
+            String resultType,
+
             @Schema(description = "장소 검색 provider", example = "KAKAO")
             String provider,
 
-            @Schema(description = "provider가 제공하는 장소 ID", example = "26338954")
+            @Schema(
+                    description = "provider가 제공하는 장소 ID. ADDRESS이면 null",
+                    example = "26338954",
+                    nullable = true
+            )
             String providerPlaceId,
 
-            @Schema(description = "장소명", example = "한강")
+            @Schema(
+                    description = "장소명. ADDRESS이면 roadAddress, address 순으로 서버에서 결정",
+                    example = "한강"
+            )
             String placeName,
 
-            @Schema(description = "장소 카테고리", example = "공원")
+            @Schema(
+                    description = "장소 카테고리. ADDRESS이면 null",
+                    example = "공원",
+                    nullable = true
+            )
             String category,
 
             @Schema(description = "지번 주소", example = "서울특별시 영등포구 여의도동")
@@ -71,12 +94,18 @@ public final class PlaceRequest {
     ) {
 
         public Selection {
+            resultType = normalize(resultType);
             provider = normalize(provider);
-            providerPlaceId = normalize(providerPlaceId);
             placeName = normalize(placeName);
-            category = normalize(category);
-            address = normalize(address);
-            roadAddress = normalize(roadAddress);
+            if ("ADDRESS".equals(resultType)) {
+                address = preserveOrNull(address);
+                roadAddress = preserveOrNull(roadAddress);
+            } else {
+                providerPlaceId = normalize(providerPlaceId);
+                category = normalize(category);
+                address = normalize(address);
+                roadAddress = normalize(roadAddress);
+            }
         }
     }
 
