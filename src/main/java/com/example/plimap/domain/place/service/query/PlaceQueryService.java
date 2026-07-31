@@ -8,6 +8,13 @@ import java.util.Optional;
 
 public interface PlaceQueryService {
 
+    PlaceResponse.Detail getPlaceDetail(
+            Long memberId,
+            Long placeId,
+            double latitude,
+            double longitude
+    );
+
     PlaceResponse.SearchResult searchPlaces(@Valid PlaceRequest.Search request);
 
     PlaceResponse.SearchHistoryResult getSearchHistories(

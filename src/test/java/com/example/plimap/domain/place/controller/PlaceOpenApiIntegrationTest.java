@@ -27,11 +27,64 @@ class PlaceOpenApiIntegrationTest {
 
     private static final String PLACE_SEARCH_PATH = "/api/v1/places/search";
     private static final String PLACE_SELECTION_PATH = "/api/v1/places/selections";
+    private static final String PLACE_DETAIL_PATH = "/api/v1/places/{placeId}";
 
     @Autowired
     private MockMvc mockMvc;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Test
+    void 장소_상세_OpenAPI는_최신_요청과_응답_계약을_노출한다() throws Exception {
+        String responseBody = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode openApi = objectMapper.readTree(responseBody);
+
+        JsonNode operation = openApi
+                .path("paths")
+                .path(PLACE_DETAIL_PATH)
+                .path("get");
+        assertThat(operation.path("description").asText())
+                .contains("isTrackDetailAccessible");
+        assertThat(operation.path("responses").has("200")).isTrue();
+        assertThat(operation.path("responses").has("400")).isTrue();
+        assertThat(operation.path("responses").has("401")).isTrue();
+        assertThat(operation.path("responses").has("404")).isTrue();
+
+        JsonNode latitude = findParameter(operation, "latitude");
+        JsonNode longitude = findParameter(operation, "longitude");
+        assertThat(latitude.path("required").asBoolean()).isTrue();
+        assertThat(longitude.path("required").asBoolean()).isTrue();
+        assertThat(latitude.path("schema").path("minimum").asDouble()).isEqualTo(-90.0);
+        assertThat(latitude.path("schema").path("maximum").asDouble()).isEqualTo(90.0);
+        assertThat(longitude.path("schema").path("minimum").asDouble()).isEqualTo(-180.0);
+        assertThat(longitude.path("schema").path("maximum").asDouble()).isEqualTo(180.0);
+
+        JsonNode properties = openApi
+                .path("components")
+                .path("schemas")
+                .path("PlaceDetailResponse")
+                .path("properties");
+        assertThat(properties.has("placeId")).isTrue();
+        assertThat(properties.has("placeName")).isTrue();
+        assertThat(properties.has("category")).isTrue();
+        assertThat(properties.has("address")).isTrue();
+        assertThat(properties.has("roadAddress")).isTrue();
+        assertThat(properties.has("latitude")).isTrue();
+        assertThat(properties.has("longitude")).isTrue();
+        assertThat(properties.has("distanceMeters")).isTrue();
+        assertThat(properties.has("withinAccessRange")).isTrue();
+        assertThat(properties.has("hasPin")).isTrue();
+        assertThat(properties.has("pinCount")).isTrue();
+        assertThat(properties.has("bookmarkedByMe")).isTrue();
+        assertThat(properties.has("pinnedByMe")).isTrue();
+        assertThat(properties.has("detailAccessible")).isFalse();
+        assertThat(properties.has("likedTrackAtPlaceByMe")).isFalse();
+        assertThat(properties.has("followedMemberPinnedAtPlace")).isFalse();
+    }
 
     @Test
     void 장소_검색_OpenAPI는_PLACE와_ADDRESS_응답_계약을_노출한다() throws Exception {
@@ -111,6 +164,15 @@ class PlaceOpenApiIntegrationTest {
             }
         }
         throw new AssertionError("Place search item schema not found");
+    }
+
+    private JsonNode findParameter(JsonNode operation, String name) {
+        for (JsonNode parameter : operation.path("parameters")) {
+            if (name.equals(parameter.path("name").asText())) {
+                return parameter;
+            }
+        }
+        throw new AssertionError("OpenAPI parameter not found: " + name);
     }
 
     private JsonNode findSelectionRequestSchema(JsonNode openApi) {

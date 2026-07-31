@@ -5,9 +5,11 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.place.entity.PlaceBookmarkId;
 import com.example.plimap.domain.place.entity.PlaceSearchHistory;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
+import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
@@ -39,15 +41,59 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     private static final String ADDRESS_RESULT_TYPE = "ADDRESS";
     private static final String PLACE_RESULT_TYPE = "PLACE";
     private static final int MAX_SEARCH_RESULTS = 15;
+    private static final double ACCESS_RANGE_METERS = 500.0;
+    private static final double DISTANCE_COMPARISON_EPSILON_METERS = 1e-6;
     private static final double PROVIDER_PLACE_SEARCH_DISTANCE_METERS = 20.0;
     private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null, 0L);
 
     private final PlaceRepository placeRepository;
+    private final PlaceBookmarkRepository placeBookmarkRepository;
     private final PlaceSearchHistoryRepository placeSearchHistoryRepository;
     private final PlaceQueryRepository placeQueryRepository;
     private final KakaoAddressSearchClient kakaoAddressSearchClient;
     private final KakaoPlaceSearchClient kakaoPlaceSearchClient;
     private final PinQueryService pinQueryService;
+
+    @Override
+    public PlaceResponse.Detail getPlaceDetail(
+            Long memberId,
+            Long placeId,
+            double latitude,
+            double longitude
+    ) {
+        Place place = getActivePlace(placeId);
+        PlacePinInfo pinInfo = pinQueryService.findPinInfosByPlaceIds(List.of(placeId))
+                .getOrDefault(placeId, NO_PIN_INFO);
+        boolean bookmarkedByMe = placeBookmarkRepository.existsById(
+                new PlaceBookmarkId(placeId, memberId)
+        );
+        boolean pinnedByMe = pinQueryService.existsActivePinByPlaceIdAndMemberId(
+                placeId,
+                memberId
+        );
+        double distance = GeoDistanceCalculator.calculateMeters(
+                latitude,
+                longitude,
+                place.getLocation().getY(),
+                place.getLocation().getX()
+        );
+
+        return new PlaceResponse.Detail(
+                place.getId(),
+                place.getName(),
+                place.getCategory(),
+                place.getAddress(),
+                place.getRoadAddress(),
+                place.getLocation().getY(),
+                place.getLocation().getX(),
+                Math.toIntExact(Math.round(distance)),
+                distance <= ACCESS_RANGE_METERS + DISTANCE_COMPARISON_EPSILON_METERS,
+                pinInfo.hasPin(),
+                pinInfo.pinCount(),
+                bookmarkedByMe,
+                pinnedByMe
+        );
+    }
 
     @Override
     public PlaceResponse.SearchResult searchPlaces(PlaceRequest.Search request) {
