@@ -1,6 +1,10 @@
 # Deployment Guide
 
+## Overview
+
 이 문서는 PLIMAP 백엔드의 local, dev, prod 환경별 실행 위치와 인프라 구성을 설명합니다.
+
+현재 구축된 local·dev 환경과 목표 상태인 prod 환경을 구분하고, 요청 흐름과 배포 자동화, 보안 및 검증 절차를 확인할 수 있도록 정리합니다.
 
 ## 환경별 구성
 
@@ -45,6 +49,8 @@ prod 항목은 현재 저장소에서 배포 완료를 의미하지 않습니다
 - Actuator는 상태 확인 endpoint만 공개하고 상세 컴포넌트 정보는 노출하지 않습니다.
 - 프록시 환경에서는 전달된 host와 protocol 정보를 Spring이 인식하도록 forwarded header 처리를 사용합니다.
 
+---
+
 ## local 환경
 
 local 환경은 백엔드 개발자가 외부 배포 인프라 없이 기능을 개발하고 검증하기 위한 구성입니다.
@@ -63,6 +69,8 @@ Spring Boot (개발자 PC, :8080)
 - Swagger UI는 `http://localhost:8080/swagger-ui/index.html`에서 확인합니다.
 
 구체적인 실행 명령은 [README의 로컬 실행 방법](../README.md#로컬-실행-방법), DB와 volume 관리 방법은 [Database Guide](DATABASE.md)를 참고합니다.
+
+---
 
 ## dev 환경
 
@@ -193,6 +201,8 @@ gcloud run services describe plimap-api-dev `
 - 로컬 프론트는 `GET /api/v1/auth/csrf` 응답 본문의 토큰을 상태 변경 요청의 `X-XSRF-TOKEN` 헤더로 전달합니다.
 - secure cookie와 forwarded header 처리는 HTTPS reverse proxy 구성을 기준으로 적용합니다.
 
+---
+
 ## prod 환경
 
 prod는 아직 배포되지 않았으며 다음 항목은 목표 구성입니다.
@@ -244,4 +254,3 @@ dev 배포 스크립트는 Cloud Run 원본에서 health endpoint의 `200`과 Sw
 - 환경변수, Secret Manager 매핑과 값 교체: [SECRETS.md](../scripts/gcp/SECRETS.md)
 - GCP 배포 스크립트 사용법: [scripts/gcp/README.md](../scripts/gcp/README.md)
 - 로컬 DB와 Migration: [DATABASE.md](DATABASE.md)
-- 로컬 실행 방법: [README.md](../README.md#로컬-실행-방법)

@@ -1,5 +1,11 @@
 # Database Development Guide
 
+## Overview
+
+이 문서는 PLIMAP API의 데이터베이스 개발 환경과 스키마 관리 원칙을 설명합니다.
+
+PostgreSQL/PostGIS 기반 로컬·테스트 구성, Flyway Migration, Hibernate 스키마 검증, QueryDSL 빌드 및 Testcontainers 테스트 절차를 일관된 방식으로 적용하는 것이 목적입니다.
+
 ## 구성
 
 - 로컬 DB: `postgis/postgis:18-3.6` Docker Compose
@@ -52,7 +58,7 @@ docker compose up -d
 
 그 다음 애플리케이션을 `local` 프로필로 실행하면 Flyway가 Migration을 처음부터 적용한다.
 
-## Migration 작성 규칙
+## Flyway Migration 작성 규칙
 
 - 위치: `src/main/resources/db/migration`
 - 초기 스키마: `V1__init_schema.sql`

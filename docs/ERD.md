@@ -102,39 +102,6 @@ PIN의 피드 공개 여부는 두 가지 값만 필요하므로 Enum 대신 `pi
 
 ---
 
-## 공통 엔티티 정책
-
-모든 JPA 엔티티는 `BaseEntity`를 상속하며 `created_at`, `updated_at` 컬럼을 공통으로 사용한다. 삭제 이력 보존이 필요한 `member`, `place`, `place_track`, `pin`만 `SoftDeleteEntity`를 상속하고 `deleted_at` 컬럼을 사용한다.
-
-- `created_at`, `updated_at`: JPA Auditing으로 자동 기록한다.
-- `deleted_at`: Soft Delete 대상의 삭제 시각을 기록하며, `NULL`이면 활성 데이터로 본다.
-- Soft Delete 대상의 삭제 유스케이스에서는 물리 삭제를 사용하지 않고 엔티티의 `delete()`를 호출한다.
-- Soft Delete 대상의 일반 조회와 인덱스는 활성 데이터인 `deleted_at IS NULL`을 기준으로 한다.
-- 삭제된 동일 식별 관계를 다시 활성화할 때는 새 row를 삽입하지 않고 기존 row를 `restore()`한다.
-- 이력·매핑 테이블은 별도의 보존 요구사항이 없다면 물리 삭제한다.
-
-PIN의 활성 상태와 피드 공개 여부는 별도로 관리한다.
-
-- `deleted_at IS NULL`: 삭제되지 않은 활성 PIN으로 본다.
-- `is_feed_public = TRUE`: 공개 피드에 노출하는 PIN으로 본다.
-- `is_feed_public = FALSE`: 활성 PIN으로 유지하되 작성자 외 사용자에게 노출하지 않는다.
-- 비공개 PIN도 활성 PIN이므로 회원별 장소 PIN 중복 등록 제한에 포함한다.
-- `place_track.public_pin_count`는 `deleted_at IS NULL AND is_feed_public = TRUE`인 PIN만 집계한다.
-
-시간 컬럼은 PostgreSQL `TIMESTAMPTZ`, Java `Instant`로 통일한다.
-
-PLIMAP 백엔드가 유일한 DB 쓰기 주체인 동안 `updated_at`은 JPA Auditing으로 관리한다. AWS RDS 연결 여부와 무관하게 이 정책을 유지하며, 외부 배치·Lambda·관리자 SQL·다른 서비스가 DB를 직접 수정하게 될 때 DB Trigger 도입을 재검토한다.
-
----
-
-## 로컬 DB 마이그레이션
-
-데이터베이스 스키마는 Hibernate `ddl-auto`가 아니라 Flyway Migration으로 관리한다.
-빈 로컬 DB는 애플리케이션 최초 실행 시 `V1__init_schema.sql`로 초기화된다.
-실행 및 변경 절차는 [데이터베이스 개발 가이드](DATABASE.md)를 따른다.
-
----
-
 ## PostgreSQL DDL
 
 ~~~sql
@@ -675,13 +642,6 @@ CREATE TABLE notification
 CREATE INDEX idx_notification_recipient_latest
     ON notification (recipient_id, created_at DESC, id DESC);
 ~~~
-
----
-
-## 화면 테이블 매칭
-
-| Figma 화면 | 화면 수 | 관련 테이블 | 설계 판단 |
-|---|---:|---|---|
 
 ---
 
