@@ -267,27 +267,7 @@ class PlaceTrackQueryServiceImplTest {
     }
 
     @Test
-    void 반경_밖이지만_본인_PIN이_있으면_조회한다() {
-        Place place = givenPlaceAndDistance(500.1);
-        Member member = mock(Member.class);
-        givenNoLikedPlaceTrack();
-        when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
-        when(pinQueryService.validatePlacePinAccessByMember(member, place))
-                .thenReturn(true);
-        givenTracks(List.of(track(10L, 5, true)), false);
-
-        PlaceTrackResponse.PlaceTrackListResult result =
-                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
-
-        assertThat(result.isWithinRadius()).isFalse();
-        assertThat(result.isTrackDetailAccessible()).isTrue();
-        assertThat(result.tracks().getFirst().pinCount()).isEqualTo(1);
-        assertThat(result.tracks().getFirst().likeCount()).isEqualTo(5);
-        assertThat(result.tracks().getFirst().isLiked()).isTrue();
-    }
-
-    @Test
-    void 반경_밖이지만_팔로우한_회원의_PIN이_있으면_조회한다() {
+    void 반경_밖이지만_PIN_접근이_허용되면_조회한다() {
         Place place = givenPlaceAndDistance(500.1);
         Member member = mock(Member.class);
         givenNoLikedPlaceTrack();
