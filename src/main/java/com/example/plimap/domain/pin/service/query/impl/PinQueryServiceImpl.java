@@ -95,6 +95,6 @@ public class PinQueryServiceImpl implements PinQueryService {
 
     @Override
     public boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId) {
-        return pinQueryRepository.existsActivePinByPlaceIdAndMemberId(memberId, placeId);
+        return pinQueryRepository.existsActivePinByPlaceIdAndMemberId(placeId, memberId);
     }
 }

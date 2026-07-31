@@ -11,6 +11,7 @@ import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.repository.PlaceRepository;
@@ -73,12 +74,13 @@ class PinQueryRepositoryImplTest {
     @Autowired
     EntityManager entityManager;
 
-    Pin pin1, pin2, pin3, pin4, pin5, deletedPin, pin7;
+    Pin pin1, pin2, pin3, pin4, pin5, deletedPin, pin7, pin8, pin9;
     Place place1, place2, place3, place4, deletedPlace;
     Member member1, member2, member3, deletedMember;
     Report report;
-    PlaceTrack placeTrack1, placeTrack3;
+    PlaceTrack placeTrack1, placeTrack3, placeTrack4, placeTrack5;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+    private PinQueryService pinQueryService;
 
     @BeforeEach
     void setup() {
@@ -147,6 +149,8 @@ class PinQueryRepositoryImplTest {
         placeTrack1 = PlaceTrack.create(place1, track);
         PlaceTrack placeTrack2 = PlaceTrack.create(place2, track);
         placeTrack3 = PlaceTrack.create(place4, track2);
+        placeTrack4 = PlaceTrack.create(deletedPlace, track2);
+        placeTrack5 = PlaceTrack.create(place3, track2);
 
         pin1 = createPin(member1, place1, placeTrack1);
         pin2 = createPin(member2, place1, placeTrack1);
@@ -155,6 +159,8 @@ class PinQueryRepositoryImplTest {
         pin5 = createPin(member1, place4, placeTrack3);
         deletedPin = createPin(member3, place1, placeTrack1);
         pin7 = createPin(member3, place2, placeTrack2, false);
+        pin8 = createPin(member3, deletedPlace, placeTrack4);
+        pin9 = createPin(deletedMember, place2, placeTrack2);
 
         report = Report.createPinReport(member2 ,pin5, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null);
 
@@ -163,15 +169,12 @@ class PinQueryRepositoryImplTest {
         memberFollowIdRepository.save(memberFollow);
         placeRepository.saveAll(List.of(place1, place2, place3, place4, deletedPlace));
         trackRepository.saveAll(List.of(track, track2));
-        placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3));
-        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, deletedPin, pin7));
+        placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5));
+        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, deletedPin, pin7, pin8, pin9));
         reportRepository.save(report);
 
         increaseLike(pin1, 3);
         increaseLike(pin2, 2);
-        deletedPin.delete();
-        deletedMember.delete();
-        deletedPlace.delete();;
 
         entityManager.flush();
         entityManager.clear();
@@ -205,10 +208,10 @@ class PinQueryRepositoryImplTest {
 
         assertThat(result.get(place1.getId()).hasPin()).isTrue();
         assertThat(result.get(place1.getId()).firstPinCreatorNickname()).isEqualTo("이서");
-        assertThat(result.get(place1.getId()).pinCount()).isEqualTo(2L);
+        assertThat(result.get(place1.getId()).pinCount()).isEqualTo(3L);
         assertThat(result.get(place2.getId()).hasPin()).isTrue();
         assertThat(result.get(place2.getId()).firstPinCreatorNickname()).isEqualTo("동길");
-        assertThat(result.get(place2.getId()).pinCount()).isEqualTo(2L);
+        assertThat(result.get(place2.getId()).pinCount()).isEqualTo(3L);
         assertThat(result.get(place3.getId()).hasPin()).isFalse();
         assertThat(result.get(place3.getId()).firstPinCreatorNickname()).isNull();
         assertThat(result.get(place3.getId()).pinCount()).isEqualTo(0L);
@@ -230,7 +233,7 @@ class PinQueryRepositoryImplTest {
 
         assertThat(result.get(place1.getId()).hasPin()).isTrue();
         assertThat(result.get(place1.getId()).firstPinCreatorNickname()).isEqualTo("동길");
-        assertThat(result.get(place1.getId()).pinCount()).isEqualTo(1L);
+        assertThat(result.get(place1.getId()).pinCount()).isEqualTo(2L);
     }
 
     @Test
@@ -337,7 +340,7 @@ class PinQueryRepositoryImplTest {
         String nextCursor = response.nextCursor();
 
         Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), nextCursor, 2, PinSortType.POPULAR, placeTrack1.getId());
-        assertThat(response2.data().size()).isEqualTo(1);
+        assertThat(response2.data().size()).isEqualTo(2);
         assertThat(response2.hasNext()).isFalse();
         assertThat(response2.data().getFirst().pinId()).isEqualTo(pin2.getId());
         assertThat(response2.nextCursor()).isNull();
@@ -349,11 +352,11 @@ class PinQueryRepositoryImplTest {
 
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isTrue();
-        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin2.getId());
+        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(deletedPin.getId());
         String nextCursor = response.nextCursor();
         Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), nextCursor, 2, PinSortType.LATEST, placeTrack1.getId());
 
-        assertThat(response2.data().size()).isEqualTo(1);
+        assertThat(response2.data().size()).isEqualTo(2);
         assertThat(response2.hasNext()).isFalse();
         assertThat(response2.nextCursor()).isNull();
     }
@@ -435,9 +438,22 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 장소에_사용자가_등록한_활성핀이_존재하지_않으면_false를_반환한다() {
-        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place1.getId(), member3.getId());
+        // 삭제 전
+        assertThat(
+                pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place1.getId(), member3.getId())
+        ).isTrue();
 
-        assertThat(result).isFalse();
+        // when
+        Pin managedPin = pinRepository.findById(deletedPin.getId()).orElseThrow();
+
+        managedPin.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        assertThat(
+                pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place1.getId(), member3.getId())
+        ).isFalse();
     }
 
     @Test
@@ -449,16 +465,42 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 장소가_존재하지_않으면_장소에_사용자가_등록한_핀_조회에서_false를_반환한다() {
-        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(deletedPlace.getId(), member3.getId());
+        // 삭제 전
+        assertThat(
+                pinQueryRepository.existsActivePinByPlaceIdAndMemberId(deletedPlace.getId(), member3.getId())
+        ).isTrue();
 
-        assertThat(result).isFalse();
+        // when
+        Place managedPlace = placeRepository.findById(deletedPlace.getId()).orElseThrow();
+
+        managedPlace.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        assertThat(
+                pinQueryRepository.existsActivePinByPlaceIdAndMemberId(deletedPlace.getId(), member3.getId())
+        ).isFalse();
     }
 
     @Test
     void 회원이__존재하지_않으면_장소에_사용자가_등록한_핀_조회에서_false를_반환한다() {
-        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place1.getId(), deletedMember.getId());
+        // 삭제 전
+        assertThat(
+                pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place2.getId(), deletedMember.getId())
+        ).isTrue();
 
-        assertThat(result).isFalse();
+        // when
+        Member managedMember = memberRepository.findById(deletedMember.getId()).orElseThrow();
+
+        managedMember.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        assertThat(
+                pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place2.getId(), deletedMember.getId())
+        ).isFalse();
     }
 
 
