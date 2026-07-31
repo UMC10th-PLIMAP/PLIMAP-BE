@@ -1,6 +1,7 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
@@ -16,6 +17,7 @@ import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -91,5 +93,10 @@ public class PinQueryServiceImpl implements PinQueryService {
                 .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
 
         return PinConverter.toPinPreview(pin);
+    }
+
+    @Override
+    public boolean existsActivePinByPlaceIdAndMemberId(Long memberId, Long placeId) {
+        return pinQueryRepository.existsActivePinByPlaceIdAndMemberId(memberId, placeId);
     }
 }

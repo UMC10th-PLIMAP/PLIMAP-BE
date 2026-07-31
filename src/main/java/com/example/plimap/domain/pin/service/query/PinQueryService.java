@@ -29,4 +29,6 @@ public interface PinQueryService {
     Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId);
 
     PinResponse.PinPreview getPinPreview(Long pinId);
+
+    boolean existsActivePinByPlaceIdAndMemberId(Long memberId, Long placeId);
 }

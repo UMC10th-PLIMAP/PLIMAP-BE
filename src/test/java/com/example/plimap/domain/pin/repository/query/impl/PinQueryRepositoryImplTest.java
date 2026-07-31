@@ -408,6 +408,20 @@ class PinQueryRepositoryImplTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    void 장소에_사용자가_등록한_핀이_존재하면_true를_반환한다() {
+        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(member1.getId(), place1.getId());
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void 장소에_사용자가_등록한_핀이_존재하지_않으면_false를_반환한다() {
+        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(member1.getId(), place2.getId());
+
+        assertThat(result).isFalse();
+    }
+
     private Member createMember(String name, String nickname) {
         return Member.builder()
                 .name(name)
