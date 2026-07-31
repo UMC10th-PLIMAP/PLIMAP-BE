@@ -73,12 +73,9 @@ class PinQueryRepositoryImplTest {
     @Autowired
     EntityManager entityManager;
 
-    Pin pin1, pin2, pin3, pin4, pin5;
-    private Place place1;
-    private Place place2;
-    private Place place3;
-    private Place place4;
-    Member member1, member2;
+    Pin pin1, pin2, pin3, pin4, pin5, deletedPin, pin7;
+    Place place1, place2, place3, place4, deletedPlace;
+    Member member1, member2, member3, deletedMember;
     Report report;
     PlaceTrack placeTrack1, placeTrack3;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
@@ -87,6 +84,8 @@ class PinQueryRepositoryImplTest {
     void setup() {
         member1 = createMember("이서윤", "이서");
         member2 = createMember("홍길동", "동길");
+        member3 = createMember("테스트", "테스트");
+        deletedMember = createMember("삭제멤", "삭제멤");
 
         place1 = createPlace(
                 "여의도 한강공원",
@@ -114,6 +113,13 @@ class PinQueryRepositoryImplTest {
                 "서울특별시 송파구 잠실동",
                 127.1025,
                 37.5125
+        );
+
+        deletedPlace = createPlace(
+                "석촌호수2",
+                "서울특별시 송파구 잠실동22",
+                127.102,
+                37.512
         );
 
         Track track = Track.create(
@@ -147,20 +153,25 @@ class PinQueryRepositoryImplTest {
         pin3 = createPin(member2, place2, placeTrack2);
         pin4 = createPin(member2, place4, placeTrack3);
         pin5 = createPin(member1, place4, placeTrack3);
+        deletedPin = createPin(member3, place1, placeTrack1);
+        pin7 = createPin(member3, place2, placeTrack2, false);
 
         report = Report.createPinReport(member2 ,pin5, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null);
 
-        memberRepository.saveAll(List.of(member1, member2));
+        memberRepository.saveAll(List.of(member1, member2, member3, deletedMember));
         MemberFollow memberFollow = MemberFollow.create(member1, member2);
         memberFollowIdRepository.save(memberFollow);
-        placeRepository.saveAll(List.of(place1, place2, place3, place4));
+        placeRepository.saveAll(List.of(place1, place2, place3, place4, deletedPlace));
         trackRepository.saveAll(List.of(track, track2));
         placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3));
-        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5));
+        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, deletedPin, pin7));
         reportRepository.save(report);
 
         increaseLike(pin1, 3);
         increaseLike(pin2, 2);
+        deletedPin.delete();
+        deletedMember.delete();
+        deletedPlace.delete();;
 
         entityManager.flush();
         entityManager.clear();
@@ -197,7 +208,7 @@ class PinQueryRepositoryImplTest {
         assertThat(result.get(place1.getId()).pinCount()).isEqualTo(2L);
         assertThat(result.get(place2.getId()).hasPin()).isTrue();
         assertThat(result.get(place2.getId()).firstPinCreatorNickname()).isEqualTo("동길");
-        assertThat(result.get(place2.getId()).pinCount()).isEqualTo(1L);
+        assertThat(result.get(place2.getId()).pinCount()).isEqualTo(2L);
         assertThat(result.get(place3.getId()).hasPin()).isFalse();
         assertThat(result.get(place3.getId()).firstPinCreatorNickname()).isNull();
         assertThat(result.get(place3.getId()).pinCount()).isEqualTo(0L);
@@ -410,17 +421,46 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 장소에_사용자가_등록한_핀이_존재하면_true를_반환한다() {
-        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(member1.getId(), place1.getId());
+        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place1.getId(), member1.getId());
 
         assertThat(result).isTrue();
     }
 
     @Test
     void 장소에_사용자가_등록한_핀이_존재하지_않으면_false를_반환한다() {
-        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(member1.getId(), place2.getId());
+        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place2.getId(), member1.getId());
 
         assertThat(result).isFalse();
     }
+
+    @Test
+    void 장소에_사용자가_등록한_활성핀이_존재하지_않으면_false를_반환한다() {
+        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place1.getId(), member3.getId());
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void 피드_비공개_상태_핀이어도_존재하면_true를_반환한다() {
+        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place2.getId(), member3.getId());
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void 장소가_존재하지_않으면_장소에_사용자가_등록한_핀_조회에서_false를_반환한다() {
+        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(deletedPlace.getId(), member3.getId());
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void 회원이__존재하지_않으면_장소에_사용자가_등록한_핀_조회에서_false를_반환한다() {
+        boolean result = pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place1.getId(), deletedMember.getId());
+
+        assertThat(result).isFalse();
+    }
+
 
     private Member createMember(String name, String nickname) {
         return Member.builder()
@@ -441,13 +481,17 @@ class PinQueryRepositoryImplTest {
     }
 
     private Pin createPin(Member member, Place place, PlaceTrack placeTrack) {
+        return createPin(member, place, placeTrack, true);
+    }
+
+    private Pin createPin(Member member, Place place, PlaceTrack placeTrack, boolean feedPublic) {
         return Pin.builder()
                 .member(member)
                 .place(place)
                 .placeTrack(placeTrack)
                 .clipStartMs(70000)
                 .introduction("good")
-                .isFeedPublic(true)
+                .isFeedPublic(feedPublic)
                 .build();
     }
 

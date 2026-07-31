@@ -19,9 +19,7 @@ import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
 import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -388,7 +386,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     @Override
-    public boolean existsActivePinByPlaceIdAndMemberId(Long memberId, Long placeId) {
+    public boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId) {
             return queryFactory
                     .selectOne()
                     .from(pin)

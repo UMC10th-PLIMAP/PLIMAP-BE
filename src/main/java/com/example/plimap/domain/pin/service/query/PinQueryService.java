@@ -30,5 +30,5 @@ public interface PinQueryService {
 
     PinResponse.PinPreview getPinPreview(Long pinId);
 
-    boolean existsActivePinByPlaceIdAndMemberId(Long memberId, Long placeId);
+    boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
 }
