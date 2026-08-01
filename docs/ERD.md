@@ -2,7 +2,7 @@
 
 > 위치 기반 음악 공유 서비스 데이터베이스 설계서
 >
-> v0.8.0 | 2026-07-31
+> v0.9.0 | 2026-08-01
 
 ---
 
@@ -15,7 +15,7 @@
 |  | social_account | 카카오, 구글, 애플 소셜 계정 |
 |  | terms | 이용약관 및 개인정보 처리방침 버전 |
 |  | member_terms_agreement | 회원별 약관 동의 이력 |
-| **place** | place | 검색 또는 지도에서 선택한 장소와 PostGIS 위치 |
+| **place** | place | 장소 검색·주소 검색 또는 지도에서 선택한 장소와 PostGIS 위치 |
 |  | place_search_history | 회원별 최근 선택 장소와 위치 스냅샷 |
 |  | place_bookmark | 회원이 저장한 장소 북마크 |
 | **track** | track | 외부 음악 제공자의 곡 메타데이터 |
@@ -34,6 +34,8 @@
 
 ```
 member
+   ├── 1:N ─ member_follow (팔로워, follower_id)
+   ├── 1:N ─ member_follow (팔로잉 대상, following_id)
    ├── 1:N ─ social_account (소셜 로그인: 카카오/구글/애플)
    ├── 1:N ─ member_terms_agreement ─── N:1 ─ terms (약관 버전별 동의)
    ├── 1:N ─ place_search_history (최근 선택 장소)
@@ -47,6 +49,7 @@ member
    └── 1:N ─ notification (행위자, actor)
 
 place 
+   ├── 1:N ─ place_search_history (저장된 장소 참조, place_id nullable)
    ├── 1:N ─ place_bookmark ─── N:1 ─ member (장소 북마크)
    └── 1:N ─ place_track ─┬─ N:1 ─ track (장소에 등록된 곡)
                           ├─ 1:N ─ pin ─┬─ N:1 ─ member (등록자)
@@ -55,11 +58,13 @@ place
                           │             └─ 1:N ─ notification (PIN 등록·좋아요 알림, nullable)
                           └─ 1:N ─ place_track_like ─── N:1 ─ member (하트)
 
+member ─── N:N ─ member (via member_follow, 자기참조 팔로우)
 member ─── N:N ─ terms (via member_terms_agreement)
 member ─── N:N ─ place (via place_bookmark)
 member ─── N:N ─ place_track (via place_track_like)
 member ─── N:N ─ pin (via pin_like, 따봉)
 pin ─── N:N ─ tag (via pin_tag)
+pin ─── N:1 ─ place (JPA 직접 참조, DB는 place_track 복합 FK로 동일 장소 보장)
 pin ─── 1:N ─ report (신고 대상 PIN, nullable)
 pin ─── 1:N ─ notification (PIN 등록·좋아요 알림, nullable)
 ```
@@ -72,10 +77,13 @@ pin ─── 1:N ─ notification (PIN 등록·좋아요 알림, nullable)
 MemberStatus: ACTIVE, SUSPENDED, WITHDRAWN
 AuthProvider: KAKAO, GOOGLE, APPLE
 TermsType: SERVICE, PRIVACY, LOCATION, MARKETING
-PlaceSource: PLACE_SEARCH, MAP_SELECTION
+PlaceSource: PLACE_SEARCH, ADDRESS_SEARCH, MAP_SELECTION
 PinSortType: POPULAR, LATEST
+PlaceTrackSort: POPULAR, LATEST
 AvailabilityStatus: CREATABLE_NEW_PLACE, 
                        OUT_OF_RANGE, TOO_CLOSE_TO_PIN
+NicknameCheckFailReason: TOO_SHORT, TOO_LONG, INVALID_FORMAT,
+                         FORBIDDEN_WORD, DUPLICATE
 ReportCategory: PERSONAL_INFORMATION_EXPOSURE, OBSCENE_OR_HARMFUL,
                 ABUSE_OR_HATE_SPEECH, COMMERCIAL_OR_PROMOTIONAL,
                 OTHER
@@ -86,10 +94,12 @@ NotificationType: FOLLOW, PIN_CREATED, PIN_LIKED
 |---|---|---|
 | `MemberStatus` | 회원의 정상 이용·정지·탈퇴 상태 | `member.status`에 저장 |
 | `AuthProvider` | 회원이 인증한 소셜 로그인 제공자 | `social_account.provider`에 저장 |
-| `TermsType` | 약관이 서비스 이용약관인지 개인정보 처리방침인지 구분 | `terms.type`에 저장 |
-| `PlaceSource` | 장소가 외부 장소 검색과 지도 직접 선택 중 어느 경로로 만들어졌는지 구분 | `place.source`에 저장 |
-| `PinSortType` | 장소의 곡 또는 곡의 PIN 목록을 인기순·최신순 중 어떤 기준으로 조회할지 표현 | API 요청용, DB에 저장하지 않음 |
-| `PinRegistrationStatus` | 현재 위치와 장소·기존 PIN 상태를 바탕으로 PIN 등록 가능 여부와 불가 사유를 표현 | API 응답용 계산값, DB에 저장하지 않음 |
+| `TermsType` | 약관이 서비스 이용·개인정보 처리·위치기반서비스·마케팅 동의 중 어떤 유형인지 구분 | `terms.type`에 저장 |
+| `PlaceSource` | 장소가 외부 장소 검색·주소 검색·지도 직접 선택 중 어느 경로로 만들어졌는지 구분 | `place.source`에 저장 |
+| `PinSortType` | 장소별 곡에 등록된 PIN 목록을 인기순·최신순 중 어떤 기준으로 조회할지 표현 | API 요청용, DB에 저장하지 않음 |
+| `PlaceTrackSort` | 장소의 곡 목록을 인기순·최신순 중 어떤 기준으로 조회할지 표현 | API 요청용, DB에 저장하지 않음 |
+| `AvailabilityStatus` | 현재 위치와 장소·기존 PIN 상태를 바탕으로 PIN 등록 가능 여부와 불가 사유를 표현 | API 응답용 계산값, DB에 저장하지 않음 |
+| `NicknameCheckFailReason` | 닉네임 사용 불가 사유를 길이·형식·금칙어·중복 기준으로 표현 | API 응답용 계산값, DB에 저장하지 않음 |
 | `ReportCategory` | 개인정보 노출·음란/유해·욕설/혐오 표현·상업적/홍보성·기타 신고 사유 | `report.category`에 저장 |
 | `NotificationType` | 알림이 팔로우·PIN 등록·PIN 좋아요 중 어떤 이벤트로 생성됐는지 구분 | `notification.type`에 저장 |
 
@@ -237,8 +247,13 @@ CREATE TABLE place
     category          VARCHAR(100),
     address           VARCHAR(255) NOT NULL,
     road_address      VARCHAR(255),
+    administrative_region_code VARCHAR(20),
+    sido              VARCHAR(100),
+    sigungu           VARCHAR(100),
+    eup_myeon_dong    VARCHAR(100),
     place_provider    VARCHAR(30),
     provider_place_id VARCHAR(255),
+    normalized_address VARCHAR(255),
     source            VARCHAR(20)  NOT NULL,
     location          GEOGRAPHY(POINT, 4326) NOT NULL,
     created_at        TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -246,7 +261,7 @@ CREATE TABLE place
     deleted_at        TIMESTAMPTZ,
     CONSTRAINT pk_place PRIMARY KEY (id),
     CONSTRAINT chk_place_source
-        CHECK (source IN ('PLACE_SEARCH', 'MAP_SELECTION')),
+        CHECK (source IN ('PLACE_SEARCH', 'ADDRESS_SEARCH', 'MAP_SELECTION')),
     CONSTRAINT chk_place_location_not_empty
         CHECK (NOT ST_IsEmpty(location::geometry)),
     CONSTRAINT chk_place_provider
@@ -257,11 +272,23 @@ CREATE TABLE place
                 AND provider_place_id IS NOT NULL
             )
             OR (
+                source = 'ADDRESS_SEARCH'
+                AND place_provider = 'KAKAO'
+                AND provider_place_id IS NULL
+            )
+            OR (
                 source = 'MAP_SELECTION'
                 AND place_provider IS NULL
                 AND provider_place_id IS NULL
             )
-        )
+        ),
+    CONSTRAINT chk_place_normalized_address
+        CHECK (
+            (source = 'ADDRESS_SEARCH' AND normalized_address IS NOT NULL)
+            OR (source <> 'ADDRESS_SEARCH' AND normalized_address IS NULL)
+        ),
+    CONSTRAINT chk_place_address_search_category
+        CHECK (source <> 'ADDRESS_SEARCH' OR category IS NULL)
 );
 
 CREATE UNIQUE INDEX uk_place_provider_id
@@ -277,6 +304,16 @@ CREATE INDEX idx_place_location_gist
 CREATE INDEX idx_place_name_ci
     ON place (lower(name))
     WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_place_active_administrative_region_code
+    ON place (administrative_region_code)
+    WHERE deleted_at IS NULL
+      AND administrative_region_code IS NOT NULL;
+
+CREATE UNIQUE INDEX uk_place_active_address_search_normalized_address
+    ON place (normalized_address)
+    WHERE source = 'ADDRESS_SEARCH'
+      AND deleted_at IS NULL;
 
 CREATE TABLE place_bookmark
 (
@@ -453,8 +490,6 @@ CREATE TABLE pin
         REFERENCES place_track (id, place_id) ON DELETE CASCADE,
     CONSTRAINT chk_pin_clip_start
         CHECK (clip_start_ms >= 0),
-    CONSTRAINT chk_pin_clip_range
-        CHECK (clip_end_ms > clip_start_ms),
     CONSTRAINT chk_pin_introduction
         CHECK (char_length(introduction) <= 100),
     CONSTRAINT chk_pin_like_count
@@ -663,3 +698,4 @@ CREATE INDEX idx_notification_recipient_latest
 | 0.6.1 | 2026-07-20 | AvailabilityStatus enum 수정                                                                                            |
 | 0.7.0 | 2026-07-23 | 회원·공개 PIN 신고 이력을 위한 `report` 테이블과 `ReportCategory`를 추가하고 대상·상세 내용·중복 신고 제약을 반영                         |
 | 0.8.0 | 2026-07-31 | 팔로우·PIN 등록·PIN 좋아요 알림(내소식)을 위한 `notification` 테이블과 `NotificationType`을 추가하고, 알림 유형별 대상 PIN 필수 여부 제약을 반영 |
+| 0.9.0 | 2026-08-01 | `place`의 행정구역·정규화 주소와 `ADDRESS_SEARCH` 제약·인덱스를 반영하고, 누락된 관계와 API Enum을 보완했으며 삭제된 `clip_end_ms` 제약을 제거 |
