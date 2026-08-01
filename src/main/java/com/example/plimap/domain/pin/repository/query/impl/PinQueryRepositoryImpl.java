@@ -488,6 +488,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .join(pin.placeTrack, placeTrack).fetchJoin()
                 .join(placeTrack.track, track).fetchJoin()
                 .where(pin.id.in(pinIds))
+                .orderBy(pin.createdAt.desc())
                 .fetch();
 
         return pins.stream()
@@ -506,8 +507,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         String sql = CLUSTER_QUERY.formatted(
             info.clusterLevelSql(),
             info.regionNameSql(),
-            info.regionNameSql(),
-            info.clusterLevelSql()
+            info.regionNameSql()
         );
 
         List<Object[]> rows = entityManager.createNativeQuery(sql)

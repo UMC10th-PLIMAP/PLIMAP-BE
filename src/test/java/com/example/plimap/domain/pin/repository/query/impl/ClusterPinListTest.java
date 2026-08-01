@@ -208,6 +208,8 @@ class ClusterPinListTest {
         placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6, placeTrack7, placeTrack8));
         pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10, pin11));
 
+        placeTrack7.increaseLikeCount();
+        placeTrack8.increaseLikeCount();
         placeTrack8.increaseLikeCount();
 
         entityManager.flush();
@@ -396,10 +398,10 @@ class ClusterPinListTest {
         // then
         assertThat(result).hasSize(2);
         PinResponse.PinPreview first = result.getFirst();
-        assertThat(first.placeId()).isEqualTo(place1.getId());
+        assertThat(first.placeId()).isEqualTo(place2.getId());
 
         PinResponse.PinPreview last = result.getLast();
-        assertThat(last.placeId()).isEqualTo(place2.getId());
+        assertThat(last.placeId()).isEqualTo(place1.getId());
     }
 
     @Test
@@ -420,6 +422,39 @@ class ClusterPinListTest {
         assertThat(result).hasSize(1);
         PinResponse.PinPreview first = result.getFirst();
         assertThat(first.albumImageUrl()).isEqualTo("album");
+    }
+
+    @Test
+    void 삭제처리된_핀은_제외하고_가장_높은것을_반환한다() {
+        // given
+        Point minPoint = geometryFactory.createPoint(
+                new Coordinate(127.0250, 37.5300)
+        );
+
+        Point maxPoint = geometryFactory.createPoint(
+                new Coordinate(127.0750, 37.5600)
+        );
+        // when
+        List<PinResponse.PinPreview> result = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+
+        // then
+        assertThat(result).hasSize(1);
+        PinResponse.PinPreview first = result.getFirst();
+        assertThat(first.albumImageUrl()).isEqualTo("album");
+
+        // when
+        Pin managedPin = pinRepository.findById(pin11.getId()).orElseThrow();
+
+        managedPin.delete(); // 좋아요가 가장 높은 핀 삭제
+        entityManager.flush();
+        entityManager.clear();
+
+        List<PinResponse.PinPreview> result2 = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+
+        // then
+        assertThat(result2).hasSize(1);
+        PinResponse.PinPreview first2 = result2.getFirst();
+        assertThat(first2.albumImageUrl()).isEqualTo("album2");
     }
 
     private Member createMember(String name, String nickname) {

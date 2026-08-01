@@ -107,7 +107,7 @@ public class PinQueryServiceImpl implements PinQueryService {
     public PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request) {
         Point minPoint = geometryFactory.createPoint(new Coordinate(request.southWestLng(), request.southWestLat()));
         Point maxPoint = geometryFactory.createPoint(new Coordinate(request.northEastLng(), request.northEastLat()));
-        if (request.zoomLevel() >= 13) {
+        if (request.zoomLevel() >= 14) {
             // 개별 Pin 조회
             List<PinResponse.PinPreview> pinPreviews = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
             return PinConverter.toClusterAndPin(null, pinPreviews, request.zoomLevel());
