@@ -3,9 +3,11 @@ package com.example.plimap.domain.place.service.command.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.plimap.domain.place.dto.PlaceAddressDecision;
 import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
+import com.example.plimap.domain.place.enums.MapSelectionStatus;
 import com.example.plimap.domain.place.service.query.PlaceLocationMetadataService;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import java.util.ArrayList;
@@ -15,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +28,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -50,6 +54,8 @@ class PlaceMapSelectionConcurrencyIntegrationTest {
         jdbcTemplate.update("DELETE FROM place");
         when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
                 .thenReturn(new PlaceAdministrativeRegion(null, null, null, null));
+        when(placeLocationMetadataService.getAddressDecision(37.5283, 126.9326))
+                .thenReturn(new PlaceAddressDecision(null, null, null));
     }
 
     @AfterEach
@@ -72,7 +78,7 @@ class PlaceMapSelectionConcurrencyIntegrationTest {
         ExecutorService executor = Executors.newFixedThreadPool(REQUEST_COUNT);
 
         try {
-            List<Future<PlaceResponse.MapSelection>> futures = new ArrayList<>();
+            List<Future<PlaceResponse.MapSelectionResult>> futures = new ArrayList<>();
             for (int index = 0; index < REQUEST_COUNT; index++) {
                 futures.add(executor.submit(() -> {
                     start.await();
@@ -83,8 +89,8 @@ class PlaceMapSelectionConcurrencyIntegrationTest {
             start.countDown();
 
             List<Long> placeIds = new ArrayList<>();
-            for (Future<PlaceResponse.MapSelection> future : futures) {
-                placeIds.add(future.get(30, TimeUnit.SECONDS).placeId());
+            for (Future<PlaceResponse.MapSelectionResult> future : futures) {
+                placeIds.add(future.get(30, TimeUnit.SECONDS).mapSelection().placeId());
             }
 
             Long activeMapSelectionCount = jdbcTemplate.queryForObject("""
@@ -98,5 +104,38 @@ class PlaceMapSelectionConcurrencyIntegrationTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void coord2address_호출_중에는_DB_트랜잭션을_점유하지_않는다() {
+        AtomicBoolean transactionActiveDuringCall = new AtomicBoolean(true);
+        when(placeLocationMetadataService.getAddressDecision(37.5283, 126.9326))
+                .thenAnswer(invocation -> {
+                    transactionActiveDuringCall.set(
+                            TransactionSynchronizationManager.isActualTransactionActive()
+                    );
+                    return new PlaceAddressDecision(
+                            "카카오 판교아지트",
+                            "서울특별시 영등포구 여의도동",
+                            "서울특별시 영등포구 여의동로"
+                    );
+                });
+
+        PlaceResponse.MapSelectionResult result = placeCommandService.confirmMapSelection(
+                new PlaceRequest.MapSelection(
+                        37.5283,
+                        126.9326,
+                        "물빛무대 앞 광장",
+                        "서울특별시 영등포구 여의도동",
+                        "서울특별시 영등포구 여의동로"
+                )
+        );
+
+        assertThat(transactionActiveDuringCall).isFalse();
+        assertThat(result.status()).isEqualTo(MapSelectionStatus.PLACE_SEARCH_REQUIRED);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM place",
+                Long.class
+        )).isZero();
     }
 }

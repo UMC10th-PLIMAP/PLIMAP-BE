@@ -119,10 +119,10 @@ public class PlaceController implements PlaceControllerDocs {
 
     @Override
     @PostMapping("/map-selections")
-    public ResponseEntity<ApiResponse<PlaceResponse.MapSelection>> confirmMapSelection(
+    public ResponseEntity<ApiResponse<PlaceResponse.MapSelectionResult>> confirmMapSelection(
             @RequestBody PlaceRequest.MapSelection request
     ) {
-        PlaceResponse.MapSelection result = placeCommandService.confirmMapSelection(request);
+        PlaceResponse.MapSelectionResult result = placeCommandService.confirmMapSelection(request);
         return ResponseEntity
                 .status(PlaceSuccessCode.PLACE_MAP_SELECTION_SUCCESS.getStatus())
                 .body(ApiResponse.success(PlaceSuccessCode.PLACE_MAP_SELECTION_SUCCESS, result));
