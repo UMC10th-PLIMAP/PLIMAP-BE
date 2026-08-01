@@ -32,7 +32,7 @@ public enum PlaceSuccessCode implements BaseSuccessCode {
     PLACE_MAP_SELECTION_SUCCESS(
             HttpStatus.OK,
             "PLACE_MAP_SELECTION_SUCCESS",
-            "지도 선택 장소 확정에 성공했습니다."
+            "지도 선택 장소 판정에 성공했습니다."
     ),
     PLACE_DETAIL_SUCCESS(
             HttpStatus.OK,

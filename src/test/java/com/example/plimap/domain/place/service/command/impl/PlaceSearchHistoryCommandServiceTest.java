@@ -13,6 +13,7 @@ import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.query.PlaceLocationMetadataService;
+import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +27,7 @@ class PlaceSearchHistoryCommandServiceTest {
     private final PlaceQueryRepository placeQueryRepository = mock(PlaceQueryRepository.class);
     private final PlacePersistenceService placePersistenceService =
             mock(PlacePersistenceService.class);
+    private final PlaceQueryService placeQueryService = mock(PlaceQueryService.class);
     private final PlaceLocationMetadataService placeLocationMetadataService =
             mock(PlaceLocationMetadataService.class);
     private final PinQueryService pinQueryService = mock(PinQueryService.class);
@@ -40,6 +42,7 @@ class PlaceSearchHistoryCommandServiceTest {
                 placeSearchHistoryRepository,
                 placeQueryRepository,
                 placePersistenceService,
+                placeQueryService,
                 placeLocationMetadataService,
                 pinQueryService
         );

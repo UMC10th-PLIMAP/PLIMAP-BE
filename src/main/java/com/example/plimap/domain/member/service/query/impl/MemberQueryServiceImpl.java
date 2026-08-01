@@ -58,6 +58,12 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     }
 
     @Override
+    public boolean isNicknameForbidden(String nickname) {
+        String lowerNickname = nickname.toLowerCase(Locale.ROOT);
+        return badWordFiltering.check(nickname) || CUSTOM_FORBIDDEN_WORDS.stream().anyMatch(lowerNickname::contains);
+    }
+
+    @Override
     public NicknameCheckFailReason checkNicknameFailReason(String nickname) {
         if (nickname.length() < NICKNAME_MIN_LENGTH) {
             return NicknameCheckFailReason.TOO_SHORT;
@@ -68,8 +74,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         if (!NICKNAME_FORMAT.matcher(nickname).matches()) {
             return NicknameCheckFailReason.INVALID_FORMAT;
         }
-        String lowerNickname = nickname.toLowerCase(Locale.ROOT);
-        if (badWordFiltering.check(nickname) || CUSTOM_FORBIDDEN_WORDS.stream().anyMatch(lowerNickname::contains)) {
+        if (isNicknameForbidden(nickname)) {
             return NicknameCheckFailReason.FORBIDDEN_WORD;
         }
         if (!isNicknameAvailable(nickname)) {

@@ -31,6 +31,25 @@ public class PlaceController implements PlaceControllerDocs {
     private final PlaceQueryService placeQueryService;
 
     @Override
+    @GetMapping("/{placeId}")
+    public ResponseEntity<ApiResponse<PlaceResponse.Detail>> getPlaceDetail(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long placeId,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude
+    ) {
+        PlaceResponse.Detail result = placeQueryService.getPlaceDetail(
+                currentMember.getMember().getId(),
+                placeId,
+                latitude,
+                longitude
+        );
+        return ResponseEntity
+                .status(PlaceSuccessCode.PLACE_DETAIL_SUCCESS.getStatus())
+                .body(ApiResponse.success(PlaceSuccessCode.PLACE_DETAIL_SUCCESS, result));
+    }
+
+    @Override
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PlaceResponse.SearchResult>> searchPlaces(
             @RequestParam(required = false) String keyword,
@@ -100,10 +119,10 @@ public class PlaceController implements PlaceControllerDocs {
 
     @Override
     @PostMapping("/map-selections")
-    public ResponseEntity<ApiResponse<PlaceResponse.MapSelection>> confirmMapSelection(
+    public ResponseEntity<ApiResponse<PlaceResponse.MapSelectionResult>> confirmMapSelection(
             @RequestBody PlaceRequest.MapSelection request
     ) {
-        PlaceResponse.MapSelection result = placeCommandService.confirmMapSelection(request);
+        PlaceResponse.MapSelectionResult result = placeCommandService.confirmMapSelection(request);
         return ResponseEntity
                 .status(PlaceSuccessCode.PLACE_MAP_SELECTION_SUCCESS.getStatus())
                 .body(ApiResponse.success(PlaceSuccessCode.PLACE_MAP_SELECTION_SUCCESS, result));

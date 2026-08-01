@@ -13,12 +13,14 @@ import static org.mockito.Mockito.when;
 
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.place.dto.PlaceAddressDecision;
+import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
-import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceBookmarkId;
 import com.example.plimap.domain.place.entity.PlaceSource;
+import com.example.plimap.domain.place.enums.MapSelectionStatus;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
@@ -27,6 +29,7 @@ import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.lock.PlaceLockRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.query.PlaceLocationMetadataService;
+import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +53,7 @@ class PlaceCommandServiceImplTest {
             mock(PlaceSearchHistoryRepository.class);
     private final PlaceQueryRepository placeQueryRepository = mock(PlaceQueryRepository.class);
     private final PlaceLockRepository placeLockRepository = mock(PlaceLockRepository.class);
+    private final PlaceQueryService placeQueryService = mock(PlaceQueryService.class);
     private final PlaceLocationMetadataService placeLocationMetadataService =
             mock(PlaceLocationMetadataService.class);
     private final PinQueryService pinQueryService = mock(PinQueryService.class);
@@ -70,6 +74,7 @@ class PlaceCommandServiceImplTest {
                 placeSearchHistoryRepository,
                 placeQueryRepository,
                 placePersistenceService,
+                placeQueryService,
                 placeLocationMetadataService,
                 pinQueryService
         );
@@ -77,22 +82,46 @@ class PlaceCommandServiceImplTest {
                 org.mockito.ArgumentMatchers.anyDouble(),
                 org.mockito.ArgumentMatchers.anyDouble()
         )).thenReturn(new PlaceAdministrativeRegion(null, null, null, null));
+        when(placeLocationMetadataService.getAddressDecision(
+                org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble()
+        )).thenReturn(new PlaceAddressDecision(null, null, null));
     }
 
     @Test
-    void 잠금_후_20m_이내의_기존_장소를_재사용한다() {
+    void 반경_20m_이내의_활성_PLACE_SEARCH_장소를_먼저_추천한다() {
         PlaceRequest.MapSelection request = request("새 장소명", "도로명 주소");
-        Place existingPlace = place(1L, "기존 장소", 37.5283, 126.9326);
-        when(placeQueryRepository.findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0))
-                .thenReturn(Optional.of(existingPlace));
+        Place recommendedPlace = place(
+                10L,
+                "카카오 판교아지트",
+                PlaceSource.PLACE_SEARCH,
+                37.5284,
+                126.9326
+        );
+        when(recommendedPlace.getCategory()).thenReturn("기업");
+        when(placeQueryService.findNearestActiveProviderPlaceSearchWithin(
+                37.5283,
+                126.9326
+        )).thenReturn(Optional.of(recommendedPlace));
 
-        PlaceResponse.MapSelection result = placeCommandService.confirmMapSelection(request);
+        PlaceResponse.MapSelectionResult result =
+                placeCommandService.confirmMapSelection(request);
 
-        assertThat(result.placeId()).isEqualTo(1L);
-        assertThat(result.placeName()).isEqualTo("기존 장소");
-        assertThat(result.latitude()).isEqualTo(37.5283);
-        assertThat(result.longitude()).isEqualTo(126.9326);
-        verify(placeQueryRepository)
+        assertThat(result.status()).isEqualTo(MapSelectionStatus.PLACE_SEARCH_RECOMMENDED);
+        assertThat(result.mapSelection()).isNull();
+        assertThat(result.recommendedPlace().placeId()).isEqualTo(10L);
+        assertThat(result.recommendedPlace().placeName()).isEqualTo("카카오 판교아지트");
+        assertThat(result.recommendedPlace().category()).isEqualTo("기업");
+        assertThat(result.recommendedPlace().address())
+                .isEqualTo("서울특별시 영등포구 여의도동");
+        assertThat(result.recommendedPlace().roadAddress())
+                .isEqualTo("서울특별시 영등포구 여의동로");
+        assertThat(result.recommendedPlace().source()).isEqualTo(PlaceSource.PLACE_SEARCH);
+        assertThat(result.recommendedPlace().latitude()).isEqualTo(37.5284);
+        assertThat(result.recommendedPlace().longitude()).isEqualTo(126.9326);
+        assertThat(result.recommendedPlace().distanceMeters()).isEqualTo(11);
+        assertThat(result.buildingName()).isNull();
+        verify(placeQueryRepository, never())
                 .findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0);
         verify(placeLockRepository, never()).acquireMapSelectionLock();
         verifyNoInteractions(placeLocationMetadataService);
@@ -100,7 +129,51 @@ class PlaceCommandServiceImplTest {
     }
 
     @Test
-    void 기존_장소가_없으면_placeName을_사용해_MAP_SELECTION_장소를_생성한다() {
+    void 추천_장소가_없고_건물명이_있으면_장소_검색을_요청한다() {
+        PlaceRequest.MapSelection request = request("새 장소명", "도로명 주소");
+        when(placeLocationMetadataService.getAddressDecision(37.5283, 126.9326))
+                .thenReturn(new PlaceAddressDecision(
+                        "카카오 판교아지트",
+                        "지번 주소",
+                        "도로명 주소"
+                ));
+
+        PlaceResponse.MapSelectionResult result =
+                placeCommandService.confirmMapSelection(request);
+
+        assertThat(result.status()).isEqualTo(MapSelectionStatus.PLACE_SEARCH_REQUIRED);
+        assertThat(result.mapSelection()).isNull();
+        assertThat(result.recommendedPlace()).isNull();
+        assertThat(result.buildingName()).isEqualTo("카카오 판교아지트");
+        verify(placeQueryRepository, never())
+                .findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0);
+        verify(placeLockRepository, never()).acquireMapSelectionLock();
+        verify(placeRepository, never()).save(any(Place.class));
+    }
+
+    @Test
+    void 추천_장소와_건물명이_없으면_20m_이내의_MAP_SELECTION_장소를_재사용한다() {
+        PlaceRequest.MapSelection request = request("새 장소명", "도로명 주소");
+        Place existingPlace = place(1L, "기존 장소", 37.5283, 126.9326);
+        when(placeQueryRepository.findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0))
+                .thenReturn(Optional.of(existingPlace));
+
+        PlaceResponse.MapSelectionResult result =
+                placeCommandService.confirmMapSelection(request);
+
+        assertThat(result.status()).isEqualTo(MapSelectionStatus.MAP_SELECTION_CONFIRMED);
+        assertThat(result.mapSelection().placeId()).isEqualTo(1L);
+        assertThat(result.mapSelection().placeName()).isEqualTo("기존 장소");
+        assertThat(result.mapSelection().latitude()).isEqualTo(37.5283);
+        assertThat(result.mapSelection().longitude()).isEqualTo(126.9326);
+        assertThat(result.recommendedPlace()).isNull();
+        assertThat(result.buildingName()).isNull();
+        verify(placeLockRepository, never()).acquireMapSelectionLock();
+        verify(placeRepository, never()).save(any(Place.class));
+    }
+
+    @Test
+    void 추천_장소와_건물명과_기존_장소가_없으면_MAP_SELECTION_장소를_생성한다() {
         PlaceRequest.MapSelection request = request("  물빛무대 앞 광장  ", "  여의동로  ");
         when(placeQueryRepository.findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0))
                 .thenReturn(Optional.empty());
@@ -109,9 +182,21 @@ class PlaceCommandServiceImplTest {
         when(placeRepository.save(any(Place.class))).thenAnswer(invocation -> invocation.getArgument(0));
         ArgumentCaptor<Place> captor = ArgumentCaptor.forClass(Place.class);
 
-        PlaceResponse.MapSelection result = placeCommandService.confirmMapSelection(request);
+        PlaceResponse.MapSelectionResult result =
+                placeCommandService.confirmMapSelection(request);
 
-        InOrder flow = inOrder(placeLocationMetadataService, placeLockRepository);
+        InOrder flow = inOrder(
+                placeQueryService,
+                placeLocationMetadataService,
+                placeQueryRepository,
+                placeLockRepository
+        );
+        flow.verify(placeQueryService)
+                .findNearestActiveProviderPlaceSearchWithin(37.5283, 126.9326);
+        flow.verify(placeLocationMetadataService)
+                .getAddressDecision(37.5283, 126.9326);
+        flow.verify(placeQueryRepository)
+                .findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0);
         flow.verify(placeLocationMetadataService)
                 .getAdministrativeRegion(37.5283, 126.9326);
         flow.verify(placeLockRepository).acquireMapSelectionLock();
@@ -131,7 +216,10 @@ class PlaceCommandServiceImplTest {
         assertThat(createdPlace.getLocation().getSRID()).isEqualTo(4326);
         assertThat(createdPlace.getLocation().getX()).isEqualTo(126.9326);
         assertThat(createdPlace.getLocation().getY()).isEqualTo(37.5283);
-        assertThat(result.placeName()).isEqualTo("물빛무대 앞 광장");
+        assertThat(result.status()).isEqualTo(MapSelectionStatus.MAP_SELECTION_CONFIRMED);
+        assertThat(result.mapSelection().placeName()).isEqualTo("물빛무대 앞 광장");
+        assertThat(result.recommendedPlace()).isNull();
+        assertThat(result.buildingName()).isNull();
     }
 
     @Test

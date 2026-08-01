@@ -5,6 +5,7 @@ import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -21,6 +22,14 @@ public interface MemberFollowRepository extends JpaRepository<MemberFollow, Memb
             @Param("status") MemberStatus status);
 
     long deleteByIdFollowerIdAndIdFollowingId(Long followerId, Long followingId);
+
+    @Modifying
+    @Query("DELETE FROM MemberFollow mf WHERE mf.id.followerId = :followerId")
+    long deleteByIdFollowerId(@Param("followerId") Long followerId);
+
+    @Modifying
+    @Query("DELETE FROM MemberFollow mf WHERE mf.id.followingId = :followingId")
+    long deleteByIdFollowingId(@Param("followingId") Long followingId);
 
     long countByIdFollowerId(Long followerId);
 

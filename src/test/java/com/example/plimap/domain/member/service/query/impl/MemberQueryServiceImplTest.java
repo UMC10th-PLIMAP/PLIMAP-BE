@@ -130,6 +130,17 @@ class MemberQueryServiceImplTest {
     }
 
     @Test
+    void isNicknameForbidden은_금칙어가_포함된_닉네임에_대해_true를_반환한다() {
+        assertThat(memberQueryService.isNicknameForbidden("플리맵사용자임")).isTrue();
+        assertThat(memberQueryService.isNicknameForbidden("plimap운영진")).isTrue();
+    }
+
+    @Test
+    void isNicknameForbidden은_금칙어가_없는_닉네임에_대해_false를_반환한다() {
+        assertThat(memberQueryService.isNicknameForbidden("예림")).isFalse();
+    }
+
+    @Test
     void 닉네임이_이미_사용중이면_DUPLICATE를_반환한다() {
         when(memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull("예림")).thenReturn(true);
 

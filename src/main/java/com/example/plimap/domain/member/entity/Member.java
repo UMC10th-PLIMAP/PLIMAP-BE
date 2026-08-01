@@ -1,6 +1,9 @@
 package com.example.plimap.domain.member.entity;
 
+import com.example.plimap.domain.auth.enums.AuthProvider;
+import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.global.entity.SoftDeleteEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -16,11 +19,13 @@ import java.time.Instant;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends SoftDeleteEntity {
 
+    private static final String WITHDRAWN_NICKNAME_PREFIX = "플리맵사용자";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nickname", length = 10)
+    @Column(name = "nickname", length = 30)
     private String nickname;
 
     @Column(name = "name", length = 7)
@@ -39,14 +44,52 @@ public class Member extends SoftDeleteEntity {
     @Column(name = "onboarding_completed_at")
     private Instant onboardingCompletedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "join_provider", length = 20)
+    private AuthProvider joinProvider;
+
+    @Column(name = "penalty_point", nullable = false)
+    private Integer penaltyPoint = 0;
+
+    @Column(name = "suspended_until")
+    private Instant suspendedUntil;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "withdrawal_reason", length = 20)
+    private WithdrawalReason withdrawalReason;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    private MemberRole role;
+
+    @Column(name = "report_count", nullable = false)
+    private Integer reportCount = 0;
+
+    @Column(name = "withdrawn_nickname", length = 10)
+    private String withdrawnNickname;
+
     @Builder
-    public Member(String nickname, String name, String introduction,
-                  String profileImageObjectKey, MemberStatus status) {
+    private Member(String nickname, String name, String introduction,
+                    String profileImageObjectKey, MemberStatus status,
+                    AuthProvider joinProvider, MemberRole role) {
         this.nickname = nickname;
         this.name = name;
         this.introduction = introduction;
         this.profileImageObjectKey = profileImageObjectKey;
         this.status = status != null ? status : MemberStatus.ACTIVE;
+        this.joinProvider = joinProvider;
+        this.role = role != null ? role : MemberRole.USER;
+    }
+
+    public static Member create(AuthProvider joinProvider, MemberRole role) {
+        return Member.builder()
+                .joinProvider(joinProvider)
+                .role(role)
+                .build();
+    }
+
+    public void grantAdmin() {
+        this.role = MemberRole.ADMIN;
     }
 
     public boolean isOnboarded() {
@@ -75,5 +118,19 @@ public class Member extends SoftDeleteEntity {
             throw new IllegalArgumentException("profileImageObjectKey must not be null");
         }
         this.profileImageObjectKey = profileImageObjectKey;
+    }
+
+    public void withdrawVoluntarily() {
+        this.withdrawnNickname = this.nickname;
+        this.nickname = WITHDRAWN_NICKNAME_PREFIX + this.id;
+        this.introduction = null;
+        this.profileImageObjectKey = null;
+        this.status = MemberStatus.WITHDRAWN;
+        this.withdrawalReason = WithdrawalReason.VOLUNTARY;
+        delete();
+    }
+
+    public String getDisplayNickname() {
+        return status == MemberStatus.WITHDRAWN ? WITHDRAWN_NICKNAME_PREFIX : nickname;
     }
 }
