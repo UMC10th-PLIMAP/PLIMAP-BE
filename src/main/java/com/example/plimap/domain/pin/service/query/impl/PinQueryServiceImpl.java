@@ -17,6 +17,10 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import lombok.RequiredArgsConstructor;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +36,7 @@ public class PinQueryServiceImpl implements PinQueryService {
     private final PinLocationValidator pinLocationValidator;
     private final PinQueryRepository pinQueryRepository;
     private final PinRepository pinRepository;
+    GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override
     public Pin getActivePin(Long pinId) {
@@ -96,5 +101,20 @@ public class PinQueryServiceImpl implements PinQueryService {
     @Override
     public boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId) {
         return pinQueryRepository.existsActivePinByPlaceIdAndMemberId(placeId, memberId);
+    }
+
+    @Override
+    public PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request) {
+        Point minPoint = geometryFactory.createPoint(new Coordinate(request.southWestLng(), request.southWestLat()));
+        Point maxPoint = geometryFactory.createPoint(new Coordinate(request.northEastLng(), request.northEastLat()));
+        if (request.zoomLevel() >= 13) {
+            // 개별 Pin 조회
+            List<PinResponse.PinPreview> pinPreviews = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+            return PinConverter.toClusterAndPin(null, pinPreviews, request.zoomLevel());
+        }
+
+        // 클러스터 조회
+        List<PinResponse.Cluster> clusters = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, request.zoomLevel());
+        return PinConverter.toClusterAndPin(clusters, null, request.zoomLevel());
     }
 }

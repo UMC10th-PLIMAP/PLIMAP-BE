@@ -1,6 +1,7 @@
 package com.example.plimap.domain.pin.dto.response;
 
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
+import com.example.plimap.domain.pin.enums.ClusterLevel;
 import lombok.Builder;
 
 import java.time.Instant;
@@ -96,5 +97,30 @@ public class PinResponse {
             String albumImageUrl,
             String youtubeVideoId,
             Integer clipStartMs
+    ) {}
+
+    @Builder
+    public record Cluster(
+            ClusterLevel clusterLevel,
+            String regionName,
+            Double latitude,
+            Double longitude,
+            Integer pinCount,
+            Bound bounds
+    ) {}
+
+    @Builder
+    public record Bound(
+            Double southWestLat,
+            Double southWestLng,
+            Double northEastLat,
+            Double northEastLng
+    ) {}
+
+    @Builder
+    public record ClusterAndPin(
+            Integer zoomLevel,
+            List<Cluster> clusters,
+            List<PinPreview> pins
     ) {}
 }

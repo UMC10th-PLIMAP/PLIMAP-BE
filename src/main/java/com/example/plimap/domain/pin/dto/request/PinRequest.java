@@ -1,10 +1,7 @@
 package com.example.plimap.domain.pin.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Builder;
 
 import java.util.List;
@@ -79,5 +76,18 @@ public class PinRequest {
 
             @Schema(description = "피드 공개 여부", example = "false")
             Boolean feedOpen
+    ) {}
+
+    @Builder
+    public record Viewport (
+            Double southWestLat,
+
+            Double southWestLng,
+
+            Double northEastLat,
+
+            Double northEastLng,
+
+            Integer zoomLevel
     ) {}
 }
