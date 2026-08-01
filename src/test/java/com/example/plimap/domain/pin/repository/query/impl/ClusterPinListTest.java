@@ -347,11 +347,11 @@ class ClusterPinListTest {
         List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 12);
 
         // then
-        assertThat(result).hasSize(2); // 백현동, 분당구
+        assertThat(result).hasSize(2); // 백현동, 서현동
 
         PinResponse.Cluster first = result.getFirst();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION3);
-        assertThat(first.regionName()).isEqualTo("경기도 성남시 분당구");
+        assertThat(first.regionName()).isEqualTo("경기도 성남시 백현동");
         assertThat(first.pinCount()).isEqualTo(2);
 
         assertThat(first.latitude())
