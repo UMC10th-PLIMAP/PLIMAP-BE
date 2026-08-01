@@ -15,8 +15,10 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.place.entity.PlaceBookmarkId;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
+import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
@@ -35,12 +37,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.locationtech.jts.geom.Point;
 
 @ExtendWith(MockitoExtension.class)
 class PlaceQueryServiceImplTest {
 
     @Mock
     private PlaceRepository placeRepository;
+
+    @Mock
+    private PlaceBookmarkRepository placeBookmarkRepository;
 
     @Mock
     private PlaceSearchHistoryRepository placeSearchHistoryRepository;
@@ -63,6 +69,7 @@ class PlaceQueryServiceImplTest {
     void setUp() {
         placeQueryService = new PlaceQueryServiceImpl(
                 placeRepository,
+                placeBookmarkRepository,
                 placeSearchHistoryRepository,
                 placeQueryRepository,
                 kakaoAddressSearchClient,
@@ -71,6 +78,111 @@ class PlaceQueryServiceImplTest {
         );
         lenient().when(kakaoAddressSearchClient.search(any()))
                 .thenReturn(new KakaoAddressSearchResponse(List.of()));
+    }
+
+    @Test
+    void 장소_상세_조회에_기본_정보와_PIN_북마크_상태를_병합한다() {
+        Place place = place(1L, 37.5283, 126.9326);
+        when(placeRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(place));
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(1L)))
+                .thenReturn(Map.of(1L, new PlacePinInfo(true, "홍길동", 3L)));
+        when(placeBookmarkRepository.existsById(new PlaceBookmarkId(1L, 7L)))
+                .thenReturn(true);
+        when(pinQueryService.existsActivePinByPlaceIdAndMemberId(1L, 7L))
+                .thenReturn(true);
+
+        PlaceResponse.Detail result = placeQueryService.getPlaceDetail(
+                7L,
+                1L,
+                37.5283,
+                126.9326
+        );
+
+        assertThat(result).isEqualTo(new PlaceResponse.Detail(
+                1L,
+                "한강",
+                "공원",
+                "서울특별시 영등포구 여의도동",
+                "서울특별시 영등포구 여의동로",
+                37.5283,
+                126.9326,
+                0,
+                true,
+                true,
+                3L,
+                true,
+                true
+        ));
+        verify(pinQueryService).findPinInfosByPlaceIds(List.of(1L));
+        verify(pinQueryService).existsActivePinByPlaceIdAndMemberId(1L, 7L);
+        verify(placeBookmarkRepository).existsById(new PlaceBookmarkId(1L, 7L));
+        verify(placeRepository, never()).save(any());
+    }
+
+    @Test
+    void PIN_집계가_없으면_hasPin_false와_pinCount_0을_반환한다() {
+        Place place = place(1L, 37.5283, 126.9326);
+        when(placeRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(place));
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(1L))).thenReturn(Map.of());
+
+        PlaceResponse.Detail result = placeQueryService.getPlaceDetail(
+                7L,
+                1L,
+                37.5283,
+                126.9326
+        );
+
+        assertThat(result.hasPin()).isFalse();
+        assertThat(result.pinCount()).isZero();
+        assertThat(result.bookmarkedByMe()).isFalse();
+        assertThat(result.pinnedByMe()).isFalse();
+    }
+
+    @Test
+    void 거리는_미터_단위로_반올림한다() {
+        Place place = place(1L, latitudeOffset(470.4), 0.0);
+        when(placeRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(place));
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(1L))).thenReturn(Map.of());
+
+        PlaceResponse.Detail result = placeQueryService.getPlaceDetail(7L, 1L, 0.0, 0.0);
+
+        assertThat(result.distanceMeters()).isEqualTo(470);
+        assertThat(result.withinAccessRange()).isTrue();
+    }
+
+    @Test
+    void 정확히_500미터이면_접근_반경_이내이다() {
+        Place place = place(1L, latitudeOffset(500.0), 0.0);
+        when(placeRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(place));
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(1L))).thenReturn(Map.of());
+
+        PlaceResponse.Detail result = placeQueryService.getPlaceDetail(7L, 1L, 0.0, 0.0);
+
+        assertThat(result.distanceMeters()).isEqualTo(500);
+        assertThat(result.withinAccessRange()).isTrue();
+    }
+
+    @Test
+    void 거리가_500미터를_초과해도_상세를_반환하고_접근_반경_밖으로_표시한다() {
+        Place place = place(1L, latitudeOffset(500.1), 0.0);
+        when(placeRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(place));
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(1L))).thenReturn(Map.of());
+
+        PlaceResponse.Detail result = placeQueryService.getPlaceDetail(7L, 1L, 0.0, 0.0);
+
+        assertThat(result.distanceMeters()).isEqualTo(500);
+        assertThat(result.withinAccessRange()).isFalse();
+    }
+
+    @Test
+    void 존재하지_않거나_삭제된_장소는_PLACE_NOT_FOUND를_던진다() {
+        when(placeRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+
+        assertPlaceError(
+                () -> placeQueryService.getPlaceDetail(7L, 1L, 37.5283, 126.9326),
+                PlaceErrorCode.PLACE_NOT_FOUND
+        );
+        verifyNoInteractions(pinQueryService, placeBookmarkRepository);
     }
 
     @Test
@@ -470,6 +582,24 @@ class PlaceQueryServiceImplTest {
                 "37.5283",
                 distance
         )));
+    }
+
+    private Place place(Long placeId, double latitude, double longitude) {
+        Place place = mock(Place.class);
+        Point location = mock(Point.class);
+        when(place.getId()).thenReturn(placeId);
+        when(place.getName()).thenReturn("한강");
+        when(place.getCategory()).thenReturn("공원");
+        when(place.getAddress()).thenReturn("서울특별시 영등포구 여의도동");
+        when(place.getRoadAddress()).thenReturn("서울특별시 영등포구 여의동로");
+        when(place.getLocation()).thenReturn(location);
+        when(location.getY()).thenReturn(latitude);
+        when(location.getX()).thenReturn(longitude);
+        return place;
+    }
+
+    private double latitudeOffset(double distanceMeters) {
+        return Math.toDegrees(distanceMeters / 6_371_000.0);
     }
 
     private KakaoAddressSearchResponse addressResponse(

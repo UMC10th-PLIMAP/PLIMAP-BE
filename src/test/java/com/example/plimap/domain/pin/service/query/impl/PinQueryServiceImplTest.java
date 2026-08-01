@@ -345,4 +345,22 @@ class PinQueryServiceImplTest {
         assertThat(result.clusters()).isNull();
     }
 
+    @Test
+    void 장소와_사용자_ID로_활성_핀_존재_여부를_조회한다() {
+        // given
+        Long placeId = 1L;
+        Long memberId = 2L;
+
+        when(pinQueryRepository.existsActivePinByPlaceIdAndMemberId(placeId, memberId))
+                .thenReturn(true);
+
+        // when
+        boolean result = pinQueryService.existsActivePinByPlaceIdAndMemberId(placeId, memberId);
+
+        // then
+        assertThat(result).isTrue();
+        verify(pinQueryRepository)
+                .existsActivePinByPlaceIdAndMemberId(placeId, memberId);
+        verifyNoMoreInteractions(pinQueryRepository);
+    }
 }

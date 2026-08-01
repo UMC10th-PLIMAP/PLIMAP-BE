@@ -3,6 +3,7 @@ package com.example.plimap.domain.place.controller;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -14,9 +15,12 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.PlaceSource;
+import com.example.plimap.domain.place.enums.MapSelectionStatus;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.service.command.PlaceCommandService;
@@ -56,6 +60,7 @@ class PlaceControllerTest {
     private static final String MAP_SELECTION_ENDPOINT = "/api/v1/places/map-selections";
     private static final String SELECTION_ENDPOINT = "/api/v1/places/selections";
     private static final String SEARCH_ENDPOINT = "/api/v1/places/search";
+    private static final String DETAIL_ENDPOINT = "/api/v1/places/1";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -94,18 +99,131 @@ class PlaceControllerTest {
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
         Member member = mock(Member.class);
         when(member.getId()).thenReturn(1L);
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(member.getRole()).thenReturn(MemberRole.USER);
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
     }
 
     @Test
-    void 지도_선택_장소_확정에_성공하면_200을_반환한다() throws Exception {
-        when(placeCommandService.confirmMapSelection(org.mockito.ArgumentMatchers.any()))
-                .thenReturn(new PlaceResponse.MapSelection(
-                        12L,
-                        "물빛무대 앞 광장",
-                        PlaceSource.MAP_SELECTION,
+    void 장소_상세_조회에_성공하면_명세_응답을_반환한다() throws Exception {
+        when(placeQueryService.getPlaceDetail(1L, 1L, 37.5283, 126.9326))
+                .thenReturn(new PlaceResponse.Detail(
+                        1L,
+                        "한강",
+                        "공원",
+                        "서울특별시 영등포구 여의도동",
+                        "서울특별시 영등포구 여의동로",
                         37.5283,
-                        126.9326
+                        126.9326,
+                        470,
+                        true,
+                        true,
+                        3L,
+                        false,
+                        true
+                ));
+
+        mockMvc.perform(validDetailRequest())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PLACE_DETAIL_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("장소 상세 조회에 성공했습니다."))
+                .andExpect(jsonPath("$.result.placeId").value(1))
+                .andExpect(jsonPath("$.result.placeName").value("한강"))
+                .andExpect(jsonPath("$.result.category").value("공원"))
+                .andExpect(jsonPath("$.result.address")
+                        .value("서울특별시 영등포구 여의도동"))
+                .andExpect(jsonPath("$.result.roadAddress")
+                        .value("서울특별시 영등포구 여의동로"))
+                .andExpect(jsonPath("$.result.latitude").value(37.5283))
+                .andExpect(jsonPath("$.result.longitude").value(126.9326))
+                .andExpect(jsonPath("$.result.distanceMeters").value(470))
+                .andExpect(jsonPath("$.result.withinAccessRange").value(true))
+                .andExpect(jsonPath("$.result.hasPin").value(true))
+                .andExpect(jsonPath("$.result.pinCount").value(3))
+                .andExpect(jsonPath("$.result.bookmarkedByMe").value(false))
+                .andExpect(jsonPath("$.result.pinnedByMe").value(true))
+                .andExpect(jsonPath("$.result.detailAccessible").doesNotExist())
+                .andExpect(jsonPath("$.result.likedTrackAtPlaceByMe").doesNotExist())
+                .andExpect(jsonPath("$.result.followedMemberPinnedAtPlace").doesNotExist());
+
+        verify(placeQueryService).getPlaceDetail(1L, 1L, 37.5283, 126.9326);
+    }
+
+    @Test
+    void 장소_상세_조회에서_장소가_없으면_404를_반환한다() throws Exception {
+        when(placeQueryService.getPlaceDetail(1L, 1L, 37.5283, 126.9326))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND));
+
+        mockMvc.perform(validDetailRequest())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("PLACE_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("장소를 찾을 수 없습니다."))
+                .andExpect(jsonPath("$.result").isEmpty());
+    }
+
+    @Test
+    void 장소_상세_조회에서_위도가_누락되면_공통_400을_반환한다() throws Exception {
+        mockMvc.perform(get(DETAIL_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("위치 정보가 올바르지 않습니다."));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
+    void 장소_상세_조회에서_경도가_누락되면_공통_400을_반환한다() throws Exception {
+        mockMvc.perform(get(DETAIL_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("latitude", "37.5283"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("위치 정보가 올바르지 않습니다."));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
+    void 장소_상세_조회에서_좌표가_범위를_벗어나면_공통_400을_반환한다() throws Exception {
+        mockMvc.perform(get(DETAIL_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("latitude", "91")
+                        .param("longitude", "181"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("위치 정보가 올바르지 않습니다."));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
+    void 장소_상세_조회는_인증되지_않은_요청에_401을_반환한다() throws Exception {
+        mockMvc.perform(get(DETAIL_ENDPOINT)
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("COMMON_401_UNAUTHORIZED"));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
+    void MAP_SELECTION_장소_판정에_성공하면_확정_응답과_200을_반환한다() throws Exception {
+        when(placeCommandService.confirmMapSelection(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new PlaceResponse.MapSelectionResult(
+                        MapSelectionStatus.MAP_SELECTION_CONFIRMED,
+                        new PlaceResponse.MapSelection(
+                                12L,
+                                "물빛무대 앞 광장",
+                                PlaceSource.MAP_SELECTION,
+                                37.5283,
+                                126.9326
+                        ),
+                        null,
+                        null
                 ));
 
         mockMvc.perform(post(MAP_SELECTION_ENDPOINT)
@@ -115,12 +233,107 @@ class PlaceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PLACE_MAP_SELECTION_SUCCESS"))
-                .andExpect(jsonPath("$.message").value("지도 선택 장소 확정에 성공했습니다."))
-                .andExpect(jsonPath("$.result.placeId").value(12))
-                .andExpect(jsonPath("$.result.placeName").value("물빛무대 앞 광장"))
-                .andExpect(jsonPath("$.result.source").value("MAP_SELECTION"))
-                .andExpect(jsonPath("$.result.latitude").value(37.5283))
-                .andExpect(jsonPath("$.result.longitude").value(126.9326));
+                .andExpect(jsonPath("$.message").value("지도 선택 장소 판정에 성공했습니다."))
+                .andExpect(jsonPath("$.result.status").value("MAP_SELECTION_CONFIRMED"))
+                .andExpect(jsonPath("$.result.mapSelection.placeId").value(12))
+                .andExpect(jsonPath("$.result.mapSelection.placeName").value("물빛무대 앞 광장"))
+                .andExpect(jsonPath("$.result.mapSelection.source").value("MAP_SELECTION"))
+                .andExpect(jsonPath("$.result.mapSelection.latitude").value(37.5283))
+                .andExpect(jsonPath("$.result.mapSelection.longitude").value(126.9326))
+                .andExpect(jsonPath("$.result.recommendedPlace").value(nullValue()))
+                .andExpect(jsonPath("$.result.buildingName").value(nullValue()));
+    }
+
+    @Test
+    void 기존_PLACE_SEARCH_장소를_추천하면_추천_응답과_200을_반환한다() throws Exception {
+        when(placeCommandService.confirmMapSelection(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new PlaceResponse.MapSelectionResult(
+                        MapSelectionStatus.PLACE_SEARCH_RECOMMENDED,
+                        null,
+                        new PlaceResponse.RecommendedPlace(
+                                10L,
+                                "카카오 판교아지트",
+                                null,
+                                "경기도 성남시 분당구 백현동 532",
+                                null,
+                                PlaceSource.PLACE_SEARCH,
+                                37.3947,
+                                127.1112,
+                                12
+                        ),
+                        null
+                ));
+
+        mockMvc.perform(post(MAP_SELECTION_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("PLACE_MAP_SELECTION_SUCCESS"))
+                .andExpect(jsonPath("$.result.status").value("PLACE_SEARCH_RECOMMENDED"))
+                .andExpect(jsonPath("$.result.mapSelection").value(nullValue()))
+                .andExpect(jsonPath("$.result.recommendedPlace.placeId").value(10))
+                .andExpect(jsonPath("$.result.recommendedPlace.placeName")
+                        .value("카카오 판교아지트"))
+                .andExpect(jsonPath("$.result.recommendedPlace.category").value(nullValue()))
+                .andExpect(jsonPath("$.result.recommendedPlace.address")
+                        .value("경기도 성남시 분당구 백현동 532"))
+                .andExpect(jsonPath("$.result.recommendedPlace.roadAddress").value(nullValue()))
+                .andExpect(jsonPath("$.result.recommendedPlace.source").value("PLACE_SEARCH"))
+                .andExpect(jsonPath("$.result.recommendedPlace.latitude").value(37.3947))
+                .andExpect(jsonPath("$.result.recommendedPlace.longitude").value(127.1112))
+                .andExpect(jsonPath("$.result.recommendedPlace.distanceMeters").value(12))
+                .andExpect(jsonPath("$.result.buildingName").value(nullValue()));
+    }
+
+    @Test
+    void 건물명으로_장소_검색이_필요하면_검색_필요_응답과_200을_반환한다() throws Exception {
+        when(placeCommandService.confirmMapSelection(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new PlaceResponse.MapSelectionResult(
+                        MapSelectionStatus.PLACE_SEARCH_REQUIRED,
+                        null,
+                        null,
+                        "카카오 판교아지트"
+                ));
+
+        mockMvc.perform(post(MAP_SELECTION_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("PLACE_MAP_SELECTION_SUCCESS"))
+                .andExpect(jsonPath("$.result.status").value("PLACE_SEARCH_REQUIRED"))
+                .andExpect(jsonPath("$.result.mapSelection").value(nullValue()))
+                .andExpect(jsonPath("$.result.recommendedPlace").value(nullValue()))
+                .andExpect(jsonPath("$.result.buildingName").value("카카오 판교아지트"));
+    }
+
+    @Test
+    void 지도_선택_장소_판정에서_Kakao_오류가_발생하면_502를_반환한다() throws Exception {
+        when(placeCommandService.confirmMapSelection(org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR));
+
+        mockMvc.perform(post(MAP_SELECTION_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validRequest()))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("PLACE_EXTERNAL_API_ERROR"))
+                .andExpect(jsonPath("$.result").isEmpty());
+    }
+
+    @Test
+    void 지도_선택_장소_판정에서_Kakao_timeout이_발생하면_504를_반환한다() throws Exception {
+        when(placeCommandService.confirmMapSelection(org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT));
+
+        mockMvc.perform(post(MAP_SELECTION_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validRequest()))
+                .andExpect(status().isGatewayTimeout())
+                .andExpect(jsonPath("$.code").value("PLACE_EXTERNAL_API_TIMEOUT"))
+                .andExpect(jsonPath("$.result").isEmpty());
     }
 
     @Test
@@ -500,6 +713,14 @@ class PlaceControllerTest {
         return get(SEARCH_ENDPOINT)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                 .param("keyword", "한강")
+                .param("latitude", "37.5283")
+                .param("longitude", "126.9326");
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            validDetailRequest() {
+        return get(DETAIL_ENDPOINT)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                 .param("latitude", "37.5283")
                 .param("longitude", "126.9326");
     }

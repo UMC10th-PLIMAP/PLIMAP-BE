@@ -1,14 +1,22 @@
 # Database Development Guide
 
-## 구성
+## Overview
 
-- 로컬 DB: `postgis/postgis:18-3.6` Docker Compose
-- 테스트 DB: 동일한 이미지의 Testcontainers
+이 문서는 PLIMAP API의 데이터베이스 개발 환경과 스키마 관리 원칙을 설명합니다.
+
+## 환경별 구성
+
+| 환경 | 데이터베이스 | 연결 방식 | 설정 주입 |
+| --- | --- | --- | --- |
+| Local | Docker Compose `postgis/postgis:18-3.6` | `localhost:5432` 직접 연결 | 기본값 또는 `.env` |
+| Dev | Supabase PostgreSQL/PostGIS | SSL 기반 Transaction Pooler | GCP Secret Manager |
+| Test | `postgis/postgis:18-3.6` Testcontainers | 테스트별 컨테이너 | 테스트 전용 설정 |
+
 - 스키마 관리: Flyway
 - ORM 검증: Hibernate `ddl-auto: validate`
 - 동적 조회: QueryDSL 7.4.0
 
-Hibernate는 테이블을 생성하거나 변경하지 않는다. Flyway가 스키마를 변경하고 Hibernate는 엔티티 매핑이 적용된 스키마와 일치하는지만 검증한다.
+Hibernate는 테이블을 생성하거나   변경하지 않는다. Flyway가 스키마를 변경하고 Hibernate는 엔티티 매핑이 적용된 스키마와 일치하는지만 검증한다.
 
 ## 로컬 실행
 
@@ -52,7 +60,43 @@ docker compose up -d
 
 그 다음 애플리케이션을 `local` 프로필로 실행하면 Flyway가 Migration을 처음부터 적용한다.
 
-## Migration 작성 규칙
+## Dev DB
+
+### 연결 구조
+
+Dev 애플리케이션은 Cloud Run에서 `dev` 프로필로 실행되며, Supabase PostgreSQL/PostGIS의 Transaction Pooler에 연결한다.
+
+```text
+Cloud Run
+    → application-dev.yml
+    → DB_URL / DB_USERNAME / DB_PASSWORD
+    → Supabase Transaction Pooler
+    → PostgreSQL/PostGIS
+```
+
+`DB_URL`은 SSL 연결을 사용하는 JDBC URL이며 비밀번호를 포함하지 않는다. 사용자 이름과 비밀번호는 `DB_USERNAME`, `DB_PASSWORD`로 분리한다. Transaction Pooler 호환성을 위해 JDBC 드라이버의 `prepareThreshold`를 `0`으로 설정한다.
+
+### 설정 및 Secret 관리
+
+`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`는 GCP Secret Manager에서 Cloud Run의 새 revision에 주입한다. 실제 연결 호스트, 사용자 이름과 비밀번호는 저장소, 문서, 로그에 기록하지 않는다.
+
+Secret ID, 연결 정보 형식과 값 교체 절차는 [Dev Secret 관리 문서](../scripts/gcp/SECRETS.md)를 따른다. Secret의 값을 변경한 경우 새 revision이 최신 활성 버전을 주입받도록 Dev를 다시 배포한다.
+
+### Migration 및 스키마 검증
+
+Dev에서도 공통 설정에 따라 애플리케이션 시작 시 Flyway가 아직 적용되지 않은 Migration을 실행한다. 이후 Hibernate의 `ddl-auto: validate`가 적용된 스키마와 엔티티 매핑이 일치하는지 검증한다.
+
+`baseline-on-migrate`는 Local 프로필에만 적용하며 Dev의 기존 스키마를 자동으로 기준선 처리하지 않는다. Dev에 적용할 스키마 변경은 반드시 `src/main/resources/db/migration`의 새 Migration으로 작성한다.
+
+### 운영 안전 규칙
+
+- Dev DB는 여러 사용자가 공유하므로 `flyway clean`이나 스키마 초기화를 실행하지 않는다.
+- 이미 적용된 Migration은 수정하거나 삭제하지 않고 더 높은 버전의 새 Migration으로 보완한다.
+- 수동 DDL을 기준 상태로 삼지 않으며 Migration과 관련 엔티티 변경을 같은 작업에서 관리한다.
+- 파괴적 DDL과 대량 데이터 변경은 아래의 확장-전환-정리 절차에 따라 나눈다.
+- Migration 적용 상태는 권한이 있는 관리 연결에서 `flyway_schema_history`를 조회해 확인한다.
+
+## Flyway Migration 작성 규칙
 
 - 위치: `src/main/resources/db/migration`
 - 초기 스키마: `V1__init_schema.sql`
@@ -99,4 +143,4 @@ DB가 필요한 테스트는 H2 대신 PostGIS Testcontainers를 사용한다. �
 ./gradlew clean build
 ```
 
-Docker가 실행 중이어야 한다. GitHub Actions의 `build` 작업도 같은 명령을 실행하므로 Migration, PostGIS, JPA Context와 QueryDSL 조회를 함께 검증한다.
+로컬에서 위 명령을 실행하려면 Docker가 실행 중이어야 한다. GitHub Actions의 `build` 작업은 `./gradlew build --no-daemon`을 실행하며, Migration, PostGIS, JPA Context와 QueryDSL 조회를 함께 검증한다.
