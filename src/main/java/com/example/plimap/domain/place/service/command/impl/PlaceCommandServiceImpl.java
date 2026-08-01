@@ -159,6 +159,22 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
 
     @Override
     @Transactional
+    public PlaceResponse.BookmarkResult bookmarkPlace(Long memberId, Long placeId) {
+        validateActivePlace(placeId);
+        placeBookmarkRepository.insertIfAbsent(placeId, memberId);
+        return new PlaceResponse.BookmarkResult(placeId, true);
+    }
+
+    @Override
+    @Transactional
+    public PlaceResponse.BookmarkResult deletePlaceBookmark(Long memberId, Long placeId) {
+        validateActivePlace(placeId);
+        placeBookmarkRepository.deleteByPlaceIdAndMemberId(placeId, memberId);
+        return new PlaceResponse.BookmarkResult(placeId, false);
+    }
+
+    @Override
+    @Transactional
     public void deleteSearchHistory(Long memberId, Long historyId) {
         int deletedCount = placeSearchHistoryRepository.deleteByIdAndMemberId(
                 historyId,
@@ -167,6 +183,11 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
         if (deletedCount == 0) {
             throw new PlaceException(PlaceErrorCode.PLACE_SEARCH_HISTORY_NOT_FOUND);
         }
+    }
+
+    private void validateActivePlace(Long placeId) {
+        placeRepository.findByIdAndDeletedAtIsNull(placeId)
+                .orElseThrow(() -> new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND));
     }
 
     private PlacePinInfo findPinInfo(Long placeId) {
