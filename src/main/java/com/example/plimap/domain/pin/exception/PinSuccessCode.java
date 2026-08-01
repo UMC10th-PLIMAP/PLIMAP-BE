@@ -73,6 +73,12 @@ public enum PinSuccessCode implements BaseSuccessCode {
             HttpStatus.OK,
             "PIN_SEARCH_SUCCESS",
             "핀이 조회되었습니다."
+    ),
+
+    CLUSTER_PIN_SEARCH_SUCCESS(
+            HttpStatus.OK,
+            "CLUSTER_PIN_SEARCH_SUCCESS",
+            "viewport 기반 클러스터&핀 목록이 조회되었습니다."
     );
 
     private final HttpStatus status;

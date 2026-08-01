@@ -6,10 +6,12 @@ import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
+import com.example.plimap.domain.pin.enums.ClusterLevel;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
@@ -40,6 +42,8 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -64,6 +68,7 @@ class PinControllerTest {
     private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feed/members/{memberId}";
     private static final String MY_PIN_ENDPOINT = "/api/v1/pins/members/me";
     private static final String PLACE_TRACK_PIN_ENDPOINT = "/api/v1/place-tracks/{placeTrackId}/pins";
+    private static final String VIEWPORT_CLUSTER_ENDPOINT = "/api/v1/pins/map";
 
     @Autowired
     private MockMvc mockMvc;
@@ -383,6 +388,79 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.message").value("특정 장소 노래의 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
+    }
+
+    @Test
+    void 클러스터_조회에_성공하면_200을_반환한다() throws Exception {
+        List<PinResponse.Cluster> clusters = List.of(
+                new PinResponse.Cluster(
+                        ClusterLevel.REGION1,
+                        "서울특별시",
+                        127.0,
+                        37.5,
+                        10,
+                        new PinResponse.Bound(0D,0D,0D,0D)
+                )
+        );
+
+        given(pinQueryService.getClusterPinList(any()))
+                .willReturn(
+                        PinConverter.toClusterAndPin(clusters, null, 7)
+                );
+
+        mockMvc.perform(get(VIEWPORT_CLUSTER_ENDPOINT)
+                        .param("southWestLat", "36.5")
+                        .param("southWestLng", "126.9")
+                        .param("northEastLat", "37.6")
+                        .param("northEastLng", "127.35")
+                        .param("zoomLevel", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("CLUSTER_PIN_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("viewport 기반 클러스터&핀 목록이 조회되었습니다."))
+                .andExpect(jsonPath("$.result.zoomLevel").value(7))
+                .andExpect(jsonPath("$.result.clusters").isArray())
+                .andExpect(jsonPath("$.result.pins").doesNotExist());
+
+        verify(pinQueryService).getClusterPinList(any(PinRequest.Viewport.class));
+    }
+
+    @Test
+    void 핀목록_조회에_성공하면_200을_반환한다() throws Exception {
+        List<PinResponse.PinPreview> pins = List.of(
+                new PinResponse.PinPreview(
+                        1L,
+                        37.5665,
+                        126.9780,
+                        "seoyoon",
+                        "https://example.com/profile.png",
+                        "좋아하는 노래예요",
+                        "https://example.com/album.jpg",
+                        "dQw4w9WgXcQ",
+                        30000
+                )
+        );
+
+        given(pinQueryService.getClusterPinList(any()))
+                .willReturn(
+                        PinConverter.toClusterAndPin(null, pins, 14)
+                );
+
+        mockMvc.perform(get(VIEWPORT_CLUSTER_ENDPOINT)
+                        .param("southWestLat", "36.5")
+                        .param("southWestLng", "126.9")
+                        .param("northEastLat", "37.6")
+                        .param("northEastLng", "127.35")
+                        .param("zoomLevel", "14"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("CLUSTER_PIN_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("viewport 기반 클러스터&핀 목록이 조회되었습니다."))
+                .andExpect(jsonPath("$.result.zoomLevel").value(14))
+                .andExpect(jsonPath("$.result.clusters").doesNotExist())
+                .andExpect(jsonPath("$.result.pins").isArray());
+
+        verify(pinQueryService).getClusterPinList(any(PinRequest.Viewport.class));
     }
 
     private String validCreateRequest() {

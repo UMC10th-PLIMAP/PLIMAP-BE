@@ -2,6 +2,7 @@ package com.example.plimap.domain.pin.converter;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.Pagination;
+import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
@@ -147,7 +148,7 @@ public class PinConverter {
     }
 
     public static PinResponse.PinPreview toPinPreview(
-        Pin pin
+            Pin pin
     ) {
         return PinResponse.PinPreview.builder()
                 .placeId(pin.getPlace().getId())
@@ -159,6 +160,18 @@ public class PinConverter {
                 .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
                 .youtubeVideoId(pin.getPlaceTrack().getTrack().getProviderTrackId())
                 .clipStartMs(pin.getClipStartMs())
+                .build();
+    }
+
+    public static PinResponse.ClusterAndPin toClusterAndPin(
+            List<PinResponse.Cluster> clusters,
+            List<PinResponse.PinPreview> pins,
+            Integer zoomLevel
+    ) {
+        return PinResponse.ClusterAndPin.builder()
+                .zoomLevel(zoomLevel)
+                .clusters(clusters)
+                .pins(pins)
                 .build();
     }
 }

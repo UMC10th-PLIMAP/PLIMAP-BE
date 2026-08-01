@@ -1,6 +1,7 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -34,9 +35,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 
@@ -61,6 +63,8 @@ class PinQueryServiceImplTest {
     PlaceTrack placeTrack;
     Pin pin;
 
+    GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+
     @BeforeEach
     void setup() {
         member = Member.builder()
@@ -76,8 +80,6 @@ class PinQueryServiceImplTest {
                 .introduction("안녕하세요")
                 .profileImageObjectKey("image_url")
                 .build();
-
-        GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
         Point point = geometryFactory.createPoint(
                 new Coordinate(127.020001338463, 37.5265858245219)
@@ -294,6 +296,53 @@ class PinQueryServiceImplTest {
         assertThat(result.latitude()).isEqualTo(pin.getPlace().getLocation().getY());
         assertThat(result.longitude()).isEqualTo(pin.getPlace().getLocation().getX());
         assertThat(result.albumImageUrl()).isEqualTo(pin.getPlaceTrack().getTrack().getAlbumImageUrl());
+    }
+
+    @Test
+    void 줌레벨이_13이하면_클러스터를_조회한다() {
+        // given
+        PinRequest.Viewport request = new PinRequest.Viewport(
+                36.50, 126.90, 37.60, 127.35, 7
+        );
+
+        List<PinResponse.Cluster> previews = List.of(mock(PinResponse.Cluster.class));
+
+        given(pinQueryRepository.findClusterListByViewport(any(), any(), anyInt()))
+                .willReturn(previews);
+
+        // when
+        PinResponse.ClusterAndPin result = pinQueryService.getClusterPinList(request);
+
+        // then
+        verify(pinQueryRepository, never()).findPinPreviewListByViewport(any(), any());
+        verify(pinQueryRepository).findClusterListByViewport(any(), any(), anyInt());
+
+        assertThat(result.pins()).isNull();
+        assertThat(result.clusters()).hasSize(1);
+    }
+
+    @Test
+    void 줌레벨이_14이상이면_핀목록을_조회한다() {
+        // given
+        PinRequest.Viewport request = new PinRequest.Viewport(
+                37.38,127.11, 37.40, 127.15, 14
+        );
+
+        List<PinResponse.PinPreview> previews = List.of(mock(PinResponse.PinPreview.class));
+
+        given(pinQueryRepository.findPinPreviewListByViewport(any(), any()))
+                .willReturn(previews);
+
+        // when
+        PinResponse.ClusterAndPin result = pinQueryService.getClusterPinList(request);
+
+        // then
+        verify(pinQueryRepository).findPinPreviewListByViewport(any(), any());
+        verify(pinQueryRepository, never())
+                .findClusterListByViewport(any(), any(), anyInt());
+
+        assertThat(result.pins()).hasSize(1);
+        assertThat(result.clusters()).isNull();
     }
 
     @Test
