@@ -2,16 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+저장소 전역의 공통 작업 지침은 루트 `AGENTS.md`를 기준으로 합니다. 이 문서는 Claude Code용 보충 안내이며, 내용이 충돌하면 `AGENTS.md`와 변경 범위에 해당하는 `docs/` 문서를 우선합니다.
+
 ## 프로젝트 개요
 
-PLIMAP은 음악과 장소를 연결해 지도 위에 기록하고 공유하는 서비스의 백엔드 API입니다. Java 21 + Spring Boot 4.1 기반이며, 위치 데이터를 다루기 위해 PostgreSQL + PostGIS(Hibernate Spatial)를 사용합니다.
+PLIMAP은 음악과 장소를 연결해 지도 위에 기록하고 공유하는 서비스의 백엔드 API입니다. Java 21 + Spring Boot 4.1 기반이며, PostgreSQL + PostGIS(Hibernate Spatial), Redis, Supabase Storage를 사용합니다.
 
 ## 자주 쓰는 명령어
 
-로컬 실행은 Docker로 PostGIS를 먼저 띄우고 `local` 프로필로 애플리케이션을 실행합니다. Docker Compose는 `.env`를 자동으로 읽지만, IDE/Gradle로 직접 실행하는 Spring Boot 프로세스는 `.env`를 읽지 않으므로 기본값이 아닌 값을 쓸 때는 실행 환경에도 같은 변수를 설정해야 합니다.
+로컬 실행은 Docker로 PostGIS와 Redis를 먼저 띄우고 `local` 프로필로 애플리케이션을 실행합니다. Docker Compose는 `.env`를 자동으로 읽지만, IDE/Gradle로 직접 실행하는 Spring Boot 프로세스는 `.env`를 읽지 않으므로 기본값이 아닌 값을 쓸 때는 실행 환경에도 같은 변수를 설정해야 합니다.
 
 ```bash
-docker compose up -d                                          # 로컬 PostGIS 기동
+docker compose up -d                                          # 로컬 PostGIS와 Redis 기동
 ./gradlew bootRun --args='--spring.profiles.active=local'     # 앱 실행 (macOS/Linux)
 .\gradlew.bat bootRun --args="--spring.profiles.active=local" # 앱 실행 (Windows)
 
@@ -33,15 +35,17 @@ docker compose down -v       # 데이터 volume까지 삭제 (Migration을 빈 D
 
 Swagger UI: `http://localhost:8080/swagger-ui/index.html` (기본적으로 `api-docs`/`swagger-ui`는 비활성이며 특정 프로필에서만 노출)
 
-**테스트에는 Docker가 반드시 실행 중이어야 합니다.** DB가 필요한 테스트는 H2가 아니라 PostGIS Testcontainers를 사용하고, 운영 코드와 동일한 Flyway Migration을 컨테이너에 적용해 검증합니다. CI(`.github/workflows/ci.yml`)도 `./gradlew build`로 동일하게 검증합니다.
+**테스트에는 Docker가 반드시 실행 중이어야 합니다.** DB 및 Redis 통합 테스트는 각각 PostGIS와 Redis Testcontainers를 사용하고, DB에는 운영 코드와 동일한 Flyway Migration을 적용해 검증합니다. CI(`.github/workflows/ci.yml`)도 `./gradlew build`로 동일하게 검증합니다.
 
 ## Commit Message Rules
 
 절대로 커밋 메시지에 다음을 포함하지 마세요:
 
-🤖 Generated with Claude Code
+Generated with Codex
+Generated with Claude Code
+Co-Authored-By: Codex
 Co-Authored-By: Claude
-AI가 생성했다는 어떤 표시도 금지
+AI가 생성했다는 어떤 표시
 
 
 ## 아키텍처
@@ -50,16 +54,20 @@ AI가 생성했다는 어떤 표시도 금지
 
 ```
 com.example.plimap
-├── domain/          # auth, member, place, track, pin
+├── domain/          # auth, member, notification, pin, place, report, track
 │   └── {domain}/
 │       ├── controller/        # REST 컨트롤러 (+ docs/ 에 Swagger용 인터페이스)
 │       ├── converter/         # 복잡한 Entity↔DTO 변환
 │       ├── dto/request, dto/response
 │       ├── entity/            # JPA 엔티티
 │       ├── enums/
+│       ├── event/             # 도메인 이벤트 (선택)
 │       ├── exception/         # 도메인 ErrorCode + Exception
+│       ├── listener/          # 도메인 이벤트 리스너 (선택)
 │       ├── repository/        # 기본 CRUD (JpaRepository)
 │       │   └── query/impl/    # QueryDSL 커스텀 조회
+│       ├── sse/               # SSE 연결 관리 (선택)
+│       ├── validator/         # 도메인 검증 (선택)
 │       └── service/
 │           ├── command/impl/  # 상태 변경 (생성·수정·삭제)
 │           └── query/impl/    # 조회 (읽기)
@@ -76,14 +84,15 @@ Service 계층은 **command**(상태 변경)와 **query**(조회)로 분리합�
 - `QueryServiceImpl` → `@Transactional(readOnly = true)`
 - 단순 CRUD/단순 조건 조회는 Spring Data JPA 메서드, 동적 조건·복잡한 검색·페이징은 `repository/query`의 QueryDSL 구현체 사용
 - **다른 도메인의 Repository를 직접 주입하지 않고**, 해당 도메인의 Service 인터페이스(주로 `QueryService`)를 통해 호출합니다. 도메인 간 순환 호출에 주의합니다.
+- 현재 알림 부수 효과는 발행 도메인이 `ApplicationEventPublisher`로 이벤트를 발행하고, `notification`의 `@TransactionalEventListener(phase = AFTER_COMMIT)`가 원 트랜잭션 커밋 이후 처리합니다.
 
 ### 데이터베이스 규칙
 
 - **스키마는 Flyway가 관리하고 Hibernate는 `ddl-auto: validate`로 검증만 합니다.** Hibernate는 테이블을 생성/변경하지 않습니다.
-- Migration 위치: `src/main/resources/db/migration`. 초기 스키마 `V1__init_schema.sql`, 후속은 `VyyyyMMddHHmm__snake_case.sql`(분 단위 타임스탬프로 파일명 충돌 방지). 엔티티 변경과 Migration은 같은 PR에서 함께 검증합니다.
+- Migration 위치: `src/main/resources/db/migration`. 초기 스키마 `V1__init_schema.sql`, 후속은 `VyyyyMMddHHmm__snake_case_description.sql`(분 단위 타임스탬프로 파일명 충돌 방지). 엔티티 변경과 Migration은 같은 PR에서 함께 검증합니다.
 - **이미 `develop`에 병합된 Migration은 절대 수정/삭제하지 않고**, 더 높은 버전의 새 Migration을 추가합니다. 공유 DB에서 `flyway clean` 금지.
 - 시간 필드는 PostgreSQL `TIMESTAMPTZ`와 맞춰 Java `Instant`를 사용하고, `createdAt`/`updatedAt`은 JPA Auditing으로 자동 기록합니다.
-- 모든 엔티티는 `BaseEntity`(createdAt/updatedAt)를 상속합니다. 삭제 이력 보존이 필요한 엔티티만 `SoftDeleteEntity`(deletedAt)를 상속합니다. **Soft Delete 대상: `Member`, `Place`, `PlaceTrack`, `Pin`**.
+- 엔티티는 원칙적으로 `BaseEntity`(createdAt/updatedAt)를 상속합니다. 현재 `MemberFollow`는 예외로 `createdAt`만 직접 관리합니다. 삭제 이력 보존이 필요한 엔티티는 `SoftDeleteEntity`(deletedAt)를 상속합니다. **Soft Delete 대상: `Member`, `Place`, `PlaceTrack`, `Pin`**.
 - Soft Delete 대상에는 `repository.delete()`/`deleteById()`를 쓰지 않고 `entity.delete()` / `restore()`를 호출합니다. 일반 조회는 `deletedAt IS NULL` 조건을 적용합니다.
 - 생성된 QueryDSL Q 타입은 `build/generated/...`에 만들어지며 커밋하지 않습니다.
 
@@ -111,4 +120,4 @@ Service 계층은 **command**(상태 변경)와 **query**(조회)로 분리합�
 - PR 제목: `[Type] 변경 내용` (첫 글자 대문자), 본문에 변경 내용·테스트 결과 작성, `Closes #14`로 이슈 연결. 작업 전 이슈 먼저 생성.
 - 이슈와 PR 작성 전 `.github/ISSUE_TEMPLATE/`의 해당 이슈 템플릿과 `.github/PULL_REQUEST_TEMPLATE.md`를 확인하고, 기존 섹션·체크리스트·필수 항목을 유지한 채 실제 작업 내용으로 작성합니다.
 
-자세한 규칙은 `docs/`(ARCHITECTURE.md, CODE_STYLE.md, DATABASE.md, CONVENTION.md)를 참고합니다.
+전체 문서 목록은 `docs/README.md`를 확인하고, 자세한 규칙은 `docs/`의 ARCHITECTURE.md, CODE_STYLE.md, DATABASE.md, CONVENTION.md, ERD.md, DEPLOYMENT.md를 참고합니다.
