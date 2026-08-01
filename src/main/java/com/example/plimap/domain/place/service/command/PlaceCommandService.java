@@ -12,5 +12,9 @@ public interface PlaceCommandService {
             PlaceRequest.Selection request
     );
 
+    PlaceResponse.BookmarkResult bookmarkPlace(Long memberId, Long placeId);
+
+    PlaceResponse.BookmarkResult deletePlaceBookmark(Long memberId, Long placeId);
+
     void deleteSearchHistory(Long memberId, Long historyId);
 }

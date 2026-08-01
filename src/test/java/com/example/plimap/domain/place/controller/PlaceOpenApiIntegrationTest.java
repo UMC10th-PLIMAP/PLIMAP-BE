@@ -29,6 +29,7 @@ class PlaceOpenApiIntegrationTest {
     private static final String PLACE_SELECTION_PATH = "/api/v1/places/selections";
     private static final String PLACE_MAP_SELECTION_PATH = "/api/v1/places/map-selections";
     private static final String PLACE_DETAIL_PATH = "/api/v1/places/{placeId}";
+    private static final String PLACE_BOOKMARK_PATH = "/api/v1/places/{placeId}/bookmarks";
 
     @Autowired
     private MockMvc mockMvc;
@@ -85,6 +86,38 @@ class PlaceOpenApiIntegrationTest {
         assertThat(properties.has("detailAccessible")).isFalse();
         assertThat(properties.has("likedTrackAtPlaceByMe")).isFalse();
         assertThat(properties.has("followedMemberPinnedAtPlace")).isFalse();
+    }
+
+    @Test
+    void 장소_북마크_OpenAPI는_PUT_DELETE와_본문_없는_계약을_노출한다() throws Exception {
+        String responseBody = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode openApi = objectMapper.readTree(responseBody);
+
+        JsonNode path = openApi.path("paths").path(PLACE_BOOKMARK_PATH);
+        JsonNode put = path.path("put");
+        JsonNode delete = path.path("delete");
+        assertThat(put.isMissingNode()).isFalse();
+        assertThat(delete.isMissingNode()).isFalse();
+        assertThat(put.has("requestBody")).isFalse();
+        assertThat(delete.has("requestBody")).isFalse();
+        assertThat(put.path("responses").has("200")).isTrue();
+        assertThat(put.path("responses").has("401")).isTrue();
+        assertThat(put.path("responses").has("404")).isTrue();
+        assertThat(delete.path("responses").has("200")).isTrue();
+        assertThat(delete.path("responses").has("401")).isTrue();
+        assertThat(delete.path("responses").has("404")).isTrue();
+
+        JsonNode properties = openApi
+                .path("components")
+                .path("schemas")
+                .path("PlaceBookmarkResult")
+                .path("properties");
+        assertThat(properties.has("placeId")).isTrue();
+        assertThat(properties.has("bookmarkedByMe")).isTrue();
     }
 
     @Test

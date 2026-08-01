@@ -47,6 +47,15 @@ public final class PlaceResponse {
     ) {
     }
 
+    @Schema(name = "PlaceBookmarkResult")
+    public record BookmarkResult(
+            @Schema(description = "장소 ID", example = "1")
+            Long placeId,
+            @Schema(description = "인증 사용자의 장소 북마크 여부", example = "true")
+            boolean bookmarkedByMe
+    ) {
+    }
+
     public record SearchResult(
             @Schema(description = "장소 검색 결과 목록")
             List<SearchItem> items
