@@ -80,7 +80,6 @@ class PinQueryRepositoryImplTest {
     Report report;
     PlaceTrack placeTrack1, placeTrack3, placeTrack4, placeTrack5;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
-    private PinQueryService pinQueryService;
 
     @BeforeEach
     void setup() {

@@ -1,10 +1,14 @@
 package com.example.plimap.domain.member.service.command.impl;
 
+import com.example.plimap.domain.auth.service.command.SocialAccountCommandService;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
+import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.WithdrawalReason;
+import com.example.plimap.domain.member.event.MemberWithdrawnEvent;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
@@ -48,6 +52,8 @@ class MemberCommandServiceImplTest {
     private final ProfileImageStorage profileImageStorage = mock(ProfileImageStorage.class);
     private final ProfileImageObjectKeyGenerator profileImageObjectKeyGenerator =
             mock(ProfileImageObjectKeyGenerator.class);
+    private final SocialAccountCommandService socialAccountCommandService =
+            mock(SocialAccountCommandService.class);
 
     private MemberCommandServiceImpl memberCommandService;
 
@@ -59,7 +65,8 @@ class MemberCommandServiceImplTest {
                 memberQueryService,
                 eventPublisher,
                 profileImageStorage,
-                profileImageObjectKeyGenerator
+                profileImageObjectKeyGenerator,
+                socialAccountCommandService
         );
     }
 
@@ -96,6 +103,21 @@ class MemberCommandServiceImplTest {
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
 
+        verify(member, never()).completeOnboarding(any());
+    }
+
+    @Test
+    void 닉네임이_금칙어이면_예외가_발생한다() {
+        Member member = mock(Member.class);
+        when(member.isOnboarded()).thenReturn(false);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberQueryService.isNicknameForbidden("플리맵사용자1")).thenReturn(true);
+
+        assertThatThrownBy(() -> memberCommandService.completeOnboarding(MEMBER_ID, onboarding("플리맵사용자1")))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_FORBIDDEN_WORD));
+
+        verify(memberQueryService, never()).isNicknameAvailable(any());
         verify(member, never()).completeOnboarding(any());
     }
 
@@ -147,6 +169,21 @@ class MemberCommandServiceImplTest {
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
 
+        verify(member, never()).updateProfile(any(), any(), any());
+    }
+
+    @Test
+    void 프로필_수정_시_닉네임을_금칙어로_변경하면_예외가_발생한다() {
+        Member member = mock(Member.class);
+        when(member.getNickname()).thenReturn("기존닉네임");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberQueryService.isNicknameForbidden("플리맵사용자1")).thenReturn(true);
+
+        assertThatThrownBy(() -> memberCommandService.updateProfile(MEMBER_ID, updateProfile("플리맵사용자1", null, null)))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_FORBIDDEN_WORD));
+
+        verify(memberQueryService, never()).isNicknameAvailable(any());
         verify(member, never()).updateProfile(any(), any(), any());
     }
 
@@ -452,6 +489,69 @@ class MemberCommandServiceImplTest {
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_PROFILE_IMAGE));
 
         verify(profileImageStorage, never()).upload(any(), any(), any());
+    }
+
+    @Test
+    void 회원_탈퇴에_성공하면_닉네임을_마스킹하고_연관_데이터를_정리한다() {
+        Member member = Member.builder()
+                .nickname("예림")
+                .introduction("소개")
+                .profileImageObjectKey("old-key")
+                .build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
+
+        memberCommandService.withdraw(MEMBER_ID);
+
+        assertThat(member.getNickname()).isEqualTo("플리맵사용자" + MEMBER_ID);
+        assertThat(member.getWithdrawnNickname()).isEqualTo("예림");
+        assertThat(member.getIntroduction()).isNull();
+        assertThat(member.getProfileImageObjectKey()).isNull();
+        assertThat(member.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
+        assertThat(member.getWithdrawalReason()).isEqualTo(WithdrawalReason.VOLUNTARY);
+        assertThat(member.isDeleted()).isTrue();
+
+        verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
+        verify(memberFollowRepository).deleteByIdFollowingId(MEMBER_ID);
+        verify(socialAccountCommandService).deleteByMemberId(MEMBER_ID);
+        verify(profileImageStorage, never()).delete(any());
+        verify(eventPublisher).publishEvent(new MemberWithdrawnEvent(MEMBER_ID, "old-key"));
+    }
+
+    @Test
+    void 탈퇴_시_프로필_이미지가_없으면_objectKey가_null인_이벤트를_발행한다() {
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
+
+        memberCommandService.withdraw(MEMBER_ID);
+
+        verify(eventPublisher).publishEvent(new MemberWithdrawnEvent(MEMBER_ID, null));
+    }
+
+    @Test
+    void 존재하지_않는_회원을_탈퇴시키면_예외가_발생한다() {
+        when(memberQueryService.getActiveMember(MEMBER_ID))
+                .thenThrow(new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        assertThatThrownBy(() -> memberCommandService.withdraw(MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Test
+    void 마스킹_닉네임이_다른_활성_회원의_닉네임과_겹치면_닉네임_중복_예외로_변환한다() {
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
+        doThrow(new DataIntegrityViolationException("duplicate"))
+                .when(memberRepository).saveAndFlush(any(Member.class));
+
+        assertThatThrownBy(() -> memberCommandService.withdraw(MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     private MockMultipartFile webpFile() {

@@ -103,6 +103,7 @@ public class SecurityConfig {
                                 "/api/v1/pins/map",
                                 "/api/v1/auth/csrf"
                         ).permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasAuthority("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

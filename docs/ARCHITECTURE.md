@@ -53,9 +53,11 @@ com.example.plimap/
 ├── domain/                         # 도메인 레이어
 │   ├── member/                     # 회원·약관
 │   ├── auth/                       # 소셜 로그인·JWT
-│   ├── place/                      # 장소·위치·검색 기록
-│   ├── track/                      # 음악·장소별 곡·하트·북마크
+│   ├── place/                      # 장소·위치·검색 기록·북마크
+│   ├── track/                      # 음악·장소별 곡·좋아요
+│   ├── notification/               # 알림·SSE
 │   ├── report/                     # 회원·PIN 신고 접수
+│   ├── admin/                      # 관리자 전용 API
 │   └── pin/                        # PIN 핵심 도메인
 │       ├── controller/             # REST API 컨트롤러
 │       │   └── docs/               # Swagger 문서용 인터페이스/설명
@@ -90,16 +92,17 @@ com.example.plimap/
 └── PlimapApplication
 ```
 
-> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report` 도메인도 동일한 내부 패키지 구조를 따릅니다.
+> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report`, `admin` 도메인도 동일한 내부 패키지 구조를 따릅니다. `admin`은 자체 엔티티가 필요한 경우에만 `entity`, `repository` 패키지를 추가합니다. 다른 도메인의 데이터는 해당 도메인의 Service 인터페이스를 통해 접근하며, 다른 도메인의 Repository를 직접 주입하지 않습니다.
 
 ## Domain Structure
 
 ### 1. Member
 
-회원과 약관 관련 기능을 담당합니다.
+회원, 프로필, 팔로우와 약관 관련 기능을 담당합니다.
 
-- 회원 프로필 관리
+- 회원 프로필 및 프로필 이미지 관리
 - 회원 상태 관리
+- 팔로우·언팔로우 및 팔로워·팔로잉 목록 관리
 - 약관 동의 내역 관리
 
 ### 2. Auth
@@ -113,28 +116,30 @@ com.example.plimap/
 
 ### 3. Place
 
-장소, 위치, 검색 기록 관련 기능을 담당합니다.
+장소, 위치, 검색 기록과 북마크 관련 기능을 담당합니다.
 
 - 장소 정보 관리
-- 위치 기반 장소 조회
-- 장소 검색
-- 사용자 검색 기록 관리
+- 외부 API를 이용한 장소 검색 및 검색 장소 확정
+- 지도 선택 위치의 장소 확정 및 위치 메타데이터 관리
+- 사용자 검색 기록 및 장소 북마크 관리
 
 ### 4. Track
 
 음악과 장소별 곡 관련 기능을 담당합니다.
 
-- 트랙 정보 관리
-- 장소별 음악 관리
-- 북마크 관리
+- 음악 검색 및 트랙 메타데이터 관리
+- 구간 재생 준비
+- 장소별 곡 조회 및 관리
+- 장소별 곡 좋아요 관리
 
 ### 5. Pin
 
 PLIMAP의 PIN 핵심 도메인을 담당합니다.
 
 - PIN 생성, 수정, 삭제
-- PIN 조회
-- 사용자별 PIN 관리
+- PIN 상세·목록·피드 조회
+- PIN 태그 및 좋아요 관리
+- 지도 선택 위치의 PIN 등록 가능 여부 검증
 
 ### 6. Report
 
@@ -142,8 +147,42 @@ PLIMAP의 PIN 핵심 도메인을 담당합니다.
 
 - 회원 신고 접수
 - 공개 PIN 신고 접수
-- 자기 대상·중복·비공개 PIN 신고 제한
-- 관리자 조회·처리·제재 기능은 담당하지 않음
+
+### 7. Notification
+
+회원 활동으로 발생하는 알림의 저장, 조회 및 실시간 전달을 담당합니다.
+
+- 팔로우, PIN 등록, PIN 좋아요 알림 생성
+- SSE 구독 및 heartbeat를 통한 실시간 알림 전달
+
+## Domain Event and Notification
+
+`member`와 `pin` 도메인의 Command Service는 알림 도메인에 직접 의존하지 않고 Spring의 애플리케이션 이벤트를 발행합니다.
+
+- `MemberFollowedEvent`: 회원 팔로우 알림
+- `PinCreatedEvent`: 팔로워 대상 PIN 등록 알림
+- `PinLikedEvent`: PIN 작성자 대상 좋아요 알림
+
+`NotificationEventListener`는 원본 상태 변경이 성공적으로 커밋된 후 `AFTER_COMMIT` 단계에서 이벤트를 처리합니다. PIN 등록 알림은 `notificationTaskExecutor`를 사용해 비동기로 처리합니다.
+
+알림 생성은 `NotificationCommandService`의 새로운 트랜잭션에서 실행되며, 알림 저장 트랜잭션이 커밋된 후 연결된 클라이언트에 SSE 이벤트를 전송합니다.
+
+```text
+Member/Pin Command Service
+    → Domain Event 발행
+    → 원본 트랜잭션 커밋
+    → NotificationEventListener
+    → NotificationCommandService
+    → Notification 저장
+    → SSE 실시간 전송
+```
+
+### 7. Admin
+
+관리자 전용 기능을 담당합니다. `Member.role`이 `ADMIN`인 계정만 `/api/v1/admin/**` 경로에 접근할 수 있습니다(`SecurityConfig`의 `hasAuthority("ADMIN")`).
+
+- 관리자 로그인 게이트(현재 로그인한 계정의 관리자 권한 확인)
+- 향후 회원 벌점·정지 처리, 신고 누적 게시물 조회 등 관리자 전용 기능 추가 예정
 
 ## Partial CQRS
 
@@ -217,7 +256,7 @@ public class Pin extends SoftDeleteEntity {
 
 JPA Auditing은 `global.config.JpaAuditingConfig`의 `@EnableJpaAuditing`으로 활성화합니다. `BaseEntity`의 `@CreatedDate`, `@LastModifiedDate`는 이 설정이 등록되어 있을 때 엔티티 저장 이벤트에 맞춰 동작합니다.
 
-애플리케이션이 로컬 PostgreSQL에서 AWS RDS for PostgreSQL로 이전되더라도 시간 기록 방식은 변경하지 않습니다. PLIMAP 백엔드가 유일한 데이터 쓰기 주체인 동안에는 JPA Auditing을 사용합니다. 추후 외부 배치, Lambda, 관리자 SQL 또는 다른 서비스가 동일한 DB를 직접 수정하게 되면 애플리케이션을 거치지 않는 변경도 기록할 수 있도록 DB Trigger 도입을 재검토합니다.
+데이터베이스 제공자나 실행 환경이 달라져도 시간 기록 방식은 변경하지 않습니다. PLIMAP 백엔드가 유일한 데이터 쓰기 주체인 동안에는 JPA Auditing을 사용합니다. 추후 외부 배치, 관리자 SQL 또는 다른 서비스가 동일한 DB를 직접 수정하게 되면 애플리케이션을 거치지 않는 변경도 기록할 수 있도록 DB Trigger 도입을 재검토합니다.
 
 ### Soft Delete
 

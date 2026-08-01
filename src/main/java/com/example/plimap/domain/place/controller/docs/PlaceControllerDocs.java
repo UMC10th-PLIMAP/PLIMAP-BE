@@ -19,6 +19,44 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 public interface PlaceControllerDocs {
 
     @Operation(
+            summary = "장소 상세 조회",
+            description = "활성 장소의 기본 정보와 현재 위치 기준 거리, 전체 활성 PIN 집계, "
+                    + "인증 사용자의 북마크 및 활성 PIN 등록 여부를 조회합니다. "
+                    + "장소별 곡 접근 가능 여부는 장소별 곡 목록 API의 "
+                    + "isTrackDetailAccessible을 사용합니다. "
+                    + "(Figma 기준 화면: MP-02-01, MP-02-02)"
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "장소 상세 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "현재 위치 누락 또는 범위 검증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "활성 장소를 찾을 수 없음")
+    })
+    ResponseEntity<ApiResponse<PlaceResponse.Detail>> getPlaceDetail(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @Parameter(description = "장소 ID", required = true, example = "1")
+            Long placeId,
+            @Parameter(description = "사용자 현재 위도", required = true, example = "37.5283")
+            @NotNull(message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMin(value = "-90", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            Double latitude,
+            @Parameter(description = "사용자 현재 경도", required = true, example = "126.9326")
+            @NotNull(message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMin(value = "-180", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            Double longitude
+    );
+
+    @Operation(
             summary = "장소 검색",
             description = "Kakao Local REST API로 주소를 먼저 검색하고, 주소 결과가 없으면 "
                     + "키워드와 현재 위치를 기준으로 장소를 검색합니다. "
@@ -138,7 +176,8 @@ public interface PlaceControllerDocs {
 
     @Operation(
             summary = "지도 선택 장소 확정",
-            description = "지도에서 선택한 위치를 기존 MAP_SELECTION Place와 매핑하거나 새 Place로 생성합니다. "
+            description = "지도에서 선택한 좌표를 판정하여 기존 PLACE_SEARCH Place를 추천하거나, "
+                    + "건물명으로 장소 검색을 유도하거나, MAP_SELECTION Place를 확정합니다. "
                     + "(Figma 기준 화면: PN-02-03)"
     )
     @ApiResponses({
@@ -150,9 +189,15 @@ public interface PlaceControllerDocs {
                     description = "좌표 또는 주소 검증 실패"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패")
+                    description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "502",
+                    description = "Kakao 장소 검색 서비스 연동 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "504",
+                    description = "Kakao 장소 검색 서비스 응답 지연")
     })
-    ResponseEntity<ApiResponse<PlaceResponse.MapSelection>> confirmMapSelection(
+    ResponseEntity<ApiResponse<PlaceResponse.MapSelectionResult>> confirmMapSelection(
             @Valid PlaceRequest.MapSelection request
     );
 }

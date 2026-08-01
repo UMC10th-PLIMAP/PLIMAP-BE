@@ -88,6 +88,28 @@ class PlaceRepositoryIntegrationTest {
         assertThat(foundPlace.getSource()).isEqualTo(PlaceSource.MAP_SELECTION);
     }
 
+    @Test
+    void PLACE_SEARCH_ADDRESS_SEARCH_MAP_SELECTION_활성_장소를_id로_조회한다() {
+        Place placeSearch = placeRepository.save(createSearchPlace("kakao-place-3"));
+        Place addressSearch = placeRepository.save(createAddressSearchPlace());
+        Place mapSelection = placeRepository.save(createMapSelectionPlace());
+        placeRepository.flush();
+        entityManager.clear();
+
+        assertThat(placeRepository.findByIdAndDeletedAtIsNull(placeSearch.getId()))
+                .get()
+                .extracting(Place::getSource)
+                .isEqualTo(PlaceSource.PLACE_SEARCH);
+        assertThat(placeRepository.findByIdAndDeletedAtIsNull(addressSearch.getId()))
+                .get()
+                .extracting(Place::getSource)
+                .isEqualTo(PlaceSource.ADDRESS_SEARCH);
+        assertThat(placeRepository.findByIdAndDeletedAtIsNull(mapSelection.getId()))
+                .get()
+                .extracting(Place::getSource)
+                .isEqualTo(PlaceSource.MAP_SELECTION);
+    }
+
     private Place createSearchPlace(String providerPlaceId) {
         Point location = GEOMETRY_FACTORY.createPoint(new Coordinate(127.1234, 37.5678));
 
@@ -114,6 +136,19 @@ class PlaceRepositoryIntegrationTest {
                 .name("지도 선택 장소")
                 .address("서울특별시 테스트구")
                 .source(PlaceSource.MAP_SELECTION)
+                .location(location)
+                .build();
+    }
+
+    private Place createAddressSearchPlace() {
+        Point location = GEOMETRY_FACTORY.createPoint(new Coordinate(127.2345, 37.6789));
+
+        return Place.builder()
+                .name("주소 검색 장소")
+                .address("서울특별시 테스트구 테스트동")
+                .normalizedAddress("서울특별시테스트구테스트동")
+                .placeProvider("KAKAO")
+                .source(PlaceSource.ADDRESS_SEARCH)
                 .location(location)
                 .build();
     }
