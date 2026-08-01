@@ -89,6 +89,46 @@ class PlaceCommandServiceImplTest {
     }
 
     @Test
+    void 활성_장소를_북마크하면_멱등_등록하고_true를_반환한다() {
+        Place place = place(1L, "한강", 37.5283, 126.9326);
+        when(placeRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(place));
+
+        PlaceResponse.BookmarkResult result = placeCommandService.bookmarkPlace(10L, 1L);
+
+        assertThat(result).isEqualTo(new PlaceResponse.BookmarkResult(1L, true));
+        verify(placeBookmarkRepository).insertIfAbsent(1L, 10L);
+        verify(placeRepository, never()).save(any(Place.class));
+    }
+
+    @Test
+    void 활성_장소의_내_북마크만_멱등_삭제하고_false를_반환한다() {
+        Place place = place(1L, "한강", 37.5283, 126.9326);
+        when(placeRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(place));
+
+        PlaceResponse.BookmarkResult result = placeCommandService.deletePlaceBookmark(10L, 1L);
+
+        assertThat(result).isEqualTo(new PlaceResponse.BookmarkResult(1L, false));
+        verify(placeBookmarkRepository).deleteByPlaceIdAndMemberId(1L, 10L);
+        verify(placeRepository, never()).save(any(Place.class));
+    }
+
+    @Test
+    void 존재하지_않거나_Soft_Delete된_장소의_북마크_변경은_404를_반환한다() {
+        when(placeRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> placeCommandService.bookmarkPlace(10L, 1L))
+                .isInstanceOf(PlaceException.class)
+                .extracting(exception -> ((PlaceException) exception).getErrorCode())
+                .isEqualTo(PlaceErrorCode.PLACE_NOT_FOUND);
+        assertThatThrownBy(() -> placeCommandService.deletePlaceBookmark(10L, 1L))
+                .isInstanceOf(PlaceException.class)
+                .extracting(exception -> ((PlaceException) exception).getErrorCode())
+                .isEqualTo(PlaceErrorCode.PLACE_NOT_FOUND);
+
+        verifyNoInteractions(placeBookmarkRepository);
+    }
+
+    @Test
     void 반경_20m_이내의_활성_PLACE_SEARCH_장소를_먼저_추천한다() {
         PlaceRequest.MapSelection request = request("새 장소명", "도로명 주소");
         Place recommendedPlace = place(

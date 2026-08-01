@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,6 +48,42 @@ public class PlaceController implements PlaceControllerDocs {
         return ResponseEntity
                 .status(PlaceSuccessCode.PLACE_DETAIL_SUCCESS.getStatus())
                 .body(ApiResponse.success(PlaceSuccessCode.PLACE_DETAIL_SUCCESS, result));
+    }
+
+    @Override
+    @PutMapping("/{placeId}/bookmarks")
+    public ResponseEntity<ApiResponse<PlaceResponse.BookmarkResult>> bookmarkPlace(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long placeId
+    ) {
+        PlaceResponse.BookmarkResult result = placeCommandService.bookmarkPlace(
+                currentMember.getMember().getId(),
+                placeId
+        );
+        return ResponseEntity
+                .status(PlaceSuccessCode.PLACE_BOOKMARK_CREATE_SUCCESS.getStatus())
+                .body(ApiResponse.success(
+                        PlaceSuccessCode.PLACE_BOOKMARK_CREATE_SUCCESS,
+                        result
+                ));
+    }
+
+    @Override
+    @DeleteMapping("/{placeId}/bookmarks")
+    public ResponseEntity<ApiResponse<PlaceResponse.BookmarkResult>> deletePlaceBookmark(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long placeId
+    ) {
+        PlaceResponse.BookmarkResult result = placeCommandService.deletePlaceBookmark(
+                currentMember.getMember().getId(),
+                placeId
+        );
+        return ResponseEntity
+                .status(PlaceSuccessCode.PLACE_BOOKMARK_DELETE_SUCCESS.getStatus())
+                .body(ApiResponse.success(
+                        PlaceSuccessCode.PLACE_BOOKMARK_DELETE_SUCCESS,
+                        result
+                ));
     }
 
     @Override

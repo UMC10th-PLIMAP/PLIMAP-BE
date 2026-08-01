@@ -6,8 +6,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -61,6 +63,7 @@ class PlaceControllerTest {
     private static final String SELECTION_ENDPOINT = "/api/v1/places/selections";
     private static final String SEARCH_ENDPOINT = "/api/v1/places/search";
     private static final String DETAIL_ENDPOINT = "/api/v1/places/1";
+    private static final String BOOKMARK_ENDPOINT = "/api/v1/places/1/bookmarks";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -101,6 +104,76 @@ class PlaceControllerTest {
         when(member.getId()).thenReturn(1L);
         when(member.getRole()).thenReturn(MemberRole.USER);
         when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
+    }
+
+    @Test
+    void 장소_북마크_등록에_성공하면_명세_응답을_반환한다() throws Exception {
+        when(placeCommandService.bookmarkPlace(1L, 1L))
+                .thenReturn(new PlaceResponse.BookmarkResult(1L, true));
+
+        mockMvc.perform(put(BOOKMARK_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PLACE_BOOKMARK_CREATE_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("장소 북마크 등록에 성공했습니다."))
+                .andExpect(jsonPath("$.result.placeId").value(1))
+                .andExpect(jsonPath("$.result.bookmarkedByMe").value(true));
+
+        verify(placeCommandService).bookmarkPlace(1L, 1L);
+    }
+
+    @Test
+    void 장소_북마크_삭제에_성공하면_명세_응답을_반환한다() throws Exception {
+        when(placeCommandService.deletePlaceBookmark(1L, 1L))
+                .thenReturn(new PlaceResponse.BookmarkResult(1L, false));
+
+        mockMvc.perform(delete(BOOKMARK_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PLACE_BOOKMARK_DELETE_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("장소 북마크 삭제에 성공했습니다."))
+                .andExpect(jsonPath("$.result.placeId").value(1))
+                .andExpect(jsonPath("$.result.bookmarkedByMe").value(false));
+
+        verify(placeCommandService).deletePlaceBookmark(1L, 1L);
+    }
+
+    @Test
+    void 장소_북마크_등록에서_장소가_없으면_404를_반환한다() throws Exception {
+        when(placeCommandService.bookmarkPlace(1L, 1L))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND));
+
+        mockMvc.perform(put(BOOKMARK_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("PLACE_NOT_FOUND"));
+    }
+
+    @Test
+    void 장소_북마크_삭제에서_장소가_없으면_404를_반환한다() throws Exception {
+        when(placeCommandService.deletePlaceBookmark(1L, 1L))
+                .thenThrow(new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND));
+
+        mockMvc.perform(delete(BOOKMARK_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("PLACE_NOT_FOUND"));
+    }
+
+    @Test
+    void 장소_북마크_등록과_삭제는_인증_실패시_공통_401을_반환한다() throws Exception {
+        mockMvc.perform(put(BOOKMARK_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("COMMON_401_UNAUTHORIZED"));
+        mockMvc.perform(delete(BOOKMARK_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("COMMON_401_UNAUTHORIZED"));
+
+        verifyNoInteractions(placeCommandService);
     }
 
     @Test
