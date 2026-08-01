@@ -2,7 +2,7 @@
 
 > 위치 기반 음악 공유 서비스 데이터베이스 설계서
 >
-> v0.9.0 | 2026-07-31
+> v0.9.2 | 2026-08-01
 
 ---
 
@@ -15,7 +15,7 @@
 |  | social_account | 카카오, 구글, 애플 소셜 계정 |
 |  | terms | 이용약관 및 개인정보 처리방침 버전 |
 |  | member_terms_agreement | 회원별 약관 동의 이력 |
-| **place** | place | 검색 또는 지도에서 선택한 장소와 PostGIS 위치 |
+| **place** | place | 장소 검색·주소 검색 또는 지도에서 선택한 장소와 PostGIS 위치 |
 |  | place_search_history | 회원별 최근 선택 장소와 위치 스냅샷 |
 |  | place_bookmark | 회원이 저장한 장소 북마크 |
 | **track** | track | 외부 음악 제공자의 곡 메타데이터 |
@@ -34,6 +34,8 @@
 
 ```
 member
+   ├── 1:N ─ member_follow (팔로워, follower_id)
+   ├── 1:N ─ member_follow (팔로잉 대상, following_id)
    ├── 1:N ─ social_account (소셜 로그인: 카카오/구글/애플)
    ├── 1:N ─ member_terms_agreement ─── N:1 ─ terms (약관 버전별 동의)
    ├── 1:N ─ place_search_history (최근 선택 장소)
@@ -47,6 +49,7 @@ member
    └── 1:N ─ notification (행위자, actor)
 
 place 
+   ├── 1:N ─ place_search_history (저장된 장소 참조, place_id nullable)
    ├── 1:N ─ place_bookmark ─── N:1 ─ member (장소 북마크)
    └── 1:N ─ place_track ─┬─ N:1 ─ track (장소에 등록된 곡)
                           ├─ 1:N ─ pin ─┬─ N:1 ─ member (등록자)
@@ -55,11 +58,13 @@ place
                           │             └─ 1:N ─ notification (PIN 등록·좋아요 알림, nullable)
                           └─ 1:N ─ place_track_like ─── N:1 ─ member (하트)
 
+member ─── N:N ─ member (via member_follow, 자기참조 팔로우)
 member ─── N:N ─ terms (via member_terms_agreement)
 member ─── N:N ─ place (via place_bookmark)
 member ─── N:N ─ place_track (via place_track_like)
 member ─── N:N ─ pin (via pin_like, 따봉)
 pin ─── N:N ─ tag (via pin_tag)
+pin ─── N:1 ─ place (JPA 직접 참조, DB는 place_track 복합 FK로 동일 장소 보장)
 pin ─── 1:N ─ report (신고 대상 PIN, nullable)
 pin ─── 1:N ─ notification (PIN 등록·좋아요 알림, nullable)
 ```
@@ -74,10 +79,13 @@ MemberRole: USER, ADMIN
 WithdrawalReason: VOLUNTARY, PENALTY
 AuthProvider: KAKAO, GOOGLE, APPLE
 TermsType: SERVICE, PRIVACY, LOCATION, MARKETING
-PlaceSource: PLACE_SEARCH, MAP_SELECTION
+PlaceSource: PLACE_SEARCH, ADDRESS_SEARCH, MAP_SELECTION
 PinSortType: POPULAR, LATEST
+PlaceTrackSort: POPULAR, LATEST
 AvailabilityStatus: CREATABLE_NEW_PLACE, 
                        OUT_OF_RANGE, TOO_CLOSE_TO_PIN
+NicknameCheckFailReason: TOO_SHORT, TOO_LONG, INVALID_FORMAT,
+                         FORBIDDEN_WORD, DUPLICATE
 ReportCategory: PERSONAL_INFORMATION_EXPOSURE, OBSCENE_OR_HARMFUL,
                 ABUSE_OR_HATE_SPEECH, COMMERCIAL_OR_PROMOTIONAL,
                 OTHER
@@ -87,12 +95,15 @@ NotificationType: FOLLOW, PIN_CREATED, PIN_LIKED
 | Enum | 표현하는 상태 | 저장 방식 |
 |---|---|---|
 | `MemberStatus` | 회원의 정상 이용·정지·탈퇴 상태 | `member.status`에 저장 |
+| `PlaceSource` | 장소가 외부 장소 검색·주소 검색·지도 직접 선택 중 어느 경로로 만들어졌는지 구분 | `place.source`에 저장 |
+| `PinSortType` | 장소별 곡에 등록된 PIN 목록을 인기순·최신순 중 어떤 기준으로 조회할지 표현 | API 요청용, DB에 저장하지 않음 |
+| `PlaceTrackSort` | 장소의 곡 목록을 인기순·최신순 중 어떤 기준으로 조회할지 표현 | API 요청용, DB에 저장하지 않음 |
+| `AvailabilityStatus` | 현재 위치와 장소·기존 PIN 상태를 바탕으로 PIN 등록 가능 여부와 불가 사유를 표현 | API 응답용 계산값, DB에 저장하지 않음 |
+| `NicknameCheckFailReason` | 닉네임 사용 불가 사유를 길이·형식·금칙어·중복 기준으로 표현 | API 응답용 계산값, DB에 저장하지 않음 |
 | `MemberRole` | 회원이 일반 사용자인지 관리자인지 구분 | `member.role`에 저장 |
 | `WithdrawalReason` | 탈퇴가 자발적 탈퇴인지 벌점 4점 누적에 의한 자동 탈퇴인지 구분(재가입 허용 여부를 가름) | `member.withdrawal_reason`에 저장 |
 | `AuthProvider` | 회원이 인증한 소셜 로그인 제공자 | `social_account.provider`에 저장, 최초 가입 provider는 `member.join_provider`에 별도 보존 |
 | `TermsType` | 약관이 서비스 이용약관인지 개인정보 처리방침인지 구분 | `terms.type`에 저장 |
-| `PlaceSource` | 장소가 외부 장소 검색과 지도 직접 선택 중 어느 경로로 만들어졌는지 구분 | `place.source`에 저장 |
-| `PinSortType` | 장소의 곡 또는 곡의 PIN 목록을 인기순·최신순 중 어떤 기준으로 조회할지 표현 | API 요청용, DB에 저장하지 않음 |
 | `PinRegistrationStatus` | 현재 위치와 장소·기존 PIN 상태를 바탕으로 PIN 등록 가능 여부와 불가 사유를 표현 | API 응답용 계산값, DB에 저장하지 않음 |
 | `ReportCategory` | 개인정보 노출·음란/유해·욕설/혐오 표현·상업적/홍보성·기타 신고 사유 | `report.category`에 저장 |
 | `NotificationType` | 알림이 팔로우·PIN 등록·PIN 좋아요 중 어떤 이벤트로 생성됐는지 구분 | `notification.type`에 저장 |
@@ -103,39 +114,6 @@ NotificationType: FOLLOW, PIN_CREATED, PIN_LIKED
 PIN의 피드 공개 여부는 두 가지 값만 필요하므로 Enum 대신 `pin.is_feed_public` Boolean 컬럼에 저장한다.
 
 알림은 `type`에 따라 대상 PIN 존재 여부가 갈린다. `FOLLOW`는 `pin_id`가 `NULL`이어야 하고, `PIN_CREATED`·`PIN_LIKED`는 `pin_id`가 필수다(`chk_notification_pin_required`).
-
----
-
-## 공통 엔티티 정책
-
-모든 JPA 엔티티는 `BaseEntity`를 상속하며 `created_at`, `updated_at` 컬럼을 공통으로 사용한다. 삭제 이력 보존이 필요한 `member`, `place`, `place_track`, `pin`만 `SoftDeleteEntity`를 상속하고 `deleted_at` 컬럼을 사용한다.
-
-- `created_at`, `updated_at`: JPA Auditing으로 자동 기록한다.
-- `deleted_at`: Soft Delete 대상의 삭제 시각을 기록하며, `NULL`이면 활성 데이터로 본다.
-- Soft Delete 대상의 삭제 유스케이스에서는 물리 삭제를 사용하지 않고 엔티티의 `delete()`를 호출한다.
-- Soft Delete 대상의 일반 조회와 인덱스는 활성 데이터인 `deleted_at IS NULL`을 기준으로 한다.
-- 삭제된 동일 식별 관계를 다시 활성화할 때는 새 row를 삽입하지 않고 기존 row를 `restore()`한다.
-- 이력·매핑 테이블은 별도의 보존 요구사항이 없다면 물리 삭제한다.
-
-PIN의 활성 상태와 피드 공개 여부는 별도로 관리한다.
-
-- `deleted_at IS NULL`: 삭제되지 않은 활성 PIN으로 본다.
-- `is_feed_public = TRUE`: 공개 피드에 노출하는 PIN으로 본다.
-- `is_feed_public = FALSE`: 활성 PIN으로 유지하되 작성자 외 사용자에게 노출하지 않는다.
-- 비공개 PIN도 활성 PIN이므로 회원별 장소 PIN 중복 등록 제한에 포함한다.
-- `place_track.public_pin_count`는 `deleted_at IS NULL AND is_feed_public = TRUE`인 PIN만 집계한다.
-
-시간 컬럼은 PostgreSQL `TIMESTAMPTZ`, Java `Instant`로 통일한다.
-
-PLIMAP 백엔드가 유일한 DB 쓰기 주체인 동안 `updated_at`은 JPA Auditing으로 관리한다. AWS RDS 연결 여부와 무관하게 이 정책을 유지하며, 외부 배치·Lambda·관리자 SQL·다른 서비스가 DB를 직접 수정하게 될 때 DB Trigger 도입을 재검토한다.
-
----
-
-## 로컬 DB 마이그레이션
-
-데이터베이스 스키마는 Hibernate `ddl-auto`가 아니라 Flyway Migration으로 관리한다.
-빈 로컬 DB는 애플리케이션 최초 실행 시 `V1__init_schema.sql`로 초기화된다.
-실행 및 변경 절차는 [데이터베이스 개발 가이드](DATABASE.md)를 따른다.
 
 ---
 
@@ -297,8 +275,13 @@ CREATE TABLE place
     category          VARCHAR(100),
     address           VARCHAR(255) NOT NULL,
     road_address      VARCHAR(255),
+    administrative_region_code VARCHAR(20),
+    sido              VARCHAR(100),
+    sigungu           VARCHAR(100),
+    eup_myeon_dong    VARCHAR(100),
     place_provider    VARCHAR(30),
     provider_place_id VARCHAR(255),
+    normalized_address VARCHAR(255),
     source            VARCHAR(20)  NOT NULL,
     location          GEOGRAPHY(POINT, 4326) NOT NULL,
     created_at        TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -306,7 +289,7 @@ CREATE TABLE place
     deleted_at        TIMESTAMPTZ,
     CONSTRAINT pk_place PRIMARY KEY (id),
     CONSTRAINT chk_place_source
-        CHECK (source IN ('PLACE_SEARCH', 'MAP_SELECTION')),
+        CHECK (source IN ('PLACE_SEARCH', 'ADDRESS_SEARCH', 'MAP_SELECTION')),
     CONSTRAINT chk_place_location_not_empty
         CHECK (NOT ST_IsEmpty(location::geometry)),
     CONSTRAINT chk_place_provider
@@ -317,11 +300,23 @@ CREATE TABLE place
                 AND provider_place_id IS NOT NULL
             )
             OR (
+                source = 'ADDRESS_SEARCH'
+                AND place_provider = 'KAKAO'
+                AND provider_place_id IS NULL
+            )
+            OR (
                 source = 'MAP_SELECTION'
                 AND place_provider IS NULL
                 AND provider_place_id IS NULL
             )
-        )
+        ),
+    CONSTRAINT chk_place_normalized_address
+        CHECK (
+            (source = 'ADDRESS_SEARCH' AND normalized_address IS NOT NULL)
+            OR (source <> 'ADDRESS_SEARCH' AND normalized_address IS NULL)
+        ),
+    CONSTRAINT chk_place_address_search_category
+        CHECK (source <> 'ADDRESS_SEARCH' OR category IS NULL)
 );
 
 CREATE UNIQUE INDEX uk_place_provider_id
@@ -337,6 +332,16 @@ CREATE INDEX idx_place_location_gist
 CREATE INDEX idx_place_name_ci
     ON place (lower(name))
     WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_place_active_administrative_region_code
+    ON place (administrative_region_code)
+    WHERE deleted_at IS NULL
+      AND administrative_region_code IS NOT NULL;
+
+CREATE UNIQUE INDEX uk_place_active_address_search_normalized_address
+    ON place (normalized_address)
+    WHERE source = 'ADDRESS_SEARCH'
+      AND deleted_at IS NULL;
 
 CREATE TABLE place_bookmark
 (
@@ -706,13 +711,6 @@ CREATE INDEX idx_notification_recipient_latest
 
 ---
 
-## 화면 테이블 매칭
-
-| Figma 화면 | 화면 수 | 관련 테이블 | 설계 판단 |
-|---|---:|---|---|
-
----
-
 ## 변경 이력
 
 | 버전    | 날짜         | 변경 내용                                                                                                                 |
@@ -733,3 +731,4 @@ CREATE INDEX idx_notification_recipient_latest
 | 0.8.0 | 2026-07-31 | 팔로우·PIN 등록·PIN 좋아요 알림(내소식)을 위한 `notification` 테이블과 `NotificationType`을 추가하고, 알림 유형별 대상 PIN 필수 여부 제약을 반영 |
 | 0.9.0 | 2026-07-31 | 회원 탈퇴/벌점/정지/관리자 인가를 위해 member에 `join_provider`·`penalty_point`·`suspended_until`·`withdrawal_reason`·`role`·`report_count` 컬럼과 `MemberRole`·`WithdrawalReason` Enum 추가, pin에 신고 자동숨김용 `report_count` 컬럼 추가. 이미 삭제된 `clip_end_ms`를 참조하던 `chk_pin_clip_range` 문서 오류도 함께 제거 |
 | 0.9.1 | 2026-07-31 | 자발적 탈퇴 시 마스킹 닉네임("플리맵사용자{memberId}")을 담기 위해 `nickname` 길이를 `VARCHAR(30)`으로 확장하고, 마스킹 전 원래 닉네임을 보존하는 `withdrawn_nickname VARCHAR(10)` 컬럼과 `chk_member_withdrawn_nickname_length` 제약 추가 |
+| 0.9.2 | 2026-08-01 | `place`의 행정구역·정규화 주소와 `ADDRESS_SEARCH` 제약·인덱스를 반영하고, 누락된 관계와 API Enum을 보완했으며 삭제된 `clip_end_ms` 제약을 제거 |
