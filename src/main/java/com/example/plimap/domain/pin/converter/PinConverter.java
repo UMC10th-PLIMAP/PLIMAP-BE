@@ -174,20 +174,4 @@ public class PinConverter {
                 .pins(pins)
                 .build();
     }
-
-    public static PinRequest.Viewport toViewPort(
-            Double southWestLat,
-            Double southWestLng,
-            Double northEastLat,
-            Double northEastLng,
-            Integer zoomLevel
-    ) {
-        return PinRequest.Viewport.builder()
-                .southWestLat(southWestLat)
-                .southWestLng(southWestLng)
-                .northEastLat(northEastLat)
-                .northEastLng(northEastLng)
-                .zoomLevel(zoomLevel)
-                .build();
-    }
 }

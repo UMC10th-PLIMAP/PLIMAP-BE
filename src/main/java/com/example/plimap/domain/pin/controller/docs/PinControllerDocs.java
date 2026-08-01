@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -141,10 +142,6 @@ public interface PinControllerDocs {
             description = "장소별로 지도에 표시할 대표 핀 1개씩만 반환한다. (Figma 기준 화면: MP-01-01)"
     )
     public ResponseEntity<ApiResponse<PinResponse.ClusterAndPin>> getClusterPinList(
-            @RequestParam Double southWestLat,
-            @RequestParam Double southWestLng,
-            @RequestParam Double northEastLat,
-            @RequestParam Double northEastLng,
-            @RequestParam Integer zoomLevel
+            @Valid @ModelAttribute PinRequest.Viewport request
     );
 }

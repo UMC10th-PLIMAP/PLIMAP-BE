@@ -172,13 +172,8 @@ public class PinController implements PinControllerDocs {
 
     @GetMapping("/pins/map")
     public ResponseEntity<ApiResponse<PinResponse.ClusterAndPin>> getClusterPinList(
-            @RequestParam Double southWestLat,
-            @RequestParam Double southWestLng,
-            @RequestParam Double northEastLat,
-            @RequestParam Double northEastLng,
-            @RequestParam Integer zoomLevel
+            @Valid @ModelAttribute PinRequest.Viewport request
     ) {
-        PinRequest.Viewport request = PinConverter.toViewPort(southWestLat, southWestLng, northEastLat, northEastLng, zoomLevel);
         PinResponse.ClusterAndPin response = pinQueryService.getClusterPinList(request);
         return ResponseEntity
                 .status(HttpStatus.OK)
