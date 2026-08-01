@@ -2,6 +2,7 @@ package com.example.plimap.global.security;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -30,7 +31,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (token != null && jwtUtil.isValid(token) && jwtUtil.isAccessToken(token)
                 && !tokenBlacklistService.isBlacklisted(jwtUtil.getJti(token))) {
             Long memberId = jwtUtil.getMemberId(token);
-            Member member = memberRepository.findById(memberId).orElse(null);
+            Member member = memberRepository.findByIdAndStatusAndDeletedAtIsNull(memberId, MemberStatus.ACTIVE)
+                    .orElse(null);
 
             if (member != null) {
                 AuthMember authMember = new AuthMember(member);

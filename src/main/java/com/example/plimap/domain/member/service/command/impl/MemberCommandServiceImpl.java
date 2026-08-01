@@ -1,5 +1,6 @@
 package com.example.plimap.domain.member.service.command.impl;
 
+import com.example.plimap.domain.auth.service.command.SocialAccountCommandService;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
@@ -7,6 +8,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.event.MemberFollowedEvent;
+import com.example.plimap.domain.member.event.MemberWithdrawnEvent;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
@@ -42,6 +44,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
     private final ApplicationEventPublisher eventPublisher;
     private final ProfileImageStorage profileImageStorage;
     private final ProfileImageObjectKeyGenerator profileImageObjectKeyGenerator;
+    private final SocialAccountCommandService socialAccountCommandService;
 
     @Override
     @Transactional
@@ -53,6 +56,9 @@ public class MemberCommandServiceImpl implements MemberCommandService {
             throw new MemberException(MemberErrorCode.ALREADY_ONBOARDED);
         }
 
+        if (memberQueryService.isNicknameForbidden(request.getNickname())) {
+            throw new MemberException(MemberErrorCode.NICKNAME_FORBIDDEN_WORD);
+        }
         if (!memberQueryService.isNicknameAvailable(request.getNickname())) {
             throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE);
         }
@@ -77,8 +83,13 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
         boolean nicknameChanged = request.nickname() != null
                 && !request.nickname().equalsIgnoreCase(member.getNickname());
-        if (nicknameChanged && !memberQueryService.isNicknameAvailable(request.nickname())) {
-            throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE);
+        if (nicknameChanged) {
+            if (memberQueryService.isNicknameForbidden(request.nickname())) {
+                throw new MemberException(MemberErrorCode.NICKNAME_FORBIDDEN_WORD);
+            }
+            if (!memberQueryService.isNicknameAvailable(request.nickname())) {
+                throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE);
+            }
         }
 
         try {
@@ -215,5 +226,30 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         if (deletedCount == 0) {
             throw new MemberException(MemberErrorCode.NOT_FOLLOWING);
         }
+    }
+
+    @Override
+    @Transactional
+    public void withdraw(Long memberId) {
+        Member member = memberQueryService.getActiveMember(memberId);
+        String oldProfileImageKey = member.getProfileImageObjectKey();
+
+        member.withdrawVoluntarily();
+        memberFollowRepository.deleteByIdFollowerId(memberId);
+        memberFollowRepository.deleteByIdFollowingId(memberId);
+        socialAccountCommandService.deleteByMemberId(memberId);
+
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            // 마스킹 닉네임("플리맵사용자{id}")이 다른 활성 회원이 실제로 사용 중인 닉네임과
+            // 우연히 겹치는 경우 DB의 대소문자 무시 유니크 인덱스(uk_member_nickname_ci)에서 걸러진다.
+            throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE, e);
+        }
+
+        // 탈퇴 트랜잭션 커밋 전에 스토리지 객체를 지우면, 커밋 실패(롤백) 시 DB는 여전히
+        // oldProfileImageKey를 가리키는데 실제 객체는 이미 삭제된 상태가 된다. 실제 삭제는
+        // MemberEventListener가 이 트랜잭션이 커밋된 뒤에만 수행한다.
+        eventPublisher.publishEvent(new MemberWithdrawnEvent(memberId, oldProfileImageKey));
     }
 }

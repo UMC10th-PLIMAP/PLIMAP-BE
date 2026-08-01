@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -133,4 +135,18 @@ public interface MemberControllerDocs {
             Integer pageSize,
             String cursor
     );
+
+    @Operation(
+            summary = "회원 탈퇴",
+            description = """
+                    로그인한 회원 자신을 자발적으로 탈퇴 처리합니다.
+
+                    - 닉네임은 `플리맵사용자{memberId}`로 마스킹되고(원래 닉네임은 관리자 확인용으로 보존), 프로필 이미지와 자기소개는 삭제됩니다.
+                    - 좋아요 목록과 등록한 핀은 유지됩니다.
+                    - 팔로우/팔로워 관계는 양방향 모두 삭제됩니다.
+                    - 소셜 계정 연동 정보는 삭제되어, 이후 동일한 소셜 계정으로 재가입할 수 있습니다.
+                    - 처리 후 현재 세션의 액세스/리프레시 토큰을 무효화하고 로그아웃 쿠키를 반환합니다.
+                    """
+    )
+    ApiResponse<Void> withdraw(AuthMember authMember, HttpServletRequest request, HttpServletResponse response);
 }

@@ -1,5 +1,6 @@
 package com.example.plimap.domain.auth.service.command.impl;
 
+import com.example.plimap.domain.auth.exception.WithdrawnMemberAuthenticationException;
 import com.example.plimap.global.config.OAuthProperties;
 import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.OAuthFrontendRedirectCookieRepository;
@@ -73,6 +74,17 @@ class OAuthFailureHandlerTest {
         callbackRequest.setCookies(originCookie);
         callbackRequest.addParameter("state", "test-state");
         return callbackRequest;
+    }
+
+    @Test
+    void 벌점으로_탈퇴된_회원의_재가입_시도는_전용_에러_파라미터로_리다이렉트한다() throws Exception {
+        MockHttpServletRequest request = callbackRequestFor("http://localhost:5173");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationFailure(request, response, new WithdrawnMemberAuthenticationException());
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:5173/home?error=account_permanently_banned");
     }
 
     private AuthenticationException authenticationException() {
