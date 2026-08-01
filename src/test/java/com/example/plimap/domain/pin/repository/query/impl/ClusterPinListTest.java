@@ -58,10 +58,10 @@ class ClusterPinListTest {
     @Autowired
     EntityManager entityManager;
 
-    Pin pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10;
+    Pin pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10, pin11;
     Place place1, place2, place3, place4, place5, place6;
     Member member1, member2, member3;
-    PlaceTrack placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6;
+    PlaceTrack placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6, placeTrack7, placeTrack8;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Autowired
@@ -177,6 +177,8 @@ class ClusterPinListTest {
         placeTrack4 = PlaceTrack.create(place4, track2);
         placeTrack5 = PlaceTrack.create(place5, track3);
         placeTrack6 = PlaceTrack.create(place6, track3);
+        placeTrack7 = PlaceTrack.create(place6, track2);
+        placeTrack8 = PlaceTrack.create(place6, track1);
 
         // 성남시 3개
         pin1 = createPin(member1, place1, placeTrack1);
@@ -194,16 +196,19 @@ class ClusterPinListTest {
         // 세종(연서면) 1개
         pin8 = createPin(member3, place5, placeTrack5);
 
-        // 서울 성수동 2개
+        // 서울 성수동 32개
         pin9 = createPin(member1, place6, placeTrack6);
-        pin10 = createPin(member2, place6, placeTrack6);
+        pin10 = createPin(member2, place6, placeTrack7);
+        pin11 = createPin(member3, place6, placeTrack8);
 
 
         memberRepository.saveAll(List.of(member1, member2, member3));
         placeRepository.saveAll(List.of(place1, place2, place3, place4, place5, place6));
         trackRepository.saveAll(List.of(track1, track2, track3));
-        placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6));
-        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10));
+        placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6, placeTrack7, placeTrack8));
+        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10, pin11));
+
+        placeTrack8.increaseLikeCount();
 
         entityManager.flush();
         entityManager.clear();
@@ -389,7 +394,7 @@ class ClusterPinListTest {
         List<PinResponse.PinPreview> result = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
 
         // then
-        assertThat(result).hasSize(3);
+        assertThat(result).hasSize(2);
         PinResponse.PinPreview first = result.getFirst();
         assertThat(first.placeId()).isEqualTo(place1.getId());
 
@@ -397,7 +402,25 @@ class ClusterPinListTest {
         assertThat(last.placeId()).isEqualTo(place2.getId());
     }
 
+    @Test
+    void 트랙이_다른_핀이_여러개일_시_좋아요가_가장_높은것을_반환한다() {
+        // given
+        Point minPoint = geometryFactory.createPoint(
+                new Coordinate(127.0250, 37.5300)
+        );
 
+        Point maxPoint = geometryFactory.createPoint(
+                new Coordinate(127.0750, 37.5600)
+        );
+
+        // when
+        List<PinResponse.PinPreview> result = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+
+        // then
+        assertThat(result).hasSize(1);
+        PinResponse.PinPreview first = result.getFirst();
+        assertThat(first.albumImageUrl()).isEqualTo("album");
+    }
 
     private Member createMember(String name, String nickname) {
         return Member.builder()

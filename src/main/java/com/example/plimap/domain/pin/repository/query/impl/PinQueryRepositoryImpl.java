@@ -90,18 +90,23 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             """;
 
     private static final String PIN_PREVIEW_QUERY = """
-    SELECT p.id
-    FROM pin p
-    JOIN place pl ON pl.id = p.place_id
-    JOIN place_track pt ON pt.id = p.place_track_id
-    WHERE
-        ST_Covers(
-            ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
-            pl.location::geometry
-        )
-        AND p.deleted_at IS NULL
-        AND pl.deleted_at IS NULL
-        AND pt.deleted_at IS NULL
+            SELECT DISTINCT ON (p.place_id)
+                 p.id
+             FROM pin p
+             JOIN place pl ON pl.id = p.place_id
+             JOIN place_track pt ON pt.id = p.place_track_id
+             WHERE
+                 ST_Covers(
+                     ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
+                     pl.location::geometry
+                 )
+                 AND p.deleted_at IS NULL
+                 AND pl.deleted_at IS NULL
+                 AND pt.deleted_at IS NULL
+             ORDER BY
+                 p.place_id,
+                 pt.like_count DESC,
+                 p.created_at DESC;
     """;
 
     private static final String CLUSTER_QUERY = """
