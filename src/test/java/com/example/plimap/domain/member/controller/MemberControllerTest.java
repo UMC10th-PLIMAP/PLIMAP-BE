@@ -6,6 +6,7 @@ import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberRepository;
@@ -15,9 +16,12 @@ import java.time.Instant;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
+import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.example.plimap.global.security.JwtUtil;
+import com.example.plimap.global.security.RefreshTokenService;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
+import com.example.plimap.global.security.SessionInvalidationService;
 import com.example.plimap.global.security.TokenBlacklistService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,6 +87,12 @@ class MemberControllerTest {
     private TokenBlacklistService tokenBlacklistService;
 
     @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
+    @MockitoBean
+    private AuthCookieUtil authCookieUtil;
+
+    @MockitoBean
     private HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @MockitoBean
@@ -90,6 +100,9 @@ class MemberControllerTest {
 
     @MockitoBean
     private MemberQueryService memberQueryService;
+
+    @MockitoBean
+    private SessionInvalidationService sessionInvalidationService;
 
     @BeforeEach
     void setUp() {
@@ -101,7 +114,8 @@ class MemberControllerTest {
 
         Member authenticatedMember = Member.builder().build();
         ReflectionTestUtils.setField(authenticatedMember, "id", AUTH_MEMBER_ID);
-        when(memberRepository.findById(AUTH_MEMBER_ID)).thenReturn(Optional.of(authenticatedMember));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(AUTH_MEMBER_ID, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(authenticatedMember));
     }
 
     @Test
@@ -186,6 +200,52 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("MEMBER_404_NOT_FOLLOWING"))
                 .andExpect(jsonPath("$.message").value("팔로우 중이 아닌 사용자입니다."))
                 .andExpect(jsonPath("$.result").doesNotExist());
+    }
+
+    @Test
+    void 회원_탈퇴에_성공하면_200과_WITHDRAWN_응답을_반환하고_세션을_무효화한다() throws Exception {
+        doNothing().when(memberCommandService).withdraw(AUTH_MEMBER_ID);
+
+        mockMvc.perform(delete("/api/v1/members/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_200_WITHDRAWN"))
+                .andExpect(jsonPath("$.result").doesNotExist());
+
+        verify(memberCommandService).withdraw(AUTH_MEMBER_ID);
+        verify(sessionInvalidationService).invalidate(any(), any());
+    }
+
+    @Test
+    void 탈퇴_후_다른_기기의_액세스_토큰은_인증이_거부되고_재탈퇴도_거부된다() throws Exception {
+        String otherDeviceToken = "other-device-access-token";
+        String otherDeviceJti = "other-device-jti";
+        when(jwtUtil.isValid(otherDeviceToken)).thenReturn(true);
+        when(jwtUtil.isAccessToken(otherDeviceToken)).thenReturn(true);
+        when(jwtUtil.getJti(otherDeviceToken)).thenReturn(otherDeviceJti);
+        when(jwtUtil.getMemberId(otherDeviceToken)).thenReturn(AUTH_MEMBER_ID);
+        when(tokenBlacklistService.isBlacklisted(otherDeviceJti)).thenReturn(false);
+
+        doNothing().when(memberCommandService).withdraw(AUTH_MEMBER_ID);
+
+        mockMvc.perform(delete("/api/v1/members/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        // 탈퇴 반영: 회원의 status/deletedAt이 더 이상 ACTIVE 조건을 만족하지 않는 DB 상태를 시뮬레이션한다.
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(AUTH_MEMBER_ID, MemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/members/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + otherDeviceToken))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(delete("/api/v1/members/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + otherDeviceToken))
+                .andExpect(status().isUnauthorized());
+
+        verify(memberCommandService).withdraw(AUTH_MEMBER_ID);
     }
 
     @Test

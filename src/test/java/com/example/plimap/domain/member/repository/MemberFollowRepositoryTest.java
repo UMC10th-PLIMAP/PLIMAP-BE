@@ -66,6 +66,26 @@ class MemberFollowRepositoryTest {
                 .containsExactly("활성팔로워");
     }
 
+    @Test
+    void deleteByIdFollowerId는_해당_회원이_팔로워인_관계를_모두_삭제한다() {
+        // when
+        long deleted = memberFollowRepository.deleteByIdFollowerId(activeFollower.getId());
+
+        // then
+        assertThat(deleted).isEqualTo(1);
+        assertThat(memberFollowRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    void deleteByIdFollowingId는_해당_회원을_팔로우하는_관계를_모두_삭제한다() {
+        // when
+        long deleted = memberFollowRepository.deleteByIdFollowingId(target.getId());
+
+        // then
+        assertThat(deleted).isEqualTo(3);
+        assertThat(memberFollowRepository.count()).isEqualTo(0);
+    }
+
     private Member createMember(String nickname, MemberStatus status) {
         return Member.builder()
                 .nickname(nickname)

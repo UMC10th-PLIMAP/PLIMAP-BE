@@ -12,6 +12,7 @@ import com.example.plimap.domain.member.dto.request.TermsReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.dto.response.TermsResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.exception.MemberSuccessCode;
@@ -24,7 +25,7 @@ import com.example.plimap.global.apiPayload.ApiResponse;
 import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.RefreshTokenService;
-import com.example.plimap.global.security.TokenBlacklistService;
+import com.example.plimap.global.security.SessionInvalidationService;
 import com.example.plimap.global.security.TokenResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -50,9 +51,9 @@ public class AuthController implements AuthControllerDocs {
     private final TermsCommandService termsCommandService;
     private final MemberRepository memberRepository;
     private final JwtUtil jwtUtil;
-    private final TokenBlacklistService tokenBlacklistService;
     private final RefreshTokenService refreshTokenService;
     private final AuthCookieUtil authCookieUtil;
+    private final SessionInvalidationService sessionInvalidationService;
 
     @Override
     @GetMapping("/csrf")
@@ -93,14 +94,7 @@ public class AuthController implements AuthControllerDocs {
     @Override
     @DeleteMapping("/logout")
     public ApiResponse<Void> logout(HttpServletRequest request, HttpServletResponse response) {
-        String token = TokenResolver.resolve(request);
-        if (token != null && jwtUtil.isValid(token)) {
-            tokenBlacklistService.blacklist(jwtUtil.getJti(token), jwtUtil.getRemainingExpiry(token));
-            refreshTokenService.delete(jwtUtil.getMemberId(token));
-        }
-
-        authCookieUtil.clearCookie(response, "accessToken");
-        authCookieUtil.clearCookie(response, "refreshToken");
+        sessionInvalidationService.invalidate(request, response);
 
         return ApiResponse.success(MemberSuccessCode.LOGOUT, null);
     }
@@ -118,7 +112,7 @@ public class AuthController implements AuthControllerDocs {
             throw new AuthException(AuthErrorCode.REFRESH_TOKEN_MISMATCH);
         }
 
-        Member member = memberRepository.findById(memberId)
+        Member member = memberRepository.findByIdAndStatusAndDeletedAtIsNull(memberId, MemberStatus.ACTIVE)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
         AuthMember authMember = new AuthMember(member);
 

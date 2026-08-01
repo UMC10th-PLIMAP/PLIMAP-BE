@@ -4,6 +4,7 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
@@ -101,7 +102,7 @@ class PinControllerTest {
         when(jwtUtil.getJti(ACCESS_TOKEN)).thenReturn("test-jti");
         when(tokenBlacklistService.isBlacklisted("test-jti")).thenReturn(false);
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(Member.builder().build()));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(Member.builder().build()));
     }
 
     @Test
@@ -288,7 +289,7 @@ class PinControllerTest {
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
 
-        when(memberRepository.findById(1L))
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(MY_FEED_ENDPOINT)
@@ -342,7 +343,7 @@ class PinControllerTest {
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
 
-        when(memberRepository.findById(1L))
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(MY_PIN_ENDPOINT)
@@ -370,7 +371,7 @@ class PinControllerTest {
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
 
-        when(memberRepository.findById(1L))
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(PLACE_TRACK_PIN_ENDPOINT, 1L)
