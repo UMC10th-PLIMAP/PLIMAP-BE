@@ -81,24 +81,24 @@ public class PinRequest {
     @Builder
     public record Viewport (
             @NotNull(message = "southWestLat는 널이어서는 안 됩니다.")
-            @Schema(description = "현재 화면의 최소 위도 (남서쪽 위도 좌표)", example = "37.629000")
+            @Schema(description = "현재 화면의 최소 위도 (남서쪽 위도 좌표)", example = "37.626145")
             Double southWestLat,
 
             @NotNull(message = "southWestLng는 널이어서는 안 됩니다.")
-            @Schema(description = "현재 화면의 최소 경도 (남서쪽 경도 좌표)", example = "127.094000")
+            @Schema(description = "현재 화면의 최소 경도 (남서쪽 경도 좌표)", example = "127.093020")
             Double southWestLng,
 
             @NotNull(message = "northEastLat는 널이어서는 안 됩니다.")
-            @Schema(description = "현재 화면의 최대 위도 (북동쪽 위도 좌표)", example = "37.626144976334544")
+            @Schema(description = "현재 화면의 최대 위도 (북동쪽 위도 좌표)", example = "37.629000")
             Double northEastLat,
 
             @NotNull(message = "northEastLng는 널이어서는 안 됩니다.")
-            @Schema(description = "현재 화면의 최대 경도 (북동쪽 경도 좌표)", example = "127.09302024107471")
+            @Schema(description = "현재 화면의 최대 경도 (북동쪽 경도 좌표)", example = "127.094000")
             Double northEastLng,
 
             @NotNull(message = "zoomLevel은 널이어서는 안 됩니다.")
-            @Min(1)
-            @Max(20)
+            @Min(value = 1,  message = "zoomLevel은 1 이상이어야 합니다.")
+            @Max(value = 20,  message = "zoomLevel은 20 이하여야 합니다.")
             @Schema(description = "현재 zoom level", example = "7")
             Integer zoomLevel
     ) {
