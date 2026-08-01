@@ -17,6 +17,8 @@
 | `OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | `https://dev.plimap.kr,http://localhost:5173` |
 | `KAKAO_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/kakao` |
 | `GOOGLE_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/google` |
+| `PROFILE_IMAGE_STORAGE_PROVIDER` | 스크립트 고정값 | `supabase` |
+| `PROFILE_IMAGE_BUCKET` | `ProfileImageBucket` | `profile-images` |
 
 GitHub Actions에서는 다음 Repository Variable로 공개 주소와 allowlist를 덮어쓸 수 있습니다. `DEV_PUBLIC_BASE_URL`이 없으면 스크립트의 dev 기본값을 사용하고, `DEV_FRONTEND_REDIRECT_URI`가 없으면 선택된 공개 origin에 `/app/oauth/callback`을 붙여 기본 로그인 완료 주소를 생성합니다. CORS와 OAuth 프론트 allowlist가 없으면 Dev 배포 프론트와 로컬 프론트 Origin을 모두 포함합니다.
 
@@ -48,6 +50,8 @@ CORS와 OAuth 프론트 allowlist는 쉼표로 Origin을 구분합니다. HTTPS 
 | `GOOGLE_CLIENT_ID` | `plimap-dev-google-client-id` |
 | `GOOGLE_CLIENT_SECRET` | `plimap-dev-google-client-secret` |
 | `YOUTUBE_API_KEY` | `plimap-dev-youtube-api-key` |
+| `SUPABASE_URL` | `plimap-dev-supabase-url` |
+| `SUPABASE_SECRET_KEY` | `plimap-dev-supabase-secret-key` |
 
 ## 최초 입력 또는 값 교체
 
