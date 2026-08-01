@@ -27,6 +27,7 @@ class PlaceOpenApiIntegrationTest {
 
     private static final String PLACE_SEARCH_PATH = "/api/v1/places/search";
     private static final String PLACE_SELECTION_PATH = "/api/v1/places/selections";
+    private static final String PLACE_MAP_SELECTION_PATH = "/api/v1/places/map-selections";
     private static final String PLACE_DETAIL_PATH = "/api/v1/places/{placeId}";
 
     @Autowired
@@ -152,6 +153,74 @@ class PlaceOpenApiIntegrationTest {
                 );
     }
 
+    @Test
+    void 지도_선택_장소_OpenAPI는_세_판정_상태와_응답_계약을_노출한다() throws Exception {
+        String responseBody = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode openApi = objectMapper.readTree(responseBody);
+
+        JsonNode operation = openApi
+                .path("paths")
+                .path(PLACE_MAP_SELECTION_PATH)
+                .path("post");
+        assertThat(operation.path("description").asText())
+                .contains("PLACE_SEARCH")
+                .contains("MAP_SELECTION");
+        assertThat(operation.path("responses").has("200")).isTrue();
+        assertThat(operation.path("responses").has("400")).isTrue();
+        assertThat(operation.path("responses").has("401")).isTrue();
+        assertThat(operation.path("responses").has("502")).isTrue();
+        assertThat(operation.path("responses").has("504")).isTrue();
+
+        JsonNode decisionProperties = openApi
+                .path("components")
+                .path("schemas")
+                .path("PlaceMapSelectionDecisionResponse")
+                .path("properties");
+        assertThat(enumValues(decisionProperties.path("status")))
+                .containsExactlyInAnyOrder(
+                        "MAP_SELECTION_CONFIRMED",
+                        "PLACE_SEARCH_RECOMMENDED",
+                        "PLACE_SEARCH_REQUIRED"
+                );
+        assertThat(isNullableSchema(decisionProperties.path("mapSelection"))).isTrue();
+        assertThat(isNullableSchema(decisionProperties.path("recommendedPlace"))).isTrue();
+        assertThat(isNullableSchema(decisionProperties.path("buildingName"))).isTrue();
+        assertThat(decisionProperties.path("mapSelection").path("description").asText())
+                .contains("MAP_SELECTION_CONFIRMED");
+        assertThat(decisionProperties.path("recommendedPlace").path("description").asText())
+                .contains("PLACE_SEARCH_RECOMMENDED");
+        assertThat(decisionProperties.path("buildingName").path("description").asText())
+                .contains("PLACE_SEARCH_REQUIRED");
+
+        JsonNode mapSelectionProperties = resolveReferencedSchema(
+                openApi,
+                decisionProperties.path("mapSelection")
+        ).path("properties");
+        assertThat(enumValues(mapSelectionProperties.path("source")))
+                .containsExactly("MAP_SELECTION");
+
+        JsonNode recommendedProperties = resolveReferencedSchema(
+                openApi,
+                decisionProperties.path("recommendedPlace")
+        )
+                .path("properties");
+        assertThat(enumValues(recommendedProperties.path("source")))
+                .containsExactly("PLACE_SEARCH");
+        assertThat(isNullableSchema(recommendedProperties.path("category"))).isTrue();
+        assertThat(isNullableSchema(recommendedProperties.path("roadAddress"))).isTrue();
+        assertThat(isNullableSchema(recommendedProperties.path("placeId"))).isFalse();
+        assertThat(isNullableSchema(recommendedProperties.path("placeName"))).isFalse();
+        assertThat(isNullableSchema(recommendedProperties.path("address"))).isFalse();
+        assertThat(isNullableSchema(recommendedProperties.path("source"))).isFalse();
+        assertThat(isNullableSchema(recommendedProperties.path("latitude"))).isFalse();
+        assertThat(isNullableSchema(recommendedProperties.path("longitude"))).isFalse();
+        assertThat(isNullableSchema(recommendedProperties.path("distanceMeters"))).isFalse();
+    }
+
     private JsonNode findSearchItemSchema(JsonNode openApi) {
         for (Map.Entry<String, JsonNode> entry :
                 openApi.path("components").path("schemas").properties()) {
@@ -202,9 +271,34 @@ class PlaceOpenApiIntegrationTest {
         throw new AssertionError("Place selection response schema not found");
     }
 
+    private JsonNode resolveReferencedSchema(JsonNode openApi, JsonNode propertySchema) {
+        String reference = propertySchema.path("$ref").asText();
+        int separatorIndex = reference.lastIndexOf('/');
+        if (separatorIndex < 0 || separatorIndex == reference.length() - 1) {
+            throw new AssertionError("Referenced schema not found: " + propertySchema);
+        }
+        return openApi
+                .path("components")
+                .path("schemas")
+                .path(reference.substring(separatorIndex + 1));
+    }
+
     private List<String> enumValues(JsonNode schema) {
         List<String> values = new ArrayList<>();
         schema.path("enum").forEach(value -> values.add(value.asText()));
         return values;
+    }
+
+    private boolean isNullableSchema(JsonNode schema) {
+        if (schema.path("nullable").asBoolean()
+                || "null".equals(schema.path("type").asText())) {
+            return true;
+        }
+        for (JsonNode type : schema.path("type")) {
+            if ("null".equals(type.asText())) {
+                return true;
+            }
+        }
+        return false;
     }
 }
