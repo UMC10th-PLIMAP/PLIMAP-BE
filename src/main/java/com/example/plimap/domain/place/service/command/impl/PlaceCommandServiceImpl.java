@@ -2,6 +2,7 @@ package com.example.plimap.domain.place.service.command.impl;
 
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.place.dto.PlaceAddressDecision;
 import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
@@ -16,6 +17,7 @@ import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.command.PlaceCommandService;
 import com.example.plimap.domain.place.service.query.PlaceLocationMetadataService;
+import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.place.util.PlaceAddressNormalizer;
 import com.example.plimap.global.util.GeoDistanceCalculator;
 import java.util.List;
@@ -41,11 +43,39 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
     private final PlaceSearchHistoryRepository placeSearchHistoryRepository;
     private final PlaceQueryRepository placeQueryRepository;
     private final PlacePersistenceService placePersistenceService;
+    private final PlaceQueryService placeQueryService;
     private final PlaceLocationMetadataService placeLocationMetadataService;
     private final PinQueryService pinQueryService;
 
     @Override
-    public PlaceResponse.MapSelection confirmMapSelection(PlaceRequest.MapSelection request) {
+    public PlaceResponse.MapSelectionResult confirmMapSelection(PlaceRequest.MapSelection request) {
+        Place recommendedPlace = placeQueryService
+                .findNearestActiveProviderPlaceSearchWithin(
+                        request.latitude(),
+                        request.longitude()
+                )
+                .orElse(null);
+        if (recommendedPlace != null) {
+            return PlaceResponse.MapSelectionResult.recommended(
+                    recommendedPlace,
+                    calculateDistanceMeters(
+                            request.latitude(),
+                            request.longitude(),
+                            recommendedPlace
+                    )
+            );
+        }
+
+        PlaceAddressDecision addressDecision = placeLocationMetadataService.getAddressDecision(
+                request.latitude(),
+                request.longitude()
+        );
+        if (addressDecision.hasBuildingName()) {
+            return PlaceResponse.MapSelectionResult.searchRequired(
+                    addressDecision.buildingName()
+            );
+        }
+
         Place existingPlace = placeQueryRepository.findNearestActiveMapSelectionWithin(
                         request.latitude(),
                         request.longitude(),
@@ -53,7 +83,7 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                 )
                 .orElse(null);
         if (existingPlace != null) {
-            return PlaceResponse.MapSelection.from(existingPlace);
+            return PlaceResponse.MapSelectionResult.confirmed(existingPlace);
         }
 
         PlaceAdministrativeRegion region =
@@ -62,7 +92,7 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                         request.longitude()
                 );
         Place place = placePersistenceService.createOrReuseMapSelection(request, region);
-        return PlaceResponse.MapSelection.from(place);
+        return PlaceResponse.MapSelectionResult.confirmed(place);
     }
 
     @Override
@@ -129,6 +159,22 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
 
     @Override
     @Transactional
+    public PlaceResponse.BookmarkResult bookmarkPlace(Long memberId, Long placeId) {
+        validateActivePlace(placeId);
+        placeBookmarkRepository.insertIfAbsent(placeId, memberId);
+        return new PlaceResponse.BookmarkResult(placeId, true);
+    }
+
+    @Override
+    @Transactional
+    public PlaceResponse.BookmarkResult deletePlaceBookmark(Long memberId, Long placeId) {
+        validateActivePlace(placeId);
+        placeBookmarkRepository.deleteByPlaceIdAndMemberId(placeId, memberId);
+        return new PlaceResponse.BookmarkResult(placeId, false);
+    }
+
+    @Override
+    @Transactional
     public void deleteSearchHistory(Long memberId, Long historyId) {
         int deletedCount = placeSearchHistoryRepository.deleteByIdAndMemberId(
                 historyId,
@@ -139,11 +185,26 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
         }
     }
 
+    private void validateActivePlace(Long placeId) {
+        placeRepository.findByIdAndDeletedAtIsNull(placeId)
+                .orElseThrow(() -> new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND));
+    }
+
     private PlacePinInfo findPinInfo(Long placeId) {
         Map<Long, PlacePinInfo> pinInfos = pinQueryService.findPinInfosByPlaceIds(
                 List.of(placeId)
         );
         return pinInfos.getOrDefault(placeId, NO_PIN_INFO);
+    }
+
+    private int calculateDistanceMeters(double latitude, double longitude, Place place) {
+        double distance = GeoDistanceCalculator.calculateMeters(
+                latitude,
+                longitude,
+                place.getLocation().getY(),
+                place.getLocation().getX()
+        );
+        return Math.toIntExact(Math.round(distance));
     }
 
     private Optional<Place> findExistingPlace(

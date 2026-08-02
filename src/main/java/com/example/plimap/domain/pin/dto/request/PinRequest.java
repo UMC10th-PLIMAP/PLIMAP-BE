@@ -1,10 +1,7 @@
 package com.example.plimap.domain.pin.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Builder;
 
 import java.util.List;
@@ -80,4 +77,44 @@ public class PinRequest {
             @Schema(description = "피드 공개 여부", example = "false")
             Boolean feedOpen
     ) {}
+
+    @Builder
+    public record Viewport (
+            @NotNull(message = "southWestLat는 널이어서는 안 됩니다.")
+            @Schema(description = "현재 화면의 최소 위도 (남서쪽 위도 좌표)", example = "37.626145")
+            Double southWestLat,
+
+            @NotNull(message = "southWestLng는 널이어서는 안 됩니다.")
+            @Schema(description = "현재 화면의 최소 경도 (남서쪽 경도 좌표)", example = "127.093020")
+            Double southWestLng,
+
+            @NotNull(message = "northEastLat는 널이어서는 안 됩니다.")
+            @Schema(description = "현재 화면의 최대 위도 (북동쪽 위도 좌표)", example = "37.629000")
+            Double northEastLat,
+
+            @NotNull(message = "northEastLng는 널이어서는 안 됩니다.")
+            @Schema(description = "현재 화면의 최대 경도 (북동쪽 경도 좌표)", example = "127.094000")
+            Double northEastLng,
+
+            @NotNull(message = "zoomLevel은 널이어서는 안 됩니다.")
+            @Min(value = 1,  message = "zoomLevel은 1 이상이어야 합니다.")
+            @Max(value = 20,  message = "zoomLevel은 20 이하여야 합니다.")
+            @Schema(description = "현재 zoom level", example = "7")
+            Integer zoomLevel
+    ) {
+
+        @AssertTrue(message = "southWestLat는 northEastLat보다 작거나 같아야 합니다.")
+        public boolean isLatitudeRangeValid() {
+            return southWestLat == null
+                    || northEastLat == null
+                    || southWestLat <= northEastLat;
+        }
+
+        @AssertTrue(message = "southWestLng는 northEastLng보다 작거나 같아야 합니다.")
+        public boolean isLongitudeRangeValid() {
+            return southWestLng == null
+                    || northEastLng == null
+                    || southWestLng <= northEastLng;
+        }
+    }
 }

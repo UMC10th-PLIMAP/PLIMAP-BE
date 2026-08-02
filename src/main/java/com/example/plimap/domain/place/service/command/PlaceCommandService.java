@@ -5,12 +5,16 @@ import com.example.plimap.domain.place.dto.response.PlaceResponse;
 
 public interface PlaceCommandService {
 
-    PlaceResponse.MapSelection confirmMapSelection(PlaceRequest.MapSelection request);
+    PlaceResponse.MapSelectionResult confirmMapSelection(PlaceRequest.MapSelection request);
 
     PlaceResponse.Selection selectSearchPlace(
             Long memberId,
             PlaceRequest.Selection request
     );
+
+    PlaceResponse.BookmarkResult bookmarkPlace(Long memberId, Long placeId);
+
+    PlaceResponse.BookmarkResult deletePlaceBookmark(Long memberId, Long placeId);
 
     void deleteSearchHistory(Long memberId, Long historyId);
 }

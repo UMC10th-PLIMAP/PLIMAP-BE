@@ -31,4 +31,6 @@ public interface PinQueryService {
     PinResponse.PinPreview getPinPreview(Long pinId, Long viewerId);
 
     boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
+
+    PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request);
 }

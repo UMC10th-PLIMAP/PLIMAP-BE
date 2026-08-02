@@ -2,6 +2,7 @@ package com.example.plimap.domain.pin.controller;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.pin.controller.docs.PinControllerDocs;
+import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -172,5 +173,15 @@ public class PinController implements PinControllerDocs {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PIN_SEARCH_SUCCESS, response));
+    }
+
+    @GetMapping("/pins/map")
+    public ResponseEntity<ApiResponse<PinResponse.ClusterAndPin>> getClusterPinList(
+            @Valid @ModelAttribute PinRequest.Viewport request
+    ) {
+        PinResponse.ClusterAndPin response = pinQueryService.getClusterPinList(request);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.CLUSTER_PIN_SEARCH_SUCCESS, response));
     }
 }

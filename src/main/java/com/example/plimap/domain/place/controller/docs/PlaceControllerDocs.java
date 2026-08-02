@@ -57,6 +57,52 @@ public interface PlaceControllerDocs {
     );
 
     @Operation(
+            summary = "장소 북마크 등록",
+            description = "인증 사용자가 활성 장소를 북마크합니다. 현재 위치 및 상세 조회 권한과 "
+                    + "관계없이 처리하며, 이미 북마크한 장소도 중복 행 없이 성공합니다. "
+                    + "(Figma 기준 화면: MP-02-01, MP-02-02)"
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "장소 북마크 등록 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "활성 장소를 찾을 수 없음")
+    })
+    ResponseEntity<ApiResponse<PlaceResponse.BookmarkResult>> bookmarkPlace(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @Parameter(description = "장소 ID", required = true, example = "1")
+            Long placeId
+    );
+
+    @Operation(
+            summary = "장소 북마크 삭제",
+            description = "인증 사용자가 소유한 활성 장소의 북마크를 삭제합니다. 현재 위치 및 "
+                    + "상세 조회 권한과 관계없이 처리하며, 미등록 상태도 성공합니다. "
+                    + "(Figma 기준 화면: MP-01-01, MP-02-01, MP-02-02)"
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "장소 북마크 삭제 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "활성 장소를 찾을 수 없음")
+    })
+    ResponseEntity<ApiResponse<PlaceResponse.BookmarkResult>> deletePlaceBookmark(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @Parameter(description = "장소 ID", required = true, example = "1")
+            Long placeId
+    );
+
+    @Operation(
             summary = "장소 검색",
             description = "Kakao Local REST API로 주소를 먼저 검색하고, 주소 결과가 없으면 "
                     + "키워드와 현재 위치를 기준으로 장소를 검색합니다. "
@@ -176,7 +222,8 @@ public interface PlaceControllerDocs {
 
     @Operation(
             summary = "지도 선택 장소 확정",
-            description = "지도에서 선택한 위치를 기존 MAP_SELECTION Place와 매핑하거나 새 Place로 생성합니다. "
+            description = "지도에서 선택한 좌표를 판정하여 기존 PLACE_SEARCH Place를 추천하거나, "
+                    + "건물명으로 장소 검색을 유도하거나, MAP_SELECTION Place를 확정합니다. "
                     + "(Figma 기준 화면: PN-02-03)"
     )
     @ApiResponses({
@@ -188,9 +235,15 @@ public interface PlaceControllerDocs {
                     description = "좌표 또는 주소 검증 실패"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패")
+                    description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "502",
+                    description = "Kakao 장소 검색 서비스 연동 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "504",
+                    description = "Kakao 장소 검색 서비스 응답 지연")
     })
-    ResponseEntity<ApiResponse<PlaceResponse.MapSelection>> confirmMapSelection(
+    ResponseEntity<ApiResponse<PlaceResponse.MapSelectionResult>> confirmMapSelection(
             @Valid PlaceRequest.MapSelection request
     );
 }

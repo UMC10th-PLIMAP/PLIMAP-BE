@@ -5,6 +5,7 @@ import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.PinSortType;
+import org.locationtech.jts.geom.Point;
 
 import java.util.List;
 import java.util.Map;
@@ -26,4 +27,8 @@ public interface PinQueryRepository{
     Optional<Pin> getPinPreview(Long pinId, Long viewerId);
 
     boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
+
+    List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint);
+
+    List<PinResponse.Cluster> findClusterListByViewport(Point minPoint, Point maxPoint, Integer zoomLevel);
 }

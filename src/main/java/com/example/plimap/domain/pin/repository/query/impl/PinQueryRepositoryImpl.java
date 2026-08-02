@@ -6,10 +6,12 @@ import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.CursorInfo;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.RegionInfo;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.QPin;
 import com.example.plimap.domain.pin.entity.QPinLike;
+import com.example.plimap.domain.pin.enums.ClusterLevel;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
@@ -18,12 +20,18 @@ import com.example.plimap.domain.place.entity.QPlace;
 import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
+import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -82,6 +90,63 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                     AND pl.deleted_at IS NULL
             ORDER BY pl.id, p.created_at ASC, p.id ASC;
             """;
+
+    private static final String PIN_PREVIEW_QUERY = """
+            SELECT DISTINCT ON (p.place_id)
+                 p.id
+             FROM pin p
+             JOIN place pl ON pl.id = p.place_id
+             JOIN place_track pt ON pt.id = p.place_track_id
+             WHERE
+                 ST_Covers(
+                     ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
+                     pl.location::geometry
+                 )
+                 AND p.deleted_at IS NULL
+                 AND pl.deleted_at IS NULL
+                 AND pt.deleted_at IS NULL
+             ORDER BY
+                 p.place_id,
+                 pt.like_count DESC,
+                 p.created_at DESC;
+    """;
+
+    private static final String CLUSTER_QUERY = """
+        SELECT
+            t.cluster_level,
+            t.region_name,
+            AVG(ST_Y(t.location::geometry)) AS latitude,
+            AVG(ST_X(t.location::geometry)) AS longitude,
+            SUM(t.pin_count) AS pin_count,
+            MIN(ST_Y(t.location::geometry)) AS sw_lat,
+            MIN(ST_X(t.location::geometry)) AS sw_lng,
+            MAX(ST_Y(t.location::geometry)) AS ne_lat,
+            MAX(ST_X(t.location::geometry)) AS ne_lng
+        FROM (
+            SELECT
+                pl.id,
+                pl.location,
+                %s AS cluster_level,
+                %s AS region_name,
+                COUNT(p.id) AS pin_count
+            FROM pin p
+            JOIN place pl ON pl.id = p.place_id
+            WHERE
+                ST_Covers(
+                     ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
+                     pl.location::geometry
+                 )
+                AND p.deleted_at IS NULL
+                AND pl.deleted_at IS NULL
+            GROUP BY
+                pl.id,
+                pl.location,
+                %s
+        ) t
+        GROUP BY
+            t.cluster_level,
+            t.region_name
+    """;
 
     private final EntityManager entityManager;
     private final JPAQueryFactory queryFactory;
@@ -421,6 +486,61 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                     .fetchFirst() != null;
     }
 
+    @Override
+    public List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint) {
+        @SuppressWarnings("unchecked")
+        List<Long> pinIds = entityManager.createNativeQuery(PIN_PREVIEW_QUERY)
+                .setParameter("minLng", minPoint.getX())
+                .setParameter("minLat", minPoint.getY())
+                .setParameter("maxLng", maxPoint.getX())
+                .setParameter("maxLat", maxPoint.getY())
+                .getResultList();
+
+        if (pinIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Pin> pins = queryFactory
+                .selectFrom(pin)
+                .join(pin.place, place).fetchJoin()
+                .join(pin.member, member).fetchJoin()
+                .join(pin.placeTrack, placeTrack).fetchJoin()
+                .join(placeTrack.track, track).fetchJoin()
+                .where(pin.id.in(pinIds))
+                .orderBy(pin.createdAt.desc())
+                .fetch();
+
+        return pins.stream()
+                .map(PinConverter::toPinPreview)
+                .toList();
+    }
+
+    @Override
+    public List<PinResponse.Cluster> findClusterListByViewport(
+            Point minPoint,
+            Point maxPoint,
+            Integer zoomLevel
+    ) {
+        RegionInfo info = getRegionInfo(zoomLevel);
+
+        String sql = CLUSTER_QUERY.formatted(
+            info.clusterLevelSql(),
+            info.regionNameSql(),
+            info.regionNameSql()
+        );
+
+        List<Object[]> rows = entityManager.createNativeQuery(sql)
+                .setParameter("minLng", minPoint.getX())
+                .setParameter("minLat", minPoint.getY())
+                .setParameter("maxLng", maxPoint.getX())
+                .setParameter("maxLat", maxPoint.getY())
+                .getResultList();
+
+        return rows.stream()
+                .map(this::toCluster)
+                .toList();
+    }
+
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {
         if (cursor == null) {
             return new CursorInfo(null, null, null);
@@ -501,6 +621,72 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 null,
                 false,
                 pageSize
+        );
+    }
+
+    private RegionInfo getRegionInfo(Integer zoomLevel) {
+        if (zoomLevel <= 7) {
+            return new RegionInfo(
+                    """
+                    CASE
+                        WHEN pl.sido IS NOT NULL THEN pl.sido
+                        WHEN pl.sigungu IS NOT NULL THEN CONCAT(pl.sido, ' ', pl.sigungu)
+                        ELSE CONCAT(pl.sido, ' ', pl.eup_myeon_dong)
+                    END
+                    """,
+                    """
+                    CASE
+                        WHEN pl.sido IS NOT NULL THEN 'REGION1'
+                        WHEN pl.sigungu IS NOT NULL THEN 'REGION2'
+                        ELSE 'REGION3'
+                    END
+                    """
+            );
+        }
+
+        if (zoomLevel <= 10) {
+            return new RegionInfo(
+                    """
+                    CASE
+                        WHEN pl.sigungu IS NOT NULL THEN CONCAT(pl.sido, ' ', pl.sigungu)
+                        ELSE CONCAT(pl.sido, ' ', pl.eup_myeon_dong)
+                    END
+                    """,
+                    """
+                    CASE
+                        WHEN pl.sigungu IS NOT NULL THEN 'REGION2'
+                        ELSE 'REGION3'
+                    END
+                    """
+            );
+        }
+
+        return new RegionInfo(
+                """
+                CASE
+                    WHEN pl.sigungu IS NOT NULL
+                        THEN CONCAT(pl.sido, ' ', pl.sigungu, ' ', pl.eup_myeon_dong)
+                    ELSE
+                        CONCAT(pl.sido, ' ', pl.eup_myeon_dong)
+                END
+                """,
+                "'REGION3'"
+        );
+    }
+
+    private PinResponse.Cluster toCluster(Object[] row) {
+        return new PinResponse.Cluster(
+                ClusterLevel.valueOf((String) row[0]),
+                (String) row[1],
+                ((Number) row[2]).doubleValue(),
+                ((Number) row[3]).doubleValue(),
+                ((Number) row[4]).intValue(),
+                new PinResponse.Bound(
+                        ((Number) row[5]).doubleValue(),
+                        ((Number) row[6]).doubleValue(),
+                        ((Number) row[7]).doubleValue(),
+                        ((Number) row[8]).doubleValue()
+                )
         );
     }
 }

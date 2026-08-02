@@ -6,9 +6,9 @@
 
 - PLIMAP은 음악과 장소를 연결해 지도에 기록하고 공유하는 백엔드 API입니다.
 - Java 21과 Spring Boot 4.1을 사용합니다.
-- 주요 기술은 Spring MVC, Spring Data JPA, Spring Security, OAuth2, JWT, QueryDSL, PostgreSQL/PostGIS, Flyway입니다.
+- 주요 기술은 Spring MVC, Spring Data JPA, Spring Data Redis, Spring Security, OAuth2, JWT, QueryDSL, PostgreSQL/PostGIS, Flyway, Supabase Storage입니다.
 - 패키지 루트는 `com.example.plimap`입니다.
-- 도메인은 현재 `auth`, `member`, `place`, `track`, `pin`을 중심으로 구성되며, 공통 기능은 `global`에 둡니다.
+- 도메인은 현재 `auth`, `member`, `notification`, `pin`, `place`, `report`, `track`으로 구성되며, 공통 기능은 `global`에 둡니다.
 
 ## 2. 먼저 확인할 문서
 
@@ -20,6 +20,7 @@
 - Flyway, QueryDSL, Testcontainers: `docs/DATABASE.md`
 - Git, 브랜치, 커밋, PR 규칙: `docs/CONVENTION.md`
 - 스키마 및 관계 변경: `docs/ERD.md`
+- 배포 환경과 운영 절차: `docs/DEPLOYMENT.md`
 
 문서와 실제 코드가 다르면 임의로 대규모 정리하지 말고, 현재 작업과 관련된 범위에서 차이를 확인한 뒤 코드와 문서를 함께 일관되게 갱신합니다.
 
@@ -38,8 +39,10 @@ src/main/java/com/example/plimap/
 └── global/                  # 공통 응답, 설정, 보안, 공통 엔티티
 
 src/main/resources/
-├── application.yml         # 공통 설정
-├── application-prod.yml    # 운영 설정
+├── application.yml          # 공통 설정
+├── application-local.yml    # 로컬 설정
+├── application-dev.yml      # 개발 환경 설정
+├── application-prod.yml     # 운영 설정
 └── db/migration/            # Flyway Migration
 
 src/test/                   # 단위 및 통합 테스트
@@ -76,6 +79,7 @@ AI가 생성했다는 어떤 표시
 - Command 구현체에는 필요에 따라 `@Transactional`, Query 구현체에는 `@Transactional(readOnly = true)`를 적용합니다.
 - 다른 도메인의 Repository를 직접 주입하지 말고 해당 도메인의 Service 인터페이스를 사용합니다.
 - 도메인 사이에 순환 의존이 생기지 않도록 합니다.
+- 알림처럼 원 트랜잭션 커밋 이후 실행해야 하는 도메인 간 부수 효과는 Spring 애플리케이션 이벤트로 분리하고 `@TransactionalEventListener(phase = AFTER_COMMIT)`에서 처리합니다.
 - 단순 조회는 Spring Data JPA, 동적 조건·복잡한 검색·페이징은 QueryDSL을 우선합니다.
 - Query Repository는 데이터 접근에만 집중하고 API 응답 DTO나 비즈니스 상태 변경에 의존하지 않습니다.
 
@@ -135,7 +139,7 @@ Windows PowerShell 기준:
 # 특정 테스트 클래스
 .\gradlew.bat test --tests "com.example.plimap.SomeTest"
 
-# 로컬 PostGIS 실행
+# 로컬 PostGIS와 Redis 실행
 docker compose up -d
 
 # 로컬 프로필로 애플리케이션 실행
@@ -145,7 +149,7 @@ docker compose up -d
 docker compose down
 ```
 
-macOS/Linux에서는 `./gradlew`를 사용합니다. DB 통합 테스트는 PostGIS Testcontainers를 사용하므로 Docker가 실행 중이어야 합니다. `docker compose down -v`는 로컬 데이터를 삭제하므로 사용자가 명시적으로 요청하거나 초기화가 반드시 필요한 경우에만 실행합니다.
+macOS/Linux에서는 `./gradlew`를 사용합니다. DB 및 Redis 통합 테스트는 PostGIS와 Redis Testcontainers를 사용하므로 Docker가 실행 중이어야 합니다. `docker compose down -v`는 로컬 데이터를 삭제하므로 사용자가 명시적으로 요청하거나 초기화가 반드시 필요한 경우에만 실행합니다.
 
 ## 12. 테스트 기준
 
