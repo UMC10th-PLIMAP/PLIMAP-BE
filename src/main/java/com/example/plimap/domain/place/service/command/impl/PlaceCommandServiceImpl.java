@@ -7,6 +7,7 @@ import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceBookmarkId;
+import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
@@ -15,6 +16,7 @@ import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.service.command.PlaceCommandService;
 import com.example.plimap.domain.place.service.query.PlaceLocationMetadataService;
+import com.example.plimap.domain.place.util.PlaceAddressNormalizer;
 import com.example.plimap.global.util.GeoDistanceCalculator;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlaceCommandServiceImpl implements PlaceCommandService {
 
     private static final String KAKAO_PROVIDER = "KAKAO";
+    private static final String PLACE_RESULT_TYPE = "PLACE";
+    private static final String ADDRESS_RESULT_TYPE = "ADDRESS";
     private static final int ACCESS_RANGE_METERS = 500;
+    private static final double DISTANCE_COMPARISON_EPSILON_METERS = 1e-6;
     private static final PlacePinInfo NO_PIN_INFO = new PlacePinInfo(false, null, 0L);
 
     private final PlaceRepository placeRepository;
@@ -66,32 +71,28 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
             PlaceRequest.Selection request
     ) {
         validateSelectionRequest(request);
-        Place existingPlace = placeRepository
-                .findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
-                        request.provider(),
-                        request.providerPlaceId()
-                )
-                .orElse(null);
+        String normalizedAddress = ADDRESS_RESULT_TYPE.equals(request.resultType())
+                ? PlaceAddressNormalizer.normalize(request.address())
+                : null;
+        Place existingPlace = findExistingPlace(request, normalizedAddress).orElse(null);
         PlaceAdministrativeRegion region = existingPlace == null
                 ? placeLocationMetadataService.getAdministrativeRegion(
                         request.latitude(),
                         request.longitude()
                 )
                 : null;
-        Optional<Place> persistedPlace = placePersistenceService.persistSearchSelection(
-                memberId,
-                request,
-                region
-        );
+        Optional<Place> persistedPlace =
+                persistSelection(memberId, request, normalizedAddress, region);
         if (persistedPlace.isEmpty()) {
             PlaceAdministrativeRegion retryRegion =
                     placeLocationMetadataService.getAdministrativeRegion(
                             request.latitude(),
                             request.longitude()
                     );
-            persistedPlace = placePersistenceService.persistSearchSelection(
+            persistedPlace = persistSelection(
                     memberId,
                     request,
+                    normalizedAddress,
                     retryRegion
             );
         }
@@ -118,7 +119,7 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                 place.getRoadAddress(),
                 place.getSource(),
                 distanceMeters,
-                distance <= ACCESS_RANGE_METERS,
+                distance <= ACCESS_RANGE_METERS + DISTANCE_COMPARISON_EPSILON_METERS,
                 pinInfo.hasPin(),
                 pinInfo.firstPinCreatorNickname(),
                 pinCount,
@@ -145,24 +146,73 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
         return pinInfos.getOrDefault(placeId, NO_PIN_INFO);
     }
 
+    private Optional<Place> findExistingPlace(
+            PlaceRequest.Selection request,
+            String normalizedAddress
+    ) {
+        if (ADDRESS_RESULT_TYPE.equals(request.resultType())) {
+            return placeRepository.findBySourceAndNormalizedAddressAndDeletedAtIsNull(
+                    PlaceSource.ADDRESS_SEARCH,
+                    normalizedAddress
+            );
+        }
+        return placeRepository.findByPlaceProviderAndProviderPlaceIdAndDeletedAtIsNull(
+                request.provider(),
+                request.providerPlaceId()
+        );
+    }
+
+    private Optional<Place> persistSelection(
+            Long memberId,
+            PlaceRequest.Selection request,
+            String normalizedAddress,
+            PlaceAdministrativeRegion region
+    ) {
+        if (ADDRESS_RESULT_TYPE.equals(request.resultType())) {
+            return placePersistenceService.persistAddressSearchSelection(
+                    memberId,
+                    request,
+                    normalizedAddress,
+                    region
+            );
+        }
+        return placePersistenceService.persistPlaceSearchSelection(memberId, request, region);
+    }
+
     private void validateSelectionRequest(PlaceRequest.Selection request) {
         if (request == null
                 || !KAKAO_PROVIDER.equals(request.provider())
-                || isBlankOrTooLong(request.providerPlaceId(), 255)
-                || isBlankOrTooLong(request.placeName(), 100)
-                || isBlankOrTooLong(request.address(), 255)
-                || isTooLong(request.category(), 100)
-                || isTooLong(request.roadAddress(), 255)
                 || !isLatitude(request.latitude())
                 || !isLongitude(request.longitude())
                 || !isLatitude(request.userLatitude())
-                || !isLongitude(request.userLongitude())) {
+                || !isLongitude(request.userLongitude())
+                || !isValidSelectionType(request)) {
             throw new PlaceException(PlaceErrorCode.PLACE_SELECTION_INVALID);
         }
     }
 
+    private boolean isValidSelectionType(PlaceRequest.Selection request) {
+        if (PLACE_RESULT_TYPE.equals(request.resultType())) {
+            return !isBlankOrTooLong(request.providerPlaceId(), 255)
+                    && !isBlankOrTooLong(request.placeName(), 100)
+                    && !isBlankOrTooLong(request.address(), 255)
+                    && !isTooLong(request.category(), 100)
+                    && !isTooLong(request.roadAddress(), 255);
+        }
+        if (ADDRESS_RESULT_TYPE.equals(request.resultType())) {
+            String resolvedName =
+                    request.roadAddress() != null ? request.roadAddress() : request.address();
+            return request.providerPlaceId() == null
+                    && request.category() == null
+                    && !isBlankOrTooLong(request.address(), 255)
+                    && !isTooLong(request.roadAddress(), 255)
+                    && !isBlankOrTooLong(resolvedName, 100);
+        }
+        return false;
+    }
+
     private boolean isBlankOrTooLong(String value, int maxLength) {
-        return value == null || value.length() > maxLength;
+        return value == null || value.isBlank() || value.length() > maxLength;
     }
 
     private boolean isTooLong(String value, int maxLength) {

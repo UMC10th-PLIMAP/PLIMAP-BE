@@ -477,6 +477,7 @@ class PlaceCommandServiceImplTest {
             double userLongitude
     ) {
         return new PlaceRequest.Selection(
+                "PLACE",
                 provider,
                 providerPlaceId,
                 "  한강  ",

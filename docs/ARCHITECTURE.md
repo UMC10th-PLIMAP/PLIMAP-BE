@@ -91,7 +91,7 @@ com.example.plimap/
 └── PlimapApplication
 ```
 
-> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report`, `admin` 도메인도 동일한 내부 패키지 구조를 따릅니다. 다만 `admin`은 자체 엔티티를 갖지 않고 다른 도메인(주로 `member`)의 데이터를 관리자 관점에서 조회·조작하므로 `entity`, `repository` 패키지는 필요할 때만 추가합니다.
+> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report`, `admin` 도메인도 동일한 내부 패키지 구조를 따릅니다. `admin`은 자체 엔티티가 필요한 경우에만 `entity`, `repository` 패키지를 추가합니다. 다른 도메인의 데이터는 해당 도메인의 Service 인터페이스를 통해 접근하며, 다른 도메인의 Repository를 직접 주입하지 않습니다.
 
 ## Domain Structure
 

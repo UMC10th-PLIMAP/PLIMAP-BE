@@ -13,6 +13,7 @@ public final class PlaceTrackResponse {
             Long placeId,
             double distance,
             boolean isWithinRadius,
+            Boolean isTrackDetailAccessible,
             List<PlaceTrackItem> tracks,
             int page,
             int size,
@@ -29,7 +30,7 @@ public final class PlaceTrackResponse {
             String trackName,
             String artistName,
             String artworkUrl,
-            int pinCount,
+            Integer pinCount,
             Integer likeCount,
             Boolean isLiked
     ) {

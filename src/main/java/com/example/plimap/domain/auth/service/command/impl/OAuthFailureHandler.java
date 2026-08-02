@@ -1,5 +1,6 @@
 package com.example.plimap.domain.auth.service.command.impl;
 
+import com.example.plimap.domain.auth.exception.WithdrawnMemberAuthenticationException;
 import com.example.plimap.global.security.OAuthFrontendRedirectCookieRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,9 +27,13 @@ public class OAuthFailureHandler implements AuthenticationFailureHandler {
         // 리다이렉트해서 실패 원인이 어디에도 남지 않는다. 여기서 명시적으로 기록한다.
         log.warn("OAuth2 로그인 실패: method={} uri={}", request.getMethod(), request.getRequestURI(), exception);
 
+        String errorCode = exception instanceof WithdrawnMemberAuthenticationException
+                ? "account_permanently_banned"
+                : "oauth_login_failed";
+
         String redirectUri = redirectCookieRepository.consumeRedirectUri(request, response);
         String redirectLocation = UriComponentsBuilder.fromUriString(redirectUri)
-                .queryParam("error", "oauth_login_failed")
+                .queryParam("error", errorCode)
                 .build()
                 .toUriString();
         response.sendRedirect(redirectLocation);

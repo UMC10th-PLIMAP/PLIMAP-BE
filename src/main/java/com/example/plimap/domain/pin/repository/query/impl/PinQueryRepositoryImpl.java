@@ -19,7 +19,6 @@ import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
 import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -61,7 +60,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     private static final String SEARCH_FIRST_PIN_CREATOR_NICKNAME_QUERY = """
             SELECT DISTINCT ON (pl.id)
                    pl.id,
-                   m.nickname,
+                   CASE WHEN m.status = 'WITHDRAWN' THEN '플리맵사용자' ELSE m.nickname END,
                    p.id,
                    COALESCE(pc.pin_count, 0) AS pin_count
             FROM place pl
@@ -403,6 +402,23 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .from(report)
                 .where(report.reportedPin.eq(pin), report.reporter.id.eq(viewerId))
                 .notExists();
+    }
+
+    @Override
+    public boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId) {
+            return queryFactory
+                    .selectOne()
+                    .from(pin)
+                    .join(pin.member, member)
+                    .join(pin.place, place)
+                    .where(
+                            place.id.eq(placeId),
+                            member.id.eq(memberId),
+                            pin.deletedAt.isNull(),
+                            member.deletedAt.isNull(),
+                            place.deletedAt.isNull()
+                    )
+                    .fetchFirst() != null;
     }
 
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {

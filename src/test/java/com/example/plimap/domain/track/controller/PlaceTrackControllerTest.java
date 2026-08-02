@@ -14,6 +14,7 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
@@ -100,7 +101,7 @@ class PlaceTrackControllerTest {
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
         Member member = Member.builder().nickname("사용자").build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
     }
 
     @Test
@@ -121,6 +122,7 @@ class PlaceTrackControllerTest {
                 .andExpect(jsonPath("$.result.createdBy").doesNotExist())
                 .andExpect(jsonPath("$.result.isBookmarked").doesNotExist())
                 .andExpect(jsonPath("$.result.isWithinRadius").value(true))
+                .andExpect(jsonPath("$.result.isTrackDetailAccessible").value(true))
                 .andExpect(jsonPath("$.result.tracks[0].placeTrackId").value(10))
                 .andExpect(jsonPath("$.result.tracks[0].pinCount").value(1))
                 .andExpect(jsonPath("$.result.tracks[0].likeCount").value(5));
@@ -588,6 +590,7 @@ class PlaceTrackControllerTest {
         return new PlaceTrackResponse.PlaceTrackListResult(
                 1L,
                 100.0,
+                true,
                 true,
                 List.of(new PlaceTrackResponse.PlaceTrackItem(
                         10L,

@@ -92,4 +92,9 @@ public class PinQueryServiceImpl implements PinQueryService {
 
         return PinConverter.toPinPreview(pin);
     }
+
+    @Override
+    public boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId) {
+        return pinQueryRepository.existsActivePinByPlaceIdAndMemberId(placeId, memberId);
+    }
 }

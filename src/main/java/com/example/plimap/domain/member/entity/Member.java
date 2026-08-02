@@ -19,11 +19,13 @@ import java.time.Instant;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends SoftDeleteEntity {
 
+    private static final String WITHDRAWN_NICKNAME_PREFIX = "플리맵사용자";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nickname", length = 10)
+    @Column(name = "nickname", length = 30)
     private String nickname;
 
     @Column(name = "name", length = 7)
@@ -63,6 +65,9 @@ public class Member extends SoftDeleteEntity {
     @Column(name = "report_count", nullable = false)
     private Integer reportCount = 0;
 
+    @Column(name = "withdrawn_nickname", length = 10)
+    private String withdrawnNickname;
+
     @Builder
     private Member(String nickname, String name, String introduction,
                     String profileImageObjectKey, MemberStatus status,
@@ -76,10 +81,15 @@ public class Member extends SoftDeleteEntity {
         this.role = role != null ? role : MemberRole.USER;
     }
 
-    public static Member create(AuthProvider joinProvider) {
+    public static Member create(AuthProvider joinProvider, MemberRole role) {
         return Member.builder()
                 .joinProvider(joinProvider)
+                .role(role)
                 .build();
+    }
+
+    public void grantAdmin() {
+        this.role = MemberRole.ADMIN;
     }
 
     public boolean isOnboarded() {
@@ -108,5 +118,19 @@ public class Member extends SoftDeleteEntity {
             throw new IllegalArgumentException("profileImageObjectKey must not be null");
         }
         this.profileImageObjectKey = profileImageObjectKey;
+    }
+
+    public void withdrawVoluntarily() {
+        this.withdrawnNickname = this.nickname;
+        this.nickname = WITHDRAWN_NICKNAME_PREFIX + this.id;
+        this.introduction = null;
+        this.profileImageObjectKey = null;
+        this.status = MemberStatus.WITHDRAWN;
+        this.withdrawalReason = WithdrawalReason.VOLUNTARY;
+        delete();
+    }
+
+    public String getDisplayNickname() {
+        return status == MemberStatus.WITHDRAWN ? WITHDRAWN_NICKNAME_PREFIX : nickname;
     }
 }

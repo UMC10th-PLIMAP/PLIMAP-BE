@@ -4,6 +4,7 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
@@ -80,7 +81,7 @@ class AdminControllerTest {
     void 관리자_계정으로_조회하면_200과_내_정보를_반환한다() throws Exception {
         Member admin = Member.builder().nickname("운영자").role(MemberRole.ADMIN).build();
         ReflectionTestUtils.setField(admin, "id", MEMBER_ID);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(admin));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE)).thenReturn(Optional.of(admin));
 
         mockMvc.perform(get("/api/v1/admin/me")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))
@@ -96,7 +97,7 @@ class AdminControllerTest {
     void 일반_회원으로_조회하면_403을_반환한다() throws Exception {
         Member user = Member.builder().nickname("일반회원").role(MemberRole.USER).build();
         ReflectionTestUtils.setField(user, "id", MEMBER_ID);
-        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(user));
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE)).thenReturn(Optional.of(user));
 
         mockMvc.perform(get("/api/v1/admin/me")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))

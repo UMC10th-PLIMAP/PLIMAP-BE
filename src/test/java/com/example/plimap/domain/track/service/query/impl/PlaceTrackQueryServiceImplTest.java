@@ -7,6 +7,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
@@ -40,6 +43,8 @@ class PlaceTrackQueryServiceImplTest {
     private static final Long MEMBER_ID = 1L;
     private static final Long PLACE_ID = 2L;
 
+    private final MemberQueryService memberQueryService = mock(MemberQueryService.class);
+    private final PinQueryService pinQueryService = mock(PinQueryService.class);
     private final PlaceQueryService placeQueryService = mock(PlaceQueryService.class);
     private final PinLocationValidator pinLocationValidator =
             mock(PinLocationValidator.class);
@@ -52,6 +57,8 @@ class PlaceTrackQueryServiceImplTest {
 
     private final PlaceTrackQueryServiceImpl placeTrackQueryService =
             new PlaceTrackQueryServiceImpl(
+                    memberQueryService,
+                    pinQueryService,
                     placeQueryService,
                     pinLocationValidator,
                     placeTrackRepository,
@@ -200,8 +207,15 @@ class PlaceTrackQueryServiceImplTest {
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
 
         assertThat(result.isWithinRadius()).isTrue();
+        assertThat(result.isTrackDetailAccessible()).isTrue();
+        assertThat(result.tracks().getFirst().pinCount()).isEqualTo(1);
         assertThat(result.tracks().getFirst().likeCount()).isEqualTo(5);
         assertThat(result.tracks().getFirst().isLiked()).isTrue();
+        verifyNoInteractions(
+                memberQueryService,
+                pinQueryService,
+                placeTrackLikeRepository
+        );
     }
 
     @Test
@@ -214,12 +228,19 @@ class PlaceTrackQueryServiceImplTest {
 
         assertThat(result.distance()).isEqualTo(500.0);
         assertThat(result.isWithinRadius()).isTrue();
+        assertThat(result.isTrackDetailAccessible()).isTrue();
+        assertThat(result.tracks().getFirst().pinCount()).isEqualTo(1);
         assertThat(result.tracks().getFirst().likeCount()).isEqualTo(5);
     }
 
     @Test
-    void 반경_밖이면_정렬은_유지하고_좋아요_정보를_null로_가린다() {
+    void 반경_밖이지만_장소곡_좋아요가_있으면_집계_정보를_반환한다() {
         givenPlaceAndDistance(500.1);
+        when(placeTrackLikeRepository
+                .existsByIdMemberIdAndPlaceTrackPlaceIdAndPlaceTrackDeletedAtIsNull(
+                        MEMBER_ID,
+                        PLACE_ID
+                )).thenReturn(true);
         givenTracks(
                 List.of(
                         track(20L, 10, true),
@@ -232,14 +253,58 @@ class PlaceTrackQueryServiceImplTest {
                 placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
 
         assertThat(result.isWithinRadius()).isFalse();
+        assertThat(result.isTrackDetailAccessible()).isTrue();
         assertThat(result.tracks())
                 .extracting(PlaceTrackResponse.PlaceTrackItem::placeTrackId)
                 .containsExactly(20L, 10L);
-        assertThat(result.tracks())
-                .allSatisfy(track -> {
-                    assertThat(track.likeCount()).isNull();
-                    assertThat(track.isLiked()).isNull();
-                });
+        assertThat(result.tracks().get(0).pinCount()).isEqualTo(1);
+        assertThat(result.tracks().get(0).likeCount()).isEqualTo(10);
+        assertThat(result.tracks().get(1).pinCount()).isEqualTo(1);
+        assertThat(result.tracks().get(1).likeCount()).isEqualTo(5);
+        assertThat(result.tracks().get(0).isLiked()).isTrue();
+        assertThat(result.tracks().get(1).isLiked()).isFalse();
+        verifyNoInteractions(memberQueryService, pinQueryService);
+    }
+
+    @Test
+    void 반경_밖이지만_PIN_접근이_허용되면_조회한다() {
+        Place place = givenPlaceAndDistance(500.1);
+        Member member = mock(Member.class);
+        givenNoLikedPlaceTrack();
+        when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
+        when(pinQueryService.validatePlacePinAccessByMember(member, place))
+                .thenReturn(true);
+        givenTracks(List.of(track(10L, 5, true)), false);
+
+        PlaceTrackResponse.PlaceTrackListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.isWithinRadius()).isFalse();
+        assertThat(result.isTrackDetailAccessible()).isTrue();
+        assertThat(result.tracks().getFirst().pinCount()).isEqualTo(1);
+        assertThat(result.tracks().getFirst().likeCount()).isEqualTo(5);
+        assertThat(result.tracks().getFirst().isLiked()).isTrue();
+    }
+
+    @Test
+    void 반경_밖이고_예외_접근_조건이_없어도_목록은_반환하고_집계_정보를_가린다() {
+        Place place = givenPlaceAndDistance(500.1);
+        Member member = mock(Member.class);
+        givenNoLikedPlaceTrack();
+        when(memberQueryService.getActiveMember(MEMBER_ID)).thenReturn(member);
+        when(pinQueryService.validatePlacePinAccessByMember(member, place))
+                .thenReturn(false);
+        givenTracks(List.of(track(10L, 5, true)), false);
+
+        PlaceTrackResponse.PlaceTrackListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.isWithinRadius()).isFalse();
+        assertThat(result.isTrackDetailAccessible()).isFalse();
+        assertThat(result.tracks()).hasSize(1);
+        assertThat(result.tracks().getFirst().pinCount()).isEqualTo(1);
+        assertThat(result.tracks().getFirst().likeCount()).isNull();
+        assertThat(result.tracks().getFirst().isLiked()).isTrue();
     }
 
     @Test
@@ -289,7 +354,7 @@ class PlaceTrackQueryServiceImplTest {
         );
     }
 
-    private void givenPlaceAndDistance(double distance) {
+    private Place givenPlaceAndDistance(double distance) {
         Place place = place();
         when(placeQueryService.getActivePlace(PLACE_ID)).thenReturn(place);
         when(pinLocationValidator.calculateDistance(
@@ -298,6 +363,15 @@ class PlaceTrackQueryServiceImplTest {
                 place.getLocation().getY(),
                 place.getLocation().getX()
         )).thenReturn(distance);
+        return place;
+    }
+
+    private void givenNoLikedPlaceTrack() {
+        when(placeTrackLikeRepository
+                .existsByIdMemberIdAndPlaceTrackPlaceIdAndPlaceTrackDeletedAtIsNull(
+                        MEMBER_ID,
+                        PLACE_ID
+                )).thenReturn(false);
     }
 
     private void givenTracks(List<PlaceTrackQueryResult> tracks, boolean hasNext) {
