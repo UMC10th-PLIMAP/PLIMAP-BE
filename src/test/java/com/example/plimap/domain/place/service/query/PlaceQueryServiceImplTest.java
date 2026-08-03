@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.place.dto.NearbyBookmarkedPlace;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
@@ -22,6 +23,7 @@ import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
+import com.example.plimap.domain.place.repository.query.PlaceBookmarkQueryRepository;
 import com.example.plimap.domain.place.service.query.impl.PlaceQueryServiceImpl;
 import com.example.plimap.global.external.kakao.KakaoAddressSearchClient;
 import com.example.plimap.global.external.kakao.KakaoClientException;
@@ -55,6 +57,9 @@ class PlaceQueryServiceImplTest {
     private PlaceQueryRepository placeQueryRepository;
 
     @Mock
+    private PlaceBookmarkQueryRepository placeBookmarkQueryRepository;
+
+    @Mock
     private KakaoAddressSearchClient kakaoAddressSearchClient;
 
     @Mock
@@ -72,12 +77,58 @@ class PlaceQueryServiceImplTest {
                 placeBookmarkRepository,
                 placeSearchHistoryRepository,
                 placeQueryRepository,
+                placeBookmarkQueryRepository,
                 kakaoAddressSearchClient,
                 kakaoPlaceSearchClient,
                 pinQueryService
         );
         lenient().when(kakaoAddressSearchClient.search(any()))
                 .thenReturn(new KakaoAddressSearchResponse(List.of()));
+    }
+
+    @Test
+    void 저장한_장소에_PIN_정보를_한_번의_배치_조회로_병합한다() {
+        List<NearbyBookmarkedPlace> bookmarks = List.of(
+                new NearbyBookmarkedPlace(1L, "가까운 장소", 120),
+                new NearbyBookmarkedPlace(2L, "PIN 없는 장소", 250)
+        );
+        when(placeBookmarkQueryRepository.findNearbyActiveBookmarks(
+                10L,
+                37.5283,
+                126.9326
+        )).thenReturn(bookmarks);
+        when(pinQueryService.findPinInfosByPlaceIds(List.of(1L, 2L)))
+                .thenReturn(Map.of(1L, new PlacePinInfo(true, "최초작성자", 2L)));
+
+        PlaceResponse.BookmarkListResult result = placeQueryService.getPlaceBookmarks(
+                10L,
+                37.5283,
+                126.9326
+        );
+
+        assertThat(result.items()).containsExactly(
+                new PlaceResponse.BookmarkListItem(1L, "가까운 장소", "최초작성자", 120),
+                new PlaceResponse.BookmarkListItem(2L, "PIN 없는 장소", null, 250)
+        );
+        verify(pinQueryService).findPinInfosByPlaceIds(List.of(1L, 2L));
+    }
+
+    @Test
+    void 저장한_장소가_없으면_빈_목록을_반환하고_PIN을_조회하지_않는다() {
+        when(placeBookmarkQueryRepository.findNearbyActiveBookmarks(
+                10L,
+                37.5283,
+                126.9326
+        )).thenReturn(List.of());
+
+        PlaceResponse.BookmarkListResult result = placeQueryService.getPlaceBookmarks(
+                10L,
+                37.5283,
+                126.9326
+        );
+
+        assertThat(result.items()).isEmpty();
+        verifyNoInteractions(pinQueryService);
     }
 
     @Test

@@ -19,6 +19,38 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 public interface PlaceControllerDocs {
 
     @Operation(
+            summary = "저장한 장소 목록 조회",
+            description = "인증 사용자가 저장한 활성 장소 중 현재 위치에서 정확히 500m "
+                    + "이내인 장소를 거리, 북마크 생성 시각, 장소 ID 순으로 최대 9개 "
+                    + "조회합니다. 활성 PIN이 없으면 최초 작성자 닉네임은 null입니다. "
+                    + "(Figma 기준 화면: HM-01)"
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "저장한 장소 목록 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "현재 위치 누락 또는 범위 검증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패")
+    })
+    ResponseEntity<ApiResponse<PlaceResponse.BookmarkListResult>> getPlaceBookmarks(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @Parameter(description = "사용자 현재 위도", required = true, example = "37.5283")
+            @NotNull(message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMin(value = "-90", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            Double latitude,
+            @Parameter(description = "사용자 현재 경도", required = true, example = "126.9326")
+            @NotNull(message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMin(value = "-180", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            Double longitude
+    );
+
+    @Operation(
             summary = "장소 상세 조회",
             description = "활성 장소의 기본 정보와 현재 위치 기준 거리, 전체 활성 PIN 집계, "
                     + "인증 사용자의 북마크 및 활성 PIN 등록 여부를 조회합니다. "

@@ -15,6 +15,12 @@ public interface PlaceQueryService {
             double longitude
     );
 
+    PlaceResponse.BookmarkListResult getPlaceBookmarks(
+            Long memberId,
+            double latitude,
+            double longitude
+    );
+
     PlaceResponse.SearchResult searchPlaces(@Valid PlaceRequest.Search request);
 
     PlaceResponse.SearchHistoryResult getSearchHistories(
