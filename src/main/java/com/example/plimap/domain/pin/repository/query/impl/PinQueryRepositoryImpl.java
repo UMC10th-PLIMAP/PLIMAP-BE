@@ -582,7 +582,10 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pin.createdAt.goe(Instant.now().minus(24, ChronoUnit.HOURS)),
                         pin.isFeedPublic.isTrue(),
                         pin.placeTrack.deletedAt.isNull(),
-                        pin.deletedAt.isNull()
+                        pin.deletedAt.isNull(),
+                        member.deletedAt.isNull(),
+                        placeTrack.deletedAt.isNull(),
+                        pin.isFeedPublic.isTrue()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
