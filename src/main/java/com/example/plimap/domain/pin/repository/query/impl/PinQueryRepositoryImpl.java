@@ -167,6 +167,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 JOIN place_track pt2 ON pt2.id = p2.place_track_id
                 WHERE pt2.place_id = pl.id
                   AND p2.deleted_at IS NULL
+                  AND pt2.deleted_at IS NULL
             ) AS pin_count,
             p.created_at
         FROM pin p
