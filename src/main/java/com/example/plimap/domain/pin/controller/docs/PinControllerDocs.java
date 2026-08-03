@@ -146,4 +146,17 @@ public interface PinControllerDocs {
     public ResponseEntity<ApiResponse<PinResponse.ClusterAndPin>> getClusterPinList(
             @Valid @ModelAttribute PinRequest.Viewport request
     );
+
+    @Operation(
+            summary = "내 친구 최근 핀 목록 조회",
+            description = "친구가 24시간 내에 등록한 피드공개 상태 핀을 조회한다. (Figma 기준 화면: 홈화면 친구찾기)"
+    )
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.FriendPin>>> getFriendRecentPinList(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            @RequestParam(required = false) String cursor
+    );
 }
