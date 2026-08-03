@@ -6,6 +6,7 @@ import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.PinSortType;
@@ -80,6 +81,10 @@ class PinQueryRepositoryImplTest {
     Report report;
     PlaceTrack placeTrack1, placeTrack3, placeTrack4, placeTrack5;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+    PinRequest.UserLocation request = PinRequest.UserLocation.builder()
+            .userLatitude(37.5283)
+            .userLongitude(126.9326)
+            .build();
 
     @BeforeEach
     void setup() {
@@ -237,13 +242,14 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 피드정보를_커서기반_페이지네이션으로_조회한다() {
-        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, 2 );
+
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, 2 , request);
 
         assertThat(response.data().size()).isEqualTo(2);
         assertThat(response.hasNext()).isTrue();
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
         String nextCursor = response.nextCursor();
-        Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member2.getId(), nextCursor, 2 );
+        Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member2.getId(), nextCursor, 2 , request);
 
         assertThat(response2.data().size()).isEqualTo(1);
         assertThat(response2.hasNext()).isFalse();
@@ -256,10 +262,25 @@ class PinQueryRepositoryImplTest {
                 pin3.getCreatedAt(),
                 pin3.getId()
         );
-        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), cursor, 2 );
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), cursor, 2, request );
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();
+    }
+
+    @Test
+    void 추가된_장소_기반_피드_정보를_조회한다() {
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, 2 , request);
+
+        assertThat(response.data().size()).isEqualTo(2);
+        assertThat(response.hasNext()).isTrue();
+        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
+
+        PinResponse.Feed last = response.data().getLast();
+        assertThat(last.placeName()).isEqualTo(place2.getName());
+        assertThat(last.pinCount()).isEqualTo(3);
+        assertThat(last.distanceFromUser())
+                .isBetween(9350, 9450);
     }
 
     @Test

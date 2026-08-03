@@ -117,4 +117,15 @@ public class PinRequest {
                     || southWestLng <= northEastLng;
         }
     }
+
+    @Builder
+    public record UserLocation(
+            @NotNull(message = "userLatitude는 널이어서는 안 됩니다.")
+            @Schema(description = "현재 사용자 위치의 위도", example = "37.5297")
+            Double userLatitude,
+
+            @NotNull(message = "userLongitude는 널이어서는 안 됩니다.")
+            @Schema(description = "현재 사용자 위치의 경도", example = "126.9333")
+            Double userLongitude
+    ) {}
 }

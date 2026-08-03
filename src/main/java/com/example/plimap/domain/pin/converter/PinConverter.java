@@ -93,18 +93,6 @@ public class PinConverter {
                 .build();
     }
 
-    public static PinResponse.Feed toFeed(
-        Pin pin
-    ) {
-        return PinResponse.Feed.builder()
-                .pinId(pin.getId())
-                .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
-                .latitude(pin.getPlace().getLocation().getY())
-                .longitude(pin.getPlace().getLocation().getX())
-                .createdAt(pin.getCreatedAt())
-                .build();
-    }
-
     public static PinResponse.PinDetail toPinDetail(
             Pin pin,
             Boolean userLike

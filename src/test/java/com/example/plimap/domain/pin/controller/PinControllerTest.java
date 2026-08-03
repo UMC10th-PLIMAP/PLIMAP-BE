@@ -283,7 +283,7 @@ class PinControllerTest {
     @Test
     void 내_피드_조회에_성공하면_200을_반환한다() throws Exception {
         when(pinQueryService.findFeedListByMemberId(
-                1L, null, 10
+                1L, null, 10, PinRequest.UserLocation.builder().build()
         )).thenReturn(Pagination.<PinResponse.Feed>builder()
                         .data(new ArrayList<>())
                         .pageSize(10)
@@ -317,7 +317,7 @@ class PinControllerTest {
     @Test
     void 타인_피드_조회에_성공하면_200을_반환한다() throws Exception {
         when(pinQueryService.findFeedListByMemberId(
-                1L, null, 10
+                1L, null, 10, PinRequest.UserLocation.builder().build()
         )).thenReturn(Pagination.<PinResponse.Feed>builder()
                 .data(new ArrayList<>())
                 .pageSize(10)

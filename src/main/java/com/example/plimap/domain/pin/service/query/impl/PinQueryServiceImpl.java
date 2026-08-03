@@ -70,8 +70,8 @@ public class PinQueryServiceImpl implements PinQueryService {
     }
 
     @Override
-    public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize) {
-        return pinQueryRepository.findFeedListByMemberId(memberId, cursor, pageSize);
+    public Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize, PinRequest.UserLocation request) {
+        return pinQueryRepository.findFeedListByMemberId(memberId, cursor, pageSize, request);
     }
 
     @Override
