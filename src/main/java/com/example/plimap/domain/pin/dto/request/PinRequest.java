@@ -7,14 +7,20 @@ import lombok.Builder;
 import java.util.List;
 
 public class PinRequest {
+    public static final String INVALID_LOCATION_MESSAGE = "위치 정보가 올바르지 않습니다.";
+
     @Builder
     @Schema(name = "PinCreateRequest")
     public record Create(
             @NotNull(message = "userLatitude는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "현재 사용자 위치의 위도", example = "37.5297")
             Double userLatitude,
 
             @NotNull(message = "userLongitude는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-180", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "현재 사용자 위치의 경도", example = "126.9333")
             Double userLongitude,
 
@@ -48,18 +54,26 @@ public class PinRequest {
     @Builder
     public record PinAvailability(
             @NotNull(message = "latitude는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "선택한 위치의 위도", example = "37.629000")
             Double latitude,
 
             @NotNull(message = "longitude는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-180", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "선택한 위치의 경도", example = "127.094000")
             Double longitude,
 
             @NotNull(message = "userLatitude는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "현재 사용자 위치의 위도", example = "37.626144976334544")
             Double userLatitude,
 
             @NotNull(message = "userLongitude는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-180", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "현재 사용자 위치의 경도", example = "127.09302024107471")
             Double userLongitude
     ) {}
@@ -81,18 +95,26 @@ public class PinRequest {
     @Builder
     public record Viewport (
             @NotNull(message = "southWestLat는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "현재 화면의 최소 위도 (남서쪽 위도 좌표)", example = "37.626145")
             Double southWestLat,
 
             @NotNull(message = "southWestLng는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-180", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "현재 화면의 최소 경도 (남서쪽 경도 좌표)", example = "127.093020")
             Double southWestLng,
 
             @NotNull(message = "northEastLat는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "현재 화면의 최대 위도 (북동쪽 위도 좌표)", example = "37.629000")
             Double northEastLat,
 
             @NotNull(message = "northEastLng는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-180", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = INVALID_LOCATION_MESSAGE)
             @Schema(description = "현재 화면의 최대 경도 (북동쪽 경도 좌표)", example = "127.094000")
             Double northEastLng,
 
@@ -117,4 +139,19 @@ public class PinRequest {
                     || southWestLng <= northEastLng;
         }
     }
+
+    @Builder
+    public record UserLocation(
+            @NotNull(message = "userLatitude는 널이어서는 안 됩니다.")
+            @Schema(description = "현재 사용자 위치의 위도", example = "37.5297")
+            @DecimalMin(value = "-90", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = INVALID_LOCATION_MESSAGE)
+            Double userLatitude,
+
+            @NotNull(message = "userLongitude는 널이어서는 안 됩니다.")
+            @DecimalMin(value = "-180", message = INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = INVALID_LOCATION_MESSAGE)
+            @Schema(description = "현재 사용자 위치의 경도", example = "126.9333")
+            Double userLongitude
+    ) {}
 }

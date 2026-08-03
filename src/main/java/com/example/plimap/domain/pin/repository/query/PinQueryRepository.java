@@ -2,6 +2,7 @@ package com.example.plimap.domain.pin.repository.query;
 
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.PinSortType;
@@ -16,7 +17,7 @@ public interface PinQueryRepository{
 
     Map<Long, PlacePinInfo> findPinInfosByPlaceIds(List<Long> placeIds);
 
-    Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize);
+    Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize, PinRequest.UserLocation request);
 
     Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize);
 

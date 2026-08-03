@@ -104,9 +104,10 @@ public class PinController implements PinControllerDocs {
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,
-            @RequestParam(required = false) String cursor
+            @RequestParam(required = false) String cursor,
+            @Valid @ModelAttribute PinRequest.UserLocation request
     ) {
-        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(currentMember.getMember().getId(), cursor, pageSize);
+        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(currentMember.getMember().getId(), cursor, pageSize, request);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.MY_FEED_LIST_SEARCH_SUCCESS, response));
@@ -119,9 +120,10 @@ public class PinController implements PinControllerDocs {
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,
-            @RequestParam(required = false) String cursor
+            @RequestParam(required = false) String cursor,
+            @Valid @ModelAttribute PinRequest.UserLocation request
     ) {
-        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(memberId, cursor, pageSize);
+        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(memberId, cursor, pageSize, request);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.MEMBER_FEED_LIST_SEARCH_SUCCESS, response));

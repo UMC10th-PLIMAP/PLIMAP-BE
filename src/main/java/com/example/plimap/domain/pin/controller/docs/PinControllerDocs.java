@@ -84,7 +84,8 @@ public interface PinControllerDocs {
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,
-            @RequestParam(required = false) String cursor
+            @RequestParam(required = false) String cursor,
+            @Valid @ModelAttribute PinRequest.UserLocation request
     );
 
     @Operation(
@@ -97,7 +98,8 @@ public interface PinControllerDocs {
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,
-            @RequestParam(required = false) String cursor
+            @RequestParam(required = false) String cursor,
+            @Valid @ModelAttribute PinRequest.UserLocation request
     );
 
     @Operation(

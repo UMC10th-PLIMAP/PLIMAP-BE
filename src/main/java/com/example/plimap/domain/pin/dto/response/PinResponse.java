@@ -56,6 +56,9 @@ public class PinResponse {
             String albumImageUrl,
             Double latitude,
             Double longitude,
+            String placeName,
+            Integer distanceFromUser,
+            Long pinCount,
             Instant createdAt
     ) {}
 
