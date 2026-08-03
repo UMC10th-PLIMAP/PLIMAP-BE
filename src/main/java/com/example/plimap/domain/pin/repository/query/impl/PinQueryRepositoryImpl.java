@@ -571,6 +571,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         List<Long> pinIds = queryFactory
                 .select(pin.id)
                 .from(pin)
+                .join(pin.member, member)
                 .join(memberFollow)
                 .on(
                     memberFollow.follower.id.eq(memberId)
@@ -582,10 +583,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pin.createdAt.goe(Instant.now().minus(24, ChronoUnit.HOURS)),
                         pin.isFeedPublic.isTrue(),
                         pin.placeTrack.deletedAt.isNull(),
-                        pin.deletedAt.isNull(),
                         member.deletedAt.isNull(),
-                        placeTrack.deletedAt.isNull(),
-                        pin.isFeedPublic.isTrue()
+                        placeTrack.deletedAt.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
@@ -611,7 +610,10 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .where(
                         pin.id.in(pinIds),
                         placeTrack.deletedAt.isNull(),
-                        pin.deletedAt.isNull()
+                        pin.deletedAt.isNull(),
+                        member.deletedAt.isNull(),
+                        placeTrack.deletedAt.isNull(),
+                        pin.isFeedPublic.isTrue()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .fetch();
