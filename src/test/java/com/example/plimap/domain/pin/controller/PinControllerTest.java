@@ -283,7 +283,10 @@ class PinControllerTest {
     @Test
     void 내_피드_조회에_성공하면_200을_반환한다() throws Exception {
         when(pinQueryService.findFeedListByMemberId(
-                1L, null, 10, PinRequest.UserLocation.builder().build()
+                1L, null, 10, PinRequest.UserLocation.builder()
+                        .userLatitude(37.5283)
+                        .userLongitude(126.9326)
+                        .build()
         )).thenReturn(Pagination.<PinResponse.Feed>builder()
                         .data(new ArrayList<>())
                         .pageSize(10)
@@ -298,7 +301,9 @@ class PinControllerTest {
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(MY_FEED_ENDPOINT)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("userLatitude", "37.5283")
+                        .param("userLongitude", "126.9326"))
                         .andDo(print())
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.isSuccess").value(true))
@@ -317,7 +322,10 @@ class PinControllerTest {
     @Test
     void 타인_피드_조회에_성공하면_200을_반환한다() throws Exception {
         when(pinQueryService.findFeedListByMemberId(
-                1L, null, 10, PinRequest.UserLocation.builder().build()
+                1L, null, 10, PinRequest.UserLocation.builder()
+                        .userLatitude(37.5283)
+                        .userLongitude(126.9326)
+                        .build()
         )).thenReturn(Pagination.<PinResponse.Feed>builder()
                 .data(new ArrayList<>())
                 .pageSize(10)
@@ -325,7 +333,9 @@ class PinControllerTest {
                 .hasNext(false)
                 .build());
 
-        mockMvc.perform(get(MEMBER_FEED_ENDPOINT, 1L))
+        mockMvc.perform(get(MEMBER_FEED_ENDPOINT, 1L)
+                .param("userLatitude", "37.5283")
+                .param("userLongitude", "126.9326"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("MEMBER_FEED_LIST_SEARCH_SUCCESS"))
