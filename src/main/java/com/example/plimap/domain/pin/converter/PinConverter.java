@@ -98,6 +98,7 @@ public class PinConverter {
             Boolean userLike
     ) {
         return PinResponse.PinDetail.builder()
+                .memberId(pin.getMember().getId())
                 .pinId(pin.getId())
                 .writerNickname(pin.getMember().getDisplayNickname())
                 .writerProfileImage(pin.getMember().getProfileImageObjectKey())
