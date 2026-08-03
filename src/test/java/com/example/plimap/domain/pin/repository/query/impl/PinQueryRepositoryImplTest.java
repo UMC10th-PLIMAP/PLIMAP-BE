@@ -377,9 +377,6 @@ class PinQueryRepositoryImplTest {
         assertThat(Integer.parseInt(response.nextCursor().split("/")[0])).isEqualTo(3);
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin1.getId());
 
-        PinResponse.PinDetail last = response.data().getLast();
-        assertThat(last.pinByMe()).isFalse();
-
         String nextCursor = response.nextCursor();
 
         Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), nextCursor, 2, PinSortType.POPULAR, placeTrack1.getId());
@@ -388,6 +385,7 @@ class PinQueryRepositoryImplTest {
         assertThat(response2.data().getFirst().pinId()).isEqualTo(pin2.getId());
         assertThat(response2.nextCursor()).isNull();
     }
+
 
     @Test
     void 특정_장소에_대한_핀_목록을_최신순으로_페이지네이션으로_조회한다() {
@@ -402,6 +400,17 @@ class PinQueryRepositoryImplTest {
         assertThat(response2.data().size()).isEqualTo(2);
         assertThat(response2.hasNext()).isFalse();
         assertThat(response2.nextCursor()).isNull();
+    }
+
+    @Test
+    void 사용자에_따라_pinByMe가_달라진다() {
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), null, 1 , PinSortType.POPULAR, placeTrack1.getId());
+        PinResponse.PinDetail last = response.data().getLast();
+        assertThat(last.pinByMe()).isFalse();
+
+        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member1.getId(), null, 1 ,  PinSortType.POPULAR, placeTrack1.getId());
+        PinResponse.PinDetail last2 = response2.data().getLast();
+        assertThat(last2.pinByMe()).isTrue();
     }
 
     @Test
