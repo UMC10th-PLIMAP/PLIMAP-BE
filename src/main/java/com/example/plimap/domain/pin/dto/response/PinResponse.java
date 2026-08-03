@@ -87,7 +87,8 @@ public class PinResponse {
             Integer likeCount,
             Boolean userLike,
             String staticCreatedAt,
-            Instant createdAt
+            Instant createdAt,
+            boolean pinByMe
     ) {}
 
     @Builder
