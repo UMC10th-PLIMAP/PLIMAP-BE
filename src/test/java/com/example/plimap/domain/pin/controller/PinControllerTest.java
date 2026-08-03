@@ -17,6 +17,8 @@ import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.global.apiPayload.code.BaseErrorCode;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -24,6 +26,7 @@ import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRe
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
 import com.example.plimap.global.security.TokenBlacklistService;
+import com.nimbusds.oauth2.sdk.GeneralException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,8 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -370,6 +372,21 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.message").value("내가 작성한 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
+    }
+
+    @Test
+    void 범위에서_벗어날시_400을_반환한다() throws Exception {
+        mockMvc.perform(get(MY_FEED_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("userLatitude", "101.5283")
+                        .param("userLongitude", "126.9326")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidUpdateRequest()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("위치 정보가 올바르지 않습니다."))
+                .andExpect(jsonPath("$.result").doesNotExist());
     }
 
     @Test

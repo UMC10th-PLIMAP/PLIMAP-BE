@@ -176,6 +176,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         WHERE p.id IN (:pinIds)
           AND p.member_id = :memberId
           AND p.deleted_at IS NULL
+          AND pl.deleted_at IS NULL
+          AND pt.deleted_at IS NULL
           AND p.is_feed_public = true
         ORDER BY p.created_at DESC, p.id DESC
     """;

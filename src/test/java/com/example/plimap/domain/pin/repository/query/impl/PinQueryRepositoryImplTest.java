@@ -278,9 +278,28 @@ class PinQueryRepositoryImplTest {
 
         PinResponse.Feed last = response.data().getLast();
         assertThat(last.placeName()).isEqualTo(place2.getName());
-        assertThat(last.pinCount()).isEqualTo(3);
+        assertThat(last.pinCount()).isEqualTo(3L);
         assertThat(last.distanceFromUser())
                 .isBetween(9350, 9450);
+    }
+
+
+    @Test
+    void 장소가_존재하지_않으면_피드_조회에서_해당_장소의_핀들을_제외한다() {
+        // 삭제 전
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member3.getId(), null, 2, request);
+        assertThat(response.data().size()).isEqualTo(2);
+
+        // when
+        Place managedPlace = placeRepository.findById(deletedPlace.getId()).orElseThrow();
+
+        managedPlace.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member3.getId(), null, 2, request);
+        assertThat(response2.data().size()).isEqualTo(1);
     }
 
     @Test
