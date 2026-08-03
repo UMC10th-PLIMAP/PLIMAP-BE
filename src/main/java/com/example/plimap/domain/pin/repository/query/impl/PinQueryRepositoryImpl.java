@@ -582,9 +582,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pin.deletedAt.isNull(),
                         pin.createdAt.goe(Instant.now().minus(24, ChronoUnit.HOURS)),
                         pin.isFeedPublic.isTrue(),
-                        pin.placeTrack.deletedAt.isNull(),
-                        member.deletedAt.isNull(),
-                        placeTrack.deletedAt.isNull()
+                        member.deletedAt.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
@@ -603,13 +601,17 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         List<Pin> pins = queryFactory
                 .selectDistinct(pin)
                 .from(pin)
+                .join(memberFollow)
+                .on(
+                        memberFollow.follower.id.eq(memberId)
+                                .and(memberFollow.following.id.eq(pin.member.id))
+                )
                 .join(pin.placeTrack, placeTrack).fetchJoin()
                 .join(pin.place, place).fetchJoin()
                 .join(placeTrack.track, track).fetchJoin()
                 .join(pin.member, member).fetchJoin()
                 .where(
                         pin.id.in(pinIds),
-                        placeTrack.deletedAt.isNull(),
                         pin.deletedAt.isNull(),
                         member.deletedAt.isNull(),
                         placeTrack.deletedAt.isNull(),
