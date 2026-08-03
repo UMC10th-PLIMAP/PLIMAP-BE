@@ -376,6 +376,10 @@ class PinQueryRepositoryImplTest {
         assertThat(response.hasNext()).isTrue();
         assertThat(Integer.parseInt(response.nextCursor().split("/")[0])).isEqualTo(3);
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin1.getId());
+
+        PinResponse.PinDetail last = response.data().getLast();
+        assertThat(last.pinByMe()).isFalse();
+
         String nextCursor = response.nextCursor();
 
         Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), nextCursor, 2, PinSortType.POPULAR, placeTrack1.getId());
