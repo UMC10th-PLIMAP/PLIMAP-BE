@@ -95,7 +95,8 @@ public class PinConverter {
 
     public static PinResponse.PinDetail toPinDetail(
             Pin pin,
-            Boolean userLike
+            Boolean userLike,
+            Boolean pinByMe
     ) {
         return PinResponse.PinDetail.builder()
                 .pinId(pin.getId())
@@ -108,6 +109,7 @@ public class PinConverter {
                 .userLike(userLike)
                 .staticCreatedAt(parseCreatedAt(pin.getCreatedAt(), Instant.now()))
                 .createdAt(pin.getCreatedAt())
+                .pinByMe(pinByMe)
                 .build();
     }
 

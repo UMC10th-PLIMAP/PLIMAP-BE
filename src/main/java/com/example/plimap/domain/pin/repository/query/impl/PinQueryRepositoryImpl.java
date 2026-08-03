@@ -446,7 +446,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .map(p ->
                         PinConverter.toPinDetail(
                                 p,
-                                likedPinIdSet.contains(p.getId())
+                                likedPinIdSet.contains(p.getId()),
+                                p.getMember().getId().equals(memberId)
                         )
                 )
                 .toList();
