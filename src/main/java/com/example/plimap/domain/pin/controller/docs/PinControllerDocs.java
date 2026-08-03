@@ -39,7 +39,7 @@ public interface PinControllerDocs {
 
     @Operation(
             summary = "PIN 수정",
-            description = "핀 내용을 수정합니다. (Figma 기준 화면: 추후 추가 예정)"
+            description = "핀 내용을 수정합니다. (Figma 기준 화면: PN-01-03)"
     )
     public ResponseEntity<ApiResponse<PinResponse.UpdatedPin>> updatePin(
             @AuthenticationPrincipal AuthMember currentMember,
@@ -49,7 +49,7 @@ public interface PinControllerDocs {
 
     @Operation(
             summary = "PIN 삭제",
-            description = "핀 내용을 삭제합니다. (Figma 기준 화면: 추후 추가 예정)"
+            description = "핀 내용을 삭제합니다. (Figma 기준 화면: PN-01-03)"
     )
     public ResponseEntity<ApiResponse<Void>> deletePin(
             @AuthenticationPrincipal AuthMember currentMember,

@@ -77,6 +77,7 @@ public class PinResponse {
 
     @Builder
     public record PinDetail(
+            Long memberId,
             Long pinId,
             String writerNickname,
             String writerProfileImage,
@@ -86,7 +87,8 @@ public class PinResponse {
             Integer likeCount,
             Boolean userLike,
             String staticCreatedAt,
-            Instant createdAt
+            Instant createdAt,
+            boolean pinByMe
     ) {}
 
     @Builder
