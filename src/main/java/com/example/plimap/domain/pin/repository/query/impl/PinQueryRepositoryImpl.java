@@ -576,12 +576,13 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                     memberFollow.follower.id.eq(memberId)
                             .and(memberFollow.following.id.eq(pin.member.id))
                 )
-                .fetchJoin()
                 .where(
                         cursorCondition(cursorInfo, null),
                         pin.deletedAt.isNull(),
                         pin.createdAt.goe(Instant.now().minus(24, ChronoUnit.HOURS)),
-                        pin.isFeedPublic.isTrue()
+                        pin.isFeedPublic.isTrue(),
+                        pin.placeTrack.deletedAt.isNull(),
+                        pin.deletedAt.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
@@ -601,9 +602,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .selectDistinct(pin)
                 .from(pin)
                 .join(pin.placeTrack, placeTrack).fetchJoin()
+                .join(pin.place, place).fetchJoin()
+                .join(placeTrack.track, track).fetchJoin()
                 .join(pin.member, member).fetchJoin()
-                .leftJoin(pin.pinTagList, pinTag).fetchJoin()
-                .leftJoin(pinTag.tag, tag).fetchJoin()
                 .where(
                         pin.id.in(pinIds),
                         placeTrack.deletedAt.isNull(),
@@ -625,7 +626,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         }
 
         PinResponse.FriendPin last = data.getLast();
-        String nextCursor = last.createdAt() + "/" + last.pinId();
+        String nextCursor = hasNext
+                ? last.createdAt() + "/" + last.pinId()
+                : null;
 
         return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
     }
