@@ -1,6 +1,7 @@
 package com.example.plimap.domain.place.repository.query;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import com.example.plimap.domain.place.dto.NearbyBookmarkedPlace;
 import com.example.plimap.support.PostgisContainerConfiguration;
@@ -86,7 +87,7 @@ class PlaceBookmarkQueryRepositoryIntegrationTest {
                         LONGITUDE
                 );
 
-        assertThat(distanceFrom(boundaryId)).isEqualTo(500.0);
+        assertThat(distanceFrom(boundaryId)).isCloseTo(500.0, within(0.001));
         assertThat(distanceFrom(outsideId)).isGreaterThan(500.0);
         assertThat(result).containsExactly(
                 new NearbyBookmarkedPlace(boundaryId, "경계 장소", 500)

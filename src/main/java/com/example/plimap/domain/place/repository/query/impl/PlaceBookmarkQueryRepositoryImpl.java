@@ -15,25 +15,29 @@ public class PlaceBookmarkQueryRepositoryImpl implements PlaceBookmarkQueryRepos
     private static final double MAX_DISTANCE_METERS = 500.0;
     private static final double DISTANCE_PREFILTER_TOLERANCE_METERS = 0.001;
     private static final String FIND_NEARBY_ACTIVE_BOOKMARKS_QUERY = """
+            WITH origin AS (
+                SELECT ST_SetSRID(
+                    ST_MakePoint(:longitude, :latitude),
+                    4326
+                )::geography AS location
+            )
             SELECT p.id,
                    p.name,
-                   ROUND(ST_Distance(
-                       p.location,
-                       ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
-                   ))::integer AS distance_meters
+                   ROUND(distance.value)::integer AS distance_meters
             FROM place_bookmark pb
             JOIN place p ON p.id = pb.place_id
+            CROSS JOIN origin
+            CROSS JOIN LATERAL (
+                SELECT ST_Distance(p.location, origin.location) AS value
+            ) distance
             WHERE pb.member_id = :memberId
               AND p.deleted_at IS NULL
               AND ST_DWithin(
                     p.location,
-                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                    origin.location,
                     :maxDistanceMeters + :prefilterToleranceMeters
                   )
-              AND ST_Distance(
-                    p.location,
-                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
-                  ) <= :maxDistanceMeters
+              AND distance.value <= :maxDistanceMeters
             ORDER BY distance_meters ASC,
                      pb.created_at DESC,
                      p.id ASC
