@@ -7,6 +7,7 @@ import com.example.plimap.domain.track.dto.PlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 import java.util.List;
 
+import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import org.springframework.data.domain.Slice;
 
@@ -80,10 +81,10 @@ public final class PlaceTrackConverter {
     }
 
     public static AlbumImage toAlbumImage(
-            Track track
+            PlaceTrack placeTrack
     ) {
         return AlbumImage.builder()
-                .albumImageUrl(track.getAlbumImageUrl())
+                .albumImageUrl(placeTrack.getTrack().getAlbumImageUrl())
                 .build();
     }
 }

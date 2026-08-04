@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -487,12 +488,14 @@ class ClusterPinListTest {
         List<Long> placeIds = new ArrayList<>(List.of(place6.getId(), place5.getId()));
 
         // when
-        List<AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
+        Map<Long, AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
 
         // then
         assertThat(result.size()).isEqualTo(2);
-        assertThat(result.getFirst().albumImageUrl()).isEqualTo(placeTrack8.getTrack().getAlbumImageUrl());
-        assertThat(result.getLast().albumImageUrl()).isEqualTo(placeTrack5.getTrack().getAlbumImageUrl());
+        assertThat(result.get(place6.getId()).albumImageUrl())
+                .isEqualTo(placeTrack8.getTrack().getAlbumImageUrl());
+        assertThat(result.get(place5.getId()).albumImageUrl())
+                .isEqualTo(placeTrack5.getTrack().getAlbumImageUrl());
     }
 
     @Test
@@ -501,10 +504,11 @@ class ClusterPinListTest {
         List<Long> placeIds = new ArrayList<>(List.of(place6.getId(), place7.getId()));
 
         // when
-        List<AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
+        Map<Long, AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
 
         // then
-        assertThat(result.getLast().albumImageUrl()).isEqualTo(placeTrack10.getTrack().getAlbumImageUrl());
+        assertThat(result.get(place7.getId()).albumImageUrl())
+                .isEqualTo(placeTrack10.getTrack().getAlbumImageUrl());
 
         // when
         Pin managedPin = pinRepository.findById(pin13.getId()).orElseThrow();
@@ -513,10 +517,11 @@ class ClusterPinListTest {
         entityManager.flush();
         entityManager.clear();
 
-        List<AlbumImage> result2 = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
+        Map<Long, AlbumImage> result2 = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
 
         // then
-        assertThat(result2.getLast().albumImageUrl()).isEqualTo(placeTrack9.getTrack().getAlbumImageUrl());
+        assertThat(result2.get(place7.getId()).albumImageUrl())
+                .isEqualTo(placeTrack9.getTrack().getAlbumImageUrl());
     }
 
     @Test
@@ -531,10 +536,11 @@ class ClusterPinListTest {
 
         entityManager.flush();
         entityManager.clear();
-        List<AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
+        Map<Long, AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
 
         // then
-        assertThat(result.getLast().albumImageUrl()).isEqualTo(placeTrack9.getTrack().getAlbumImageUrl());
+        assertThat(result.get(place7.getId()).albumImageUrl())
+                .isEqualTo(placeTrack9.getTrack().getAlbumImageUrl());
     }
 
     private Member createMember(String name, String nickname) {

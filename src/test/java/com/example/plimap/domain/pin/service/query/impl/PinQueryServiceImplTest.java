@@ -1,7 +1,6 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -12,6 +11,7 @@ import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
@@ -368,18 +368,18 @@ class PinQueryServiceImplTest {
         List<Long> placeIds = new ArrayList<>(List.of(1L,2L));
         when(pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds))
                 .thenReturn(
-                        List.of(
-                                AlbumImage.builder().albumImageUrl("url1").build(),
-                                AlbumImage.builder().albumImageUrl("url2").build()
+                        Map.of(
+                                1L, AlbumImage.builder().albumImageUrl("url1").build(),
+                                2L, AlbumImage.builder().albumImageUrl("url2").build()
                         )
                 );
 
         // when
-        List<AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
+        Map<Long, AlbumImage> result = pinQueryService.findRepresentativePlaceTracksByPlaceIds(placeIds);
 
         // then
-        assertThat(result.getFirst().albumImageUrl()).isEqualTo("url1");
-        assertThat(result.getLast().albumImageUrl()).isEqualTo("url2");
+        assertThat(result.get(1L).albumImageUrl()).isEqualTo("url1");
+        assertThat(result.get(2L).albumImageUrl()).isEqualTo("url2");
         verify(pinQueryRepository).findRepresentativePlaceTracksByPlaceIds(placeIds);
     }
 }

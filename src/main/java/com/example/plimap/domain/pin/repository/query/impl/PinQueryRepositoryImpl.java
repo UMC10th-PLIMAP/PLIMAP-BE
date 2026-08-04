@@ -18,6 +18,7 @@ import com.example.plimap.domain.place.entity.QPlace;
 import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.converter.PlaceTrackConverter;
 import com.example.plimap.domain.track.dto.AlbumImage;
+import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
 import com.example.plimap.domain.track.entity.Track;
@@ -33,6 +34,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.example.plimap.domain.pin.entity.QPinTag.pinTag;
 import static com.example.plimap.domain.pin.entity.QTag.tag;
@@ -135,7 +137,6 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                             ON pt.id = p.place_track_id
                         WHERE
                             p.deleted_at IS NULL
-                            AND p.is_feed_public = true
                         ORDER BY
                             pt.place_id,
                             p.like_count DESC,
@@ -691,11 +692,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     @Override
-    public List<AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds) {
-        if (placeIds.isEmpty()) {
-            return List.of();
-        }
-
+    public Map<Long, AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds) {
         List<Long> placeTrackIds = entityManager.createNativeQuery(
                         PIN_COUNT
                                 + ","
@@ -708,15 +705,19 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .setParameter("placeIds", placeIds)
                 .getResultList();
 
-        List<Track> tracks = queryFactory
-                .select(placeTrack.track)
+        List<PlaceTrack> placeTracks = queryFactory
+                .select(placeTrack)
                 .from(placeTrack)
+                .join(placeTrack.track, track).fetchJoin()
+                .join(placeTrack.place, place).fetchJoin()
                 .where(placeTrack.id.in(placeTrackIds))
                 .fetch();
 
-        return tracks.stream()
-                .map(PlaceTrackConverter::toAlbumImage)
-                .toList();
+        return placeTracks.stream()
+                .collect(Collectors.toMap(
+                        pt -> pt.getPlace().getId(),
+                        PlaceTrackConverter::toAlbumImage
+                ));
     }
 
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {
