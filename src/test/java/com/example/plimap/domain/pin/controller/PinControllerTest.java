@@ -17,6 +17,8 @@ import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.global.apiPayload.code.BaseErrorCode;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -24,6 +26,7 @@ import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRe
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
 import com.example.plimap.global.security.TokenBlacklistService;
+import com.nimbusds.oauth2.sdk.GeneralException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,8 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,6 +71,7 @@ class PinControllerTest {
     private static final String MY_PIN_ENDPOINT = "/api/v1/pins/members/me";
     private static final String PLACE_TRACK_PIN_ENDPOINT = "/api/v1/place-tracks/{placeTrackId}/pins";
     private static final String VIEWPORT_CLUSTER_ENDPOINT = "/api/v1/pins/map";
+    private static final String FRIEND_RECENT_PIN_ENDPOINT = "/api/v1/pins/friends";
 
     @Autowired
     private MockMvc mockMvc;
@@ -283,7 +286,10 @@ class PinControllerTest {
     @Test
     void 내_피드_조회에_성공하면_200을_반환한다() throws Exception {
         when(pinQueryService.findFeedListByMemberId(
-                1L, 1L, null, 10
+                1L, 1L, null, 10, PinRequest.UserLocation.builder()
+                        .userLatitude(37.5283)
+                        .userLongitude(126.9326)
+                        .build()
         )).thenReturn(Pagination.<PinResponse.Feed>builder()
                         .data(new ArrayList<>())
                         .pageSize(10)
@@ -298,7 +304,9 @@ class PinControllerTest {
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(MY_FEED_ENDPOINT)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("userLatitude", "37.5283")
+                        .param("userLongitude", "126.9326"))
                         .andDo(print())
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.isSuccess").value(true))
@@ -317,7 +325,10 @@ class PinControllerTest {
     @Test
     void 타인_피드_조회에_성공하면_200을_반환한다() throws Exception {
         when(pinQueryService.findFeedListByMemberId(
-                1L, null, null, 10
+                1L, null, null, 10, PinRequest.UserLocation.builder()
+                        .userLatitude(37.5283)
+                        .userLongitude(126.9326)
+                        .build()
         )).thenReturn(Pagination.<PinResponse.Feed>builder()
                 .data(new ArrayList<>())
                 .pageSize(10)
@@ -325,7 +336,9 @@ class PinControllerTest {
                 .hasNext(false)
                 .build());
 
-        mockMvc.perform(get(MEMBER_FEED_ENDPOINT, 1L))
+        mockMvc.perform(get(MEMBER_FEED_ENDPOINT, 1L)
+                .param("userLatitude", "37.5283")
+                .param("userLongitude", "126.9326"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("MEMBER_FEED_LIST_SEARCH_SUCCESS"))
@@ -341,8 +354,12 @@ class PinControllerTest {
 
         when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
                 .thenReturn(Optional.of(viewer));
+        PinRequest.UserLocation userLocation = PinRequest.UserLocation.builder()
+                .userLatitude(37.5283)
+                .userLongitude(126.9326)
+                .build();
         when(pinQueryService.findFeedListByMemberId(
-                2L, 1L, null, 10
+                2L, 1L, null, 10, userLocation
         )).thenReturn(Pagination.<PinResponse.Feed>builder()
                 .data(new ArrayList<>())
                 .pageSize(10)
@@ -351,10 +368,12 @@ class PinControllerTest {
                 .build());
 
         mockMvc.perform(get(MEMBER_FEED_ENDPOINT, 2L)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("userLatitude", "37.5283")
+                        .param("userLongitude", "126.9326"))
                 .andExpect(status().isOk());
 
-        verify(pinQueryService).findFeedListByMemberId(2L, 1L, null, 10);
+        verify(pinQueryService).findFeedListByMemberId(2L, 1L, null, 10, userLocation);
     }
 
     @Test
@@ -383,6 +402,21 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.message").value("내가 작성한 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
+    }
+
+    @Test
+    void 범위에서_벗어날시_400을_반환한다() throws Exception {
+        mockMvc.perform(get(MY_FEED_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("userLatitude", "101.5283")
+                        .param("userLongitude", "126.9326")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidUpdateRequest()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("위치 정보가 올바르지 않습니다."))
+                .andExpect(jsonPath("$.result").doesNotExist());
     }
 
     @Test
@@ -484,6 +518,38 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.result.pins").isArray());
 
         verify(pinQueryService).getClusterPinList(any(PinRequest.Viewport.class));
+    }
+
+    @Test
+    void 친구_최근핀_조회에_성공하면_200을_반환한다() throws Exception {
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
+
+        given(pinQueryService.getFriendRecentPinList(eq(1L), isNull(), eq(10)))
+                .willReturn(PinConverter.toPagination(
+                        List.of(),
+                        null,
+                        false,
+                        10
+                ));
+
+        mockMvc.perform(get(FRIEND_RECENT_PIN_ENDPOINT)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andDo(print())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("FRIENDS_RECENT_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("내 친구 최근 핀 목록이 조회되었습니다."))
+                .andExpect(jsonPath("$.result.data").isArray())
+                .andExpect(jsonPath("$.result.data.length()").value(0))
+                .andExpect(jsonPath("$.result.nextCursor").doesNotExist())
+                .andExpect(jsonPath("$.result.hasNext").value(false))
+                .andExpect(jsonPath("$.result.pageSize").value(10));
+
+
+        verify(pinQueryService)
+                .getFriendRecentPinList(eq(1L), isNull(), eq(10));
     }
 
     private String validCreateRequest() {

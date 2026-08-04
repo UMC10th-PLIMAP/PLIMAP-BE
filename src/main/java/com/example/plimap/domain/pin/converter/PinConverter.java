@@ -93,23 +93,13 @@ public class PinConverter {
                 .build();
     }
 
-    public static PinResponse.Feed toFeed(
-        Pin pin
-    ) {
-        return PinResponse.Feed.builder()
-                .pinId(pin.getId())
-                .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
-                .latitude(pin.getPlace().getLocation().getY())
-                .longitude(pin.getPlace().getLocation().getX())
-                .createdAt(pin.getCreatedAt())
-                .build();
-    }
-
     public static PinResponse.PinDetail toPinDetail(
             Pin pin,
-            Boolean userLike
+            Boolean userLike,
+            Boolean pinByMe
     ) {
         return PinResponse.PinDetail.builder()
+                .memberId(pin.getMember().getId())
                 .pinId(pin.getId())
                 .writerNickname(pin.getMember().getDisplayNickname())
                 .writerProfileImage(pin.getMember().getProfileImageObjectKey())
@@ -120,6 +110,7 @@ public class PinConverter {
                 .userLike(userLike)
                 .staticCreatedAt(parseCreatedAt(pin.getCreatedAt(), Instant.now()))
                 .createdAt(pin.getCreatedAt())
+                .pinByMe(pinByMe)
                 .build();
     }
 
@@ -172,6 +163,21 @@ public class PinConverter {
                 .zoomLevel(zoomLevel)
                 .clusters(clusters)
                 .pins(pins)
+                .build();
+    }
+
+    public static PinResponse.FriendPin toFriendPin(
+            Pin pin
+    ) {
+        return PinResponse.FriendPin.builder()
+                .pinId(pin.getId())
+                .placeName(pin.getPlace().getName())
+                .latitude(pin.getPlace().getLocation().getY())
+                .longitude(pin.getPlace().getLocation().getX())
+                .writerNickname(pin.getMember().getDisplayNickname())
+                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
+                .createdAt(pin.getCreatedAt())
                 .build();
     }
 }

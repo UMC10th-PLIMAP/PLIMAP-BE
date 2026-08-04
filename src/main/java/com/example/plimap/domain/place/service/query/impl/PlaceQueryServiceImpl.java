@@ -4,6 +4,7 @@ import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
+import com.example.plimap.domain.place.dto.NearbyBookmarkedPlace;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceBookmarkId;
 import com.example.plimap.domain.place.entity.PlaceSearchHistory;
@@ -13,6 +14,7 @@ import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
+import com.example.plimap.domain.place.repository.query.PlaceBookmarkQueryRepository;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.global.external.kakao.KakaoAddressSearchClient;
 import com.example.plimap.global.external.kakao.KakaoClientException;
@@ -50,6 +52,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     private final PlaceBookmarkRepository placeBookmarkRepository;
     private final PlaceSearchHistoryRepository placeSearchHistoryRepository;
     private final PlaceQueryRepository placeQueryRepository;
+    private final PlaceBookmarkQueryRepository placeBookmarkQueryRepository;
     private final KakaoAddressSearchClient kakaoAddressSearchClient;
     private final KakaoPlaceSearchClient kakaoPlaceSearchClient;
     private final PinQueryService pinQueryService;
@@ -93,6 +96,42 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 bookmarkedByMe,
                 pinnedByMe
         );
+    }
+
+    @Override
+    public PlaceResponse.BookmarkListResult getPlaceBookmarks(
+            Long memberId,
+            double latitude,
+            double longitude
+    ) {
+        List<NearbyBookmarkedPlace> bookmarks =
+                placeBookmarkQueryRepository.findNearbyActiveBookmarks(
+                        memberId,
+                        latitude,
+                        longitude
+                );
+        if (bookmarks.isEmpty()) {
+            return new PlaceResponse.BookmarkListResult(List.of());
+        }
+
+        List<Long> placeIds = bookmarks.stream()
+                .map(NearbyBookmarkedPlace::placeId)
+                .toList();
+        Map<Long, PlacePinInfo> pinInfosByPlaceId =
+                pinQueryService.findPinInfosByPlaceIds(placeIds);
+
+        List<PlaceResponse.BookmarkListItem> items = bookmarks.stream()
+                .map(bookmark -> new PlaceResponse.BookmarkListItem(
+                        bookmark.placeId(),
+                        bookmark.placeName(),
+                        pinInfosByPlaceId.getOrDefault(
+                                bookmark.placeId(),
+                                NO_PIN_INFO
+                        ).firstPinCreatorNickname(),
+                        bookmark.distanceMeters()
+                ))
+                .toList();
+        return new PlaceResponse.BookmarkListResult(items);
     }
 
     @Override

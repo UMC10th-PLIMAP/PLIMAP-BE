@@ -35,6 +35,7 @@ import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRe
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
 import com.example.plimap.global.security.TokenBlacklistService;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,7 @@ class PlaceControllerTest {
     private static final String SEARCH_ENDPOINT = "/api/v1/places/search";
     private static final String DETAIL_ENDPOINT = "/api/v1/places/1";
     private static final String BOOKMARK_ENDPOINT = "/api/v1/places/1/bookmarks";
+    private static final String BOOKMARK_LIST_ENDPOINT = "/api/v1/places/bookmarks";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -104,6 +106,96 @@ class PlaceControllerTest {
         when(member.getId()).thenReturn(1L);
         when(member.getRole()).thenReturn(MemberRole.USER);
         when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
+    }
+
+    @Test
+    void 저장한_장소_목록_조회에_성공하면_명세_응답을_반환한다() throws Exception {
+        when(placeQueryService.getPlaceBookmarks(1L, 37.5283, 126.9326))
+                .thenReturn(new PlaceResponse.BookmarkListResult(List.of(
+                        new PlaceResponse.BookmarkListItem(
+                                1L,
+                                "물빛무대 앞 광장",
+                                "홍길동",
+                                470
+                        ),
+                        new PlaceResponse.BookmarkListItem(
+                                2L,
+                                "뚝섬역 2호선",
+                                null,
+                                480
+                        )
+                )));
+
+        mockMvc.perform(get(BOOKMARK_LIST_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PLACE_BOOKMARK_LIST_SUCCESS"))
+                .andExpect(jsonPath("$.message")
+                        .value("저장한 장소 목록 조회에 성공했습니다."))
+                .andExpect(jsonPath("$.result.items.length()").value(2))
+                .andExpect(jsonPath("$.result.items[0].placeId").value(1))
+                .andExpect(jsonPath("$.result.items[0].placeName")
+                        .value("물빛무대 앞 광장"))
+                .andExpect(jsonPath("$.result.items[0].firstPinCreatorNickname")
+                        .value("홍길동"))
+                .andExpect(jsonPath("$.result.items[0].distanceMeters").value(470))
+                .andExpect(jsonPath("$.result.items[1].firstPinCreatorNickname")
+                        .value(nullValue()));
+
+        verify(placeQueryService).getPlaceBookmarks(1L, 37.5283, 126.9326);
+    }
+
+    @Test
+    void 저장한_장소_목록은_빈_items를_반환한다() throws Exception {
+        when(placeQueryService.getPlaceBookmarks(1L, 37.5283, 126.9326))
+                .thenReturn(new PlaceResponse.BookmarkListResult(List.of()));
+
+        mockMvc.perform(get(BOOKMARK_LIST_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.items").isArray())
+                .andExpect(jsonPath("$.result.items").isEmpty());
+    }
+
+    @Test
+    void 저장한_장소_목록에서_좌표가_누락되면_공통_400을_반환한다() throws Exception {
+        mockMvc.perform(get(BOOKMARK_LIST_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("위치 정보가 올바르지 않습니다."));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
+    void 저장한_장소_목록에서_좌표가_범위를_벗어나면_공통_400을_반환한다() throws Exception {
+        mockMvc.perform(get(BOOKMARK_LIST_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("latitude", "91")
+                        .param("longitude", "181"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("위치 정보가 올바르지 않습니다."));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
+    void 저장한_장소_목록은_미인증_요청에_401을_반환한다() throws Exception {
+        mockMvc.perform(get(BOOKMARK_LIST_ENDPOINT)
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("COMMON_401_UNAUTHORIZED"));
+
+        verifyNoInteractions(placeQueryService);
     }
 
     @Test

@@ -20,7 +20,7 @@ public interface PinQueryService {
 
     Map<Long, PlacePinInfo> findPinInfosByPlaceIds(List<Long> placeIds);
 
-    Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, Long viewerId, String cursor, Integer pageSize);
+    Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, Long viewerId, String cursor, Integer pageSize, PinRequest.UserLocation request);
 
     Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize);
 
@@ -33,4 +33,6 @@ public interface PinQueryService {
     boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
 
     PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request);
+
+    Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize);
 }

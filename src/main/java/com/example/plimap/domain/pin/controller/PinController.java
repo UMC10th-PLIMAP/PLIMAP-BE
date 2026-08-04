@@ -104,10 +104,11 @@ public class PinController implements PinControllerDocs {
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,
-            @RequestParam(required = false) String cursor
+            @RequestParam(required = false) String cursor,
+            @Valid @ModelAttribute PinRequest.UserLocation request
     ) {
         Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(
-                currentMember.getMember().getId(), currentMember.getMember().getId(), cursor, pageSize);
+                currentMember.getMember().getId(), currentMember.getMember().getId(), cursor, pageSize, request);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.MY_FEED_LIST_SEARCH_SUCCESS, response));
@@ -121,11 +122,12 @@ public class PinController implements PinControllerDocs {
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,
-            @RequestParam(required = false) String cursor
+            @RequestParam(required = false) String cursor,
+            @Valid @ModelAttribute PinRequest.UserLocation request
     ) {
         // 이 경로는 SecurityConfig에서 인증 없이도 허용되므로 currentMember가 null일 수 있다.
         Long viewerId = currentMember != null ? currentMember.getMember().getId() : null;
-        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(memberId, viewerId, cursor, pageSize);
+        Pagination<PinResponse.Feed> response = pinQueryService.findFeedListByMemberId(memberId, viewerId, cursor, pageSize, request);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.MEMBER_FEED_LIST_SEARCH_SUCCESS, response));
@@ -183,5 +185,20 @@ public class PinController implements PinControllerDocs {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.CLUSTER_PIN_SEARCH_SUCCESS, response));
+    }
+
+    @GetMapping("/pins/friends")
+    public ResponseEntity<ApiResponse<Pagination<PinResponse.FriendPin>>> getFriendRecentPinList(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false, defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            @RequestParam(required = false) String cursor
+    ) {
+        Pagination<PinResponse.FriendPin> response = pinQueryService.getFriendRecentPinList(currentMember.getMember().getId(), cursor, pageSize);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.FRIENDS_RECENT_LIST_SEARCH_SUCCESS, response));
     }
 }

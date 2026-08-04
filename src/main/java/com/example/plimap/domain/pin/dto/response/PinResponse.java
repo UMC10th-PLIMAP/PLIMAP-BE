@@ -56,6 +56,9 @@ public class PinResponse {
             String albumImageUrl,
             Double latitude,
             Double longitude,
+            String placeName,
+            Integer distanceFromUser,
+            Long pinCount,
             Instant createdAt
     ) {}
 
@@ -74,6 +77,7 @@ public class PinResponse {
 
     @Builder
     public record PinDetail(
+            Long memberId,
             Long pinId,
             String writerNickname,
             String writerProfileImage,
@@ -83,7 +87,8 @@ public class PinResponse {
             Integer likeCount,
             Boolean userLike,
             String staticCreatedAt,
-            Instant createdAt
+            Instant createdAt,
+            boolean pinByMe
     ) {}
 
     @Builder
@@ -122,5 +127,17 @@ public class PinResponse {
             Integer zoomLevel,
             List<Cluster> clusters,
             List<PinPreview> pins
+    ) {}
+
+    @Builder
+    public record FriendPin(
+            Long pinId,
+            String placeName,
+            Double latitude,
+            Double longitude,
+            String writerNickname,
+            String writerProfileImage,
+            String albumImageUrl,
+            Instant createdAt
     ) {}
 }

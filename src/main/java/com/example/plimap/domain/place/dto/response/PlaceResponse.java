@@ -56,6 +56,34 @@ public final class PlaceResponse {
     ) {
     }
 
+    @Schema(name = "PlaceBookmarkListResponse")
+    public record BookmarkListResult(
+            @Schema(description = "저장한 장소 목록")
+            List<BookmarkListItem> items
+    ) {
+
+        public BookmarkListResult {
+            items = List.copyOf(items);
+        }
+    }
+
+    @Schema(name = "PlaceBookmarkListItem")
+    public record BookmarkListItem(
+            @Schema(description = "장소 ID", example = "1")
+            Long placeId,
+            @Schema(description = "장소명", example = "물빛무대 앞 광장")
+            String placeName,
+            @Schema(
+                    description = "최초 활성 PIN 작성자 닉네임. 활성 PIN이 없으면 null",
+                    example = "홍길동",
+                    nullable = true
+            )
+            String firstPinCreatorNickname,
+            @Schema(description = "사용자 현재 위치 기준 거리(m)", example = "470")
+            Integer distanceMeters
+    ) {
+    }
+
     public record SearchResult(
             @Schema(description = "장소 검색 결과 목록")
             List<SearchItem> items

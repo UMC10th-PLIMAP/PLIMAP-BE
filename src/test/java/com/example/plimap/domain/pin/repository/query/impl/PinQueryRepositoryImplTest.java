@@ -6,12 +6,12 @@ import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
-import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.repository.PlaceRepository;
@@ -24,6 +24,7 @@ import com.example.plimap.domain.track.repository.PlaceTrackRepository;
 import com.example.plimap.domain.track.repository.TrackRepository;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import jakarta.persistence.EntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
@@ -35,6 +36,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -74,12 +79,19 @@ class PinQueryRepositoryImplTest {
     @Autowired
     EntityManager entityManager;
 
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+
     Pin pin1, pin2, pin3, pin4, pin5, deletedPin, pin7, pin8, pin9;
     Place place1, place2, place3, place4, deletedPlace;
     Member member1, member2, member3, deletedMember;
     Report report;
     PlaceTrack placeTrack1, placeTrack3, placeTrack4, placeTrack5;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+    PinRequest.UserLocation request = PinRequest.UserLocation.builder()
+            .userLatitude(37.5283)
+            .userLongitude(126.9326)
+            .build();
 
     @BeforeEach
     void setup() {
@@ -164,8 +176,11 @@ class PinQueryRepositoryImplTest {
         report = Report.createPinReport(member2 ,pin5, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null);
 
         memberRepository.saveAll(List.of(member1, member2, member3, deletedMember));
-        MemberFollow memberFollow = MemberFollow.create(member1, member2);
-        memberFollowIdRepository.save(memberFollow);
+        MemberFollow memberFollow12 = MemberFollow.create(member1, member2);
+        MemberFollow memberFollow23 = MemberFollow.create(member2, member3);
+        MemberFollow memberFollow1d = MemberFollow.create(member1, deletedMember);
+
+        memberFollowIdRepository.saveAll(List.of(memberFollow12, memberFollow23, memberFollow1d));
         placeRepository.saveAll(List.of(place1, place2, place3, place4, deletedPlace));
         trackRepository.saveAll(List.of(track, track2));
         placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5));
@@ -237,13 +252,13 @@ class PinQueryRepositoryImplTest {
 
     @Test
     void 피드정보를_커서기반_페이지네이션으로_조회한다() {
-        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, null, 2 );
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, null, 2, request);
 
         assertThat(response.data().size()).isEqualTo(2);
         assertThat(response.hasNext()).isTrue();
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
         String nextCursor = response.nextCursor();
-        Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, nextCursor, 2 );
+        Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, nextCursor, 2, request);
 
         assertThat(response2.data().size()).isEqualTo(1);
         assertThat(response2.hasNext()).isFalse();
@@ -256,10 +271,44 @@ class PinQueryRepositoryImplTest {
                 pin3.getCreatedAt(),
                 pin3.getId()
         );
-        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, cursor, 2 );
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, cursor, 2, request);
         assertThat(response.data().size()).isEqualTo(1);
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();
+    }
+
+    @Test
+    void 추가된_장소_기반_피드_정보를_조회한다() {
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member2.getId(), null, null, 2, request);
+
+        assertThat(response.data().size()).isEqualTo(2);
+        assertThat(response.hasNext()).isTrue();
+        assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin3.getId());
+
+        PinResponse.Feed last = response.data().getLast();
+        assertThat(last.placeName()).isEqualTo(place2.getName());
+        assertThat(last.pinCount()).isEqualTo(3L);
+        assertThat(last.distanceFromUser())
+                .isBetween(9350, 9450);
+    }
+
+
+    @Test
+    void 장소가_존재하지_않으면_피드_조회에서_해당_장소의_핀들을_제외한다() {
+        // 삭제 전
+        Pagination<PinResponse.Feed> response = pinQueryRepository.findFeedListByMemberId(member3.getId(), null, null, 2, request);
+        assertThat(response.data().size()).isEqualTo(2);
+
+        // when
+        Place managedPlace = placeRepository.findById(deletedPlace.getId()).orElseThrow();
+
+        managedPlace.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        Pagination<PinResponse.Feed> response2 = pinQueryRepository.findFeedListByMemberId(member3.getId(), null, null, 2, request);
+        assertThat(response2.data().size()).isEqualTo(1);
     }
 
     @Test
@@ -336,6 +385,7 @@ class PinQueryRepositoryImplTest {
         assertThat(response.hasNext()).isTrue();
         assertThat(Integer.parseInt(response.nextCursor().split("/")[0])).isEqualTo(3);
         assertThat(Long.parseLong(response.nextCursor().split("/")[1])).isEqualTo(pin1.getId());
+
         String nextCursor = response.nextCursor();
 
         Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), nextCursor, 2, PinSortType.POPULAR, placeTrack1.getId());
@@ -344,6 +394,7 @@ class PinQueryRepositoryImplTest {
         assertThat(response2.data().getFirst().pinId()).isEqualTo(pin2.getId());
         assertThat(response2.nextCursor()).isNull();
     }
+
 
     @Test
     void 특정_장소에_대한_핀_목록을_최신순으로_페이지네이션으로_조회한다() {
@@ -358,6 +409,17 @@ class PinQueryRepositoryImplTest {
         assertThat(response2.data().size()).isEqualTo(2);
         assertThat(response2.hasNext()).isFalse();
         assertThat(response2.nextCursor()).isNull();
+    }
+
+    @Test
+    void 사용자에_따라_pinByMe가_달라진다() {
+        Pagination<PinResponse.PinDetail> response = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member2.getId(), null, 1 , PinSortType.POPULAR, placeTrack1.getId());
+        PinResponse.PinDetail last = response.data().getLast();
+        assertThat(last.pinByMe()).isFalse();
+
+        Pagination<PinResponse.PinDetail> response2 = pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member1.getId(), null, 1 ,  PinSortType.POPULAR, placeTrack1.getId());
+        PinResponse.PinDetail last2 = response2.data().getLast();
+        assertThat(last2.pinByMe()).isTrue();
     }
 
     @Test
@@ -398,7 +460,7 @@ class PinQueryRepositoryImplTest {
     @Test
     void 피드_조회시_내가_신고한_핀은_제외된다() {
         Pagination<PinResponse.Feed> response =
-                pinQueryRepository.findFeedListByMemberId(member1.getId(), member2.getId(), null, 10);
+                pinQueryRepository.findFeedListByMemberId(member1.getId(), member2.getId(), null, 10, request);
 
         assertThat(response.data())
                 .extracting(PinResponse.Feed::pinId)
@@ -409,7 +471,7 @@ class PinQueryRepositoryImplTest {
     @Test
     void 피드_조회시_다른_사람이_신고한_핀은_보인다() {
         Pagination<PinResponse.Feed> response =
-                pinQueryRepository.findFeedListByMemberId(member1.getId(), member1.getId(), null, 10);
+                pinQueryRepository.findFeedListByMemberId(member1.getId(), member1.getId(), null, 10, request);
 
         assertThat(response.data())
                 .extracting(PinResponse.Feed::pinId)
@@ -423,7 +485,7 @@ class PinQueryRepositoryImplTest {
         entityManager.clear();
 
         Pagination<PinResponse.Feed> response =
-                pinQueryRepository.findFeedListByMemberId(member1.getId(), null, null, 10);
+                pinQueryRepository.findFeedListByMemberId(member1.getId(), null, null, 10, request);
 
         assertThat(response.data())
                 .extracting(PinResponse.Feed::pinId)
@@ -574,6 +636,65 @@ class PinQueryRepositoryImplTest {
         assertThat(
                 pinQueryRepository.existsActivePinByPlaceIdAndMemberId(place2.getId(), deletedMember.getId())
         ).isFalse();
+    }
+
+
+    // getFriendRecentPinList
+    @Test
+    void 내가_팔로우한_사람의_24시간_이내_등록_핀을_조회한다() {
+        // when
+        Pagination<PinResponse.FriendPin> result = pinQueryRepository.getFriendRecentPinList(member1.getId(), null, 10);
+        PinResponse.FriendPin first = result.data().getFirst();
+
+        // then
+        assertThat(result.data().size()).isEqualTo(4);
+        assertThat(first.pinId()).isEqualTo(pin9.getId());
+        assertThat(first.writerNickname()).isEqualTo(deletedMember.getNickname());
+        assertThat(first.writerProfileImage()).isEqualTo(deletedMember.getProfileImageObjectKey());
+        assertThat(first.placeName()).isEqualTo(pin9.getPlace().getName());
+        assertThat(first.latitude()).isEqualTo(pin9.getPlace().getLocation().getY());
+        assertThat(first.longitude()).isEqualTo(pin9.getPlace().getLocation().getX());
+    }
+
+    @Test
+    void 피드공개_설정이_false면_등록_핀을_조회하지_않는다() {
+        // when
+        Pagination<PinResponse.FriendPin> result = pinQueryRepository.getFriendRecentPinList(member2.getId(), null, 10);
+        PinResponse.FriendPin first = result.data().getFirst();
+
+        // then
+        assertThat(result.data().size()).isEqualTo(2);
+        assertThat(first.pinId()).isEqualTo(pin8.getId());
+        assertThat(first.writerNickname()).isEqualTo(member3.getNickname());
+        assertThat(first.writerProfileImage()).isEqualTo(member3.getProfileImageObjectKey());
+        assertThat(first.placeName()).isEqualTo(pin8.getPlace().getName());
+        assertThat(first.latitude()).isEqualTo(pin8.getPlace().getLocation().getY());
+        assertThat(first.longitude()).isEqualTo(pin8.getPlace().getLocation().getX());
+    }
+
+    @Test
+    void _24시간_내에_등록한_핀만_조회한다() throws SQLException {
+        // given
+        Instant now = Instant.now();
+
+        jdbcTemplate.update(
+                "UPDATE pin SET created_at = ? WHERE id = ?",
+                Timestamp.from(now.minus(25, ChronoUnit.HOURS)),
+                pin2.getId()
+        );
+
+        // when
+        Pagination<PinResponse.FriendPin> result = pinQueryRepository.getFriendRecentPinList(member1.getId(), null, 10);
+        PinResponse.FriendPin last = result.data().getLast();
+
+        // then
+        assertThat(result.data().size()).isEqualTo(3);
+        assertThat(last.pinId()).isEqualTo(pin3.getId());
+        assertThat(last.writerNickname()).isEqualTo(member2.getNickname());
+        assertThat(last.writerProfileImage()).isEqualTo(member2.getProfileImageObjectKey());
+        assertThat(last.placeName()).isEqualTo(pin3.getPlace().getName());
+        assertThat(last.latitude()).isEqualTo(pin3.getPlace().getLocation().getY());
+        assertThat(last.longitude()).isEqualTo(pin3.getPlace().getLocation().getX());
     }
 
 

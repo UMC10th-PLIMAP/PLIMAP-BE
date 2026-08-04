@@ -142,7 +142,7 @@ public class PinCommandServiceImpl implements PinCommandService {
 
         eventPublisher.publishEvent(new PinLikedEvent(pinId, pin.getMember().getId(), currentMember.getId()));
 
-        return PinConverter.toLikeCount(pin.getLikeCount());
+        return PinConverter.toLikeCount(pin.getLikeCount() + 1);
     }
 
     @Override
@@ -152,7 +152,7 @@ public class PinCommandServiceImpl implements PinCommandService {
                         .orElseThrow(() -> new PinLikeException(PinLikeErrorCode.PIN_LIKE_NOT_FOUND));
         pinLikeRepository.delete(pinLike);
         pinRepository.decreaseLikeCount(pinId);
-        return PinConverter.toLikeCount(pin.getLikeCount());
+        return PinConverter.toLikeCount(pin.getLikeCount() - 1);
     }
 
     @Override
