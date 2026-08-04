@@ -231,7 +231,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pin.id.in(pinIds),
                         cursorCondition(cursorInfo, null),
                         pin.isFeedPublic.eq(true),
-                        pin.deletedAt.isNull()
+                        pin.deletedAt.isNull(),
+                        pin.reportCount.lt(REPORT_HIDE_THRESHOLD),
+                        notReportedByViewer(viewerId)
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
@@ -303,7 +305,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .where(
                         pin.id.in(pinIds),
                         place.deletedAt.isNull(),
-                        placeTrack.deletedAt.isNull()
+                        placeTrack.deletedAt.isNull(),
+                        pin.reportCount.lt(REPORT_HIDE_THRESHOLD)
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .fetch();
@@ -389,10 +392,17 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .join(pin.member, member).fetchJoin()
                 .leftJoin(pin.pinTagList, pinTag).fetchJoin()
                 .leftJoin(pinTag.tag, tag).fetchJoin()
+                .leftJoin(report)
+                .on(
+                        report.reportedPin.eq(pin),
+                        report.reporter.id.eq(memberId)
+                )
                 .where(
                         pin.id.in(pinIds),
                         placeTrack.deletedAt.isNull(),
-                        pin.deletedAt.isNull()
+                        pin.deletedAt.isNull(),
+                        report.id.isNull(),
+                        pin.reportCount.lt(REPORT_HIDE_THRESHOLD)
                 )
                 .orderBy(getOrders(pinSortType))
                 .fetch();

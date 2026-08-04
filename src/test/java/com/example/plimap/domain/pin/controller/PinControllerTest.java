@@ -335,6 +335,29 @@ class PinControllerTest {
     }
 
     @Test
+    void 로그인한_상태로_타인_피드_조회시_viewerId가_전달된다() throws Exception {
+        Member viewer = Member.builder().build();
+        ReflectionTestUtils.setField(viewer, "id", 1L);
+
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(viewer));
+        when(pinQueryService.findFeedListByMemberId(
+                2L, 1L, null, 10
+        )).thenReturn(Pagination.<PinResponse.Feed>builder()
+                .data(new ArrayList<>())
+                .pageSize(10)
+                .nextCursor(null)
+                .hasNext(false)
+                .build());
+
+        mockMvc.perform(get(MEMBER_FEED_ENDPOINT, 2L)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        verify(pinQueryService).findFeedListByMemberId(2L, 1L, null, 10);
+    }
+
+    @Test
     void 내_핀_목록_조회에_성공하면_200을_반환한다() throws Exception {
         when(pinQueryService.findMyPinList(
                 1L, null, 10

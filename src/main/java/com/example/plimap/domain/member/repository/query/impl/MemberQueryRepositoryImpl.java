@@ -55,6 +55,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                 .join(memberFollow.follower, follower)
                 .where(
                         memberFollow.following.id.eq(memberId),
+                        follower.status.eq(MemberStatus.ACTIVE),
                         follower.deletedAt.isNull(),
                         follower.reportCount.lt(REPORT_HIDE_THRESHOLD),
                         notReportedByViewer(viewerId, follower.id),
@@ -103,6 +104,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                 .join(memberFollow.following, following)
                 .where(
                         memberFollow.follower.id.eq(memberId),
+                        following.status.eq(MemberStatus.ACTIVE),
                         following.deletedAt.isNull(),
                         following.reportCount.lt(REPORT_HIDE_THRESHOLD),
                         notReportedByViewer(viewerId, following.id),
