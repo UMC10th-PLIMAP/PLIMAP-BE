@@ -10,4 +10,8 @@ public interface ProfileImageStorage {
     void delete(String objectKey);
 
     URI getPublicUrl(String objectKey);
+
+    default String getPublicUrlOrNull(String objectKey) {
+        return objectKey == null ? null : getPublicUrl(objectKey).toString();
+    }
 }

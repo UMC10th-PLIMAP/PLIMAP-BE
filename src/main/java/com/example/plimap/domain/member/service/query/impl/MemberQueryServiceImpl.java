@@ -14,6 +14,7 @@ import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.vane.badwordfiltering.BadWordFiltering;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     private final MemberRepository memberRepository;
     private final MemberFollowRepository memberFollowRepository;
     private final MemberQueryRepository memberQueryRepository;
+    private final ProfileImageStorage profileImageStorage;
     private final BadWordFiltering badWordFiltering = new BadWordFiltering();
 
     @Override
@@ -88,7 +90,8 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         Member member = getActiveMember(memberId);
         long followerCount = memberFollowRepository.countByIdFollowingId(memberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(memberId);
-        return MemberConverter.toMyProfile(member, followerCount, followingCount);
+        String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
+        return MemberConverter.toMyProfile(member, profileImageUrl, followerCount, followingCount);
     }
 
     @Override
@@ -101,7 +104,8 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         long followerCount = memberFollowRepository.countByIdFollowingId(targetMemberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
         boolean isFollowing = memberFollowRepository.existsById(new MemberFollowId(viewerId, targetMemberId));
-        return MemberConverter.toOtherProfile(member, followerCount, followingCount, isFollowing);
+        String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
+        return MemberConverter.toOtherProfile(member, profileImageUrl, followerCount, followingCount, isFollowing);
     }
 
     @Override

@@ -12,6 +12,7 @@ import com.example.plimap.domain.member.exception.MemberSuccessCode;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.example.plimap.global.security.SessionInvalidationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -39,6 +40,7 @@ public class MemberController implements MemberControllerDocs {
     private final MemberQueryService memberQueryService;
     private final MemberCommandService memberCommandService;
     private final SessionInvalidationService sessionInvalidationService;
+    private final ProfileImageStorage profileImageStorage;
 
     @Override
     @GetMapping("/nickname/check")
@@ -71,7 +73,8 @@ public class MemberController implements MemberControllerDocs {
             @Valid @RequestBody MemberReqDTO.UpdateProfile request
     ) {
         Member member = memberCommandService.updateProfile(authMember.getMember().getId(), request);
-        return ApiResponse.success(MemberSuccessCode.PROFILE_UPDATED, MemberConverter.toProfile(member));
+        String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
+        return ApiResponse.success(MemberSuccessCode.PROFILE_UPDATED, MemberConverter.toProfile(member, profileImageUrl));
     }
 
     @Override

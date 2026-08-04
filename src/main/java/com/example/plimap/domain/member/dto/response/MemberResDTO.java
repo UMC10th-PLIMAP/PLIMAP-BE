@@ -35,7 +35,7 @@ public class MemberResDTO {
             String nickname,
             String name,
             String introduction,
-            String profileImageObjectKey,
+            String profileImageUrl,
             Instant updatedAt
     ) {
     }
@@ -45,7 +45,7 @@ public class MemberResDTO {
             String nickname,
             String name,
             String introduction,
-            String profileImageObjectKey,
+            String profileImageUrl,
             long followerCount,
             long followingCount,
             Instant onboardingCompletedAt
@@ -57,7 +57,7 @@ public class MemberResDTO {
             String nickname,
             String name,
             String introduction,
-            String profileImageObjectKey,
+            String profileImageUrl,
             long followerCount,
             long followingCount,
             boolean isFollowing

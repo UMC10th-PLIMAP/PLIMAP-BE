@@ -12,6 +12,7 @@ import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import java.time.Instant;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
@@ -103,6 +104,9 @@ class MemberControllerTest {
 
     @MockitoBean
     private SessionInvalidationService sessionInvalidationService;
+
+    @MockitoBean
+    private ProfileImageStorage profileImageStorage;
 
     @BeforeEach
     void setUp() {

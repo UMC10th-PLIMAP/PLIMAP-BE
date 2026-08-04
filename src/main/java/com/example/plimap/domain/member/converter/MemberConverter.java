@@ -40,37 +40,37 @@ public class MemberConverter {
                 .build();
     }
 
-    public static MemberResDTO.Profile toProfile(Member member) {
+    public static MemberResDTO.Profile toProfile(Member member, String profileImageUrl) {
         return new MemberResDTO.Profile(
                 member.getId(),
                 member.getNickname(),
                 member.getName(),
                 member.getIntroduction(),
-                member.getProfileImageObjectKey(),
+                profileImageUrl,
                 member.getUpdatedAt()
         );
     }
 
-    public static MemberResDTO.MyProfile toMyProfile(Member member, long followerCount, long followingCount) {
+    public static MemberResDTO.MyProfile toMyProfile(Member member, String profileImageUrl, long followerCount, long followingCount) {
         return new MemberResDTO.MyProfile(
                 member.getId(),
                 member.getNickname(),
                 member.getName(),
                 member.getIntroduction(),
-                member.getProfileImageObjectKey(),
+                profileImageUrl,
                 followerCount,
                 followingCount,
                 member.getOnboardingCompletedAt()
         );
     }
 
-    public static MemberResDTO.OtherProfile toOtherProfile(Member member, long followerCount, long followingCount, boolean isFollowing) {
+    public static MemberResDTO.OtherProfile toOtherProfile(Member member, String profileImageUrl, long followerCount, long followingCount, boolean isFollowing) {
         return new MemberResDTO.OtherProfile(
                 member.getId(),
                 member.getNickname(),
                 member.getName(),
                 member.getIntroduction(),
-                member.getProfileImageObjectKey(),
+                profileImageUrl,
                 followerCount,
                 followingCount,
                 isFollowing
