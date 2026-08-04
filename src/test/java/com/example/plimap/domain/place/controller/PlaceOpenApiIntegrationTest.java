@@ -31,6 +31,7 @@ class PlaceOpenApiIntegrationTest {
     private static final String PLACE_DETAIL_PATH = "/api/v1/places/{placeId}";
     private static final String PLACE_BOOKMARK_PATH = "/api/v1/places/{placeId}/bookmarks";
     private static final String PLACE_BOOKMARK_LIST_PATH = "/api/v1/places/bookmarks";
+    private static final String PLACE_POPULAR_LIST_PATH = "/api/v1/places/popular";
 
     @Autowired
     private MockMvc mockMvc;
@@ -159,6 +160,51 @@ class PlaceOpenApiIntegrationTest {
         assertThat(itemProperties.has("firstPinCreatorNickname")).isTrue();
         assertThat(itemProperties.has("distanceMeters")).isTrue();
         assertThat(isNullableSchema(itemProperties.path("firstPinCreatorNickname"))).isTrue();
+    }
+
+    @Test
+    void 인기_장소_목록_OpenAPI는_scope_좌표와_응답_계약을_노출한다() throws Exception {
+        String responseBody = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode openApi = objectMapper.readTree(responseBody);
+
+        JsonNode operation = openApi.path("paths").path(PLACE_POPULAR_LIST_PATH).path("get");
+        assertThat(operation.path("description").asText())
+                .contains("최대 6개")
+                .contains("반올림 전 실제 거리")
+                .contains("HM-01");
+        assertThat(operation.path("responses").has("200")).isTrue();
+        assertThat(operation.path("responses").has("400")).isTrue();
+        assertThat(operation.path("responses").has("401")).isTrue();
+
+        JsonNode scope = findParameter(operation, "scope");
+        JsonNode latitude = findParameter(operation, "latitude");
+        JsonNode longitude = findParameter(operation, "longitude");
+        assertThat(scope.path("required").asBoolean()).isTrue();
+        assertThat(enumValues(scope.path("schema")))
+                .containsExactlyInAnyOrder("NEARBY", "GLOBAL");
+        assertThat(latitude.path("required").asBoolean()).isTrue();
+        assertThat(longitude.path("required").asBoolean()).isTrue();
+        assertThat(latitude.path("schema").path("minimum").asDouble()).isEqualTo(-90.0);
+        assertThat(latitude.path("schema").path("maximum").asDouble()).isEqualTo(90.0);
+        assertThat(longitude.path("schema").path("minimum").asDouble()).isEqualTo(-180.0);
+        assertThat(longitude.path("schema").path("maximum").asDouble()).isEqualTo(180.0);
+
+        JsonNode resultProperties = openApi.path("components").path("schemas")
+                .path("PlacePopularListResponse").path("properties");
+        assertThat(resultProperties.has("items")).isTrue();
+
+        JsonNode itemProperties = openApi.path("components").path("schemas")
+                .path("PlacePopularListItem").path("properties");
+        assertThat(itemProperties.has("placeId")).isTrue();
+        assertThat(itemProperties.has("placeName")).isTrue();
+        assertThat(itemProperties.has("distanceMeters")).isTrue();
+        assertThat(itemProperties.has("pinCount")).isTrue();
+        assertThat(itemProperties.has("representativeImageUrl")).isTrue();
+        assertThat(isNullableSchema(itemProperties.path("representativeImageUrl"))).isTrue();
     }
 
     @Test

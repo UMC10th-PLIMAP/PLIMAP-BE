@@ -2,20 +2,24 @@ package com.example.plimap.domain.place.service.query.impl;
 
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.place.dto.NearbyBookmarkedPlace;
+import com.example.plimap.domain.place.dto.PopularPlaceCandidate;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
-import com.example.plimap.domain.place.dto.NearbyBookmarkedPlace;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceBookmarkId;
 import com.example.plimap.domain.place.entity.PlaceSearchHistory;
+import com.example.plimap.domain.place.enums.PopularPlaceScope;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
-import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceBookmarkQueryRepository;
+import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
+import com.example.plimap.domain.place.repository.query.PopularPlaceQueryRepository;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
+import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.global.external.kakao.KakaoAddressSearchClient;
 import com.example.plimap.global.external.kakao.KakaoClientException;
 import com.example.plimap.global.external.kakao.KakaoClientTimeoutException;
@@ -53,9 +57,51 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     private final PlaceSearchHistoryRepository placeSearchHistoryRepository;
     private final PlaceQueryRepository placeQueryRepository;
     private final PlaceBookmarkQueryRepository placeBookmarkQueryRepository;
+    private final PopularPlaceQueryRepository popularPlaceQueryRepository;
     private final KakaoAddressSearchClient kakaoAddressSearchClient;
     private final KakaoPlaceSearchClient kakaoPlaceSearchClient;
     private final PinQueryService pinQueryService;
+
+    @Override
+    public PlaceResponse.PopularListResult getPopularPlaces(
+            PopularPlaceScope scope,
+            double latitude,
+            double longitude
+    ) {
+        List<PopularPlaceCandidate> candidates = switch (scope) {
+            case NEARBY -> popularPlaceQueryRepository.findNearbyPopularPlaces(
+                    latitude,
+                    longitude
+            );
+            case GLOBAL -> popularPlaceQueryRepository.findGlobalPopularPlaces(
+                    latitude,
+                    longitude
+            );
+        };
+        if (candidates.isEmpty()) {
+            return new PlaceResponse.PopularListResult(List.of());
+        }
+
+        List<Long> placeIds = candidates.stream()
+                .map(PopularPlaceCandidate::placeId)
+                .toList();
+        Map<Long, AlbumImage> representativeImages =
+                pinQueryService.findRepresentativePlaceTracksByPlaceIds(placeIds);
+
+        List<PlaceResponse.PopularListItem> items = candidates.stream()
+                .map(candidate -> {
+                    AlbumImage albumImage = representativeImages.get(candidate.placeId());
+                    return new PlaceResponse.PopularListItem(
+                            candidate.placeId(),
+                            candidate.placeName(),
+                            roundToMeters(candidate.distanceMeters()),
+                            candidate.pinCount(),
+                            albumImage == null ? null : albumImage.albumImageUrl()
+                    );
+                })
+                .toList();
+        return new PlaceResponse.PopularListResult(items);
+    }
 
     @Override
     public PlaceResponse.Detail getPlaceDetail(

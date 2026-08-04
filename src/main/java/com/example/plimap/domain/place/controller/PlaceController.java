@@ -4,6 +4,7 @@ import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.place.controller.docs.PlaceControllerDocs;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
+import com.example.plimap.domain.place.enums.PopularPlaceScope;
 import com.example.plimap.domain.place.exception.PlaceSuccessCode;
 import com.example.plimap.domain.place.service.command.PlaceCommandService;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
@@ -30,6 +31,24 @@ public class PlaceController implements PlaceControllerDocs {
 
     private final PlaceCommandService placeCommandService;
     private final PlaceQueryService placeQueryService;
+
+    @Override
+    @GetMapping("/popular")
+    public ResponseEntity<ApiResponse<PlaceResponse.PopularListResult>> getPopularPlaces(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false) String scope,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude
+    ) {
+        PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
+                PopularPlaceScope.valueOf(scope),
+                latitude,
+                longitude
+        );
+        return ResponseEntity
+                .status(PlaceSuccessCode.PLACE_POPULAR_LIST_SUCCESS.getStatus())
+                .body(ApiResponse.success(PlaceSuccessCode.PLACE_POPULAR_LIST_SUCCESS, result));
+    }
 
     @Override
     @GetMapping("/bookmarks")
