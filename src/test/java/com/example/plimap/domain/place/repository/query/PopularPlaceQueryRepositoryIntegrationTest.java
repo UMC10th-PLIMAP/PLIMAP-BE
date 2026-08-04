@@ -90,15 +90,19 @@ class PopularPlaceQueryRepositoryIntegrationTest {
     @Test
     void GLOBAL은_PIN수_실제거리_placeId순으로_정렬한다() {
         Long mostPinsId = insertPlace("PIN 3개", 400.0, 0.0, false);
-        Long tiedNearId = insertPlace("PIN 2개 가까움", 100.0, 0.0, false);
-        Long tiedFarId = insertPlace("PIN 2개 멂", 300.0, 0.0, false);
+        Long tiedFarId = insertPlace("PIN 2개 멂", 100.4, 0.0, false);
+        Long tiedNearId = insertPlace("PIN 2개 가까움", 100.1, 0.0, false);
         Long firstId = insertPlace("ID 우선 1", 500.0, 90.0, false);
         Long secondId = insertPlace("ID 우선 2", 500.0, 90.0, false);
+        Long deletedPlaceId = insertPlace("삭제 장소", 10.0, 0.0, true);
+        Long deletedPinOnlyPlaceId = insertPlace("삭제 PIN만 있는 장소", 20.0, 0.0, false);
         insertPins(mostPinsId, 3, false, false);
         insertPins(tiedNearId, 2, false, false);
         insertPins(tiedFarId, 2, true, false);
         insertPins(firstId, 1, true, false);
         insertPins(secondId, 1, false, false);
+        insertPins(deletedPlaceId, 4, true, false);
+        insertPins(deletedPinOnlyPlaceId, 4, true, true);
 
         List<PopularPlaceCandidate> result =
                 popularPlaceQueryRepository.findGlobalPopularPlaces(
@@ -106,8 +110,13 @@ class PopularPlaceQueryRepositoryIntegrationTest {
                         LONGITUDE
                 );
 
+        assertThat(Math.round(distanceFrom(tiedNearId)))
+                .isEqualTo(Math.round(distanceFrom(tiedFarId)));
+        assertThat(distanceFrom(tiedNearId)).isLessThan(distanceFrom(tiedFarId));
         assertThat(result).extracting(PopularPlaceCandidate::placeId)
                 .containsExactly(mostPinsId, tiedNearId, tiedFarId, firstId, secondId);
+        assertThat(result).extracting(PopularPlaceCandidate::placeId)
+                .doesNotContain(deletedPlaceId, deletedPinOnlyPlaceId);
         assertThat(result).extracting(PopularPlaceCandidate::pinCount)
                 .containsExactly(3L, 2L, 2L, 1L, 1L);
     }
