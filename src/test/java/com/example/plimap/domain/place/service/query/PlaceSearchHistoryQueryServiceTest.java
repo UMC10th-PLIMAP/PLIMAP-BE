@@ -16,6 +16,7 @@ import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceBookmarkQueryRepository;
+import com.example.plimap.domain.place.repository.query.PopularPlaceQueryRepository;
 import com.example.plimap.domain.place.service.query.impl.PlaceQueryServiceImpl;
 import com.example.plimap.global.external.kakao.KakaoAddressSearchClient;
 import com.example.plimap.global.external.kakao.KakaoPlaceSearchClient;
@@ -53,6 +54,9 @@ class PlaceSearchHistoryQueryServiceTest {
     private PlaceBookmarkQueryRepository placeBookmarkQueryRepository;
 
     @Mock
+    private PopularPlaceQueryRepository popularPlaceQueryRepository;
+
+    @Mock
     private KakaoAddressSearchClient kakaoAddressSearchClient;
 
     @Mock
@@ -71,6 +75,7 @@ class PlaceSearchHistoryQueryServiceTest {
                 placeSearchHistoryRepository,
                 placeQueryRepository,
                 placeBookmarkQueryRepository,
+                popularPlaceQueryRepository,
                 kakaoAddressSearchClient,
                 kakaoPlaceSearchClient,
                 pinQueryService

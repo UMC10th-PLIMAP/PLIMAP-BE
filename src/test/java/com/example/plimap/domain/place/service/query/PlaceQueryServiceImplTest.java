@@ -13,18 +13,22 @@ import static org.mockito.Mockito.when;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.dto.NearbyBookmarkedPlace;
+import com.example.plimap.domain.place.dto.PopularPlaceCandidate;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceBookmarkId;
+import com.example.plimap.domain.place.enums.PopularPlaceScope;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
-import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceBookmarkQueryRepository;
+import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
+import com.example.plimap.domain.place.repository.query.PopularPlaceQueryRepository;
 import com.example.plimap.domain.place.service.query.impl.PlaceQueryServiceImpl;
+import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.global.external.kakao.KakaoAddressSearchClient;
 import com.example.plimap.global.external.kakao.KakaoClientException;
 import com.example.plimap.global.external.kakao.KakaoClientTimeoutException;
@@ -60,6 +64,9 @@ class PlaceQueryServiceImplTest {
     private PlaceBookmarkQueryRepository placeBookmarkQueryRepository;
 
     @Mock
+    private PopularPlaceQueryRepository popularPlaceQueryRepository;
+
+    @Mock
     private KakaoAddressSearchClient kakaoAddressSearchClient;
 
     @Mock
@@ -78,12 +85,86 @@ class PlaceQueryServiceImplTest {
                 placeSearchHistoryRepository,
                 placeQueryRepository,
                 placeBookmarkQueryRepository,
+                popularPlaceQueryRepository,
                 kakaoAddressSearchClient,
                 kakaoPlaceSearchClient,
                 pinQueryService
         );
         lenient().when(kakaoAddressSearchClient.search(any()))
                 .thenReturn(new KakaoAddressSearchResponse(List.of()));
+    }
+
+    @Test
+    void NEARBY_인기_장소를_조회하고_대표_이미지를_한_번의_배치_조회로_병합한다() {
+        List<PopularPlaceCandidate> candidates = List.of(
+                new PopularPlaceCandidate(1L, "첫 장소", 49.6, 3L),
+                new PopularPlaceCandidate(2L, "URL 없는 장소", 120.4, 2L),
+                new PopularPlaceCandidate(3L, "대표곡 없는 장소", 200.2, 1L)
+        );
+        when(popularPlaceQueryRepository.findNearbyPopularPlaces(37.5283, 126.9326))
+                .thenReturn(candidates);
+        when(pinQueryService.findRepresentativePlaceTracksByPlaceIds(List.of(1L, 2L, 3L)))
+                .thenReturn(Map.of(
+                        1L, new AlbumImage("https://image/1"),
+                        2L, new AlbumImage(null)
+                ));
+
+        PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
+                PopularPlaceScope.NEARBY,
+                37.5283,
+                126.9326
+        );
+
+        assertThat(result.items()).containsExactly(
+                new PlaceResponse.PopularListItem(
+                        1L,
+                        "첫 장소",
+                        50,
+                        3L,
+                        "https://image/1"
+                ),
+                new PlaceResponse.PopularListItem(2L, "URL 없는 장소", 120, 2L, null),
+                new PlaceResponse.PopularListItem(3L, "대표곡 없는 장소", 200, 1L, null)
+        );
+        verify(popularPlaceQueryRepository)
+                .findNearbyPopularPlaces(37.5283, 126.9326);
+        verify(pinQueryService)
+                .findRepresentativePlaceTracksByPlaceIds(List.of(1L, 2L, 3L));
+    }
+
+    @Test
+    void GLOBAL_인기_장소는_GLOBAL_전용_Repository를_사용한다() {
+        when(popularPlaceQueryRepository.findGlobalPopularPlaces(37.5283, 126.9326))
+                .thenReturn(List.of(new PopularPlaceCandidate(7L, "전체 인기", 10.2, 9L)));
+        when(pinQueryService.findRepresentativePlaceTracksByPlaceIds(List.of(7L)))
+                .thenReturn(Map.of());
+
+        PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL,
+                37.5283,
+                126.9326
+        );
+
+        assertThat(result.items()).containsExactly(
+                new PlaceResponse.PopularListItem(7L, "전체 인기", 10, 9L, null)
+        );
+        verify(popularPlaceQueryRepository)
+                .findGlobalPopularPlaces(37.5283, 126.9326);
+    }
+
+    @Test
+    void 인기_장소가_없으면_빈_목록을_반환하고_대표_이미지를_조회하지_않는다() {
+        when(popularPlaceQueryRepository.findNearbyPopularPlaces(37.5283, 126.9326))
+                .thenReturn(List.of());
+
+        PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
+                PopularPlaceScope.NEARBY,
+                37.5283,
+                126.9326
+        );
+
+        assertThat(result.items()).isEmpty();
+        verifyNoInteractions(pinQueryService);
     }
 
     @Test

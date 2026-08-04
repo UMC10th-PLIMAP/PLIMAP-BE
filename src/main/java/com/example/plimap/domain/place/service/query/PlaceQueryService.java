@@ -3,10 +3,17 @@ package com.example.plimap.domain.place.service.query;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.place.enums.PopularPlaceScope;
 import jakarta.validation.Valid;
 import java.util.Optional;
 
 public interface PlaceQueryService {
+
+    PlaceResponse.PopularListResult getPopularPlaces(
+            PopularPlaceScope scope,
+            double latitude,
+            double longitude
+    );
 
     PlaceResponse.Detail getPlaceDetail(
             Long memberId,
