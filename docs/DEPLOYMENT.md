@@ -29,14 +29,14 @@ Prod 공개 도메인은 `plimap.kr`입니다. `application-prod.yml`, `deploy-p
 | GitHub Actions | CI, dev/prod CD | Gradle 검증, dev 자동 배포, Prod 승인 배포 실행 |
 | Workload Identity Federation | dev/prod CD | 장기 GCP 서비스 계정 키 없이 승인된 GitHub Actions가 GCP에 인증 |
 | Artifact Registry | dev, prod | commit SHA image를 저장하고 Prod에는 immutable digest로 배포 |
-| Cloud Run | dev, prod | Spring Boot API 컨테이너 실행, candidate 검증과 revision 트래픽 처리 |
+| Cloud Run | dev, prod | Spring Boot API 컨테이너 실행, 0% 신규 revision 검증과 revision 트래픽 처리 |
 | Secret Manager | dev, prod | 환경별로 분리된 DB, Redis, JWT, OAuth, 외부 API 자격 증명 관리 |
 | Supabase | dev | PostgreSQL/PostGIS 데이터베이스 제공 |
 | Redis Cloud | dev | 공유 Redis 제공 |
 | GCS | prod | 공개 프로필 이미지 객체 저장, runtime service account가 업로드·삭제 |
 | 가비아 DNS | dev, prod | `plimap.kr` 도메인과 Traefik 서버 주소 연결 |
-| Traefik | dev | TLS 종료와 경로 기반 리버스 프록시 처리 |
-| 프론트 Docker | dev | SPA 정적 파일과 프론트엔드 애플리케이션 제공 |
+| Traefik | dev, prod | TLS 종료와 환경별 경로 기반 리버스 프록시 처리 |
+| 프론트 Docker | dev, prod | 환경별 SPA 정적 파일과 프론트엔드 애플리케이션 제공 |
 
 ## 공통 애플리케이션 런타임
 
@@ -225,6 +225,10 @@ flowchart LR
 
 초기에는 기존 Traefik을 유지하고 서비스가 안정되면 GCP Load Balancer로 이전합니다. Prod Traefik은 `/api/**`, `/oauth/**`만 Cloud Run으로 전달하고 Swagger/OpenAPI와 Actuator 경로는 공개 라우팅하지 않습니다. Cloud Run 원본 URL은 배포 검증과 장애 대응에만 사용합니다.
 
+Traefik이 외부 서버에서 Cloud Run을 호출하는 현재 구조는 `ingress=all`과 인증 없는 호출을 사용하므로 `run.app` 기본 URL에 직접 접근할 수 있다는 한계가 있습니다. CORS는 브라우저 정책일 뿐 직접 호출을 차단하지 않습니다. 공개 candidate tag URL은 만들지 않고, Prod profile의 문서 비활성화, Actuator 제한, Cloud Run 접근 로그와 오류·요청량 알림으로 이 임시 노출을 관리합니다.
+
+GCP Load Balancer로 이전할 때는 외부 Application Load Balancer와 serverless NEG를 구성하고 Cloud Run ingress를 `internal-and-cloud-load-balancing`으로 제한합니다. 경로 검증이 끝나면 기본 `run.app` URL 비활성화도 적용해 Load Balancer 외 직접 진입을 차단합니다.
+
 ### Cloud SQL
 
 | 항목 | Prod 설정 |
@@ -238,7 +242,9 @@ flowchart LR
 | HikariCP | max pool 8, min idle 0, connection timeout 5초 |
 | 최대 애플리케이션 연결 | Cloud Run 3개 × pool 8 = 24 |
 
-Flyway가 애플리케이션 시작 시 PostGIS 확장과 Migration을 적용합니다. Candidate revision은 사용자 트래픽이 0%여도 startup 과정에서 Flyway를 실행할 수 있으므로 모든 Migration은 기존·신규 revision이 함께 동작할 수 있는 하위 호환 방식으로 작성합니다. Revision rollback은 이미 적용된 DB Migration을 되돌리지 않습니다.
+Flyway가 애플리케이션 시작 시 PostGIS 확장과 Migration을 적용합니다. 0% 신규 revision도 deploy health check 과정에서 시작되어 사용자 트래픽 전환 전에 Flyway를 실행할 수 있으므로, 모든 Migration은 기존·신규 revision이 함께 동작하는 하위 호환 방식으로 작성합니다.
+
+초기에는 이 시작 시 Migration 방식을 유지하고, 대량 backfill이나 파괴적 변경이 필요해지면 별도 Cloud Run Job 또는 승인된 운영 작업으로 분리합니다. Revision rollback은 이미 적용된 DB Migration을 되돌리지 않습니다.
 
 ### Cloud Run
 
@@ -253,7 +259,7 @@ Flyway가 애플리케이션 시작 시 PostGIS 확장과 Migration을 적용합
 | Theoretical request slots | 최대 120 |
 | Ingress / authentication | all / 공개 접근 허용, Traefik 사용 |
 | Egress | Direct VPC `private-ranges-only` |
-| Swagger/OpenAPI | Prod profile 기본 비활성화, candidate와 최종 URL에서 `404` 검증 |
+| Swagger/OpenAPI | Prod profile 기본 비활성화, 승격 후 Cloud Run 서비스 URL에서 `404` 검증 |
 
 SSE 구독은 Dev와 동일하게 약 50초 후 정상 종료하고 클라이언트 재연결을 사용합니다. SSE 연결도 concurrency 슬롯과 실행 시간을 점유하므로 초기 사용자 수를 넘어서면 Cloud Run instance, 요청 수와 비용을 함께 모니터링합니다.
 
@@ -297,26 +303,40 @@ Public Access Prevention 조직 정책이 강제되어 있다면 공개 URL 방�
 2. 성공한 CI의 정확한 commit SHA로 `Deploy Prod`의 비보호 `prepare` Job이 시작됩니다.
 3. `deploy` Job은 GitHub `production` Environment에서 대기하며 승인 전에는 Environment Variable, GCP OIDC 권한과 운영 리소스에 접근하지 않습니다.
 4. 필수 승인자가 Actions의 **Review deployments → Approve and deploy**를 선택합니다.
-5. 승인된 Job이 commit SHA image를 재사용하거나 빌드하고 Artifact Registry digest를 확인해 immutable image를 확정합니다.
-6. `deploy-prod.ps1`이 새 revision을 `--no-traffic`과 candidate tag로 배포합니다.
-7. Candidate URL에서 liveness, readiness, health `200`과 Swagger/OpenAPI `404`를 확인합니다.
-8. 검증된 revision에만 트래픽을 100% 전환하고 Cloud Run 기본 URL에서 최종 검증합니다.
-9. 최종 검증 실패 시 직전 revision으로 트래픽을 100% 복구합니다.
-10. Commit, image digest, 이전·후보 revision, 검증과 rollback 결과를 Actions Summary에 기록합니다.
+5. 승인된 Job이 commit SHA image를 재사용하거나 빌드하고, 승인 repository의 commit SHA tag가 가리키는 immutable digest를 확정합니다.
+6. 입력 리소스와 기존 서비스의 단일 revision 100% 트래픽 상태를 확인하고, 각 Prod Secret의 `ENABLED` 숫자 버전을 고정합니다.
+7. 공개 traffic tag 없이 `--no-traffic`과 deploy health check로 신규 revision을 시작하고 Ready 상태와 실제 image digest를 확인합니다.
+8. 검증된 revision으로 트래픽을 100% 전환한 뒤 실제 서비스 트래픽이 단일 revision 100%로 수렴할 때까지 확인합니다.
+9. Cloud Run 서비스 URL에서 리다이렉션 없이 health JSON의 `status=UP`, 상세 정보 미노출, Swagger/OpenAPI `404`, 민감 Actuator 경로 차단을 검증합니다.
+10. 실패 시 현재 트래픽 상태를 다시 조회하고 직전 revision으로 100% 복구한 뒤 트래픽 수렴과 health를 재검증합니다.
+11. Commit, image digest, Secret ID·숫자 버전, 이전·신규 revision, 검증과 rollback 결과를 Actions Summary에 기록합니다.
 
-Candidate 검증 전에 사용자 트래픽은 변경되지 않습니다. 기존 revision이 없는 최초 배포는 자동 복구 대상도 없으므로 candidate 검증 결과와 Actions Summary를 확인하면서 수행합니다. Traefik과 `plimap.kr` 공개 라우팅은 Cloud Run 최종 검증이 끝난 뒤 연결합니다.
+0% 신규 revision은 외부 호출용 tag URL을 갖지 않지만 deploy health check 과정에서 시작되므로 Flyway가 트래픽 전환 전에 운영 DB를 변경할 수 있습니다. 기존 revision이 없는 최초 배포는 자동 복구 대상도 없습니다. 최초 배포에서는 Migration 호환성과 Actions Summary를 특히 확인하고, Traefik과 `plimap.kr` 공개 라우팅은 Cloud Run 최종 검증이 끝난 뒤 연결합니다.
 
 ### 외부 인프라 준비 체크리스트
 
-- Cloud SQL Enterprise `db-custom-1-3840`, PostgreSQL 18, SSD 10GB 자동 증가, backup/PITR와 삭제 방지 구성
+- Cloud SQL Enterprise `db-custom-1-3840`, PostgreSQL 18, SSD 10GB 자동 증가, 자동 backup/PITR와 삭제 방지 구성
 - Prod VPC/subnet과 Cloud SQL private IP 연결, Cloud Run Direct VPC egress 권한 구성
 - GCS bucket, 공개 읽기와 runtime 쓰기·삭제 IAM, versioning/soft delete 비활성화 확인
 - Prod 전용 Redis Cloud database와 TLS URL 준비
-- `plimap-api-prod` runtime service account 및 Prod Secret 접근 권한 구성
-- `scripts/gcp/SECRETS.md`의 GitHub Environment Variable과 Prod Secret 활성 버전 입력
+- `plimap-api-prod` runtime service account에 Prod Secret별 accessor와 Prod bucket `objectUser` 권한 구성
+- GitHub deployer에 Cloud Run·Artifact Registry·service account 사용·Direct VPC 설정 권한과 Secret version metadata 조회 권한만 구성
+- `scripts/gcp/SECRETS.md`의 GitHub Environment Variable과 Prod Secret의 `ENABLED` 버전 입력
 - Google/Kakao Prod OAuth client callback 등록
 - Traefik `plimap.kr` TLS와 `/api/**`, `/oauth/**` 라우팅, DNS 연결
-- Cloud SQL 자동 백업/PITR와 삭제 방지, GCP 로그·지표·예산 알림 확인
+- GCP 접근 로그, 오류율·요청량·지연 시간 지표, 비용 예산 알림 확인
+
+### Prod 공개 경로 smoke test
+
+Cloud Run 서비스 URL 검증이 성공하고 Traefik을 연결한 뒤에는 `plimap.kr`의 실제 사용자 경로를 별도로 확인합니다.
+
+- `https://plimap.kr/api/v1/auth/csrf`가 예상한 API 응답과 CSRF cookie를 반환하는지 확인합니다.
+- `/api/**`, `/oauth/**`가 `plimap-api-prod`로 전달되고 다른 프론트 경로는 Prod 프론트 Docker로 전달되는지 확인합니다.
+- `/swagger-ui/**`, `/v3/api-docs/**`, `/actuator/**`가 Cloud Run으로 전달되지 않고 명시적인 `404`를 반환하는지 확인합니다.
+- 로그인 응답의 `Set-Cookie`와 OAuth 응답의 `Location` header가 Traefik을 거쳐도 유지되는지 확인합니다.
+
+`deploy-prod.ps1`은 Traefik에서 의도적으로 차단한 Actuator를 Cloud Run 서비스 URL에서 검증하므로 이 공개 경로 smoke test를 대체하지 않습니다.
+
 ## 상태 확인과 배포 검증
 
 | 목적 | 경로 |

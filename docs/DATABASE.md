@@ -110,7 +110,10 @@ Cloud Run plimap-api-prod
 
 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`는 `plimap-prod-*` Secret으로 분리합니다. JDBC URL에는 비밀번호를 포함하지 않습니다. HikariCP는 instance당 최대 8개 연결, minimum idle 0, connection timeout 5초를 사용하므로 Cloud Run 서비스 최대 3개 instance에서 애플리케이션 연결 상한은 24개입니다.
 
-Candidate revision도 시작 과정에서 Flyway를 실행할 수 있습니다. Prod Migration은 이전 revision과 신규 revision이 동시에 동작할 수 있도록 확장-전환-정리 순서를 지키고, 배포 전 자동 백업/PITR 상태를 확인합니다. Cloud Run rollback은 Flyway schema history를 되돌리지 않습니다.
+Prod는 Flyway Migration과 Hibernate `ddl-auto: validate`를 사용하므로 Hibernate가 운영 스키마를 자동 변경하지 않습니다. 0% 신규 revision도 deploy health check 중 시작되며, 이때 Flyway가 사용자 트래픽 전환 전에 운영 DB에 Migration을 적용할 수 있습니다.
+
+초기 운영에서는 애플리케이션 시작 시 Flyway 실행 방식을 유지합니다. 모든 Prod Migration은 이전 revision과 신규 revision이 동시에 동작하도록 확장-전환-정리 순서를 지키고, 배포 전 자동 백업/PITR 상태를 확인합니다. 대량 backfill이나 파괴적 변경이 필요해지면 별도 Cloud Run Job 또는 승인된 운영 작업으로 분리합니다. Cloud Run rollback은 Flyway schema history를 되돌리지 않습니다.
+
 ## Flyway Migration 작성 규칙
 
 - 위치: `src/main/resources/db/migration`

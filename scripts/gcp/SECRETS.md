@@ -136,7 +136,7 @@ Kakao와 Google에는 dev 전용 OAuth client를 사용합니다. 각 Provider C
 
 ## Prod Secret Manager 매핑
 
-Prod Secret은 Dev와 별도 ID와 값을 사용합니다. `deploy-prod.ps1`은 다음 Secret의 `latest` 활성 버전만 환경변수로 연결하며 payload를 읽거나 출력하지 않습니다.
+Prod Secret은 Dev와 별도 ID와 값을 사용합니다. `deploy-prod.ps1`은 다음 Secret의 `latest` 버전 metadata를 조회해 상태가 `ENABLED`인지 확인한 뒤, 그 시점의 숫자 버전을 환경변수에 고정합니다. Secret payload는 읽거나 출력하지 않습니다.
 
 | 애플리케이션 환경변수 | Secret Manager ID |
 | --- | --- |
@@ -150,6 +150,8 @@ Prod Secret은 Dev와 별도 ID와 값을 사용합니다. `deploy-prod.ps1`은 
 | `GOOGLE_CLIENT_ID` | `plimap-prod-google-client-id` |
 | `GOOGLE_CLIENT_SECRET` | `plimap-prod-google-client-secret` |
 | `YOUTUBE_API_KEY` | `plimap-prod-youtube-api-key` |
+
+배포 결과와 Actions Summary에는 Secret ID와 선택된 숫자 버전만 기록합니다. 새 Secret 버전을 만든 뒤에는 다시 배포해야 새 revision이 해당 버전을 사용하며, 기존 revision과 rollback 대상 revision은 자신에게 고정된 버전을 계속 사용합니다.
 
 Prod에는 Dev 테스트 토큰 Secret과 Supabase Secret을 주입하지 않습니다. GCS 인증은 `plimap-api-prod@plimap.iam.gserviceaccount.com`의 Application Default Credentials를 사용합니다.
 
@@ -182,7 +184,7 @@ Kakao와 Google에는 Prod 전용 OAuth client를 사용하고 callback URI를 `
 ## Prod IAM 최소 권한
 
 - Runtime service account `plimap-api-prod@plimap.iam.gserviceaccount.com`: Prod Secret에 대한 `roles/secretmanager.secretAccessor`, Prod bucket에 대한 `roles/storage.objectUser`
-- GitHub deployer: Cloud Run 배포, Artifact Registry push, runtime service account 사용과 Direct VPC egress 설정에 필요한 권한
+- GitHub deployer: Cloud Run 배포, Artifact Registry push, runtime service account 사용, Direct VPC egress 설정과 Prod Secret version metadata 조회(`secretmanager.versions.get`)에 필요한 권한. Secret payload 접근 권한은 배포 검증에 필요하지 않음
 - 공개 프로필 이미지 bucket: uniform bucket-level access 사용, runtime service account만 쓰기·삭제, `allUsers`에는 `roles/storage.objectViewer`만 부여
 
 버킷이 Public Access Prevention 조직 정책의 적용 대상이면 공개 URL 방식이 동작하지 않으므로 실제 생성 전에 정책을 확인합니다. 합의한 즉시 삭제 정책에 따라 Object Versioning과 7일 Soft Delete는 비활성화합니다. 값 입력과 IAM 변경은 저장소나 Actions 로그에 Secret payload를 노출하지 않는 GCP Console 또는 표준 입력 기반 절차로 수행합니다.
