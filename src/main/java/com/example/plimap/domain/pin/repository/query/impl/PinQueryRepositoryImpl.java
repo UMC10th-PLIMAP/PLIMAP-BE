@@ -70,7 +70,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     private static final String SEARCH_FIRST_PIN_CREATOR_NICKNAME_QUERY = """
             SELECT DISTINCT ON (pl.id)
                    pl.id,
-                   CASE WHEN m.status = 'WITHDRAWN' THEN '플리맵 사용자' ELSE m.nickname END,
+                   CASE WHEN m.status = 'WITHDRAWN' THEN '플리맵사용자' ELSE m.nickname END,
                    p.id,
                    COALESCE(pc.pin_count, 0) AS pin_count
             FROM place pl
@@ -93,12 +93,10 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             ORDER BY pl.id, p.created_at ASC, p.id ASC;
             """;
 
-    private static final String PIN_PREVIEW_QUERY = """
-            SELECT DISTINCT ON (p.place_id)
-                 p.id
+    private static final String PLACE_ID_IN_RANGE_QUERY = """
+            SELECT DISTINCT pl.id
              FROM pin p
              JOIN place pl ON pl.id = p.place_id
-             JOIN place_track pt ON pt.id = p.place_track_id
              WHERE
                  ST_Covers(
                      ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
@@ -106,12 +104,62 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                  )
                  AND p.deleted_at IS NULL
                  AND pl.deleted_at IS NULL
-                 AND pt.deleted_at IS NULL
-             ORDER BY
-                 p.place_id,
-                 pt.like_count DESC,
-                 p.created_at DESC;
+            """;
+
+    private static final String REPRESENTATIVE_PLACE_TRACK = """
+                representative_place_track AS (
+                    SELECT DISTINCT ON (pt.place_id)
+                        pt.place_id,
+                        pt.id AS place_track_id
+                    FROM place_track pt
+                    JOIN place pl
+                        ON pl.id = pt.place_id
+                    LEFT JOIN pin_count pc
+                        ON pc.place_track_id = pt.id
+                    WHERE
+                        pt.place_id IN (:placeIds)
+                        AND pl.deleted_at IS NULL
+                        AND pt.deleted_at IS NULL
+                    ORDER BY
+                        pt.place_id,
+                        pt.like_count DESC,
+                        COALESCE(pc.active_pin_count, 0) DESC,
+                        pt.created_at DESC,
+                        pt.id DESC
+                )
+                """;
+
+    private static final String REPRESENTATIVE_PIN = """
+            SELECT DISTINCT ON (pt.place_id)
+                            p.id
+                        FROM representative_place_track rpt
+                        JOIN pin p
+                            ON p.place_track_id = rpt.place_track_id
+                        JOIN place_track pt
+                            ON pt.id = p.place_track_id
+                        WHERE
+                            p.deleted_at IS NULL
+                            AND p.is_feed_public = true
+                        ORDER BY
+                            pt.place_id,
+                            p.like_count DESC,
+                            p.created_at DESC,
+                            p.id DESC;
+            """;
+
+
+    private static final String PIN_COUNT= """
+             WITH pin_count AS (
+                 SELECT
+                     p.place_track_id,
+                     COUNT(*) AS active_pin_count
+                 FROM pin p
+                 WHERE p.deleted_at IS NULL
+                   AND p.is_feed_public = true
+                 GROUP BY p.place_track_id
+             )
     """;
+
 
     private static final String CLUSTER_QUERY = """
         SELECT
@@ -196,9 +244,6 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     QPlace place = QPlace.place;
     QMemberFollow memberFollow = QMemberFollow.memberFollow;
     QReport report = QReport.report;
-    QPin pinSub = new QPin("pinSub");
-    QPlace placeSub = new QPlace("placeSub");
-    QPlaceTrack placeTrackSub = new QPlaceTrack("placeTrackSub");
 
     @Override
     @SuppressWarnings("unchecked")
@@ -513,16 +558,25 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     @Override
     public List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint) {
         @SuppressWarnings("unchecked")
-        List<Long> pinIds = entityManager.createNativeQuery(PIN_PREVIEW_QUERY)
+        List<Long> placeIds = entityManager.createNativeQuery(PLACE_ID_IN_RANGE_QUERY)
                 .setParameter("minLng", minPoint.getX())
                 .setParameter("minLat", minPoint.getY())
                 .setParameter("maxLng", maxPoint.getX())
                 .setParameter("maxLat", maxPoint.getY())
                 .getResultList();
 
-        if (pinIds.isEmpty()) {
+        if (placeIds.isEmpty()) {
             return List.of();
         }
+
+        List<Long> pinIds = entityManager.createNativeQuery(
+                        PIN_COUNT
+                                + ","
+                                + REPRESENTATIVE_PLACE_TRACK
+                                + REPRESENTATIVE_PIN
+                )
+                .setParameter("placeIds", placeIds)
+                .getResultList();
 
         List<Pin> pins = queryFactory
                 .selectFrom(pin)
@@ -531,7 +585,6 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .join(pin.placeTrack, placeTrack).fetchJoin()
                 .join(placeTrack.track, track).fetchJoin()
                 .where(pin.id.in(pinIds))
-                .orderBy(pin.createdAt.desc())
                 .fetch();
 
         return pins.stream()
