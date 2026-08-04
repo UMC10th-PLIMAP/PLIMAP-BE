@@ -152,7 +152,6 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                      COUNT(*) AS active_pin_count
                  FROM pin p
                  WHERE p.deleted_at IS NULL
-                   AND p.is_feed_public = true
                  GROUP BY p.place_track_id
              )
     """;
