@@ -1,5 +1,6 @@
 package com.example.plimap.domain.pin.repository.query;
 
+import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
@@ -32,4 +33,6 @@ public interface PinQueryRepository{
     List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint);
 
     List<PinResponse.Cluster> findClusterListByViewport(Point minPoint, Point maxPoint, Integer zoomLevel);
+
+    Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize);
 }

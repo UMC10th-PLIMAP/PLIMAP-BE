@@ -71,6 +71,7 @@ class PinControllerTest {
     private static final String MY_PIN_ENDPOINT = "/api/v1/pins/members/me";
     private static final String PLACE_TRACK_PIN_ENDPOINT = "/api/v1/place-tracks/{placeTrackId}/pins";
     private static final String VIEWPORT_CLUSTER_ENDPOINT = "/api/v1/pins/map";
+    private static final String FRIEND_RECENT_PIN_ENDPOINT = "/api/v1/pins/friends";
 
     @Autowired
     private MockMvc mockMvc;
@@ -488,6 +489,38 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.result.pins").isArray());
 
         verify(pinQueryService).getClusterPinList(any(PinRequest.Viewport.class));
+    }
+
+    @Test
+    void 친구_최근핀_조회에_성공하면_200을_반환한다() throws Exception {
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
+
+        given(pinQueryService.getFriendRecentPinList(eq(1L), isNull(), eq(10)))
+                .willReturn(PinConverter.toPagination(
+                        List.of(),
+                        null,
+                        false,
+                        10
+                ));
+
+        mockMvc.perform(get(FRIEND_RECENT_PIN_ENDPOINT)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andDo(print())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("FRIENDS_RECENT_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("내 친구 최근 핀 목록이 조회되었습니다."))
+                .andExpect(jsonPath("$.result.data").isArray())
+                .andExpect(jsonPath("$.result.data.length()").value(0))
+                .andExpect(jsonPath("$.result.nextCursor").doesNotExist())
+                .andExpect(jsonPath("$.result.hasNext").value(false))
+                .andExpect(jsonPath("$.result.pageSize").value(10));
+
+
+        verify(pinQueryService)
+                .getFriendRecentPinList(eq(1L), isNull(), eq(10));
     }
 
     private String validCreateRequest() {
