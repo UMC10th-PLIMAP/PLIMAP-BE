@@ -353,12 +353,14 @@ function Get-HttpsUrl {
 function Assert-HttpStatus {
     param(
         [Parameter(Mandatory)][string]$Uri,
-        [Parameter(Mandatory)][int]$ExpectedStatus,
+        [Alias("ExpectedStatus")]
+        [Parameter(Mandatory)][int[]]$ExpectedStatuses,
         [ValidateRange(1, 10)][int]$MaxAttempts = 5,
         [ValidateRange(1, 60)][int]$RequestTimeoutSeconds = 20,
         [ValidateRange(0, 60)][int]$InitialDelaySeconds = 2
     )
 
+    $expectedStatusText = $ExpectedStatuses -join ","
     $delaySeconds = $InitialDelaySeconds
     for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
         $webResponse = $null
@@ -369,7 +371,8 @@ function Assert-HttpStatus {
             $webResponse = Invoke-WebRequest `
                 -UseBasicParsing `
                 -Uri $Uri `
-                -TimeoutSec $RequestTimeoutSeconds
+                -TimeoutSec $RequestTimeoutSeconds `
+                -MaximumRedirection 0
             $actualStatus = [int]$webResponse.StatusCode
         } catch {
             $responseProperty = $_.Exception.PSObject.Properties["Response"]
@@ -385,25 +388,50 @@ function Assert-HttpStatus {
             }
         }
 
-        if ($actualStatus -eq $ExpectedStatus) {
+        if ($ExpectedStatuses -contains $actualStatus) {
             return $webResponse
         }
 
         if ($attempt -eq $MaxAttempts) {
             if ($null -ne $actualStatus) {
-                throw "Endpoint verification failed after $MaxAttempts attempts: $Uri (expected=$ExpectedStatus, actual=$actualStatus)"
+                throw "Endpoint verification failed after $MaxAttempts attempts: $Uri (expected=$expectedStatusText, actual=$actualStatus)"
             }
-            throw "Endpoint verification failed after $MaxAttempts attempts: $Uri (expected=$ExpectedStatus, error=$lastErrorMessage)"
+            throw "Endpoint verification failed after $MaxAttempts attempts: $Uri (expected=$expectedStatusText, error=$lastErrorMessage)"
         }
 
         $failureReason = if ($null -ne $actualStatus) {
-            "expected=$ExpectedStatus, actual=$actualStatus"
+            "expected=$expectedStatusText, actual=$actualStatus"
         } else {
             "error=$lastErrorMessage"
         }
         Write-Warning "Endpoint verification attempt $attempt/$MaxAttempts failed: $Uri ($failureReason). Retrying in $delaySeconds seconds."
         Start-Sleep -Seconds $delaySeconds
         $delaySeconds = [Math]::Min($delaySeconds * 2, 10)
+    }
+}
+
+function Assert-HealthEndpoint {
+    param([Parameter(Mandatory)][string]$Uri)
+
+    $response = Assert-HttpStatus -Uri $Uri -ExpectedStatus 200
+    if ($null -eq $response -or [string]::IsNullOrWhiteSpace([string]$response.Content)) {
+        throw "Health endpoint returned an empty response body: $Uri"
+    }
+
+    try {
+        $health = $response.Content | ConvertFrom-Json
+    } catch {
+        throw "Health endpoint did not return valid JSON: $Uri"
+    }
+
+    $status = [string](Get-JsonProperty -Object $health -Name "status")
+    if ($status -ne "UP") {
+        throw "Health endpoint status is not UP: $Uri (actual=$status)"
+    }
+    foreach ($sensitiveField in @("components", "details")) {
+        if ($null -ne $health.PSObject.Properties[$sensitiveField]) {
+            throw "Health endpoint exposed a forbidden field: $Uri ($sensitiveField)"
+        }
     }
 }
 
@@ -415,7 +443,7 @@ function Assert-ProdEndpoints {
         "/actuator/health/readiness",
         "/actuator/health"
     )) {
-        Assert-HttpStatus -Uri "$BaseUrl$healthPath" -ExpectedStatus 200 | Out-Null
+        Assert-HealthEndpoint -Uri "$BaseUrl$healthPath"
     }
 
     foreach ($documentationPath in @(
@@ -423,6 +451,23 @@ function Assert-ProdEndpoints {
         "/v3/api-docs"
     )) {
         Assert-HttpStatus -Uri "$BaseUrl$documentationPath" -ExpectedStatus 404 | Out-Null
+    }
+
+    foreach ($blockedActuatorPath in @(
+        "/actuator",
+        "/actuator/info",
+        "/actuator/env",
+        "/actuator/configprops",
+        "/actuator/heapdump",
+        "/actuator/threaddump",
+        "/actuator/mappings",
+        "/actuator/loggers",
+        "/actuator/beans",
+        "/actuator/metrics"
+    )) {
+        Assert-HttpStatus `
+            -Uri "$BaseUrl$blockedActuatorPath" `
+            -ExpectedStatuses @(401, 403, 404) | Out-Null
     }
 }
 
@@ -602,7 +647,7 @@ try {
         "--subnet=$VpcSubnet",
         "--vpc-egress=private-ranges-only",
         "--deploy-health-check",
-        "--startup-probe=httpGet.path=/actuator/health/liveness,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=3,periodSeconds=5,failureThreshold=24",
+        "--startup-probe=httpGet.path=/actuator/health,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=3,periodSeconds=5,failureThreshold=24",
         "--liveness-probe=httpGet.path=/actuator/health/liveness,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=3,periodSeconds=10,failureThreshold=3",
         "--readiness-probe=httpGet.path=/actuator/health/readiness,httpGet.port=8080,timeoutSeconds=3,periodSeconds=5,failureThreshold=3",
         "--env-vars-file=$($environmentFile.FullName)",
