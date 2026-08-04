@@ -1,10 +1,10 @@
 package com.example.plimap.global.external.storage.supabase;
 
+import com.example.plimap.global.external.storage.ProfileImageObjectKeyValidator;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.example.plimap.global.external.storage.ProfileImageStorageException;
 import java.net.URI;
 import java.util.List;
-import java.util.regex.Pattern;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -17,10 +17,6 @@ public class SupabaseProfileImageStorage implements ProfileImageStorage {
 
     private static final String API_KEY_HEADER = "apikey";
     private static final String UPSERT_HEADER = "x-upsert";
-    private static final Pattern OBJECT_KEY_PATTERN = Pattern.compile(
-            "members/[1-9]\\d*/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}"
-                    + "-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.webp"
-    );
 
     private final RestClient restClient;
     private final ProfileImageStorageProperties properties;
@@ -35,7 +31,7 @@ public class SupabaseProfileImageStorage implements ProfileImageStorage {
 
     @Override
     public void upload(String objectKey, byte[] content, MediaType contentType) {
-        validateObjectKey(objectKey);
+        ProfileImageObjectKeyValidator.validate(objectKey);
         if (content == null || content.length == 0) {
             throw new IllegalArgumentException("content must not be empty");
         }
@@ -66,7 +62,7 @@ public class SupabaseProfileImageStorage implements ProfileImageStorage {
 
     @Override
     public void delete(String objectKey) {
-        validateObjectKey(objectKey);
+        ProfileImageObjectKeyValidator.validate(objectKey);
 
         try {
             restClient.method(HttpMethod.DELETE)
@@ -86,7 +82,7 @@ public class SupabaseProfileImageStorage implements ProfileImageStorage {
 
     @Override
     public URI getPublicUrl(String objectKey) {
-        validateObjectKey(objectKey);
+        ProfileImageObjectKeyValidator.validate(objectKey);
 
         try {
             return buildObjectUri(objectKey, true);
@@ -123,12 +119,6 @@ public class SupabaseProfileImageStorage implements ProfileImageStorage {
     private UriComponentsBuilder storageUriBuilder() {
         return UriComponentsBuilder.fromUri(properties.supabase().url())
                 .pathSegment("storage", "v1", "object");
-    }
-
-    private void validateObjectKey(String objectKey) {
-        if (objectKey == null || !OBJECT_KEY_PATTERN.matcher(objectKey).matches()) {
-            throw new IllegalArgumentException("Invalid profile image object key");
-        }
     }
 
     private record DeleteObjectsRequest(List<String> prefixes) {
