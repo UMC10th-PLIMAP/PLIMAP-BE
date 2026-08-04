@@ -130,7 +130,12 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         }
 
         member.updateProfileImage(newObjectKey);
-        memberRepository.saveAndFlush(member);
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (RuntimeException persistenceException) {
+            deleteNewProfileImageAfterPersistenceFailure(newObjectKey, persistenceException);
+            throw persistenceException;
+        }
 
         if (oldObjectKey != null) {
             try {
@@ -142,6 +147,22 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
         URI publicUrl = profileImageStorage.getPublicUrl(newObjectKey);
         return MemberConverter.toProfileImage(newObjectKey, publicUrl);
+    }
+
+    private void deleteNewProfileImageAfterPersistenceFailure(
+            String newObjectKey,
+            RuntimeException persistenceException
+    ) {
+        try {
+            profileImageStorage.delete(newObjectKey);
+        } catch (ProfileImageStorageException cleanupException) {
+            persistenceException.addSuppressed(cleanupException);
+            log.warn(
+                    "프로필 이미지 DB 반영 실패 후 신규 이미지 삭제 실패: objectKey={}",
+                    newObjectKey,
+                    cleanupException
+            );
+        }
     }
 
     private void validateImageMetadata(MultipartFile image) {

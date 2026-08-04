@@ -263,7 +263,11 @@ function ConvertTo-YamlSingleQuoted {
 function Get-HttpsOrigin {
     param([Parameter(Mandatory)][string]$Value)
 
-    $uri = [Uri]::new($Value, [UriKind]::Absolute)
+    try {
+        $uri = [Uri]::new($Value.Trim(), [UriKind]::Absolute)
+    } catch {
+        throw "PublicBaseUrl is not a valid absolute URL: $Value"
+    }
     if ($uri.Scheme -ne "https" -or
         -not [string]::IsNullOrEmpty($uri.UserInfo) -or
         -not $uri.IsDefaultPort -or
@@ -330,7 +334,11 @@ function Get-HttpsUrl {
         [Parameter(Mandatory)][string]$ExpectedOrigin
     )
 
-    $uri = [Uri]::new($Value, [UriKind]::Absolute)
+    try {
+        $uri = [Uri]::new($Value.Trim(), [UriKind]::Absolute)
+    } catch {
+        throw "$Name is not a valid absolute URL: $Value"
+    }
     if ($uri.Scheme -ne "https" -or
         -not [string]::IsNullOrEmpty($uri.UserInfo) -or
         -not $uri.IsDefaultPort -or

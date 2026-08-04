@@ -75,26 +75,35 @@ jobs:
       - name: Configure Artifact Registry authentication
         run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
 
-      - name: Set image name
+      - name: Build and verify approved commit image
         env:
           DEPLOY_SHA: ${{ needs.prepare.outputs.deploy-sha }}
-        run: echo "IMAGE=asia-northeast3-docker.pkg.dev/plimap/plimap-docker/api:${DEPLOY_SHA}" >> "$GITHUB_ENV"
-
-      - name: Reuse or build tested commit image
+          IMAGE: asia-northeast3-docker.pkg.dev/plimap/plimap-docker/api:${{ needs.prepare.outputs.deploy-sha }}
         run: |
-          if gcloud artifacts docker images describe "$IMAGE" --format='value(image_summary.digest)' >/dev/null 2>&1; then
-            echo "Reusing existing commit image: $IMAGE"
-          else
-            docker build --pull --tag "$IMAGE" .
-            docker push "$IMAGE"
-          fi
+          docker build --pull \
+            --label "org.opencontainers.image.revision=${DEPLOY_SHA}" \
+            --tag "$IMAGE" \
+            .
+          docker push "$IMAGE"
 
           digest="$(gcloud artifacts docker images describe "$IMAGE" --format='value(image_summary.digest)')"
           if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
             echo "Could not resolve an immutable image digest for $IMAGE" >&2
             exit 1
           fi
-          echo "DEPLOY_IMAGE=${IMAGE%:*}@${digest}" >> "$GITHUB_ENV"
+
+          resolved_image="${IMAGE%:*}@${digest}"
+          docker pull "$resolved_image" >/dev/null
+          resolved_revision="$(
+            docker image inspect "$resolved_image" \
+              --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}'
+          )"
+          if [[ "$resolved_revision" != "$DEPLOY_SHA" ]]; then
+            echo "Resolved image revision does not match approved commit: expected=$DEPLOY_SHA actual=$resolved_revision" >&2
+            exit 1
+          fi
+
+          echo "DEPLOY_IMAGE=$resolved_image" >> "$GITHUB_ENV"
 
       - name: Deploy candidate, verify, and promote
         shell: pwsh

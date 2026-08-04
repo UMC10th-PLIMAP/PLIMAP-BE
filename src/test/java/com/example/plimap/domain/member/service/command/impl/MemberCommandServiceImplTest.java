@@ -408,6 +408,50 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
+    void 프로필_이미지_DB_저장에_실패하면_업로드한_신규_이미지를_삭제한다() {
+        Member member = mock(Member.class);
+        RuntimeException persistenceFailure = new RuntimeException("DB 저장 실패");
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(profileImageObjectKeyGenerator.generate(MEMBER_ID)).thenReturn("members/1/new.webp");
+        when(memberRepository.saveAndFlush(member)).thenThrow(persistenceFailure);
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, webpFile()))
+                .isSameAs(persistenceFailure);
+
+        InOrder replacementOrder = inOrder(profileImageStorage, member, memberRepository);
+        replacementOrder.verify(profileImageStorage)
+                .upload(eq("members/1/new.webp"), any(), any());
+        replacementOrder.verify(member).updateProfileImage("members/1/new.webp");
+        replacementOrder.verify(memberRepository).saveAndFlush(member);
+        replacementOrder.verify(profileImageStorage).delete("members/1/new.webp");
+        verify(profileImageStorage, never()).delete("members/1/old.webp");
+    }
+
+    @Test
+    void DB_저장과_신규_이미지_삭제가_모두_실패하면_원래_DB_예외를_유지한다() {
+        Member member = mock(Member.class);
+        RuntimeException persistenceFailure = new RuntimeException("DB 저장 실패");
+        ProfileImageStorageException cleanupFailure = new ProfileImageStorageException(
+                "신규 이미지 삭제 실패",
+                new RuntimeException()
+        );
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(profileImageObjectKeyGenerator.generate(MEMBER_ID)).thenReturn("members/1/new.webp");
+        when(memberRepository.saveAndFlush(member)).thenThrow(persistenceFailure);
+        doThrow(cleanupFailure).when(profileImageStorage).delete("members/1/new.webp");
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, webpFile()))
+                .isSameAs(persistenceFailure)
+                .satisfies(exception ->
+                        assertThat(exception.getSuppressed()).containsExactly(cleanupFailure));
+
+        verify(profileImageStorage).delete("members/1/new.webp");
+        verify(profileImageStorage, never()).delete("members/1/old.webp");
+    }
+
+    @Test
     void 이전_이미지_삭제가_실패해도_업로드_자체는_성공한다() {
         Member member = mock(Member.class);
         when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");

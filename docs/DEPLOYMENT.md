@@ -268,6 +268,7 @@ SSE 구독은 Dev와 동일하게 약 50초 후 정상 종료하고 클라이언
 Prod profile은 Application Default Credentials로 GCS Java client를 사용합니다. DB에는 `members/{memberId}/{uuid}.webp` object key만 저장하고 응답 URL은 `https://storage.googleapis.com/{bucket}/{objectKey}` 형식으로 생성합니다.
 
 - 새 이미지 업로드 성공 후 DB object key를 갱신하고, DB 반영이 완료된 뒤 이전 이미지를 삭제합니다.
+- DB 반영에 실패하면 방금 업로드한 신규 객체를 보상 삭제하고 원래 DB 오류를 반환합니다. 보상 삭제 실패는 원래 오류를 덮지 않고 경고 로그로 남깁니다.
 - Runtime service account에는 bucket 범위 `roles/storage.objectUser`만 부여합니다.
 - 프로필 이미지는 공개 데이터로 취급해 `allUsers`에는 `roles/storage.objectViewer`만 부여합니다.
 - Uniform bucket-level access를 사용하고 Object Versioning과 7일 Soft Delete는 비활성화합니다.
@@ -303,7 +304,7 @@ Public Access Prevention 조직 정책이 강제되어 있다면 공개 URL 방�
 2. 성공한 CI의 정확한 commit SHA로 `Deploy Prod`의 비보호 `prepare` Job이 시작됩니다.
 3. `deploy` Job은 GitHub `production` Environment에서 대기하며 승인 전에는 Environment Variable, GCP OIDC 권한과 운영 리소스에 접근하지 않습니다.
 4. 필수 승인자가 Actions의 **Review deployments → Approve and deploy**를 선택합니다.
-5. 승인된 Job이 commit SHA image를 재사용하거나 빌드하고, 승인 repository의 commit SHA tag가 가리키는 immutable digest를 확정합니다.
+5. 승인된 Job이 정확한 commit SHA checkout을 OCI revision label과 함께 image로 빌드·push하고, 원격 digest와 revision label을 검증해 immutable image를 확정합니다.
 6. 입력 리소스와 기존 서비스의 단일 revision 100% 트래픽 상태를 확인하고, 각 Prod Secret의 `ENABLED` 숫자 버전을 고정합니다.
 7. 공개 traffic tag 없이 `--no-traffic`과 deploy health check로 신규 revision을 시작하고 Ready 상태와 실제 image digest를 확인합니다.
 8. 검증된 revision으로 트래픽을 100% 전환한 뒤 실제 서비스 트래픽이 단일 revision 100%로 수렴할 때까지 확인합니다.
