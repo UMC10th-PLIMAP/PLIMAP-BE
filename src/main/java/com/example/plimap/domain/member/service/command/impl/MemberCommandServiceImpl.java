@@ -77,7 +77,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
     @Override
     @Transactional
-    public Member updateProfile(Long memberId, MemberReqDTO.UpdateProfile request) {
+    public MemberResDTO.Profile updateProfile(Long memberId, MemberReqDTO.UpdateProfile request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
@@ -104,7 +104,8 @@ public class MemberCommandServiceImpl implements MemberCommandService {
             throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE, e);
         }
 
-        return member;
+        String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
+        return MemberConverter.toProfile(member, profileImageUrl);
     }
 
     @Override

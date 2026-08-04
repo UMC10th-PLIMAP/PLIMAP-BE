@@ -1,7 +1,6 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -12,9 +11,11 @@ import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
+import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,10 +31,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -363,5 +361,26 @@ class PinQueryServiceImplTest {
         verify(pinQueryRepository)
                 .existsActivePinByPlaceIdAndMemberId(placeId, memberId);
         verifyNoMoreInteractions(pinQueryRepository);
+    }
+
+    @Test
+    void 장소_아이디_목록으로_대표_pinTrack_이미지를_조회한다() {
+        // given
+        List<Long> placeIds = new ArrayList<>(List.of(1L,2L));
+        when(pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds))
+                .thenReturn(
+                        Map.of(
+                                1L, AlbumImage.builder().albumImageUrl("url1").build(),
+                                2L, AlbumImage.builder().albumImageUrl("url2").build()
+                        )
+                );
+
+        // when
+        Map<Long, AlbumImage> result = pinQueryService.findRepresentativePlaceTracksByPlaceIds(placeIds);
+
+        // then
+        assertThat(result.get(1L).albumImageUrl()).isEqualTo("url1");
+        assertThat(result.get(2L).albumImageUrl()).isEqualTo("url2");
+        verify(pinQueryRepository).findRepresentativePlaceTracksByPlaceIds(placeIds);
     }
 }

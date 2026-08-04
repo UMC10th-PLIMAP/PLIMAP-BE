@@ -12,11 +12,58 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @Tag(name = "Place", description = "장소 API")
 public interface PlaceControllerDocs {
+
+    @Operation(
+            summary = "인기 장소 목록 조회",
+            description = "활성 PIN이 하나 이상 등록된 활성 장소를 NEARBY 또는 GLOBAL 정책으로 "
+                    + "DB에서 정렬해 최대 6개 조회합니다. 거리 정렬은 반올림 전 실제 거리를 "
+                    + "사용하며 응답 거리는 가장 가까운 정수로 반올림합니다. 대표 이미지는 "
+                    + "장소별 대표 PlaceTrack 배치 조회 정책을 사용합니다. (Figma 기준 화면: HM-01)"
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "인기 장소 목록 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "scope 또는 현재 위치 검증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패")
+    })
+    ResponseEntity<ApiResponse<PlaceResponse.PopularListResult>> getPopularPlaces(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @Parameter(
+                    description = "조회 범위",
+                    required = true,
+                    example = "NEARBY",
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            allowableValues = {"NEARBY", "GLOBAL"}
+                    )
+            )
+            @NotNull(message = "조회 범위가 올바르지 않습니다.")
+            @Pattern(
+                    regexp = "NEARBY|GLOBAL",
+                    message = "조회 범위가 올바르지 않습니다."
+            )
+            String scope,
+            @Parameter(description = "사용자 현재 위도", required = true, example = "37.5283")
+            @NotNull(message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMin(value = "-90", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "90", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            Double latitude,
+            @Parameter(description = "사용자 현재 경도", required = true, example = "126.9326")
+            @NotNull(message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMin(value = "-180", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            @DecimalMax(value = "180", message = PlaceRequest.INVALID_LOCATION_MESSAGE)
+            Double longitude
+    );
 
     @Operation(
             summary = "저장한 장소 목록 조회",

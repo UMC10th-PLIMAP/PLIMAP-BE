@@ -3,13 +3,13 @@ package com.example.plimap.domain.member.repository.query.impl;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.CursorInfo;
 import com.example.plimap.domain.member.dto.Pagination;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.QMember;
 import com.example.plimap.domain.member.entity.QMemberFollow;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
+import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.report.entity.QReport;
 import com.querydsl.core.types.Projections;
@@ -34,15 +34,15 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Pagination<MemberResDTO.FollowerItem> findFollowersByMemberId(Long viewerId, Long memberId, String cursor, Integer pageSize) {
+    public Pagination<MemberFollowRow> findFollowersByMemberId(Long viewerId, Long memberId, String cursor, Integer pageSize) {
         QMemberFollow memberFollow = QMemberFollow.memberFollow;
         QMember follower = QMember.member;
         CursorInfo cursorInfo = parseCursor(cursor);
 
-        List<MemberResDTO.FollowerItem> data = queryFactory
+        List<MemberFollowRow> data = queryFactory
                 .select(
                         Projections.constructor(
-                                MemberResDTO.FollowerItem.class,
+                                MemberFollowRow.class,
                                 follower.id,
                                 follower.nickname,
                                 follower.name,
@@ -74,7 +74,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
             return MemberConverter.toPagination(data, null, false, pageSize);
         }
 
-        MemberResDTO.FollowerItem last = data.get(data.size() - 1);
+        MemberFollowRow last = data.get(data.size() - 1);
         String nextCursor = hasNext
                 ? last.followedAt() + "/" + last.id()
                 : null;
@@ -83,15 +83,15 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
     }
 
     @Override
-    public Pagination<MemberResDTO.FollowingItem> findFollowingByMemberId(Long viewerId, Long memberId, String cursor, Integer pageSize) {
+    public Pagination<MemberFollowRow> findFollowingByMemberId(Long viewerId, Long memberId, String cursor, Integer pageSize) {
         QMemberFollow memberFollow = QMemberFollow.memberFollow;
         QMember following = QMember.member;
         CursorInfo cursorInfo = parseCursor(cursor);
 
-        List<MemberResDTO.FollowingItem> data = queryFactory
+        List<MemberFollowRow> data = queryFactory
                 .select(
                         Projections.constructor(
-                                MemberResDTO.FollowingItem.class,
+                                MemberFollowRow.class,
                                 following.id,
                                 following.nickname,
                                 following.name,
@@ -123,7 +123,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
             return MemberConverter.toPagination(data, null, false, pageSize);
         }
 
-        MemberResDTO.FollowingItem last = data.get(data.size() - 1);
+        MemberFollowRow last = data.get(data.size() - 1);
         String nextCursor = hasNext
                 ? last.followedAt() + "/" + last.id()
                 : null;

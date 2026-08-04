@@ -214,16 +214,20 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
-    void 정상_요청이면_프로필을_수정하고_회원을_반환한다() {
+    void 정상_요청이면_프로필을_수정하고_수정된_프로필_정보를_반환한다() {
         Member member = mock(Member.class);
+        when(member.getId()).thenReturn(MEMBER_ID);
         when(member.getNickname()).thenReturn("기존닉네임");
+        when(member.getProfileImageObjectKey()).thenReturn("key");
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
         when(memberQueryService.isNicknameAvailable("새닉네임")).thenReturn(true);
+        when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         MemberReqDTO.UpdateProfile request = updateProfile("새닉네임", "새이름", "새소개");
-        Member result = memberCommandService.updateProfile(MEMBER_ID, request);
+        MemberResDTO.Profile result = memberCommandService.updateProfile(MEMBER_ID, request);
 
-        assertThat(result).isSameAs(member);
+        assertThat(result.id()).isEqualTo(MEMBER_ID);
+        assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
         verify(member).updateProfile("새닉네임", "새이름", "새소개");
         verify(memberRepository).flush();
     }

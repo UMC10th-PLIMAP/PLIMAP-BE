@@ -3,6 +3,7 @@ package com.example.plimap.domain.notification.service.command.impl;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.notification.converter.NotificationConverter;
+import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
 import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.enums.NotificationType;
 import com.example.plimap.domain.notification.repository.NotificationRepository;
@@ -10,6 +11,7 @@ import com.example.plimap.domain.notification.service.command.NotificationComman
 import com.example.plimap.domain.notification.sse.NotificationEmitterRegistry;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class NotificationCommandServiceImpl implements NotificationCommandServic
     private final MemberQueryService memberQueryService;
     private final PinQueryService pinQueryService;
     private final NotificationEmitterRegistry notificationEmitterRegistry;
+    private final ProfileImageStorage profileImageStorage;
 
     @Override
     public void createFollowNotification(Long recipientId, Long actorId) {
@@ -81,7 +84,7 @@ public class NotificationCommandServiceImpl implements NotificationCommandServic
 
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             notificationEmitterRegistry.sendToMember(
-                    recipientId, "notification", NotificationConverter.toItem(notification));
+                    recipientId, "notification", toItem(notification));
             return;
         }
 
@@ -89,8 +92,14 @@ public class NotificationCommandServiceImpl implements NotificationCommandServic
             @Override
             public void afterCommit() {
                 notificationEmitterRegistry.sendToMember(
-                        recipientId, "notification", NotificationConverter.toItem(notification));
+                        recipientId, "notification", toItem(notification));
             }
         });
+    }
+
+    private NotificationResDTO.Item toItem(Notification notification) {
+        String actorProfileImageUrl =
+                profileImageStorage.getPublicUrlOrNull(notification.getActor().getProfileImageObjectKey());
+        return NotificationConverter.toItem(notification, actorProfileImageUrl);
     }
 }

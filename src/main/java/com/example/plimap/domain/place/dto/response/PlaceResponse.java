@@ -84,6 +84,36 @@ public final class PlaceResponse {
     ) {
     }
 
+    @Schema(name = "PlacePopularListResponse")
+    public record PopularListResult(
+            @Schema(description = "인기 장소 목록")
+            List<PopularListItem> items
+    ) {
+
+        public PopularListResult {
+            items = List.copyOf(items);
+        }
+    }
+
+    @Schema(name = "PlacePopularListItem")
+    public record PopularListItem(
+            @Schema(description = "장소 ID", example = "1")
+            Long placeId,
+            @Schema(description = "장소명", example = "뚝섬한강공원")
+            String placeName,
+            @Schema(description = "사용자 현재 위치 기준 반올림 거리(m)", example = "50")
+            Integer distanceMeters,
+            @Schema(description = "전체 활성 PIN 수", example = "30")
+            Long pinCount,
+            @Schema(
+                    description = "대표 PlaceTrack의 앨범 이미지 URL. 없으면 null",
+                    example = "https://example.com/album.jpg",
+                    nullable = true
+            )
+            String representativeImageUrl
+    ) {
+    }
+
     public record SearchResult(
             @Schema(description = "장소 검색 결과 목록")
             List<SearchItem> items

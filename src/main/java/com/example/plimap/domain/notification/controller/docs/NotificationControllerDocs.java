@@ -43,7 +43,7 @@ public interface NotificationControllerDocs {
                             "type": "PIN_LIKED",
                             "actorId": 2,
                             "actorNickname": "플리맵유저",
-                            "actorProfileImageObjectKey": null,
+                            "actorProfileImageUrl": null,
                             "pinId": 10,
                             "read": false,
                             "createdAt": "2026-07-29T10:00:00Z"
