@@ -203,7 +203,7 @@ class PinQueryServiceImplTest {
         assertThat(result.nearestPinDistanceMeters()).isNull();
 
         verify(pinQueryRepository, never())
-                .findNearestActivePinWithin20m(anyDouble(), anyDouble());
+                .findNearestActivePinWithin10m(anyDouble(), anyDouble());
     }
 
     @Test
@@ -211,13 +211,13 @@ class PinQueryServiceImplTest {
         PinRequest.PinAvailability request = PinRequest.PinAvailability.builder()
                 .latitude(37.5282)
                 .longitude(126.9326)
-                .userLatitude(37.5278)
-                .userLongitude(126.9319)
+                .userLatitude(37.528240)
+                .userLongitude(126.932650)
                 .build();
         when(pinLocationValidator.calculateDistance(request.userLatitude(), request.userLongitude(), request.latitude(), request.longitude()))
                 .thenReturn(76.0836069534716);
 
-        when(pinQueryRepository.findNearestActivePinWithin20m(request.latitude(), request.longitude()))
+        when(pinQueryRepository.findNearestActivePinWithin10m(request.latitude(), request.longitude()))
                 .thenReturn(Optional.of(11.09875689));
 
         PinResponse.PinAvailability result = pinQueryService.validatePinAvailability(request);

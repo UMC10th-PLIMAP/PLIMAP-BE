@@ -53,8 +53,8 @@ public class PinQueryServiceImpl implements PinQueryService {
             return PinConverter.toPinAvailability(AvailabilityStatus.OUT_OF_RANGE, false, distanceFromUserMeters, null);
         }
 
-        // 20m 이내에 PIN 존재하는지 검증
-        Double nearestPinDistanceMeters = pinQueryRepository.findNearestActivePinWithin20m(request.latitude(), request.longitude()).orElse(null);
+        // 10m 이내에 PIN 존재하는지 검증
+        Double nearestPinDistanceMeters = pinQueryRepository.findNearestActivePinWithin10m(request.latitude(), request.longitude()).orElse(null);
         if (nearestPinDistanceMeters != null) {
             return PinConverter.toPinAvailability(AvailabilityStatus.TOO_CLOSE_TO_PIN, false, distanceFromUserMeters, nearestPinDistanceMeters);
         }

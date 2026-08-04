@@ -21,7 +21,6 @@ import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
-import com.example.plimap.domain.track.entity.Track;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -42,9 +41,9 @@ import static com.example.plimap.domain.pin.entity.QTag.tag;
 @Repository
 @RequiredArgsConstructor
 public class PinQueryRepositoryImpl implements PinQueryRepository {
-    private static final double DISTANCE_METERS = 20.0;
+    private static final double DISTANCE_METERS = 10.0;
     private static final double DISTANCE_PREFILTER_TOLERANCE_METERS = 0.001;
-    private static final String NEAREST_ACTIVE_PIN_WITHIN_20M_QUERY = """
+    private static final String NEAREST_ACTIVE_PIN_WITHIN_10M_QUERY = """
             SELECT ST_Distance(
                               pl.location,
                               ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
@@ -243,10 +242,10 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Optional<Double> findNearestActivePinWithin20m(
+    public Optional<Double> findNearestActivePinWithin10m(
             double latitude, double longitude
     ) {
-        return entityManager.createNativeQuery(NEAREST_ACTIVE_PIN_WITHIN_20M_QUERY)
+        return entityManager.createNativeQuery(NEAREST_ACTIVE_PIN_WITHIN_10M_QUERY)
                 .setParameter("latitude", latitude)
                 .setParameter("longitude", longitude)
                 .setParameter("distanceMeters", DISTANCE_METERS)
