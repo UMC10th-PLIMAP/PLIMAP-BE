@@ -59,6 +59,9 @@ dependencies {
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    // Google Cloud Storage
+    implementation 'com.google.cloud:google-cloud-storage:2.69.0'
+
     // 금칙어 필터
     implementation 'io.github.vaneproject:badwordfiltering:1.0.0'
 }

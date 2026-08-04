@@ -19,6 +19,7 @@ import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.example.plimap.global.external.storage.ProfileImageStorageException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockMultipartFile;
@@ -32,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -397,7 +399,12 @@ class MemberCommandServiceImplTest {
 
         memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
 
-        verify(profileImageStorage).delete("members/1/old.webp");
+        InOrder replacementOrder = inOrder(profileImageStorage, member, memberRepository);
+        replacementOrder.verify(profileImageStorage)
+                .upload(eq("members/1/new.webp"), any(), any());
+        replacementOrder.verify(member).updateProfileImage("members/1/new.webp");
+        replacementOrder.verify(memberRepository).saveAndFlush(member);
+        replacementOrder.verify(profileImageStorage).delete("members/1/old.webp");
     }
 
     @Test

@@ -4,38 +4,37 @@
 
 이 문서는 PLIMAP 백엔드의 local, dev, prod 환경별 실행 위치와 인프라 구성을 설명합니다.
 
-현재 구축된 local·dev 환경과 목표 상태인 prod 환경을 구분하고, 요청 흐름과 배포 자동화, 보안 및 검증 절차를 확인할 수 있도록 정리합니다.
-
 ## 환경별 구성
 
 | 구분 | local | dev | prod |
 | --- | --- | --- | --- |
-| 상태 | 개발자 PC에서 사용 | 배포 자동화 및 `dev.plimap.kr` 공개 경로 구성 완료 | 목표 구성만 정의, 배포 자동화 미구축 |
+| 상태 | 개발자 PC에서 사용 | 배포 자동화 및 `dev.plimap.kr` 공개 경로 구성 완료 | 코드·승인 배포 구성 완료, 외부 인프라 및 최초 배포 대기 |
 | Spring profile | `local` | `dev` | `prod` |
-| 애플리케이션 실행 위치 | 개발자 PC | GCP Cloud Run Gen2 (`asia-northeast3`) | GCP Cloud Run 예정 |
-| PostgreSQL/PostGIS | Docker Compose | Supabase Transaction Pooler | Cloud SQL for PostgreSQL 예정 |
-| Redis | Docker Compose | Redis Cloud (`ap-northeast-2`) | 미정 |
-| 외부 진입점 | `localhost:8080` | 개인 서버의 Traefik | `plimap.kr` 사용 예정, 구성 미정 |
-| 프론트엔드 | `localhost:5173` 기준 | 로컬 개발 서버와 개인 서버 Docker가 Dev 백엔드 공유 | 구성 미정 |
+| 애플리케이션 실행 위치 | 개발자 PC | GCP Cloud Run Gen2 (`asia-northeast3`) | GCP Cloud Run Gen2 (`asia-northeast3`) |
+| PostgreSQL/PostGIS | Docker Compose | Supabase Transaction Pooler | Cloud SQL PostgreSQL 18/PostGIS |
+| Redis | Docker Compose | Redis Cloud (`ap-northeast-2`) | Prod 전용 Redis Cloud |
+| 외부 진입점 | `localhost:8080` | 개인 서버의 Traefik | 초기 Traefik `plimap.kr`, 안정화 후 GCP Load Balancer |
+| 프론트엔드 | `localhost:5173` 기준 | 로컬 개발 서버와 개인 서버 Docker가 Dev 백엔드 공유 | Traefik의 `plimap.kr` 프론트 Docker |
 | Swagger/OpenAPI | 활성화 | 활성화 | 기본 비활성화 |
-| 배포 방식 | Gradle로 직접 실행 | GitHub Actions 자동 배포 또는 PowerShell 스크립트 | 미구축 |
+| 배포 방식 | Gradle로 직접 실행 | GitHub Actions 자동 배포 또는 PowerShell 스크립트 | `main` CI 성공 후 GitHub Environment 수동 승인 |
 
-prod 공개 도메인은 `plimap.kr`로 사용할 예정입니다. 다만 prod 항목은 현재 저장소에서 배포 완료를 의미하지 않으며, `application-prod.yml`에는 Swagger를 기본적으로 비활성화하는 정책만 있고 prod용 배포 워크플로와 인프라는 아직 추가되지 않았습니다.
+Prod 공개 도메인은 `plimap.kr`입니다. `application-prod.yml`, `deploy-prod.ps1`, `Deploy Prod` workflow는 구현되어 있지만 Cloud SQL, GCS, Redis, VPC, Traefik, DNS/TLS와 Secret payload의 실제 생성·입력은 별도 운영 작업입니다.
 
 ## 배포 구성요소와 역할
 
 | 구성요소 | 적용 환경 | 역할 |
 | --- | --- | --- |
 | Docker Compose | local | PostGIS와 Redis를 개발자 PC에 실행 |
-| Dockerfile | dev, 향후 prod | Java 21 애플리케이션을 빌드하고 non-root 사용자로 실행하는 컨테이너 이미지 생성 |
-| GitHub Actions | CI, dev CD | Gradle 검증 후 컨테이너 이미지를 빌드하고 dev 배포 실행 |
-| Workload Identity Federation | dev CD | 장기 GCP 서비스 계정 키 없이 GitHub Actions가 GCP에 인증 |
-| Artifact Registry | dev, 향후 prod | 배포할 컨테이너 이미지 저장 |
-| Cloud Run | dev, 향후 prod | Spring Boot API 컨테이너 실행 및 트래픽 처리 |
-| Secret Manager | dev, 향후 prod | DB, Redis, JWT, OAuth, 외부 API 자격 증명 관리 |
+| Dockerfile | dev, prod | Java 21 애플리케이션을 빌드하고 non-root 사용자로 실행하는 컨테이너 이미지 생성 |
+| GitHub Actions | CI, dev/prod CD | Gradle 검증, dev 자동 배포, Prod 승인 배포 실행 |
+| Workload Identity Federation | dev/prod CD | 장기 GCP 서비스 계정 키 없이 승인된 GitHub Actions가 GCP에 인증 |
+| Artifact Registry | dev, prod | commit SHA image를 저장하고 Prod에는 immutable digest로 배포 |
+| Cloud Run | dev, prod | Spring Boot API 컨테이너 실행, candidate 검증과 revision 트래픽 처리 |
+| Secret Manager | dev, prod | 환경별로 분리된 DB, Redis, JWT, OAuth, 외부 API 자격 증명 관리 |
 | Supabase | dev | PostgreSQL/PostGIS 데이터베이스 제공 |
 | Redis Cloud | dev | 공유 Redis 제공 |
-| 가비아 DNS | dev, 향후 prod | `plimap.kr` 도메인과 공개 서버 주소 연결 |
+| GCS | prod | 공개 프로필 이미지 객체 저장, runtime service account가 업로드·삭제 |
+| 가비아 DNS | dev, prod | `plimap.kr` 도메인과 Traefik 서버 주소 연결 |
 | Traefik | dev | TLS 종료와 경로 기반 리버스 프록시 처리 |
 | 프론트 Docker | dev | SPA 정적 파일과 프론트엔드 애플리케이션 제공 |
 
@@ -209,31 +208,115 @@ gcloud run services describe plimap-api-dev `
 
 ## prod 환경
 
-prod는 아직 배포되지 않았으며 다음 항목은 목표 구성입니다.
+Prod 저장소 구현은 완료되었지만 실제 GCP와 외부 서비스 리소스는 아직 생성·연결하지 않은 상태입니다. 외부 리소스 생성, Secret payload 입력과 최초 트래픽 전환은 운영자가 별도 수행합니다.
 
-Prod 공개 도메인은 `plimap.kr`로 사용할 예정이며, DNS, TLS와 프록시 구성은 prod 배포 작업에서 확정합니다.
+### 목표 요청 흐름
 
-| 항목 | 목표 또는 현재 결정 |
+```mermaid
+flowchart LR
+    Browser["Prod 사용자"] --> DNS["plimap.kr"]
+    DNS --> Traefik["개인 서버 Traefik<br/>TLS 및 경로 라우팅"]
+    Traefik -->|"프론트 경로"| Frontend["Prod 프론트 Docker"]
+    Traefik -->|"/api/** · /oauth/**"| CloudRun["Cloud Run<br/>plimap-api-prod"]
+    CloudRun -->|"Direct VPC egress"| CloudSQL["Cloud SQL PostgreSQL 18/PostGIS"]
+    CloudRun --> Redis["Prod Redis Cloud"]
+    CloudRun --> GCS["GCS 프로필 이미지 bucket"]
+```
+
+초기에는 기존 Traefik을 유지하고 서비스가 안정되면 GCP Load Balancer로 이전합니다. Prod Traefik은 `/api/**`, `/oauth/**`만 Cloud Run으로 전달하고 Swagger/OpenAPI와 Actuator 경로는 공개 라우팅하지 않습니다. Cloud Run 원본 URL은 배포 검증과 장애 대응에만 사용합니다.
+
+### Cloud SQL
+
+| 항목 | Prod 설정 |
 | --- | --- |
-| 공개 도메인 | `plimap.kr` 예정 |
-| 애플리케이션 런타임 | dev와 동일한 Docker 이미지 기반 Cloud Run 예정 |
-| 데이터베이스 | Cloud SQL for PostgreSQL 예정 |
-| Redis | 제공 서비스와 region 미정 |
-| Swagger/OpenAPI | `prod` profile에서 기본 비활성화 |
-| 프록시와 TLS | 구성 방식 미정 |
-| CI/CD | prod 전용 workflow 미구축 |
-| 접근 정책과 모니터링 | 배포 전 결정 필요 |
+| Edition / machine | Enterprise / `db-custom-1-3840` |
+| Database | PostgreSQL 18 + PostGIS |
+| Region / availability | `asia-northeast3` / 단일 Zone |
+| Storage | SSD 10GB, 자동 증가 |
+| Protection | 자동 백업, PITR, 삭제 방지 권장 |
+| Network | Private IP, Cloud Run Direct VPC egress |
+| HikariCP | max pool 8, min idle 0, connection timeout 5초 |
+| 최대 애플리케이션 연결 | Cloud Run 3개 × pool 8 = 24 |
 
-prod 배포 전에는 다음 사항을 별도 작업으로 확정해야 합니다.
+Flyway가 애플리케이션 시작 시 PostGIS 확장과 Migration을 적용합니다. Candidate revision은 사용자 트래픽이 0%여도 startup 과정에서 Flyway를 실행할 수 있으므로 모든 Migration은 기존·신규 revision이 함께 동작할 수 있는 하위 호환 방식으로 작성합니다. Revision rollback은 이미 적용된 DB Migration을 되돌리지 않습니다.
 
-1. Cloud Run service, service account, Artifact Registry image 정책
-2. Cloud SQL의 PostGIS 지원, network 연결, backup과 Migration 전략
-3. Redis 제공 서비스와 장애 대응 정책
-4. `plimap.kr` DNS, TLS, 프론트·백엔드 라우팅 구조
-5. Google·Kakao 운영 OAuth client와 callback 등록
-6. Secret Manager의 prod 전용 Secret 분리
-7. 로그, 지표, 알림, rollback과 배포 승인 절차
+### Cloud Run
 
+| 항목 | Prod 설정 |
+| --- | --- |
+| Project / region / service | `plimap` / `asia-northeast3` / `plimap-api-prod` |
+| Execution environment | Gen2 |
+| CPU / Memory | 1 vCPU / 1 GiB |
+| Billing | Request-based (`cpu-throttling`) |
+| Concurrency / timeout | 40 / 60초 |
+| Service minimum / maximum instances | 0 / 3 |
+| Theoretical request slots | 최대 120 |
+| Ingress / authentication | all / 공개 접근 허용, Traefik 사용 |
+| Egress | Direct VPC `private-ranges-only` |
+| Swagger/OpenAPI | Prod profile 기본 비활성화, candidate와 최종 URL에서 `404` 검증 |
+
+SSE 구독은 Dev와 동일하게 약 50초 후 정상 종료하고 클라이언트 재연결을 사용합니다. SSE 연결도 concurrency 슬롯과 실행 시간을 점유하므로 초기 사용자 수를 넘어서면 Cloud Run instance, 요청 수와 비용을 함께 모니터링합니다.
+
+### GCS 프로필 이미지
+
+Prod profile은 Application Default Credentials로 GCS Java client를 사용합니다. DB에는 `members/{memberId}/{uuid}.webp` object key만 저장하고 응답 URL은 `https://storage.googleapis.com/{bucket}/{objectKey}` 형식으로 생성합니다.
+
+- 새 이미지 업로드 성공 후 DB object key를 갱신하고, DB 반영이 완료된 뒤 이전 이미지를 삭제합니다.
+- Runtime service account에는 bucket 범위 `roles/storage.objectUser`만 부여합니다.
+- 프로필 이미지는 공개 데이터로 취급해 `allUsers`에는 `roles/storage.objectViewer`만 부여합니다.
+- Uniform bucket-level access를 사용하고 Object Versioning과 7일 Soft Delete는 비활성화합니다.
+- 버킷 용량은 사전 할당하지 않으며 실제 객체 수와 저장 용량을 모니터링합니다.
+
+리소스 생성 예시는 다음과 같습니다. 실제 bucket 이름은 GitHub `production` Environment의 `PROD_GCS_BUCKET`과 일치시킵니다.
+
+```powershell
+gcloud storage buckets create "gs://<prod-gcs-bucket>" `
+  --project=plimap `
+  --location=asia-northeast3 `
+  --default-storage-class=STANDARD `
+  --uniform-bucket-level-access
+
+gcloud storage buckets update "gs://<prod-gcs-bucket>" `
+  --no-versioning `
+  --clear-soft-delete
+
+gcloud storage buckets add-iam-policy-binding "gs://<prod-gcs-bucket>" `
+  --member="serviceAccount:plimap-api-prod@plimap.iam.gserviceaccount.com" `
+  --role="roles/storage.objectUser"
+
+gcloud storage buckets add-iam-policy-binding "gs://<prod-gcs-bucket>" `
+  --member=allUsers `
+  --role="roles/storage.objectViewer"
+```
+
+Public Access Prevention 조직 정책이 강제되어 있다면 공개 URL 방식은 사용할 수 없습니다. 이 경우 정책을 임의로 우회하지 말고 signed URL 또는 프록시 제공 방식으로 별도 설계를 변경합니다.
+
+### 승인 배포 흐름
+
+1. `main` push에 대한 `PLIMAP CI`가 Gradle build와 test, PowerShell 구문 검증을 수행합니다.
+2. 성공한 CI의 정확한 commit SHA로 `Deploy Prod`의 비보호 `prepare` Job이 시작됩니다.
+3. `deploy` Job은 GitHub `production` Environment에서 대기하며 승인 전에는 Environment Variable, GCP OIDC 권한과 운영 리소스에 접근하지 않습니다.
+4. 필수 승인자가 Actions의 **Review deployments → Approve and deploy**를 선택합니다.
+5. 승인된 Job이 commit SHA image를 재사용하거나 빌드하고 Artifact Registry digest를 확인해 immutable image를 확정합니다.
+6. `deploy-prod.ps1`이 새 revision을 `--no-traffic`과 candidate tag로 배포합니다.
+7. Candidate URL에서 liveness, readiness, health `200`과 Swagger/OpenAPI `404`를 확인합니다.
+8. 검증된 revision에만 트래픽을 100% 전환하고 Cloud Run 기본 URL에서 최종 검증합니다.
+9. 최종 검증 실패 시 직전 revision으로 트래픽을 100% 복구합니다.
+10. Commit, image digest, 이전·후보 revision, 검증과 rollback 결과를 Actions Summary에 기록합니다.
+
+Candidate 검증 전에 사용자 트래픽은 변경되지 않습니다. 기존 revision이 없는 최초 배포는 자동 복구 대상도 없으므로 candidate 검증 결과와 Actions Summary를 확인하면서 수행합니다. Traefik과 `plimap.kr` 공개 라우팅은 Cloud Run 최종 검증이 끝난 뒤 연결합니다.
+
+### 외부 인프라 준비 체크리스트
+
+- Cloud SQL Enterprise `db-custom-1-3840`, PostgreSQL 18, SSD 10GB 자동 증가, backup/PITR와 삭제 방지 구성
+- Prod VPC/subnet과 Cloud SQL private IP 연결, Cloud Run Direct VPC egress 권한 구성
+- GCS bucket, 공개 읽기와 runtime 쓰기·삭제 IAM, versioning/soft delete 비활성화 확인
+- Prod 전용 Redis Cloud database와 TLS URL 준비
+- `plimap-api-prod` runtime service account 및 Prod Secret 접근 권한 구성
+- `scripts/gcp/SECRETS.md`의 GitHub Environment Variable과 Prod Secret 활성 버전 입력
+- Google/Kakao Prod OAuth client callback 등록
+- Traefik `plimap.kr` TLS와 `/api/**`, `/oauth/**` 라우팅, DNS 연결
+- Cloud SQL 자동 백업/PITR와 삭제 방지, GCP 로그·지표·예산 알림 확인
 ## 상태 확인과 배포 검증
 
 | 목적 | 경로 |
