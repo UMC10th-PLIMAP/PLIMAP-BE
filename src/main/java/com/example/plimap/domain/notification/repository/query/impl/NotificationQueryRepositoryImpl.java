@@ -3,7 +3,6 @@ package com.example.plimap.domain.notification.repository.query.impl;
 import com.example.plimap.domain.member.entity.QMember;
 import com.example.plimap.domain.notification.converter.NotificationConverter;
 import com.example.plimap.domain.notification.dto.Pagination;
-import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
 import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.entity.QNotification;
 import com.example.plimap.domain.notification.exception.NotificationErrorCode;
@@ -29,7 +28,7 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
     private final QPin pin = QPin.pin;
 
     @Override
-    public Pagination<NotificationResDTO.Item> findNotifications(Long memberId, String cursor, Integer pageSize) {
+    public Pagination<Notification> findNotifications(Long memberId, String cursor, Integer pageSize) {
         Cursor parsedCursor = parseCursor(cursor);
 
         List<Notification> notifications = queryFactory
@@ -53,16 +52,12 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
             notifications = notifications.subList(0, pageSize);
         }
 
-        List<NotificationResDTO.Item> data = notifications.stream()
-                .map(NotificationConverter::toItem)
-                .toList();
-
         Notification last = notifications.getLast();
         String nextCursor = hasNext
                 ? last.getCreatedAt() + "/" + last.getId()
                 : null;
 
-        return NotificationConverter.toPagination(data, nextCursor, hasNext, pageSize);
+        return NotificationConverter.toPagination(notifications, nextCursor, hasNext, pageSize);
     }
 
     private Cursor parseCursor(String cursor) {

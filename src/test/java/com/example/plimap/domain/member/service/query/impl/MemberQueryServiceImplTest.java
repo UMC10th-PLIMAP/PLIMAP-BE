@@ -10,7 +10,9 @@ import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -31,8 +33,9 @@ class MemberQueryServiceImplTest {
     private final MemberRepository memberRepository = mock(MemberRepository.class);
     private final MemberFollowRepository memberFollowRepository = mock(MemberFollowRepository.class);
     private final MemberQueryRepository memberQueryRepository = mock(MemberQueryRepository.class);
+    private final ProfileImageStorage profileImageStorage = mock(ProfileImageStorage.class);
     private final MemberQueryServiceImpl memberQueryService =
-            new MemberQueryServiceImpl(memberRepository, memberFollowRepository, memberQueryRepository);
+            new MemberQueryServiceImpl(memberRepository, memberFollowRepository, memberQueryRepository, profileImageStorage);
 
     @Test
     void 활성_회원을_조회한다() {
@@ -187,6 +190,7 @@ class MemberQueryServiceImplTest {
                 .thenReturn(Optional.of(member));
         when(memberFollowRepository.countByIdFollowingId(1L)).thenReturn(3L);
         when(memberFollowRepository.countByIdFollowerId(1L)).thenReturn(5L);
+        when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
         MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
@@ -196,6 +200,7 @@ class MemberQueryServiceImplTest {
         assertThat(result.nickname()).isEqualTo("예림");
         assertThat(result.followerCount()).isEqualTo(3L);
         assertThat(result.followingCount()).isEqualTo(5L);
+        assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
     }
 
     @Test
@@ -231,13 +236,14 @@ class MemberQueryServiceImplTest {
     @Test
     void 다른_회원의_프로필을_팔로우_수와_함께_조회한다() {
         // given
-        Member member = Member.builder().nickname("상대방").build();
+        Member member = Member.builder().nickname("상대방").profileImageObjectKey("key").build();
         ReflectionTestUtils.setField(member, "id", 2L);
         when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
                 .thenReturn(Optional.of(member));
         when(memberFollowRepository.countByIdFollowingId(2L)).thenReturn(3L);
         when(memberFollowRepository.countByIdFollowerId(2L)).thenReturn(5L);
         when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
+        when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
         MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
@@ -247,6 +253,7 @@ class MemberQueryServiceImplTest {
         assertThat(result.nickname()).isEqualTo("상대방");
         assertThat(result.followerCount()).isEqualTo(3L);
         assertThat(result.followingCount()).isEqualTo(5L);
+        assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
     }
 
     @Test
@@ -312,21 +319,24 @@ class MemberQueryServiceImplTest {
         when(memberQueryRepository.findVisibleActiveMember(1L, 99L))
                 .thenReturn(Optional.of(member));
 
-        MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "key", Instant.now(), true);
-        Pagination<MemberResDTO.FollowerItem> page =
-                Pagination.<MemberResDTO.FollowerItem>builder()
-                        .data(List.of(follower))
+        Instant followedAt = Instant.now();
+        MemberFollowRow row = new MemberFollowRow(2L, "팔로워", "이름", "key", followedAt, true);
+        Pagination<MemberFollowRow> page =
+                Pagination.<MemberFollowRow>builder()
+                        .data(List.of(row))
                         .nextCursor(null)
                         .hasNext(false)
                         .pageSize(10)
                         .build();
         when(memberQueryRepository.findFollowersByMemberId(99L, 1L, null, 10)).thenReturn(page);
+        when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
         Pagination<MemberResDTO.FollowerItem> result = memberQueryService.findFollowers(99L, 1L, null, 10);
 
         // then
-        assertThat(result.data()).containsExactly(follower);
+        assertThat(result.data()).containsExactly(
+                new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "https://example.com/key", followedAt, true));
         assertThat(result.hasNext()).isFalse();
     }
 
@@ -352,21 +362,24 @@ class MemberQueryServiceImplTest {
         when(memberQueryRepository.findVisibleActiveMember(1L, 99L))
                 .thenReturn(Optional.of(member));
 
-        MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "key", Instant.now(), true);
-        Pagination<MemberResDTO.FollowingItem> page =
-                Pagination.<MemberResDTO.FollowingItem>builder()
-                        .data(List.of(following))
+        Instant followedAt = Instant.now();
+        MemberFollowRow row = new MemberFollowRow(2L, "팔로잉", "이름", "key", followedAt, true);
+        Pagination<MemberFollowRow> page =
+                Pagination.<MemberFollowRow>builder()
+                        .data(List.of(row))
                         .nextCursor(null)
                         .hasNext(false)
                         .pageSize(10)
                         .build();
         when(memberQueryRepository.findFollowingByMemberId(99L, 1L, null, 10)).thenReturn(page);
+        when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
         Pagination<MemberResDTO.FollowingItem> result = memberQueryService.findFollowing(99L, 1L, null, 10);
 
         // then
-        assertThat(result.data()).containsExactly(following);
+        assertThat(result.data()).containsExactly(
+                new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "https://example.com/key", followedAt, true));
         assertThat(result.hasNext()).isFalse();
     }
 
