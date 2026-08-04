@@ -1,8 +1,10 @@
 package com.example.plimap.domain.report.service.command.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.pin.entity.Pin;
+import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.report.dto.request.ReportRequest;
 import com.example.plimap.domain.report.entity.Report;
@@ -21,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReportCommandServiceImpl implements ReportCommandService {
 
     private final MemberQueryService memberQueryService;
+    private final MemberCommandService memberCommandService;
     private final PinQueryService pinQueryService;
+    private final PinCommandService pinCommandService;
     private final ReportRepository reportRepository;
 
     @Override
@@ -42,6 +46,7 @@ public class ReportCommandServiceImpl implements ReportCommandService {
         }
 
         saveReport(report, ReportErrorCode.REPORT_MEMBER_ALREADY_EXISTS);
+        memberCommandService.increaseReportCount(reportedMemberId);
     }
 
     @Override
@@ -61,6 +66,7 @@ public class ReportCommandServiceImpl implements ReportCommandService {
         }
 
         saveReport(report, ReportErrorCode.REPORT_PIN_ALREADY_EXISTS);
+        pinCommandService.increaseReportCount(reportedPinId);
     }
 
     private void validatePinReportTarget(Member reporter, Pin reportedPin) {

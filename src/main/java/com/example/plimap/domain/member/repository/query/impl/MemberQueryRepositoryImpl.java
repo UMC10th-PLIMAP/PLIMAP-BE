@@ -4,11 +4,14 @@ import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.CursorInfo;
 import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.QMember;
 import com.example.plimap.domain.member.entity.QMemberFollow;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.domain.report.entity.QReport;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberPath;
@@ -20,10 +23,13 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
 public class MemberQueryRepositoryImpl implements MemberQueryRepository {
+
+    private static final int REPORT_HIDE_THRESHOLD = 10;
 
     private final JPAQueryFactory queryFactory;
 
@@ -49,7 +55,10 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                 .join(memberFollow.follower, follower)
                 .where(
                         memberFollow.following.id.eq(memberId),
+                        follower.status.eq(MemberStatus.ACTIVE),
                         follower.deletedAt.isNull(),
+                        follower.reportCount.lt(REPORT_HIDE_THRESHOLD),
+                        notReportedByViewer(viewerId, follower.id),
                         cursorCondition(memberFollow, follower.id, cursorInfo.createdAt(), cursorInfo.memberId())
                 )
                 .orderBy(memberFollow.createdAt.desc(), follower.id.desc())
@@ -95,7 +104,10 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                 .join(memberFollow.following, following)
                 .where(
                         memberFollow.follower.id.eq(memberId),
+                        following.status.eq(MemberStatus.ACTIVE),
                         following.deletedAt.isNull(),
+                        following.reportCount.lt(REPORT_HIDE_THRESHOLD),
+                        notReportedByViewer(viewerId, following.id),
                         cursorCondition(memberFollow, following.id, cursorInfo.createdAt(), cursorInfo.memberId())
                 )
                 .orderBy(memberFollow.createdAt.desc(), following.id.desc())
@@ -117,6 +129,35 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                 : null;
 
         return MemberConverter.toPagination(data, nextCursor, hasNext, pageSize);
+    }
+
+    @Override
+    public Optional<Member> findVisibleActiveMember(Long targetMemberId, Long viewerId) {
+        QMember target = QMember.member;
+
+        return Optional.ofNullable(queryFactory
+                .selectFrom(target)
+                .where(
+                        target.id.eq(targetMemberId),
+                        target.status.eq(MemberStatus.ACTIVE),
+                        target.deletedAt.isNull(),
+                        target.reportCount.lt(REPORT_HIDE_THRESHOLD),
+                        notReportedByViewer(viewerId, target.id)
+                )
+                .fetchOne()
+        );
+    }
+
+    private BooleanExpression notReportedByViewer(Long viewerId, NumberPath<Long> targetId) {
+        if (viewerId == null) {
+            return null;
+        }
+        QReport report = QReport.report;
+        return JPAExpressions
+                .selectOne()
+                .from(report)
+                .where(report.reportedMember.id.eq(targetId), report.reporter.id.eq(viewerId))
+                .notExists();
     }
 
     private CursorInfo parseCursor(String cursor) {

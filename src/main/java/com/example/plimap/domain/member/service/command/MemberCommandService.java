@@ -17,5 +17,7 @@ public interface MemberCommandService {
 
     void unfollow(Long followerId, Long followingId);
 
+    void increaseReportCount(Long memberId);
+
     void withdraw(Long memberId);
 }

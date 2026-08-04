@@ -97,7 +97,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
             throw new MemberException(MemberErrorCode.CANNOT_VIEW_SELF_PROFILE);
         }
 
-        Member member = getActiveMember(targetMemberId);
+        Member member = getVisibleActiveMember(targetMemberId, viewerId);
         long followerCount = memberFollowRepository.countByIdFollowingId(targetMemberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
         boolean isFollowing = memberFollowRepository.existsById(new MemberFollowId(viewerId, targetMemberId));
@@ -106,13 +106,18 @@ public class MemberQueryServiceImpl implements MemberQueryService {
 
     @Override
     public Pagination<MemberResDTO.FollowerItem> findFollowers(Long viewerId, Long memberId, String cursor, Integer pageSize) {
-        getActiveMember(memberId);
+        getVisibleActiveMember(memberId, viewerId);
         return memberQueryRepository.findFollowersByMemberId(viewerId, memberId, cursor, pageSize);
     }
 
     @Override
     public Pagination<MemberResDTO.FollowingItem> findFollowing(Long viewerId, Long memberId, String cursor, Integer pageSize) {
-        getActiveMember(memberId);
+        getVisibleActiveMember(memberId, viewerId);
         return memberQueryRepository.findFollowingByMemberId(viewerId, memberId, cursor, pageSize);
+    }
+
+    private Member getVisibleActiveMember(Long targetMemberId, Long viewerId) {
+        return memberQueryRepository.findVisibleActiveMember(targetMemberId, viewerId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 }
