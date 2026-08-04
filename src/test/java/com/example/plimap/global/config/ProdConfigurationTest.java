@@ -33,4 +33,27 @@ class ProdConfigurationTest {
         assertThat(properties.getProperty("springdoc.swagger-ui.enabled"))
                 .isEqualTo("${SWAGGER_ENABLED:false}");
     }
+
+    @Test
+    void Prod_Flyway_Hibernate_Actuator_안전_정책을_고정한다() throws IOException {
+        YamlPropertySourceLoader loader = new YamlPropertySourceLoader();
+        List<PropertySource<?>> propertySources = loader.load(
+                "application",
+                new ClassPathResource("application.yml")
+        );
+        PropertySource<?> properties = propertySources.get(0);
+
+        assertThat(properties.getProperty("spring.flyway.enabled"))
+                .isEqualTo(true);
+        assertThat(properties.getProperty("spring.flyway.clean-disabled"))
+                .isEqualTo(true);
+        assertThat(properties.getProperty("spring.jpa.hibernate.ddl-auto"))
+                .isEqualTo("validate");
+        assertThat(properties.getProperty("management.endpoints.web.exposure.include"))
+                .isEqualTo("health");
+        assertThat(properties.getProperty("management.endpoint.health.probes.enabled"))
+                .isEqualTo(true);
+        assertThat(properties.getProperty("management.endpoint.health.show-details"))
+                .isEqualTo("never");
+    }
 }
