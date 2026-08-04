@@ -7,6 +7,9 @@ import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.domain.report.entity.Report;
+import com.example.plimap.domain.report.enums.ReportCategory;
+import com.example.plimap.domain.report.repository.ReportRepository;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,6 +39,9 @@ class MemberQueryRepositoryImplTest {
 
     @Autowired
     private MemberFollowRepository memberFollowRepository;
+
+    @Autowired
+    private ReportRepository reportRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -138,6 +145,35 @@ class MemberQueryRepositoryImplTest {
     }
 
     @Test
+    void 팔로워_목록에서_뷰어가_신고한_회원은_제외된다() {
+        reportRepository.save(Report.createMemberReport(outsider, follower1, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberResDTO.FollowerItem> response =
+                memberQueryRepository.findFollowersByMemberId(outsider.getId(), target.getId(), null, 10);
+
+        assertThat(response.data()).extracting(MemberResDTO.FollowerItem::nickname)
+                .doesNotContain("팔로워1")
+                .contains("팔로워2");
+    }
+
+    @Test
+    void 팔로워_목록에서_신고누적_10회_이상인_회원은_전원에게_숨겨진다() {
+        for (int i = 0; i < 10; i++) {
+            memberRepository.increaseReportCount(follower1.getId());
+        }
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberResDTO.FollowerItem> response =
+                memberQueryRepository.findFollowersByMemberId(target.getId(), target.getId(), null, 10);
+
+        assertThat(response.data()).extracting(MemberResDTO.FollowerItem::nickname)
+                .doesNotContain("팔로워1");
+    }
+
+    @Test
     void 팔로잉_목록을_최신순으로_조회한다() {
         Pagination<MemberResDTO.FollowingItem> response =
                 memberQueryRepository.findFollowingByMemberId(source.getId(), source.getId(), null, 10);
@@ -197,6 +233,44 @@ class MemberQueryRepositoryImplTest {
                 .filteredOn(item -> item.nickname().equals("팔로잉2"))
                 .extracting(MemberResDTO.FollowingItem::isFollowing)
                 .containsExactly(false);
+    }
+
+    @Test
+    void 활성이고_신고되지_않은_회원은_조회된다() {
+        Optional<Member> result = memberQueryRepository.findVisibleActiveMember(target.getId(), outsider.getId());
+
+        assertThat(result).isPresent();
+    }
+
+    @Test
+    void 뷰어가_신고한_회원은_조회되지_않는다() {
+        reportRepository.save(Report.createMemberReport(outsider, target, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        entityManager.flush();
+        entityManager.clear();
+
+        Optional<Member> result = memberQueryRepository.findVisibleActiveMember(target.getId(), outsider.getId());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void 신고누적_10회_이상인_회원은_전원에게_조회되지_않는다() {
+        for (int i = 0; i < 10; i++) {
+            memberRepository.increaseReportCount(target.getId());
+        }
+        entityManager.flush();
+        entityManager.clear();
+
+        Optional<Member> result = memberQueryRepository.findVisibleActiveMember(target.getId(), outsider.getId());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void 탈퇴한_회원은_조회되지_않는다() {
+        Optional<Member> result = memberQueryRepository.findVisibleActiveMember(follower3.getId(), outsider.getId());
+
+        assertThat(result).isEmpty();
     }
 
     private Member createMember(String nickname) {

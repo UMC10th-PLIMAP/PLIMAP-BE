@@ -3,10 +3,12 @@ package com.example.plimap.domain.report.service.command.impl;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.report.dto.request.ReportRequest;
 import com.example.plimap.domain.report.entity.Report;
@@ -46,7 +48,13 @@ class ReportCommandServiceImplTest {
     private MemberQueryService memberQueryService;
 
     @Mock
+    private MemberCommandService memberCommandService;
+
+    @Mock
     private PinQueryService pinQueryService;
+
+    @Mock
+    private PinCommandService pinCommandService;
 
     @Mock
     private ReportRepository reportRepository;
@@ -75,6 +83,7 @@ class ReportCommandServiceImplTest {
         assertThat(savedReport.getReporter()).isSameAs(reporter);
         assertThat(savedReport.getReportedMember()).isSameAs(reportedMember);
         assertThat(savedReport.getReportedPin()).isNull();
+        verify(memberCommandService).increaseReportCount(TARGET_ID);
     }
 
     @Test
@@ -95,6 +104,7 @@ class ReportCommandServiceImplTest {
         assertThat(savedReport.getReportedMember()).isNull();
         assertThat(savedReport.getReportedPin()).isSameAs(reportedPin);
         assertThat(savedReport.getDetail()).isEqualTo("가");
+        verify(pinCommandService).increaseReportCount(TARGET_ID);
     }
 
     @Test
