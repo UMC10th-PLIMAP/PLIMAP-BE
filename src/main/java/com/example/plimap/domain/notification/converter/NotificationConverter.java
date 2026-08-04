@@ -9,13 +9,13 @@ public class NotificationConverter {
 
     private NotificationConverter() {}
 
-    public static NotificationResDTO.Item toItem(Notification notification) {
+    public static NotificationResDTO.Item toItem(Notification notification, String actorProfileImageUrl) {
         return new NotificationResDTO.Item(
                 notification.getId(),
                 notification.getType(),
                 notification.getActor().getId(),
                 notification.getActor().getDisplayNickname(),
-                notification.getActor().getProfileImageObjectKey(),
+                actorProfileImageUrl,
                 notification.getPin() != null ? notification.getPin().getId() : null,
                 notification.isRead(),
                 notification.getCreatedAt()

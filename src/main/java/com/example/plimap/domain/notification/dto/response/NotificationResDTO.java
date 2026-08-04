@@ -17,7 +17,7 @@ public class NotificationResDTO {
             @Schema(description = "알림을 발생시킨 회원의 닉네임")
             String actorNickname,
 
-            String actorProfileImageObjectKey,
+            String actorProfileImageUrl,
 
             @Schema(description = "PIN_CREATED, PIN_LIKED 유형일 때만 존재")
             Long pinId,

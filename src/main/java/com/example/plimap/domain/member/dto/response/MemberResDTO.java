@@ -68,7 +68,7 @@ public class MemberResDTO {
             Long id,
             String nickname,
             String name,
-            String profileImageObjectKey,
+            String profileImageUrl,
             Instant followedAt,
             boolean isFollowing
     ) {
@@ -78,7 +78,7 @@ public class MemberResDTO {
             Long id,
             String nickname,
             String name,
-            String profileImageObjectKey,
+            String profileImageUrl,
             Instant followedAt,
             boolean isFollowing
     ) {

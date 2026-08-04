@@ -7,6 +7,7 @@ import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 
 import java.net.URI;
 import java.util.List;
@@ -79,6 +80,28 @@ public class MemberConverter {
 
     public static MemberResDTO.ProfileImage toProfileImage(String objectKey, URI imageUrl) {
         return new MemberResDTO.ProfileImage(objectKey, imageUrl.toString());
+    }
+
+    public static MemberResDTO.FollowerItem toFollowerItem(MemberFollowRow row, String profileImageUrl) {
+        return new MemberResDTO.FollowerItem(
+                row.id(),
+                row.nickname(),
+                row.name(),
+                profileImageUrl,
+                row.followedAt(),
+                row.isFollowing()
+        );
+    }
+
+    public static MemberResDTO.FollowingItem toFollowingItem(MemberFollowRow row, String profileImageUrl) {
+        return new MemberResDTO.FollowingItem(
+                row.id(),
+                row.nickname(),
+                row.name(),
+                profileImageUrl,
+                row.followedAt(),
+                row.isFollowing()
+        );
     }
 
     public static <T> Pagination<T> toPagination(List<T> data, String nextCursor, Boolean hasNext, Integer pageSize) {

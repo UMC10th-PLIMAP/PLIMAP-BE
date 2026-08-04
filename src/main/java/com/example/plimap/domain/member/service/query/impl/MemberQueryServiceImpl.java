@@ -12,6 +12,7 @@ import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
@@ -111,13 +112,25 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     @Override
     public Pagination<MemberResDTO.FollowerItem> findFollowers(Long viewerId, Long memberId, String cursor, Integer pageSize) {
         getVisibleActiveMember(memberId, viewerId);
-        return memberQueryRepository.findFollowersByMemberId(viewerId, memberId, cursor, pageSize);
+        Pagination<MemberFollowRow> rows = memberQueryRepository.findFollowersByMemberId(viewerId, memberId, cursor, pageSize);
+
+        List<MemberResDTO.FollowerItem> data = rows.data().stream()
+                .map(row -> MemberConverter.toFollowerItem(row, profileImageStorage.getPublicUrlOrNull(row.profileImageObjectKey())))
+                .toList();
+
+        return MemberConverter.toPagination(data, rows.nextCursor(), rows.hasNext(), rows.pageSize());
     }
 
     @Override
     public Pagination<MemberResDTO.FollowingItem> findFollowing(Long viewerId, Long memberId, String cursor, Integer pageSize) {
         getVisibleActiveMember(memberId, viewerId);
-        return memberQueryRepository.findFollowingByMemberId(viewerId, memberId, cursor, pageSize);
+        Pagination<MemberFollowRow> rows = memberQueryRepository.findFollowingByMemberId(viewerId, memberId, cursor, pageSize);
+
+        List<MemberResDTO.FollowingItem> data = rows.data().stream()
+                .map(row -> MemberConverter.toFollowingItem(row, profileImageStorage.getPublicUrlOrNull(row.profileImageObjectKey())))
+                .toList();
+
+        return MemberConverter.toPagination(data, rows.nextCursor(), rows.hasNext(), rows.pageSize());
     }
 
     private Member getVisibleActiveMember(Long targetMemberId, Long viewerId) {
