@@ -230,6 +230,12 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
     @Override
     @Transactional
+    public void increaseReportCount(Long memberId) {
+        memberRepository.increaseReportCount(memberId);
+    }
+
+    @Override
+    @Transactional
     public void withdraw(Long memberId) {
         Member member = memberQueryService.getActiveMember(memberId);
         String oldProfileImageKey = member.getProfileImageObjectKey();
