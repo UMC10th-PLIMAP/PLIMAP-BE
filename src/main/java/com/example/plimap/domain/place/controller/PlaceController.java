@@ -32,6 +32,23 @@ public class PlaceController implements PlaceControllerDocs {
     private final PlaceQueryService placeQueryService;
 
     @Override
+    @GetMapping("/bookmarks")
+    public ResponseEntity<ApiResponse<PlaceResponse.BookmarkListResult>> getPlaceBookmarks(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude
+    ) {
+        PlaceResponse.BookmarkListResult result = placeQueryService.getPlaceBookmarks(
+                currentMember.getMember().getId(),
+                latitude,
+                longitude
+        );
+        return ResponseEntity
+                .status(PlaceSuccessCode.PLACE_BOOKMARK_LIST_SUCCESS.getStatus())
+                .body(ApiResponse.success(PlaceSuccessCode.PLACE_BOOKMARK_LIST_SUCCESS, result));
+    }
+
+    @Override
     @GetMapping("/{placeId}")
     public ResponseEntity<ApiResponse<PlaceResponse.Detail>> getPlaceDetail(
             @AuthenticationPrincipal AuthMember currentMember,
