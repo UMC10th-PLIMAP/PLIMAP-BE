@@ -151,7 +151,7 @@ jobs:
               "| Candidate revision | ``$($result.candidateRevision)`` |",
               "| Candidate verification | $($result.candidateVerification) |",
               "| Traffic promotion | $($result.trafficPromotion) |",
-              "| Final verification | $($result.publicVerification) |",
+              "| Service verification | $($result.serviceVerification) |",
               "| Rollback | $($result.rollback) |",
               "| Service URL | $($result.serviceUrl) |"
             )

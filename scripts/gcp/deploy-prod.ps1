@@ -50,14 +50,13 @@ $result = [ordered]@{
     candidateRevision     = ""
     candidateVerification = "not-started"
     trafficPromotion      = "not-started"
-    publicVerification    = "not-started"
+    serviceVerification   = "not-started"
     rollback              = "not-required"
     serviceUrl            = ""
     error                 = ""
 }
 $environmentFile = $null
-$trafficPromoted = $false
-$candidateTag = ""
+$trafficPromotionAttempted = $false
 
 function Invoke-Gcloud {
     param([Parameter(Mandatory)][string[]]$Arguments)
@@ -76,6 +75,133 @@ function Get-GcloudText {
         throw "gcloud command failed: gcloud $($Arguments -join ' ')"
     }
     return ($output -join "`n").Trim()
+}
+
+function Get-JsonProperty {
+    param(
+        [AllowNull()][object]$Object,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    if ($null -eq $Object) {
+        return $null
+    }
+
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        return $null
+    }
+
+    return $property.Value
+}
+
+function Get-ServiceState {
+    param([switch]$AllowMissing)
+
+    $serviceStateJson = @(& gcloud run services describe $ServiceName `
+        --project=$ProjectId `
+        --region=$Region `
+        --format=json 2>$null)
+    if ($LASTEXITCODE -ne 0) {
+        if ($AllowMissing) {
+            return $null
+        }
+        throw "Could not describe Cloud Run service: $ServiceName"
+    }
+    if ($serviceStateJson.Count -eq 0) {
+        throw "Cloud Run service describe returned an empty response: $ServiceName"
+    }
+
+    return ($serviceStateJson -join "`n") | ConvertFrom-Json
+}
+
+function Get-ActiveTrafficAllocations {
+    param([Parameter(Mandatory)][object]$ServiceState)
+
+    $status = Get-JsonProperty -Object $ServiceState -Name "status"
+    $latestReadyRevisionName = [string](Get-JsonProperty -Object $status -Name "latestReadyRevisionName")
+    $trafficTargets = @(Get-JsonProperty -Object $status -Name "traffic")
+    $allocations = @()
+
+    foreach ($trafficTarget in $trafficTargets) {
+        $percentValue = Get-JsonProperty -Object $trafficTarget -Name "percent"
+        $percent = if ($null -eq $percentValue) { 0 } else { [int]$percentValue }
+        if ($percent -le 0) {
+            continue
+        }
+
+        $revisionName = [string](Get-JsonProperty -Object $trafficTarget -Name "revisionName")
+        if ([string]::IsNullOrWhiteSpace($revisionName)) {
+            $latestRevision = Get-JsonProperty -Object $trafficTarget -Name "latestRevision"
+            if ($latestRevision -eq $true) {
+                $revisionName = $latestReadyRevisionName
+            }
+        }
+        if ([string]::IsNullOrWhiteSpace($revisionName)) {
+            throw "Could not resolve the revision name for an active Cloud Run traffic target."
+        }
+
+        $allocations += [pscustomobject]@{
+            revisionName = $revisionName
+            percent      = $percent
+        }
+    }
+
+    return $allocations
+}
+
+function Assert-RevisionReady {
+    param([Parameter(Mandatory)][string]$RevisionName)
+
+    $revisionStateJson = Get-GcloudText -Arguments @(
+        "run", "revisions", "describe", $RevisionName,
+        "--project=$ProjectId",
+        "--region=$Region",
+        "--format=json"
+    )
+    $revisionState = $revisionStateJson | ConvertFrom-Json
+    $status = Get-JsonProperty -Object $revisionState -Name "status"
+    $conditions = @(Get-JsonProperty -Object $status -Name "conditions")
+    $readyConditions = @($conditions | Where-Object {
+        (Get-JsonProperty -Object $_ -Name "type") -eq "Ready"
+    })
+    if ($readyConditions.Count -ne 1 -or
+        (Get-JsonProperty -Object $readyConditions[0] -Name "status") -ne "True") {
+        throw "Cloud Run candidate revision is not Ready: $RevisionName"
+    }
+}
+
+function Wait-ForSingleRevisionTraffic {
+    param(
+        [Parameter(Mandatory)][string]$ExpectedRevision,
+        [ValidateRange(1, 30)][int]$MaxAttempts = 15
+    )
+
+    $delaySeconds = 1
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        $serviceState = Get-ServiceState
+        $allocations = @(Get-ActiveTrafficAllocations -ServiceState $serviceState)
+        if ($allocations.Count -eq 1 -and
+            $allocations[0].revisionName -eq $ExpectedRevision -and
+            [int]$allocations[0].percent -eq 100) {
+            return
+        }
+
+        if ($attempt -eq $MaxAttempts) {
+            $actualTraffic = if ($allocations.Count -eq 0) {
+                "none"
+            } else {
+                ($allocations | ForEach-Object {
+                    "$($_.revisionName)=$($_.percent)%"
+                }) -join ","
+            }
+            throw "Cloud Run traffic did not converge to $ExpectedRevision=100% (actual=$actualTraffic)."
+        }
+
+        Write-Warning "Cloud Run traffic has not converged yet ($attempt/$MaxAttempts)."
+        Start-Sleep -Seconds $delaySeconds
+        $delaySeconds = [Math]::Min($delaySeconds * 2, 5)
+    }
 }
 
 function ConvertTo-YamlSingleQuoted {
@@ -359,18 +485,13 @@ try {
         }
     }
 
-    $serviceStateJson = @(& gcloud run services describe $ServiceName `
-        --project=$ProjectId `
-        --region=$Region `
-        --format=json 2>$null)
-    if ($LASTEXITCODE -eq 0 -and $serviceStateJson.Count -gt 0) {
-        $serviceState = ($serviceStateJson -join "`n") | ConvertFrom-Json
-        $activeTraffic = @($serviceState.status.traffic |
-            Where-Object { $_.percent -gt 0 -and $_.revisionName } |
-            Sort-Object -Property percent -Descending)
-        if ($activeTraffic.Count -gt 0) {
-            $result.previousRevision = [string]$activeTraffic[0].revisionName
+    $serviceState = Get-ServiceState -AllowMissing
+    if ($null -ne $serviceState) {
+        $activeTraffic = @(Get-ActiveTrafficAllocations -ServiceState $serviceState)
+        if ($activeTraffic.Count -ne 1 -or [int]$activeTraffic[0].percent -ne 100) {
+            throw "Existing Cloud Run service must have exactly one revision serving 100% traffic."
         }
+        $result.previousRevision = [string]$activeTraffic[0].revisionName
     }
 
     $environmentFile = New-TemporaryFile
@@ -388,8 +509,8 @@ try {
 
     $shortCommit = $DeployCommit.Substring(0, 12)
     $deploymentTimestamp = Get-Date -Format "yyyyMMddHHmmss"
-    $candidateTag = "candidate-$shortCommit-$deploymentTimestamp"
     $revisionSuffix = "$shortCommit-$deploymentTimestamp"
+    $result.candidateRevision = "$ServiceName-$revisionSuffix"
 
     $deployArguments = @(
         "run", "deploy", $ServiceName,
@@ -397,7 +518,6 @@ try {
         "--region=$Region",
         "--image=$Image",
         "--revision-suffix=$revisionSuffix",
-        "--tag=$candidateTag",
         "--no-traffic",
         "--service-account=$runtimeServiceAccount",
         "--execution-environment=gen2",
@@ -425,26 +545,10 @@ try {
     )
     Invoke-Gcloud -Arguments $deployArguments
 
-    $deployedStateJson = Get-GcloudText -Arguments @(
-        "run", "services", "describe", $ServiceName,
-        "--project=$ProjectId",
-        "--region=$Region",
-        "--format=json"
-    )
-    $deployedState = $deployedStateJson | ConvertFrom-Json
-    $candidateTraffic = @($deployedState.status.traffic |
-        Where-Object { $_.tag -eq $candidateTag })
-    if ($candidateTraffic.Count -ne 1 -or
-        [string]::IsNullOrWhiteSpace([string]$candidateTraffic[0].revisionName) -or
-        [string]::IsNullOrWhiteSpace([string]$candidateTraffic[0].url)) {
-        throw "Could not resolve the candidate revision and tag URL."
-    }
-
-    $result.candidateRevision = [string]$candidateTraffic[0].revisionName
-    $candidateUrl = ([string]$candidateTraffic[0].url).TrimEnd('/')
-    Assert-ProdEndpoints -BaseUrl $candidateUrl
+    Assert-RevisionReady -RevisionName $result.candidateRevision
     $result.candidateVerification = "passed"
 
+    $trafficPromotionAttempted = $true
     Invoke-Gcloud -Arguments @(
         "run", "services", "update-traffic", $ServiceName,
         "--project=$ProjectId",
@@ -452,7 +556,7 @@ try {
         "--to-revisions=$($result.candidateRevision)=100",
         "--quiet"
     )
-    $trafficPromoted = $true
+    Wait-ForSingleRevisionTraffic -ExpectedRevision $result.candidateRevision
     $result.trafficPromotion = "passed"
 
     $serviceUrl = Get-GcloudText -Arguments @(
@@ -467,19 +571,7 @@ try {
     $result.serviceUrl = $serviceUrl.TrimEnd('/')
 
     Assert-ProdEndpoints -BaseUrl $result.serviceUrl
-    $result.publicVerification = "passed"
-
-    try {
-        Invoke-Gcloud -Arguments @(
-            "run", "services", "update-traffic", $ServiceName,
-            "--project=$ProjectId",
-            "--region=$Region",
-            "--remove-tags=$candidateTag",
-            "--quiet"
-        )
-    } catch {
-        Write-Warning "Could not remove candidate traffic tag: $($_.Exception.Message)"
-    }
+    $result.serviceVerification = "passed"
 
     $result.status = "succeeded"
 
@@ -487,7 +579,21 @@ try {
 } catch {
     $result.error = $_.Exception.Message
 
-    if ($trafficPromoted) {
+    $shouldRollback = $false
+    if ($trafficPromotionAttempted) {
+        try {
+            $failedServiceState = Get-ServiceState
+            $failedTraffic = @(Get-ActiveTrafficAllocations -ServiceState $failedServiceState)
+            $shouldRollback = @($failedTraffic | Where-Object {
+                $_.revisionName -eq $result.candidateRevision -and [int]$_.percent -gt 0
+            }).Count -gt 0
+        } catch {
+            Write-Warning "Could not inspect traffic after deployment failure; rollback will be attempted conservatively."
+            $shouldRollback = $true
+        }
+    }
+
+    if ($shouldRollback) {
         if (-not [string]::IsNullOrWhiteSpace($result.previousRevision)) {
             try {
                 Invoke-Gcloud -Arguments @(
@@ -497,6 +603,7 @@ try {
                     "--to-revisions=$($result.previousRevision)=100",
                     "--quiet"
                 )
+                Wait-ForSingleRevisionTraffic -ExpectedRevision $result.previousRevision
                 if (-not [string]::IsNullOrWhiteSpace($result.serviceUrl)) {
                     Assert-ProdEndpoints -BaseUrl $result.serviceUrl
                 }
@@ -506,20 +613,6 @@ try {
             }
         } else {
             $result.rollback = "unavailable-first-deployment"
-        }
-    }
-
-    if (-not [string]::IsNullOrWhiteSpace($candidateTag)) {
-        try {
-            Invoke-Gcloud -Arguments @(
-                "run", "services", "update-traffic", $ServiceName,
-                "--project=$ProjectId",
-                "--region=$Region",
-                "--remove-tags=$candidateTag",
-                "--quiet"
-            )
-        } catch {
-            Write-Warning "Could not remove failed candidate traffic tag: $($_.Exception.Message)"
         }
     }
 
