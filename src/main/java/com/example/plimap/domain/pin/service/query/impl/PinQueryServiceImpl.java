@@ -4,6 +4,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
@@ -121,5 +122,10 @@ public class PinQueryServiceImpl implements PinQueryService {
     @Override
     public Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize) {
         return pinQueryRepository.getFriendRecentPinList(memberId, cursor, pageSize);
+    }
+
+    @Override
+    public List<AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds) {
+        return pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
     }
 }

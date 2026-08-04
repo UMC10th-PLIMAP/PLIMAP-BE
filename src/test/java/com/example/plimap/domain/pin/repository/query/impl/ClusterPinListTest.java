@@ -10,6 +10,7 @@ import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.repository.PlaceRepository;
+import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
@@ -28,6 +29,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,10 +60,12 @@ class ClusterPinListTest {
     @Autowired
     EntityManager entityManager;
 
-    Pin pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10, pin11;
-    Place place1, place2, place3, place4, place5, place6;
+    Pin pin1, pin2, pin3, pin4, pin5, pin6, pin7,
+            pin8, pin9, pin10, pin11, pin12, pin13, pin14;
+    Place place1, place2, place3, place4, place5, place6, place7;
     Member member1, member2, member3;
-    PlaceTrack placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6, placeTrack7, placeTrack8;
+    PlaceTrack placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6,
+            placeTrack7, placeTrack8, placeTrack9, placeTrack10;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Autowired
@@ -138,6 +142,17 @@ class ClusterPinListTest {
                 37.5446
         );
 
+        // REGION3 (부산)
+        place7 = createPlace(
+                "광안리해수욕장",
+                "부산광역시 수영구 광안해변로",
+                "부산광역시",
+                "수영구",
+                "광안동",
+                129.1186,
+                35.1532
+        );
+
         Track track1 = Track.create(
                 "provider",
                 "providerTrackId",
@@ -176,9 +191,11 @@ class ClusterPinListTest {
         placeTrack3 = PlaceTrack.create(place3, track2);
         placeTrack4 = PlaceTrack.create(place4, track2);
         placeTrack5 = PlaceTrack.create(place5, track3);
-        placeTrack6 = PlaceTrack.create(place6, track3);
-        placeTrack7 = PlaceTrack.create(place6, track2);
-        placeTrack8 = PlaceTrack.create(place6, track1);
+        placeTrack6 = PlaceTrack.create(place6, track3); // 좋아요 0개
+        placeTrack7 = PlaceTrack.create(place6, track2); // 좋아요 1개
+        placeTrack8 = PlaceTrack.create(place6, track1); // 좋아요 2개
+        placeTrack9 = PlaceTrack.create(place7, track1); // 좋아요 0개, 핀 2개
+        placeTrack10 = PlaceTrack.create(place7, track2); // 좋아요 1개, 핀 1개
 
         // 성남시 3개
         pin1 = createPin(member1, place1, placeTrack1);
@@ -196,21 +213,27 @@ class ClusterPinListTest {
         // 세종(연서면) 1개
         pin8 = createPin(member3, place5, placeTrack5);
 
-        // 서울 성수동 32개
+        // 서울 성수동 3개
         pin9 = createPin(member1, place6, placeTrack6);
         pin10 = createPin(member2, place6, placeTrack7);
         pin11 = createPin(member3, place6, placeTrack8);
 
+        // 부산 2개
+        pin12 = createPin(member2, place7, placeTrack9);
+        pin13 = createPin(member3, place7, placeTrack10);
+        pin14 = createPin(member1, place7, placeTrack9);
 
         memberRepository.saveAll(List.of(member1, member2, member3));
-        placeRepository.saveAll(List.of(place1, place2, place3, place4, place5, place6));
+        placeRepository.saveAll(List.of(place1, place2, place3, place4, place5, place6, place7));
         trackRepository.saveAll(List.of(track1, track2, track3));
-        placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6, placeTrack7, placeTrack8));
-        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10, pin11));
+        placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5,
+                placeTrack6, placeTrack7, placeTrack8, placeTrack9, placeTrack10));
+        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10, pin11, pin12, pin13, pin14));
 
         placeTrack7.increaseLikeCount();
         placeTrack8.increaseLikeCount();
         placeTrack8.increaseLikeCount();
+        placeTrack10.increaseLikeCount();
 
         entityManager.flush();
         entityManager.clear();
@@ -398,10 +421,10 @@ class ClusterPinListTest {
         // then
         assertThat(result).hasSize(2);
         PinResponse.PinPreview first = result.getFirst();
-        assertThat(first.placeId()).isEqualTo(place2.getId());
+        assertThat(first.placeId()).isEqualTo(place1.getId());
 
         PinResponse.PinPreview last = result.getLast();
-        assertThat(last.placeId()).isEqualTo(place1.getId());
+        assertThat(last.placeId()).isEqualTo(place2.getId());
     }
 
     @Test
@@ -455,6 +478,63 @@ class ClusterPinListTest {
         assertThat(result2).hasSize(1);
         PinResponse.PinPreview first2 = result2.getFirst();
         assertThat(first2.albumImageUrl()).isEqualTo("album2");
+    }
+
+    // findRepresentativePlaceTracksByPlaceIds
+    @Test
+    void 장소별_대표_PlaceTrack은_좋아요가_가장_많은_트랙을_선택한다() {
+        // given
+        List<Long> placeIds = new ArrayList<>(List.of(place6.getId(), place5.getId()));
+
+        // when
+        List<AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
+
+        // then
+        assertThat(result.size()).isEqualTo(2);
+        assertThat(result.getFirst().albumImageUrl()).isEqualTo(placeTrack8.getTrack().getAlbumImageUrl());
+        assertThat(result.getLast().albumImageUrl()).isEqualTo(placeTrack5.getTrack().getAlbumImageUrl());
+    }
+
+    @Test
+    void 삭제된_핀만_존재하는_PlaceTrack은_대표에서_제외한다() {
+        // given
+        List<Long> placeIds = new ArrayList<>(List.of(place6.getId(), place7.getId()));
+
+        // when
+        List<AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
+
+        // then
+        assertThat(result.getLast().albumImageUrl()).isEqualTo(placeTrack10.getTrack().getAlbumImageUrl());
+
+        // when
+        Pin managedPin = pinRepository.findById(pin13.getId()).orElseThrow();
+
+        managedPin.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        List<AlbumImage> result2 = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
+
+        // then
+        assertThat(result2.getLast().albumImageUrl()).isEqualTo(placeTrack9.getTrack().getAlbumImageUrl());
+    }
+
+    @Test
+    void 좋아요_수가_같으면_핀_개수_기준으로_반환한다() {
+        // given
+        List<Long> placeIds = new ArrayList<>(List.of(place6.getId(), place7.getId()));
+
+        // when
+        PlaceTrack managedPlaceTrack =
+                placeTrackRepository.findById(placeTrack9.getId()).orElseThrow();
+        managedPlaceTrack.increaseLikeCount();
+
+        entityManager.flush();
+        entityManager.clear();
+        List<AlbumImage> result = pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
+
+        // then
+        assertThat(result.getLast().albumImageUrl()).isEqualTo(placeTrack9.getTrack().getAlbumImageUrl());
     }
 
     private Member createMember(String name, String nickname) {

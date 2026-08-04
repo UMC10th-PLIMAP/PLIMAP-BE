@@ -1,10 +1,13 @@
 package com.example.plimap.domain.track.converter;
 
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.dto.LikedPlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.PlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 import java.util.List;
+
+import com.example.plimap.domain.track.entity.Track;
 import org.springframework.data.domain.Slice;
 
 public final class PlaceTrackConverter {
@@ -74,5 +77,13 @@ public final class PlaceTrackConverter {
                 trackDetailAccessible ? placeTrack.likeCount() : null,
                 placeTrack.liked()
         );
+    }
+
+    public static AlbumImage toAlbumImage(
+            Track track
+    ) {
+        return AlbumImage.builder()
+                .albumImageUrl(track.getAlbumImageUrl())
+                .build();
     }
 }

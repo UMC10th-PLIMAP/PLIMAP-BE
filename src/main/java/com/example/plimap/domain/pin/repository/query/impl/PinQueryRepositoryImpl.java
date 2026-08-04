@@ -1,13 +1,9 @@
 package com.example.plimap.domain.pin.repository.query.impl;
 
-import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.QMember;
 import com.example.plimap.domain.member.entity.QMemberFollow;
 import com.example.plimap.domain.pin.converter.PinConverter;
-import com.example.plimap.domain.pin.dto.CursorInfo;
-import com.example.plimap.domain.pin.dto.Pagination;
-import com.example.plimap.domain.pin.dto.PlacePinInfo;
-import com.example.plimap.domain.pin.dto.RegionInfo;
+import com.example.plimap.domain.pin.dto.*;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
@@ -20,22 +16,19 @@ import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.place.entity.QPlace;
 import com.example.plimap.domain.report.entity.QReport;
+import com.example.plimap.domain.track.converter.PlaceTrackConverter;
+import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
-import com.querydsl.core.types.Expression;
+import com.example.plimap.domain.track.entity.Track;
 import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.Expressions;
-import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Repository;
 
-import java.security.Timestamp;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
@@ -114,6 +107,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                     FROM place_track pt
                     JOIN place pl
                         ON pl.id = pt.place_id
+                    JOIN pin p
+                            ON p.place_track_id = pt.id
+                           AND p.deleted_at IS NULL
                     LEFT JOIN pin_count pc
                         ON pc.place_track_id = pt.id
                     WHERE
@@ -692,6 +688,35 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 : null;
 
         return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
+    }
+
+    @Override
+    public List<AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds) {
+        if (placeIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> placeTrackIds = entityManager.createNativeQuery(
+                        PIN_COUNT
+                                + ","
+                                + REPRESENTATIVE_PLACE_TRACK
+                                + """
+                                    SELECT rpt.place_track_id
+                                    FROM representative_place_track rpt
+                                """
+                )
+                .setParameter("placeIds", placeIds)
+                .getResultList();
+
+        List<Track> tracks = queryFactory
+                .select(placeTrack.track)
+                .from(placeTrack)
+                .where(placeTrack.id.in(placeTrackIds))
+                .fetch();
+
+        return tracks.stream()
+                .map(PlaceTrackConverter::toAlbumImage)
+                .toList();
     }
 
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {
