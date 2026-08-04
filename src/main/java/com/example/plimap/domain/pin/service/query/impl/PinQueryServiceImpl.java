@@ -117,4 +117,9 @@ public class PinQueryServiceImpl implements PinQueryService {
         List<PinResponse.Cluster> clusters = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, request.zoomLevel());
         return PinConverter.toClusterAndPin(clusters, null, request.zoomLevel());
     }
+
+    @Override
+    public Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize) {
+        return pinQueryRepository.getFriendRecentPinList(memberId, cursor, pageSize);
+    }
 }

@@ -128,4 +128,16 @@ public class PinResponse {
             List<Cluster> clusters,
             List<PinPreview> pins
     ) {}
+
+    @Builder
+    public record FriendPin(
+            Long pinId,
+            String placeName,
+            Double latitude,
+            Double longitude,
+            String writerNickname,
+            String writerProfileImage,
+            String albumImageUrl,
+            Instant createdAt
+    ) {}
 }

@@ -165,4 +165,19 @@ public class PinConverter {
                 .pins(pins)
                 .build();
     }
+
+    public static PinResponse.FriendPin toFriendPin(
+            Pin pin
+    ) {
+        return PinResponse.FriendPin.builder()
+                .pinId(pin.getId())
+                .placeName(pin.getPlace().getName())
+                .latitude(pin.getPlace().getLocation().getY())
+                .longitude(pin.getPlace().getLocation().getX())
+                .writerNickname(pin.getMember().getDisplayNickname())
+                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
+                .createdAt(pin.getCreatedAt())
+                .build();
+    }
 }
