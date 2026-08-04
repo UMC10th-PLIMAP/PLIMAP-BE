@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
+    [ValidatePattern("^[a-z][a-z0-9-]{4,28}[a-z0-9]$")]
     [string]$ProjectId = "plimap",
+    [ValidatePattern("^[a-z]+-[a-z]+[0-9]$")]
     [string]$Region = "asia-northeast3",
+    [ValidatePattern("^[a-z](?:[a-z0-9-]{0,47}[a-z0-9])?$")]
     [string]$ServiceName = "plimap-api-prod",
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
@@ -15,12 +18,15 @@ param(
     [string]$OAuthAllowedFrontendOrigins = "",
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
+    [ValidatePattern("^[a-z0-9](?:[a-z0-9._-]{1,61}[a-z0-9])$")]
     [string]$ProfileImageBucket,
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
+    [ValidatePattern("^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$")]
     [string]$VpcNetwork,
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
+    [ValidatePattern("^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$")]
     [string]$VpcSubnet,
     [string]$ResultPath = ""
 )
@@ -52,6 +58,7 @@ $result = [ordered]@{
     trafficPromotion      = "not-started"
     serviceVerification   = "not-started"
     rollback              = "not-required"
+    secretVersions        = [ordered]@{}
     serviceUrl            = ""
     error                 = ""
 }
@@ -75,6 +82,32 @@ function Get-GcloudText {
         throw "gcloud command failed: gcloud $($Arguments -join ' ')"
     }
     return ($output -join "`n").Trim()
+}
+
+function Assert-ApprovedImage {
+    $approvedRepository = "$Region-docker.pkg.dev/$ProjectId/plimap-docker/api"
+    $approvedImagePattern = "^$([regex]::Escape($approvedRepository))@sha256:[0-9a-f]{64}$"
+    if ($Image -notmatch $approvedImagePattern) {
+        throw "Production image must use the approved Artifact Registry repository and an immutable SHA-256 digest: $approvedRepository"
+    }
+
+    $imageDigest = ($Image -split "@", 2)[1]
+    $commitImage = "${approvedRepository}:$DeployCommit"
+    $commitDigest = Get-GcloudText -Arguments @(
+        "artifacts", "docker", "images", "describe", $commitImage,
+        "--project=$ProjectId",
+        "--format=value(image_summary.digest)"
+    )
+    if ($commitDigest -notmatch "^sha256:[0-9a-f]{64}$") {
+        throw "Could not resolve the Artifact Registry digest for commit image: $commitImage"
+    }
+    if (-not [string]::Equals(
+        $imageDigest,
+        $commitDigest,
+        [StringComparison]::OrdinalIgnoreCase
+    )) {
+        throw "Production image digest does not match the image tagged with deploy commit $DeployCommit."
+    }
 }
 
 function Get-JsonProperty {
@@ -151,7 +184,10 @@ function Get-ActiveTrafficAllocations {
 }
 
 function Assert-RevisionReady {
-    param([Parameter(Mandatory)][string]$RevisionName)
+    param(
+        [Parameter(Mandatory)][string]$RevisionName,
+        [Parameter(Mandatory)][string]$ExpectedImage
+    )
 
     $revisionStateJson = Get-GcloudText -Arguments @(
         "run", "revisions", "describe", $RevisionName,
@@ -168,6 +204,20 @@ function Assert-RevisionReady {
     if ($readyConditions.Count -ne 1 -or
         (Get-JsonProperty -Object $readyConditions[0] -Name "status") -ne "True") {
         throw "Cloud Run candidate revision is not Ready: $RevisionName"
+    }
+
+    $spec = Get-JsonProperty -Object $revisionState -Name "spec"
+    $containers = @(Get-JsonProperty -Object $spec -Name "containers")
+    if ($containers.Count -ne 1) {
+        throw "Cloud Run candidate revision must contain exactly one container: $RevisionName"
+    }
+    $actualImage = [string](Get-JsonProperty -Object $containers[0] -Name "image")
+    if (-not [string]::Equals(
+        $actualImage,
+        $ExpectedImage,
+        [StringComparison]::OrdinalIgnoreCase
+    )) {
+        throw "Cloud Run candidate image mismatch: expected=$ExpectedImage, actual=$actualImage"
     }
 }
 
@@ -426,6 +476,7 @@ try {
     if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
         throw "gcloud CLI was not found. Check the Google Cloud CLI installation and login."
     }
+    Assert-ApprovedImage
 
     $publicOrigin = Get-HttpsOrigin -Value $PublicBaseUrl
     if ([string]::IsNullOrWhiteSpace($FrontendRedirectUri)) {
@@ -474,15 +525,29 @@ try {
         "--quiet"
     )
 
+    $resolvedSecretVersions = [ordered]@{}
     foreach ($entry in $secretMap.GetEnumerator()) {
-        $versionStates = @(Get-GcloudText -Arguments @(
-            "secrets", "versions", "list", $entry.Value,
+        $versionStateJson = Get-GcloudText -Arguments @(
+            "secrets", "versions", "describe", "latest",
+            "--secret=$($entry.Value)",
             "--project=$ProjectId",
-            "--format=value(state)"
-        ) -split "`n")
-        if ($versionStates -notcontains "ENABLED") {
-            throw "Secret has no enabled version: $($entry.Value) ($($entry.Key))"
+            "--format=json"
+        )
+        $versionState = $versionStateJson | ConvertFrom-Json
+        $state = [string](Get-JsonProperty -Object $versionState -Name "state")
+        if ($state -ne "ENABLED") {
+            throw "Latest Secret version is not enabled: $($entry.Value) ($($entry.Key))"
         }
+
+        $versionName = [string](Get-JsonProperty -Object $versionState -Name "name")
+        $versionMatch = [regex]::Match($versionName, "/versions/(?<version>[1-9]\d*)$")
+        if (-not $versionMatch.Success) {
+            throw "Could not resolve the numeric Secret version: $($entry.Value) ($($entry.Key))"
+        }
+
+        $version = $versionMatch.Groups["version"].Value
+        $resolvedSecretVersions[$entry.Key] = $version
+        $result.secretVersions[$entry.Key] = "$($entry.Value):$version"
     }
 
     $serviceState = Get-ServiceState -AllowMissing
@@ -504,7 +569,8 @@ try {
         -ProfileImageBucket $ProfileImageBucket
 
     $secretBindings = ($secretMap.GetEnumerator() | ForEach-Object {
-        "$($_.Key)=$($_.Value):latest"
+        $version = $resolvedSecretVersions[$_.Key]
+        "$($_.Key)=$($_.Value):$version"
     }) -join ","
 
     $shortCommit = $DeployCommit.Substring(0, 12)
@@ -545,7 +611,7 @@ try {
     )
     Invoke-Gcloud -Arguments $deployArguments
 
-    Assert-RevisionReady -RevisionName $result.candidateRevision
+    Assert-RevisionReady -RevisionName $result.candidateRevision -ExpectedImage $Image
     $result.candidateVerification = "passed"
 
     $trafficPromotionAttempted = $true

@@ -145,10 +145,18 @@ jobs:
 
           if (Test-Path -LiteralPath $env:DEPLOYMENT_RESULT_PATH) {
             $result = Get-Content -Raw $env:DEPLOYMENT_RESULT_PATH | ConvertFrom-Json
+            $secretVersionSummary = @(
+              $result.secretVersions.PSObject.Properties |
+                ForEach-Object { "$($_.Name)=$($_.Value)" }
+            ) -join "<br>"
+            if ([string]::IsNullOrWhiteSpace($secretVersionSummary)) {
+              $secretVersionSummary = "not-recorded"
+            }
             $lines += @(
               "| Status | $($result.status) |",
               "| Previous revision | ``$($result.previousRevision)`` |",
               "| Candidate revision | ``$($result.candidateRevision)`` |",
+              "| Secret versions | $secretVersionSummary |",
               "| Candidate verification | $($result.candidateVerification) |",
               "| Traffic promotion | $($result.trafficPromotion) |",
               "| Service verification | $($result.serviceVerification) |",
