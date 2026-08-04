@@ -108,17 +108,21 @@ public class AuthController implements AuthControllerDocs {
         }
 
         Long memberId = jwtUtil.getMemberId(refreshToken);
-        if (!refreshTokenService.matches(memberId, refreshToken)) {
-            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_MISMATCH);
-        }
-
         Member member = memberRepository.findByIdAndStatusAndDeletedAtIsNull(memberId, MemberStatus.ACTIVE)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
         AuthMember authMember = new AuthMember(member);
 
         String newAccessToken = jwtUtil.createAccessToken(authMember);
         String newRefreshToken = jwtUtil.createRefreshToken(authMember);
-        refreshTokenService.save(memberId, newRefreshToken, jwtUtil.getRefreshTokenExpiry());
+        boolean rotated = refreshTokenService.rotateIfMatches(
+                memberId,
+                jwtUtil.getJti(refreshToken),
+                jwtUtil.getJti(newRefreshToken),
+                jwtUtil.getRefreshTokenExpiry()
+        );
+        if (!rotated) {
+            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_MISMATCH);
+        }
 
         authCookieUtil.setCookie(response, "accessToken", newAccessToken, jwtUtil.getAccessTokenExpiry());
         authCookieUtil.setCookie(response, "refreshToken", newRefreshToken, jwtUtil.getRefreshTokenExpiry());
