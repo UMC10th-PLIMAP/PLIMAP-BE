@@ -24,6 +24,7 @@ import com.example.plimap.domain.track.entity.QTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
