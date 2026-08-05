@@ -91,6 +91,22 @@ class MemberQueryServiceImplTest {
     }
 
     @Test
+    void 벌점_닉네임_후보_풀이_모두_소진되면_폴백_후보로_대체한다() {
+        // given: 접미사 없는 풀 후보는 전부 사용 중이고, 숫자 접미사가 붙은 폴백 후보만 사용 가능하다.
+        when(memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull(any()))
+                .thenAnswer(invocation -> {
+                    String nickname = invocation.getArgument(0);
+                    return !Character.isDigit(nickname.charAt(nickname.length() - 1));
+                });
+
+        // when
+        String result = memberQueryService.pickAvailablePenaltyNickname();
+
+        // then
+        assertThat(result).matches(".+\\d+$");
+    }
+
+    @Test
     void 벌점_닉네임_후보_풀과_폴백_공간이_모두_소진되면_예외가_발생한다() {
         // given
         when(memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull(any())).thenReturn(true);
