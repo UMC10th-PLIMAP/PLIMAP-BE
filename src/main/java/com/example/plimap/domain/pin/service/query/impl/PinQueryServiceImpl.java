@@ -149,6 +149,11 @@ public class PinQueryServiceImpl implements PinQueryService {
         return pinLikeRepository.findPinIdsByMemberId(memberId);
     }
 
+    @Override
+    public long countPinsByMemberId(Long memberId) {
+        return pinQueryRepository.countPinsByMemberId(memberId);
+    }
+
     private Integer getPrecision(Integer zoomLevel) {
         if (zoomLevel <= 16) {
             return 7;

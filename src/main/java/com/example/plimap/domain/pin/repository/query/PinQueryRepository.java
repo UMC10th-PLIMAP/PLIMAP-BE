@@ -41,4 +41,6 @@ public interface PinQueryRepository{
     Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize);
 
     Map<Long, AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds);
+
+    long countPinsByMemberId(Long memberId);
 }

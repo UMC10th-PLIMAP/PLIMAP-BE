@@ -697,6 +697,19 @@ class PinQueryRepositoryImplTest {
         assertThat(last.longitude()).isEqualTo(pin3.getPlace().getLocation().getX());
     }
 
+    @Test
+    void 특정_사용자가_작성한_핀_개수를_반환한다() {
+        // when
+        long countMember1Pin = pinQueryRepository.countPinsByMemberId(member1.getId());
+        long countMember2Pin = pinQueryRepository.countPinsByMemberId(member2.getId());
+        long countMember3Pin = pinQueryRepository.countPinsByMemberId(member3.getId());
+
+        // then
+        assertThat(countMember1Pin).isEqualTo(2);
+        assertThat(countMember2Pin).isEqualTo(3);
+        assertThat(countMember3Pin).isEqualTo(3);
+    }
+
 
     private Member createMember(String name, String nickname) {
         return Member.builder()
