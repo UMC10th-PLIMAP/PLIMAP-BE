@@ -160,6 +160,38 @@ public class PinCommandServiceImpl implements PinCommandService {
         pinRepository.increaseReportCount(pinId);
     }
 
+    @Override
+    public void decreaseReportCount(Long pinId) {
+        pinRepository.decreaseReportCount(pinId);
+    }
+
+    @Override
+    public void decreaseLikeCount(Long pinId) {
+        pinRepository.decreaseLikeCount(pinId);
+    }
+
+    @Override
+    public void penalizePin(Long pinId) {
+        Pin pin = getPin(pinId);
+        pin.penalize();
+    }
+
+    @Override
+    public void resetPinReportCount(Long pinId) {
+        Pin pin = getPin(pinId);
+        pin.resetReportCount();
+    }
+
+    @Override
+    public void hardDeleteAllByMember(Long memberId) {
+        pinRepository.deleteByMemberId(memberId);
+    }
+
+    @Override
+    public void hardDeleteLikesByMember(Long memberId) {
+        pinLikeRepository.deleteByMemberId(memberId);
+    }
+
     private Pin getPin(Long id) {
         return pinRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));

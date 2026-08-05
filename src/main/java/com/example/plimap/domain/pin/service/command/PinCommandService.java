@@ -16,4 +16,16 @@ public interface PinCommandService {
     PinResponse.LikeCount deletePinLike(Member currentMember, Long pinId);
 
     void increaseReportCount(Long pinId);
+
+    void decreaseReportCount(Long pinId);
+
+    void decreaseLikeCount(Long pinId);
+
+    void penalizePin(Long pinId);
+
+    void resetPinReportCount(Long pinId);
+
+    void hardDeleteAllByMember(Long memberId);
+
+    void hardDeleteLikesByMember(Long memberId);
 }

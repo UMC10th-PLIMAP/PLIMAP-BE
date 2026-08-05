@@ -1,5 +1,6 @@
 package com.example.plimap.global.config;
 
+import com.example.plimap.domain.member.service.command.MemberCommandService;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -8,13 +9,14 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 class CorsConfigTest {
 
     @Test
     void 쿠키_인증과_CSRF_헤더를_허용한다() {
         CorsProperties properties = new CorsProperties(List.of("http://localhost:5173", "https://dev.plimap.kr"));
-        CorsConfig config = new CorsConfig(properties);
+        CorsConfig config = new CorsConfig(properties, mock(MemberCommandService.class));
         TestCorsRegistry registry = new TestCorsRegistry();
 
         config.addCorsMappings(registry);

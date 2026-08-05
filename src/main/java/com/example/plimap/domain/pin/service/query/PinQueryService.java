@@ -38,4 +38,8 @@ public interface PinQueryService {
     Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize);
 
     Map<Long, AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds);
+
+    List<Long> findAllPinIdsByMemberId(Long memberId);
+
+    List<Long> findPinIdsLikedByMember(Long memberId);
 }

@@ -21,8 +21,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 import java.util.regex.Pattern;
 
 @Service
@@ -35,6 +38,17 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     private static final Pattern NICKNAME_FORMAT = Pattern.compile("^[가-힣A-Za-z0-9]+$");
     // BadWordFiltering.check()는 대소문자를 구분하는 완전 일치 substring 검사라 브랜드 사칭 방지용 단어는 별도로 대소문자 무시 검사한다.
     private static final List<String> CUSTOM_FORBIDDEN_WORDS = List.of("plimap", "플리맵운영자", "플리맵사용자");
+    // 벌점 부여 시 프로필 닉네임을 강제 치환할 때 사용하는 후보 풀(조류 이름).
+    // 관리자 페이지에서 후보 풀을 직접 관리하는 기능은 별도 스코프.
+    private static final List<String> PENALTY_NICKNAME_POOL = List.of(
+            "참새", "까치", "제비", "부엉이", "올빼미", "딱따구리", "종달새", "뻐꾸기", "두루미", "백로",
+            "왜가리", "갈매기", "앵무새", "공작새", "독수리", "기러기", "오리", "백조", "홍학", "펭귄",
+            "타조", "벌새", "딱새", "굴뚝새", "박새", "직박구리", "물총새", "소쩍새", "뜸부기", "꾀꼬리",
+            "방울새", "콩새", "되새", "개똥지빠귀", "파랑새", "후투티", "황조롱이", "붉은배새매", "매사촌", "검은딱새"
+    );
+    private static final Random RANDOM = new Random();
+    // 조류 이름 x 0~999 조합(최대 40,000개)도 이론상 소진될 수 있으므로 무한 루프 대신 시도 횟수를 제한한다.
+    private static final int FALLBACK_MAX_ATTEMPTS = 100;
 
     private final MemberRepository memberRepository;
     private final MemberFollowRepository memberFollowRepository;
@@ -58,6 +72,27 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     @Override
     public boolean isNicknameAvailable(String nickname) {
         return !memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull(nickname);
+    }
+
+    @Override
+    public String pickAvailablePenaltyNickname() {
+        List<String> shuffled = new ArrayList<>(PENALTY_NICKNAME_POOL);
+        Collections.shuffle(shuffled);
+        for (String candidate : shuffled) {
+            if (isNicknameAvailable(candidate)) {
+                return candidate;
+            }
+        }
+        // 후보 풀이 전부 소진된 극단적 상황을 대비한 폴백. 시도 횟수를 제한해 폴백 공간마저
+        // 소진됐을 때 무한 루프에 빠지지 않고 명시적인 오류로 실패한다.
+        for (int attempt = 0; attempt < FALLBACK_MAX_ATTEMPTS; attempt++) {
+            String base = PENALTY_NICKNAME_POOL.get(RANDOM.nextInt(PENALTY_NICKNAME_POOL.size()));
+            String fallback = base + RANDOM.nextInt(1000);
+            if (isNicknameAvailable(fallback)) {
+                return fallback;
+            }
+        }
+        throw new MemberException(MemberErrorCode.PENALTY_NICKNAME_POOL_EXHAUSTED);
     }
 
     @Override

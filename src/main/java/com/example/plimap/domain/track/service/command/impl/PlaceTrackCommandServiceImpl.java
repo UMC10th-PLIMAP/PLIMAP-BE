@@ -55,6 +55,11 @@ public class PlaceTrackCommandServiceImpl implements PlaceTrackCommandService {
         return PlaceTrackResponse.PlaceTrackLikeResult.from(placeTrack, false);
     }
 
+    @Override
+    public void hardDeleteLikesByMember(Long memberId) {
+        placeTrackLikeRepository.deleteByIdMemberId(memberId);
+    }
+
     private PlaceTrack getActivePlaceTrackForUpdate(Long placeTrackId) {
         return placeTrackRepository.findActiveByIdForUpdate(placeTrackId)
                 .orElseThrow(() -> new TrackException(

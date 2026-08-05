@@ -1,12 +1,13 @@
 package com.example.plimap.domain.admin.controller;
 
+import com.example.plimap.domain.admin.service.command.AdminCommandService;
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -26,8 +28,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -63,6 +68,12 @@ class AdminControllerTest {
     private MemberRepository memberRepository;
 
     @MockitoBean
+    private MemberCommandService memberCommandService;
+
+    @MockitoBean
+    private AdminCommandService adminCommandService;
+
+    @MockitoBean
     private TokenBlacklistService tokenBlacklistService;
 
     @MockitoBean
@@ -81,7 +92,7 @@ class AdminControllerTest {
     void 관리자_계정으로_조회하면_200과_내_정보를_반환한다() throws Exception {
         Member admin = Member.builder().nickname("운영자").role(MemberRole.ADMIN).build();
         ReflectionTestUtils.setField(admin, "id", MEMBER_ID);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE)).thenReturn(Optional.of(admin));
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(admin));
 
         mockMvc.perform(get("/api/v1/admin/me")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))
@@ -97,10 +108,42 @@ class AdminControllerTest {
     void 일반_회원으로_조회하면_403을_반환한다() throws Exception {
         Member user = Member.builder().nickname("일반회원").role(MemberRole.USER).build();
         ReflectionTestUtils.setField(user, "id", MEMBER_ID);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE)).thenReturn(Optional.of(user));
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(user));
 
         mockMvc.perform(get("/api/v1/admin/me")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void 관리자가_PIN_신고에_벌점을_부여하면_200을_반환한다() throws Exception {
+        Member admin = Member.builder().nickname("운영자").role(MemberRole.ADMIN).build();
+        ReflectionTestUtils.setField(admin, "id", MEMBER_ID);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(admin));
+
+        mockMvc.perform(post("/api/v1/admin/pins/10/penalty")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"grantPenalty\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_PIN_PENALTY_REVIEWED"));
+
+        verify(adminCommandService).reviewPinReport(eq(10L), eq(true));
+    }
+
+    @Test
+    void 관리자가_프로필_신고에_벌점을_부여하지_않으면_200을_반환한다() throws Exception {
+        Member admin = Member.builder().nickname("운영자").role(MemberRole.ADMIN).build();
+        ReflectionTestUtils.setField(admin, "id", MEMBER_ID);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(admin));
+
+        mockMvc.perform(post("/api/v1/admin/members/2/penalty")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"grantPenalty\": false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_PROFILE_PENALTY_REVIEWED"));
+
+        verify(adminCommandService).reviewProfileReport(eq(2L), eq(false));
     }
 }

@@ -1,15 +1,20 @@
 package com.example.plimap.global.security;
 
+import com.example.plimap.domain.auth.controller.AuthController;
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.MemberRole;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
+import com.example.plimap.domain.member.service.command.TermsCommandService;
+import com.example.plimap.domain.member.service.query.TermsQueryService;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
 import jakarta.servlet.http.Cookie;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +24,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +36,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -41,7 +50,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = {
         SecurityIntegrationTest.TestController.class,
-        SecurityIntegrationTest.AdminTestController.class
+        SecurityIntegrationTest.AdminTestController.class,
+        AuthController.class
 })
 @Import({
         SecurityConfig.class,
@@ -80,7 +90,22 @@ class SecurityIntegrationTest {
     private MemberRepository memberRepository;
 
     @MockitoBean
+    private MemberCommandService memberCommandService;
+
+    @MockitoBean
     private TokenBlacklistService tokenBlacklistService;
+
+    @MockitoBean
+    private TermsQueryService termsQueryService;
+
+    @MockitoBean
+    private TermsCommandService termsCommandService;
+
+    @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
+    @MockitoBean
+    private SessionInvalidationService sessionInvalidationService;
 
     @BeforeEach
     void setUp() {
@@ -89,7 +114,7 @@ class SecurityIntegrationTest {
         when(jwtUtil.isAccessToken(ACCESS_TOKEN)).thenReturn(true);
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
         when(jwtUtil.getJti(ACCESS_TOKEN)).thenReturn("test-jti");
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
         when(tokenBlacklistService.isBlacklisted("test-jti")).thenReturn(false);
     }
 
@@ -150,6 +175,27 @@ class SecurityIntegrationTest {
         assertThat(csrfCookie.getSecure()).isFalse();
         assertThat(csrfCookie.getAttribute("SameSite")).isEqualTo("Lax");
         assertThat(csrfCookie.getPath()).isEqualTo("/");
+    }
+
+    @Test
+    void 정지_회원은_CSRF_토큰을_발급받아_로그아웃할_수_있다() throws Exception {
+        Member suspended = Member.builder().status(MemberStatus.SUSPENDED).build();
+        ReflectionTestUtils.setField(suspended, "suspendedUntil", Instant.now().plusSeconds(3600));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(suspended));
+
+        MvcResult csrfResult = mockMvc.perform(get("/api/v1/auth/csrf")
+                        .cookie(new Cookie("accessToken", ACCESS_TOKEN)))
+                .andExpect(status().isOk())
+                .andReturn();
+        Cookie csrfCookie = csrfResult.getResponse().getCookie("XSRF-TOKEN");
+        assertThat(csrfCookie).isNotNull();
+
+        mockMvc.perform(delete("/api/v1/auth/logout")
+                        .cookie(new Cookie("accessToken", ACCESS_TOKEN), csrfCookie)
+                        .header("X-XSRF-TOKEN", csrfCookie.getValue()))
+                .andExpect(status().isOk());
+
+        verify(sessionInvalidationService).invalidate(any(), any());
     }
 
     @Test
@@ -226,7 +272,7 @@ class SecurityIntegrationTest {
     @Test
     void 관리자_전용_경로는_관리자_회원이면_허용한다() throws Exception {
         Member admin = Member.builder().role(MemberRole.ADMIN).build();
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(admin));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(admin));
 
         mockMvc.perform(get(ADMIN_PATH)
                         .cookie(new Cookie("accessToken", ACCESS_TOKEN)))

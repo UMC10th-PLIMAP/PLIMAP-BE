@@ -11,4 +11,8 @@ public class MemberException extends BusinessException {
     public MemberException(MemberErrorCode errorCode, Throwable cause) {
         super(errorCode, cause);
     }
+
+    public MemberException(MemberErrorCode errorCode, String message) {
+        super(errorCode, message);
+    }
 }

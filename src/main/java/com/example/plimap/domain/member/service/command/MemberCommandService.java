@@ -19,5 +19,15 @@ public interface MemberCommandService {
 
     void increaseReportCount(Long memberId);
 
+    void decreaseReportCount(Long memberId);
+
     void withdraw(Long memberId);
+
+    boolean increasePenaltyPoint(Long memberId);
+
+    void liftSuspension(Long memberId);
+
+    void replacePenalizedNickname(Long memberId, String newNickname);
+
+    void resetReportCount(Long memberId);
 }

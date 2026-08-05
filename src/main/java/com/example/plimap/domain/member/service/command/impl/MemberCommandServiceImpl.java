@@ -7,6 +7,7 @@ import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.event.MemberFollowedEvent;
 import com.example.plimap.domain.member.event.MemberWithdrawnEvent;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
@@ -258,6 +259,12 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
     @Override
     @Transactional
+    public void decreaseReportCount(Long memberId) {
+        memberRepository.decreaseReportCount(memberId);
+    }
+
+    @Override
+    @Transactional
     public void withdraw(Long memberId) {
         Member member = memberQueryService.getActiveMember(memberId);
         String oldProfileImageKey = member.getProfileImageObjectKey();
@@ -279,5 +286,71 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         // oldProfileImageKey를 가리키는데 실제 객체는 이미 삭제된 상태가 된다. 실제 삭제는
         // MemberEventListener가 이 트랜잭션이 커밋된 뒤에만 수행한다.
         eventPublisher.publishEvent(new MemberWithdrawnEvent(memberId, oldProfileImageKey));
+    }
+
+    @Override
+    @Transactional
+    public boolean increasePenaltyPoint(Long memberId) {
+        // PESSIMISTIC_WRITE로 조회해 동시에 들어온 벌점 부여 요청이 서로의 증가분을
+        // 덮어쓰지 않도록 직렬화한다(같은 회원에 대한 두 번째 요청은 첫 번째가 커밋될 때까지 대기).
+        Member member = memberRepository.findByIdAndDeletedAtIsNullForUpdate(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        String oldProfileImageKey = member.getProfileImageObjectKey();
+
+        member.applyPenalty();
+
+        if (member.getStatus() != MemberStatus.WITHDRAWN) {
+            memberRepository.save(member);
+            return false;
+        }
+
+        memberFollowRepository.deleteByIdFollowerId(memberId);
+        memberFollowRepository.deleteByIdFollowingId(memberId);
+
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            // 마스킹 닉네임("플리맵사용자{id}")이 다른 활성 회원이 실제로 사용 중인 닉네임과
+            // 우연히 겹치는 경우 DB의 대소문자 무시 유니크 인덱스(uk_member_nickname_ci)에서 걸러진다.
+            throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE, e);
+        }
+
+        // 탈퇴 트랜잭션 커밋 전에 스토리지 객체를 지우면, 커밋 실패(롤백) 시 DB는 여전히
+        // oldProfileImageKey를 가리키는데 실제 객체는 이미 삭제된 상태가 된다. 실제 삭제는
+        // MemberEventListener가 이 트랜잭션이 커밋된 뒤에만 수행한다.
+        eventPublisher.publishEvent(new MemberWithdrawnEvent(memberId, oldProfileImageKey));
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public void liftSuspension(Long memberId) {
+        Member member = memberRepository.findByIdAndDeletedAtIsNull(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        member.liftSuspension();
+        memberRepository.save(member);
+    }
+
+    @Override
+    @Transactional
+    public void replacePenalizedNickname(Long memberId, String newNickname) {
+        Member member = memberRepository.findByIdAndDeletedAtIsNull(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        try {
+            member.replaceNicknameForPenalty(newNickname);
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE, e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void resetReportCount(Long memberId) {
+        Member member = memberRepository.findByIdAndDeletedAtIsNull(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        member.resetReportCount();
+        memberRepository.save(member);
     }
 }

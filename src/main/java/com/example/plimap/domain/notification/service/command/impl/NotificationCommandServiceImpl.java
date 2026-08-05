@@ -79,6 +79,14 @@ public class NotificationCommandServiceImpl implements NotificationCommandServic
         pushAfterCommit(saved);
     }
 
+    @Override
+    @Transactional // 클래스 레벨 REQUIRES_NEW를 오버라이드: 자동탈퇴 캐스케이드의 일부로 호출자 트랜잭션에 참여해야
+                   // 이후 단계(핀 하드삭제)가 실패했을 때 이 삭제도 함께 롤백된다. MemberWithdrawnEvent
+                   // 리스너(AFTER_COMMIT)에서 호출될 때는 진행 중인 트랜잭션이 없어 새로 시작된다.
+    public void deleteByMemberId(Long memberId) {
+        notificationRepository.deleteByMemberId(memberId);
+    }
+
     private void pushAfterCommit(Notification notification) {
         Long recipientId = notification.getRecipient().getId();
 

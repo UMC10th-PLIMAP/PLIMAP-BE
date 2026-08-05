@@ -7,4 +7,6 @@ public interface NotificationCommandService {
     void createPinCreatedNotifications(Long pinId, Long authorId);
 
     void createPinLikedNotification(Long recipientId, Long actorId, Long pinId);
+
+    void deleteByMemberId(Long memberId);
 }

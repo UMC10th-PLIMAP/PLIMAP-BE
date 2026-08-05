@@ -36,7 +36,10 @@ public class GlobalExceptionHandler {
             BusinessException exception,
             HttpServletRequest request
     ) {
-        return failure(exception.getErrorCode(), request, exception);
+        // 대부분의 BusinessException은 exception.getMessage() == errorCode.getMessage()라
+        // 동작 변화가 없다. 일부(예: 정지 만료일을 담은 MemberException)는 생성 시점에
+        // 동적 메시지를 넘겨 고정 메시지 대신 그 메시지를 응답에 노출한다.
+        return failure(exception.getErrorCode(), exception.getMessage(), request, exception);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

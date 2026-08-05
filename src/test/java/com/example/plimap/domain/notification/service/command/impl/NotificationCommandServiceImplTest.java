@@ -130,4 +130,13 @@ class NotificationCommandServiceImplTest {
         verify(notificationRepository, never()).save(any());
         verify(notificationEmitterRegistry, never()).sendToMember(any(), anyString(), any());
     }
+
+    @Test
+    void 회원_기준으로_알림을_전부_삭제한다() {
+        // when
+        notificationCommandService.deleteByMemberId(1L);
+
+        // then
+        verify(notificationRepository).deleteByMemberId(1L);
+    }
 }

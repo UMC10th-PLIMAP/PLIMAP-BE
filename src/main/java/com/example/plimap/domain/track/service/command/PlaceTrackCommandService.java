@@ -13,4 +13,6 @@ public interface PlaceTrackCommandService {
             Long memberId,
             Long placeTrackId
     );
+
+    void hardDeleteLikesByMember(Long memberId);
 }

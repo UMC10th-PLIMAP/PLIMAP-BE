@@ -2,7 +2,6 @@ package com.example.plimap.global.security;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -31,8 +30,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (token != null && jwtUtil.isValid(token) && jwtUtil.isAccessToken(token)
                 && !tokenBlacklistService.isBlacklisted(jwtUtil.getJti(token))) {
             Long memberId = jwtUtil.getMemberId(token);
-            Member member = memberRepository.findByIdAndStatusAndDeletedAtIsNull(memberId, MemberStatus.ACTIVE)
-                    .orElse(null);
+            // 상태(SUSPENDED/WITHDRAWN)로 인증 자체를 막지 않는다 — 정지/탈퇴 여부에 따른 차단 판단은
+            // MemberStatusInterceptor가 담당하며, 여기서는 "이 토큰이 누구 것인지"만 확인한다.
+            Member member = memberRepository.findById(memberId).orElse(null);
 
             if (member != null) {
                 AuthMember authMember = new AuthMember(member);

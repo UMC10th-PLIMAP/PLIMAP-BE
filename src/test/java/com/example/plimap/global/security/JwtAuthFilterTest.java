@@ -2,7 +2,6 @@ package com.example.plimap.global.security;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberRole;
-import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
@@ -45,8 +44,7 @@ class JwtAuthFilterTest {
         when(jwtUtil.getJti(TOKEN)).thenReturn(JTI);
         when(tokenBlacklistService.isBlacklisted(JTI)).thenReturn(false);
         when(jwtUtil.getMemberId(TOKEN)).thenReturn(MEMBER_ID);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE))
-                .thenReturn(Optional.of(member));
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
 
         jwtAuthFilter.doFilter(request(TOKEN), mock(HttpServletResponse.class), mock(FilterChain.class));
 
@@ -54,14 +52,31 @@ class JwtAuthFilterTest {
     }
 
     @Test
-    void 탈퇴한_회원의_토큰이면_블랙리스트에_없어도_인증하지_않는다() throws Exception {
+    void 정지_탈퇴_등_상태와_무관하게_회원이_존재하면_인증에_성공한다() throws Exception {
+        // 상태(SUSPENDED/WITHDRAWN)에 따른 차단은 MemberStatusInterceptor가 담당하므로,
+        // JwtAuthFilter는 회원이 DB에 존재하기만 하면 상태와 무관하게 인증을 성공시켜야 한다.
+        Member withdrawnMember = mock(Member.class);
+        when(withdrawnMember.getRole()).thenReturn(MemberRole.USER);
         when(jwtUtil.isValid(TOKEN)).thenReturn(true);
         when(jwtUtil.isAccessToken(TOKEN)).thenReturn(true);
         when(jwtUtil.getJti(TOKEN)).thenReturn(JTI);
         when(tokenBlacklistService.isBlacklisted(JTI)).thenReturn(false);
         when(jwtUtil.getMemberId(TOKEN)).thenReturn(MEMBER_ID);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE))
-                .thenReturn(Optional.empty());
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(withdrawnMember));
+
+        jwtAuthFilter.doFilter(request(TOKEN), mock(HttpServletResponse.class), mock(FilterChain.class));
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
+
+    @Test
+    void 회원이_DB에_존재하지_않으면_인증하지_않는다() throws Exception {
+        when(jwtUtil.isValid(TOKEN)).thenReturn(true);
+        when(jwtUtil.isAccessToken(TOKEN)).thenReturn(true);
+        when(jwtUtil.getJti(TOKEN)).thenReturn(JTI);
+        when(tokenBlacklistService.isBlacklisted(JTI)).thenReturn(false);
+        when(jwtUtil.getMemberId(TOKEN)).thenReturn(MEMBER_ID);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.empty());
 
         jwtAuthFilter.doFilter(request(TOKEN), mock(HttpServletResponse.class), mock(FilterChain.class));
 
@@ -78,7 +93,7 @@ class JwtAuthFilterTest {
         jwtAuthFilter.doFilter(request(TOKEN), mock(HttpServletResponse.class), mock(FilterChain.class));
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        verify(memberRepository, never()).findByIdAndStatusAndDeletedAtIsNull(MEMBER_ID, MemberStatus.ACTIVE);
+        verify(memberRepository, never()).findById(MEMBER_ID);
     }
 
     @Test

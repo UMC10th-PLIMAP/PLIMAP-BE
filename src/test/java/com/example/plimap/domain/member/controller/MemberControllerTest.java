@@ -6,7 +6,6 @@ import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberRepository;
@@ -114,7 +113,7 @@ class MemberControllerTest {
 
         Member authenticatedMember = Member.builder().build();
         ReflectionTestUtils.setField(authenticatedMember, "id", AUTH_MEMBER_ID);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(AUTH_MEMBER_ID, MemberStatus.ACTIVE))
+        when(memberRepository.findById(AUTH_MEMBER_ID))
                 .thenReturn(Optional.of(authenticatedMember));
     }
 
@@ -234,7 +233,7 @@ class MemberControllerTest {
                 .andExpect(status().isOk());
 
         // 탈퇴 반영: 회원의 status/deletedAt이 더 이상 ACTIVE 조건을 만족하지 않는 DB 상태를 시뮬레이션한다.
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(AUTH_MEMBER_ID, MemberStatus.ACTIVE))
+        when(memberRepository.findById(AUTH_MEMBER_ID))
                 .thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/members/me")

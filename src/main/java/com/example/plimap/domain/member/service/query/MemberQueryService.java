@@ -14,6 +14,8 @@ public interface MemberQueryService {
 
     boolean isNicknameAvailable(String nickname);
 
+    String pickAvailablePenaltyNickname();
+
     boolean isNicknameForbidden(String nickname);
 
     NicknameCheckFailReason checkNicknameFailReason(String nickname);
