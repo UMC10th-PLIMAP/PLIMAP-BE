@@ -79,11 +79,15 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
 
         entityManager.persist(Report.createPinReport(reporter, pin, ReportCategory.OBSCENE_OR_HARMFUL, null));
         entityManager.persist(Notification.create(reporter, owner, pin, NotificationType.PIN_CREATED));
+        // 핀과 무관한 팔로우 알림(pin_id 없음)도 탈퇴 시 함께 지워져야 한다.
+        Notification followNotification = Notification.create(reporter, owner, null, NotificationType.FOLLOW);
+        entityManager.persist(followNotification);
         entityManager.flush();
         entityManager.clear();
 
         Long pinId = pin.getId();
         Long ownerId = owner.getId();
+        Long followNotificationId = followNotification.getId();
 
         // when
         adminCommandService.reviewPinReport(pinId, true);
@@ -93,6 +97,7 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         // then
         assertThat(pinRepository.findById(pinId)).isEmpty();
         assertThat(reportRepository.existsByReporter_IdAndReportedPin_Id(reporter.getId(), pinId)).isFalse();
+        assertThat(notificationRepository.findById(followNotificationId)).isEmpty();
 
         Member withdrawn = memberRepository.findById(ownerId).orElseThrow();
         assertThat(withdrawn.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);

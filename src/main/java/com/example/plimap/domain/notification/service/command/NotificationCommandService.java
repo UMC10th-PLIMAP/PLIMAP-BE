@@ -1,7 +1,5 @@
 package com.example.plimap.domain.notification.service.command;
 
-import java.util.List;
-
 public interface NotificationCommandService {
 
     void createFollowNotification(Long recipientId, Long actorId);
@@ -10,5 +8,5 @@ public interface NotificationCommandService {
 
     void createPinLikedNotification(Long recipientId, Long actorId, Long pinId);
 
-    void deleteByPinIds(List<Long> pinIds);
+    void deleteByMemberId(Long memberId);
 }

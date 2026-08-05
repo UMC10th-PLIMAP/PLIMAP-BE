@@ -90,7 +90,7 @@ class AdminCommandServiceImplTest {
         adminCommandService.reviewPinReport(PIN_ID, true);
 
         InOrder order = inOrder(notificationCommandService, reportCommandService, pinCommandService, placeTrackCommandService);
-        order.verify(notificationCommandService).deleteByPinIds(List.of(PIN_ID));
+        order.verify(notificationCommandService).deleteByMemberId(MEMBER_ID);
         order.verify(reportCommandService).deleteReportsByPinIds(List.of(PIN_ID));
         order.verify(reportCommandService).deleteReportsAgainstMember(MEMBER_ID);
         order.verify(pinCommandService).hardDeleteAllByMember(MEMBER_ID);
@@ -126,6 +126,7 @@ class AdminCommandServiceImplTest {
 
         adminCommandService.reviewProfileReport(MEMBER_ID, true);
 
+        verify(notificationCommandService).deleteByMemberId(MEMBER_ID);
         verify(pinCommandService).hardDeleteAllByMember(MEMBER_ID);
         verify(placeTrackCommandService).hardDeleteLikesByMember(MEMBER_ID);
         verify(reportCommandService).deleteReportsAgainstMember(MEMBER_ID);

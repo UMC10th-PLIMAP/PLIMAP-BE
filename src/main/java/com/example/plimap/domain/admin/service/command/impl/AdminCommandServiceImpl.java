@@ -66,9 +66,12 @@ public class AdminCommandServiceImpl implements AdminCommandService {
     private void cascadeAutoWithdrawal(Long memberId) {
         List<Long> pinIds = pinQueryService.findAllPinIdsByMemberId(memberId);
 
-        // report.reported_pin_id / notification.pin_id는 ON DELETE RESTRICT라
-        // 핀을 하드삭제하기 전에 참조 row를 먼저 지워야 한다.
-        notificationCommandService.deleteByPinIds(pinIds);
+        // notification.pin_id는 ON DELETE RESTRICT라 핀을 하드삭제하기 전에 참조 row를 먼저 지워야 한다.
+        // deleteByMemberId는 이 회원이 actor/recipient인 알림(팔로우 알림 포함)을 전부 지우는데,
+        // 이 회원 소유 핀에 달린 알림(PIN_CREATED는 actor, PIN_LIKED는 recipient가 항상 이 회원)도
+        // 그 안에 포함되므로 별도로 pin_id 기준 삭제를 할 필요가 없다.
+        notificationCommandService.deleteByMemberId(memberId);
+        // report.reported_pin_id도 ON DELETE RESTRICT라 마찬가지로 먼저 지운다.
         reportCommandService.deleteReportsByPinIds(pinIds);
         reportCommandService.deleteReportsAgainstMember(memberId);
 

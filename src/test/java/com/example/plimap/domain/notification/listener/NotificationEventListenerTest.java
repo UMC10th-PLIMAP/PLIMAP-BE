@@ -1,6 +1,7 @@
 package com.example.plimap.domain.notification.listener;
 
 import com.example.plimap.domain.member.event.MemberFollowedEvent;
+import com.example.plimap.domain.member.event.MemberWithdrawnEvent;
 import com.example.plimap.domain.notification.service.command.NotificationCommandService;
 import com.example.plimap.domain.pin.event.PinCreatedEvent;
 import com.example.plimap.domain.pin.event.PinLikedEvent;
@@ -48,5 +49,17 @@ class NotificationEventListenerTest {
 
         // then
         verify(notificationCommandService).createPinLikedNotification(1L, 2L, 100L);
+    }
+
+    @Test
+    void 회원_탈퇴_이벤트를_받으면_해당_회원의_알림을_전부_지운다() {
+        // given
+        MemberWithdrawnEvent event = new MemberWithdrawnEvent(1L, null);
+
+        // when
+        listener.handleMemberWithdrawn(event);
+
+        // then
+        verify(notificationCommandService).deleteByMemberId(1L);
     }
 }
