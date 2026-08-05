@@ -827,7 +827,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .from(pin)
                 .where(
                         pin.member.id.eq(memberId),
-                        pin.deletedAt.isNull()
+                        pin.deletedAt.isNull(),
+                        pin.isFeedPublic.isTrue()
                 )
                 .fetchOne();
     }

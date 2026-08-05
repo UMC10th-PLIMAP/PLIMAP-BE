@@ -707,7 +707,7 @@ class PinQueryRepositoryImplTest {
         // then
         assertThat(countMember1Pin).isEqualTo(2);
         assertThat(countMember2Pin).isEqualTo(3);
-        assertThat(countMember3Pin).isEqualTo(3);
+        assertThat(countMember3Pin).isEqualTo(2);
     }
 
 
