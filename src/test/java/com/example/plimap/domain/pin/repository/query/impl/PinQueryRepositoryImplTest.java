@@ -200,7 +200,7 @@ class PinQueryRepositoryImplTest {
                 pinQueryRepository.findNearestActivePinWithin10m(37.528345,126.932600);
 
         assertThat(distance).isPresent();
-        assertThat(distance.get()).isLessThan(20);
+        assertThat(distance.get()).isLessThan(10);
     }
 
     @Test

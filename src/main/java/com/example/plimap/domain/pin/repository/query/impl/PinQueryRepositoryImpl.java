@@ -164,7 +164,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             t.region_name,
             AVG(ST_Y(t.location::geometry)) AS latitude,
             AVG(ST_X(t.location::geometry)) AS longitude,
-            SUM(t.pin_count) AS pin_count,
+            COUNT(*) AS place_count,
             MIN(ST_Y(t.location::geometry)) AS sw_lat,
             MIN(ST_X(t.location::geometry)) AS sw_lng,
             MAX(ST_Y(t.location::geometry)) AS ne_lat,
@@ -201,14 +201,18 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                     pl.id,
                     pl.location,
                     ST_GeoHash(pl.location::geometry, :precision) AS geohash
-                FROM pin p
-                JOIN place pl ON pl.id = p.place_id
+                FROM place pl
                 WHERE ST_Covers(
-                                 ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
-                                 pl.location::geometry
-                             )
-                             AND p.deleted_at IS NULL
-                             AND pl.deleted_at IS NULL
+                     ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
+                     pl.location::geometry
+                 )
+                AND pl.deleted_at IS NULL
+                AND EXISTS (
+                          SELECT 1
+                          FROM pin p
+                          WHERE p.place_id = pl.id
+                            AND p.deleted_at IS NULL
+                      )
             ),
             geohash_group AS (
                 SELECT
@@ -226,7 +230,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             )
             SELECT *
             FROM geohash_group;
-            """;
+    """;
 
     private static final String FEED_QUERY =  """
         SELECT
@@ -693,15 +697,12 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
         List<PinResponse.Cluster> clusters = new ArrayList<>();
         List<Long> singlePlaceIds = new ArrayList<>();
-        System.out.println("rows = " + rows.size());
         for (Object[] row : rows) {
-            System.out.println(Arrays.toString(row));
             int placeCount = ((Number) row[1]).intValue();
             Long placeId = ((Number) row[2]).longValue();
 
             if (placeCount == 1) {
                 singlePlaceIds.add(placeId);
-                System.out.println(singlePlaceIds);
             } else {
                 clusters.add(
                         toCluster(row, precision)

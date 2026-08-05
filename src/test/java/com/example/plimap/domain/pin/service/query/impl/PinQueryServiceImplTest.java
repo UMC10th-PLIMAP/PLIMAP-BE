@@ -336,6 +336,7 @@ class PinQueryServiceImplTest {
         PinResponse.ClusterAndPin result = pinQueryService.getClusterPinList(request);
 
         // then
+        assertThat(result).isSameAs(clusterAndPin);
         verify(pinQueryRepository).findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt());
         verify(pinQueryRepository, never())
                 .findPinPreviewListByViewport(any(), any());

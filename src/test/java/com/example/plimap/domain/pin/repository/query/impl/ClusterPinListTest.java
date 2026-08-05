@@ -285,7 +285,7 @@ class ClusterPinListTest {
         PinResponse.Cluster first = result.getFirst();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION1);
         assertThat(first.regionName()).isEqualTo("경기도");
-        assertThat(first.placeCount()).isEqualTo(5);
+        assertThat(first.placeCount()).isEqualTo(3);
 
         assertThat(first.latitude())
                 .isCloseTo(37.3544, within(1e-6));
@@ -327,7 +327,7 @@ class ClusterPinListTest {
         PinResponse.Cluster first = result.getFirst();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION2);
         assertThat(first.regionName()).isEqualTo("경기도 성남시");
-        assertThat(first.placeCount()).isEqualTo(3);
+        assertThat(first.placeCount()).isEqualTo(2);
 
         assertThat(first.latitude())
                 .isCloseTo(37.38835, within(1e-6));
@@ -378,7 +378,7 @@ class ClusterPinListTest {
                 .findFirst()
                 .orElseThrow();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION3);
-        assertThat(first.placeCount()).isEqualTo(2);
+        assertThat(first.placeCount()).isEqualTo(1);
 
         PinResponse.Cluster last = result.stream()
                 .filter(c -> c.regionName().equals("세종특별자치시 연서면"))
@@ -408,7 +408,7 @@ class ClusterPinListTest {
         PinResponse.Cluster first = result.getFirst();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION3);
         assertThat(first.regionName()).isEqualTo("경기도 성남시 백현동");
-        assertThat(first.placeCount()).isEqualTo(2);
+        assertThat(first.placeCount()).isEqualTo(1);
 
         assertThat(first.latitude())
                 .isCloseTo(37.3947, within(1e-6));
