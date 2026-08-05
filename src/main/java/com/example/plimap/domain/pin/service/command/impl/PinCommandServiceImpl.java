@@ -161,6 +161,11 @@ public class PinCommandServiceImpl implements PinCommandService {
     }
 
     @Override
+    public void decreaseReportCount(Long pinId) {
+        pinRepository.decreaseReportCount(pinId);
+    }
+
+    @Override
     public void penalizePin(Long pinId) {
         Pin pin = getPin(pinId);
         pin.penalize();

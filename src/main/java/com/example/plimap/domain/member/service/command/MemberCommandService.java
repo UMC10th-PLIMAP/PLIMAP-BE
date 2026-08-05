@@ -19,6 +19,8 @@ public interface MemberCommandService {
 
     void increaseReportCount(Long memberId);
 
+    void decreaseReportCount(Long memberId);
+
     void withdraw(Long memberId);
 
     boolean increasePenaltyPoint(Long memberId);

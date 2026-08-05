@@ -101,6 +101,10 @@ public class ReportCommandServiceImpl implements ReportCommandService {
 
     @Override
     public void deleteReportsByReporter(Long memberId) {
+        // 삭제될 신고가 대상(핀/회원)의 reportCount에 이미 반영돼 있으므로, row를 지우기 전에
+        // 캐시된 카운트를 먼저 보정해야 신고 이력과 자동숨김 기준(reportCount)이 어긋나지 않는다.
+        reportRepository.findReportedPinIdsByReporterId(memberId).forEach(pinCommandService::decreaseReportCount);
+        reportRepository.findReportedMemberIdsByReporterId(memberId).forEach(memberCommandService::decreaseReportCount);
         reportRepository.deleteAllByReporterId(memberId);
     }
 

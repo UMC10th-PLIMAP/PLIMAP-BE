@@ -32,4 +32,13 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
         where m.id = :memberId
     """)
     void increaseReportCount(Long memberId);
+
+    // reportCount > 0 조건으로 감소 후에도 chk_member_report_count(>= 0) 제약을 항상 만족시킨다.
+    @Modifying
+    @Query("""
+        update Member m
+        set m.reportCount = m.reportCount - 1
+        where m.id = :memberId and m.reportCount > 0
+    """)
+    void decreaseReportCount(Long memberId);
 }

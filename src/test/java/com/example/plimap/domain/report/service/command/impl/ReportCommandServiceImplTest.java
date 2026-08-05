@@ -16,10 +16,12 @@ import com.example.plimap.domain.report.enums.ReportCategory;
 import com.example.plimap.domain.report.exception.ReportErrorCode;
 import com.example.plimap.domain.report.exception.ReportException;
 import com.example.plimap.domain.report.repository.ReportRepository;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -29,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -273,20 +276,33 @@ class ReportCommandServiceImplTest {
 
     @Test
     void 회원_기준으로_신고당한_이력을_삭제한다() {
+        // given
+        Long targetMemberId = TARGET_ID;
+
         // when
-        reportCommandService.deleteReportsAgainstMember(TARGET_ID);
+        reportCommandService.deleteReportsAgainstMember(targetMemberId);
 
         // then
-        verify(reportRepository).deleteAllByReportedMemberId(TARGET_ID);
+        verify(reportRepository).deleteAllByReportedMemberId(targetMemberId);
     }
 
     @Test
-    void 회원이_신고한_이력을_삭제한다() {
+    void 회원이_신고한_이력을_삭제하면_대상의_신고누적을_먼저_보정한다() {
+        // given
+        Long reporterId = REPORTER_ID;
+        Long reportedPinId = 10L;
+        Long reportedMemberId = 20L;
+        when(reportRepository.findReportedPinIdsByReporterId(reporterId)).thenReturn(List.of(reportedPinId));
+        when(reportRepository.findReportedMemberIdsByReporterId(reporterId)).thenReturn(List.of(reportedMemberId));
+
         // when
-        reportCommandService.deleteReportsByReporter(REPORTER_ID);
+        reportCommandService.deleteReportsByReporter(reporterId);
 
         // then
-        verify(reportRepository).deleteAllByReporterId(REPORTER_ID);
+        InOrder order = inOrder(pinCommandService, memberCommandService, reportRepository);
+        order.verify(pinCommandService).decreaseReportCount(reportedPinId);
+        order.verify(memberCommandService).decreaseReportCount(reportedMemberId);
+        order.verify(reportRepository).deleteAllByReporterId(reporterId);
     }
 
     private Member member(Long id) {

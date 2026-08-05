@@ -23,4 +23,10 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     @Modifying
     @Query("delete from Report r where r.reporter.id = :memberId")
     void deleteAllByReporterId(Long memberId);
+
+    @Query("select r.reportedPin.id from Report r where r.reporter.id = :memberId and r.reportedPin.id is not null")
+    List<Long> findReportedPinIdsByReporterId(Long memberId);
+
+    @Query("select r.reportedMember.id from Report r where r.reporter.id = :memberId and r.reportedMember.id is not null")
+    List<Long> findReportedMemberIdsByReporterId(Long memberId);
 }

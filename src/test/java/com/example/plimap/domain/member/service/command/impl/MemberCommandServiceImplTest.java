@@ -741,6 +741,13 @@ class MemberCommandServiceImplTest {
         verify(memberRepository).save(member);
     }
 
+    @Test
+    void 회원의_신고누적을_감소시킨다() {
+        memberCommandService.decreaseReportCount(MEMBER_ID);
+
+        verify(memberRepository).decreaseReportCount(MEMBER_ID);
+    }
+
     private MockMultipartFile webpFile() {
         return new MockMultipartFile("image", "profile.webp", "image/webp", WEBP_CONTENT);
     }

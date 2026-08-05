@@ -115,6 +115,36 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
                 .isPresent();
     }
 
+    @Test
+    void 벌점_4점_도달시_다른_대상에_대한_신고로_쌓인_신고누적도_함께_보정한다() {
+        // given
+        Member pinOwner = saveMember("핀주인");
+        Pin targetPin = savePin(pinOwner);
+        ReflectionTestUtils.setField(targetPin, "reportCount", 10);
+
+        Member withdrawingReporter = saveMember("탈퇴예정신고자");
+        ReflectionTestUtils.setField(withdrawingReporter, "penaltyPoint", 3);
+        ReflectionTestUtils.setField(withdrawingReporter, "status", MemberStatus.SUSPENDED);
+
+        entityManager.persist(Report.createPinReport(
+                withdrawingReporter, targetPin, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        entityManager.flush();
+        entityManager.clear();
+
+        Long targetPinId = targetPin.getId();
+        Long reporterId = withdrawingReporter.getId();
+
+        // when
+        adminCommandService.reviewProfileReport(reporterId, true);
+        entityManager.flush();
+        entityManager.clear();
+
+        // then: 신고 row는 삭제되고, 그 신고가 반영돼 있던 핀의 reportCount는 10에서 9로 보정된다.
+        assertThat(reportRepository.existsByReporter_IdAndReportedPin_Id(reporterId, targetPinId)).isFalse();
+        Pin reloadedPin = pinRepository.findById(targetPinId).orElseThrow();
+        assertThat(reloadedPin.getReportCount()).isEqualTo(9);
+    }
+
     private Member saveMember(String nickname) {
         Member member = Member.builder()
                 .nickname(nickname)

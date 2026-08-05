@@ -17,6 +17,8 @@ public interface PinCommandService {
 
     void increaseReportCount(Long pinId);
 
+    void decreaseReportCount(Long pinId);
+
     void penalizePin(Long pinId);
 
     void resetPinReportCount(Long pinId);

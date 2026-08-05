@@ -45,4 +45,14 @@ public interface PinRepository extends JpaRepository<Pin, Long> {
         where p.id = :pinId
     """)
     void increaseReportCount(Long pinId);
+
+    // reportCount > 0 조건으로 감소 후에도 chk_pin_report_count(>= 0) 제약을 항상 만족시킨다.
+    // 관리자가 이미 reportCount를 0으로 리셋한 뒤 그 신고 row가 뒤늦게 삭제되는 경우에도 안전하다.
+    @Modifying
+    @Query("""
+        update Pin p
+        set p.reportCount = p.reportCount - 1
+        where p.id = :pinId and p.reportCount > 0
+    """)
+    void decreaseReportCount(Long pinId);
 }

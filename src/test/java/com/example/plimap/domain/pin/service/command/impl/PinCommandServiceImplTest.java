@@ -369,6 +369,13 @@ class PinCommandServiceImplTest {
         verify(pinRepository).deleteByMemberId(1L);
     }
 
+    @Test
+    void 핀의_신고누적을_감소시킨다() {
+        pinCommandService.decreaseReportCount(1L);
+
+        verify(pinRepository).decreaseReportCount(1L);
+    }
+
     // createPinLike 테스트
     @Test
     void 핀_좋아요_등록시_좋아요_개수가_증가한다() {
