@@ -614,7 +614,7 @@ class MemberCommandServiceImplTest {
     void 벌점_1점을_부여하면_정지_상태로_전환된다() {
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
-        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
 
         boolean withdrawn = memberCommandService.increasePenaltyPoint(MEMBER_ID);
 
@@ -633,7 +633,7 @@ class MemberCommandServiceImplTest {
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
         ReflectionTestUtils.setField(member, "penaltyPoint", 1);
         ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
-        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
 
         memberCommandService.increasePenaltyPoint(MEMBER_ID);
 
@@ -648,7 +648,7 @@ class MemberCommandServiceImplTest {
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
         ReflectionTestUtils.setField(member, "penaltyPoint", 3);
         ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
-        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
 
         boolean withdrawn = memberCommandService.increasePenaltyPoint(MEMBER_ID);
 
@@ -669,7 +669,7 @@ class MemberCommandServiceImplTest {
 
     @Test
     void 존재하지_않는_회원에게_벌점을_부여하면_예외가_발생한다() {
-        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.empty());
+        when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> memberCommandService.increasePenaltyPoint(MEMBER_ID))
                 .isInstanceOfSatisfying(MemberException.class, exception ->

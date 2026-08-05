@@ -285,7 +285,9 @@ public class MemberCommandServiceImpl implements MemberCommandService {
     @Override
     @Transactional
     public boolean increasePenaltyPoint(Long memberId) {
-        Member member = memberRepository.findByIdAndDeletedAtIsNull(memberId)
+        // PESSIMISTIC_WRITE로 조회해 동시에 들어온 벌점 부여 요청이 서로의 증가분을
+        // 덮어쓰지 않도록 직렬화한다(같은 회원에 대한 두 번째 요청은 첫 번째가 커밋될 때까지 대기).
+        Member member = memberRepository.findByIdAndDeletedAtIsNullForUpdate(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
         String oldProfileImageKey = member.getProfileImageObjectKey();
 
