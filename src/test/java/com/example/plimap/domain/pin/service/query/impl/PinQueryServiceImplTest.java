@@ -320,10 +320,33 @@ class PinQueryServiceImplTest {
     }
 
     @Test
-    void 줌레벨이_14이상이면_핀목록을_조회한다() {
+    void 줌레벨이_14이상_19이하이면_geohash기반_클러스터와_핀목록을_조회한다() {
         // given
         PinRequest.Viewport request = new PinRequest.Viewport(
-                37.38,127.11, 37.40, 127.15, 14
+                37.38,127.11, 37.40, 127.15, 17
+        );
+
+        PinResponse.ClusterAndPin clusterAndPin = mock(PinResponse.ClusterAndPin.class);
+
+        given(pinQueryRepository.findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt()))
+                .willReturn(clusterAndPin);
+
+        // when
+        PinResponse.ClusterAndPin result = pinQueryService.getClusterPinList(request);
+
+        // then
+        verify(pinQueryRepository).findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt());
+        verify(pinQueryRepository, never())
+                .findPinPreviewListByViewport(any(), any());
+        verify(pinQueryRepository, never())
+                .findClusterListByViewport(any(), any(), anyInt());
+    }
+
+    @Test
+    void 줌레벨이_20이상이면_핀목록을_조회한다() {
+        // given
+        PinRequest.Viewport request = new PinRequest.Viewport(
+                37.38,127.11, 37.40, 127.15, 20
         );
 
         List<PinResponse.PinPreview> previews = List.of(mock(PinResponse.PinPreview.class));

@@ -424,6 +424,7 @@ class PinControllerTest {
                 new PinResponse.Cluster(
                         ClusterLevel.REGION1,
                         "서울특별시",
+                        null,
                         127.0,
                         37.5,
                         10,

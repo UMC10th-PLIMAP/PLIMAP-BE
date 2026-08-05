@@ -193,6 +193,39 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             t.region_name
     """;
 
+    private static final String GEOHASH_CLUSTER_QUERY = """
+            WITH place_geohash AS (
+                SELECT
+                    pl.id,
+                    pl.location,
+                    ST_GeoHash(pl.location::geometry, :precision) AS geohash
+                FROM pin p
+                JOIN place pl ON pl.id = p.place_id
+                WHERE ST_Covers(
+                                 ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
+                                 pl.location::geometry
+                             )
+                             AND p.deleted_at IS NULL
+                             AND pl.deleted_at IS NULL
+            ),
+            geohash_group AS (
+                SELECT
+                    geohash,
+                    COUNT(DISTINCT id) AS place_count,
+                    MIN(id) AS place_id,
+                    AVG(ST_Y(location::geometry)) AS latitude,
+                    AVG(ST_X(location::geometry)) AS longitude,
+                    MIN(ST_Y(location::geometry)) AS sw_lat,
+                    MIN(ST_X(location::geometry)) AS sw_lng,
+                    MAX(ST_Y(location::geometry)) AS ne_lat,
+                    MAX(ST_X(location::geometry)) AS ne_lng
+                FROM place_geohash
+                GROUP BY geohash
+            )
+            SELECT *
+            FROM geohash_group;
+            """;
+
     private static final String FEED_QUERY =  """
         SELECT
             p.id,
@@ -551,19 +584,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     @Override
-    public List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint) {
-        @SuppressWarnings("unchecked")
-        List<Long> placeIds = entityManager.createNativeQuery(PLACE_ID_IN_RANGE_QUERY)
-                .setParameter("minLng", minPoint.getX())
-                .setParameter("minLat", minPoint.getY())
-                .setParameter("maxLng", maxPoint.getX())
-                .setParameter("maxLat", maxPoint.getY())
-                .getResultList();
-
-        if (placeIds.isEmpty()) {
-            return List.of();
-        }
-
+    public List<PinResponse.PinPreview> findPinPreviewListByPlaceIds(List<Long> placeIds) {
         List<Long> pinIds = entityManager.createNativeQuery(
                         PIN_COUNT
                                 + ","
@@ -588,6 +609,23 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     @Override
+    public List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint) {
+        @SuppressWarnings("unchecked")
+        List<Long> placeIds = entityManager.createNativeQuery(PLACE_ID_IN_RANGE_QUERY)
+                .setParameter("minLng", minPoint.getX())
+                .setParameter("minLat", minPoint.getY())
+                .setParameter("maxLng", maxPoint.getX())
+                .setParameter("maxLat", maxPoint.getY())
+                .getResultList();
+
+        if (placeIds.isEmpty()) {
+            return List.of();
+        }
+
+        return findPinPreviewListByPlaceIds(placeIds);
+    }
+
+    @Override
     public List<PinResponse.Cluster> findClusterListByViewport(
             Point minPoint,
             Point maxPoint,
@@ -609,8 +647,43 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .getResultList();
 
         return rows.stream()
-                .map(this::toCluster)
+                .map(r -> {
+                    return toCluster(r, null);
+                })
                 .toList();
+    }
+
+    @Override
+    public PinResponse.ClusterAndPin findGeohashClusterListByViewport(Point minPoint, Point maxPoint, Integer zoomLevel, Integer precision) {
+        List<Object[]> rows = entityManager.createNativeQuery(GEOHASH_CLUSTER_QUERY)
+                .setParameter("precision", precision)
+                .setParameter("minLng", minPoint.getX())
+                .setParameter("minLat", minPoint.getY())
+                .setParameter("maxLng", maxPoint.getX())
+                .setParameter("maxLat", maxPoint.getY())
+                .getResultList();
+
+        List<PinResponse.Cluster> clusters = new ArrayList<>();
+        List<Long> singlePlaceIds = new ArrayList<>();
+        System.out.println("rows = " + rows.size());
+        for (Object[] row : rows) {
+            System.out.println(Arrays.toString(row));
+            int placeCount = ((Number) row[1]).intValue();
+            Long placeId = ((Number) row[2]).longValue();
+
+            if (placeCount == 1) {
+                singlePlaceIds.add(placeId);
+                System.out.println(singlePlaceIds);
+            } else {
+                clusters.add(
+                        toCluster(row, precision)
+                );
+            }
+        }
+
+        List<PinResponse.PinPreview> pinPreviews = findPinPreviewListByPlaceIds(singlePlaceIds);
+
+        return PinConverter.toClusterAndPin(clusters, pinPreviews, zoomLevel);
     }
 
     @Override
@@ -851,10 +924,28 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         );
     }
 
-    private PinResponse.Cluster toCluster(Object[] row) {
+    private PinResponse.Cluster   toCluster(Object[] row, Integer precision) {
+        if (precision != null) {
+            return new PinResponse.Cluster(
+                    ClusterLevel.GEOHASH,
+                    null,
+                    precision,
+                    ((Number) row[3]).doubleValue(),
+                    ((Number) row[4]).doubleValue(),
+                    ((Number) row[1]).intValue(),
+                    new PinResponse.Bound(
+                            ((Number) row[5]).doubleValue(),
+                            ((Number) row[6]).doubleValue(),
+                            ((Number) row[7]).doubleValue(),
+                            ((Number) row[8]).doubleValue()
+                    )
+            );
+        }
+
         return new PinResponse.Cluster(
                 ClusterLevel.valueOf((String) row[0]),
                 (String) row[1],
+                null,
                 ((Number) row[2]).doubleValue(),
                 ((Number) row[3]).doubleValue(),
                 ((Number) row[4]).intValue(),
