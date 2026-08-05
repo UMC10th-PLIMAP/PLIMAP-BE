@@ -91,6 +91,16 @@ class MemberStatusInterceptorTest {
     }
 
     @Test
+    void 정지_중에도_CSRF_토큰_발급은_허용된다() {
+        authenticateAs(member(MemberStatus.SUSPENDED, Instant.now().plusSeconds(3600)));
+        MockHttpServletRequest request = request("GET", "/api/v1/auth/csrf");
+
+        boolean result = interceptor.preHandle(request, response, new Object());
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
     void 정지_중에도_로그아웃은_허용된다() {
         authenticateAs(member(MemberStatus.SUSPENDED, Instant.now().plusSeconds(3600)));
         MockHttpServletRequest request = request("DELETE", "/api/v1/auth/logout");

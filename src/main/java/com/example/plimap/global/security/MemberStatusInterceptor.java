@@ -28,6 +28,7 @@ public class MemberStatusInterceptor implements HandlerInterceptor {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("Asia/Seoul"));
 
     private static final Set<AllowedRequest> ALLOWED_DURING_RESTRICTION = Set.of(
+            new AllowedRequest(HttpMethod.GET, "/api/v1/auth/csrf"),
             new AllowedRequest(HttpMethod.DELETE, "/api/v1/auth/logout"),
             new AllowedRequest(HttpMethod.GET, "/api/v1/members/me"),
             new AllowedRequest(HttpMethod.DELETE, "/api/v1/members/me")
