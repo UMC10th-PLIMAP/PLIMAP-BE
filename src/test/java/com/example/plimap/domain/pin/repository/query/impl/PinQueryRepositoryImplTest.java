@@ -195,18 +195,18 @@ class PinQueryRepositoryImplTest {
     }
 
     @Test
-    void 현위치로부터_20m_이내_핀이_있으면_거리를_반환한다() {
+    void 현위치로부터_10m_이내_핀이_있으면_거리를_반환한다() {
         Optional<Double> distance =
-                pinQueryRepository.findNearestActivePinWithin20m(37.5282,126.9326);
+                pinQueryRepository.findNearestActivePinWithin10m(37.528345,126.932600);
 
         assertThat(distance).isPresent();
-        assertThat(distance.get()).isLessThan(20);
+        assertThat(distance.get()).isLessThan(10);
     }
 
     @Test
-    void 현위치로부터_20m_이내_핀이_없으면_OptionalEmpty를_반환한다() {
+    void 현위치로부터_10m_이내_핀이_없으면_OptionalEmpty를_반환한다() {
         Optional<Double> distance =
-                pinQueryRepository.findNearestActivePinWithin20m(37.6000,127.1000);
+                pinQueryRepository.findNearestActivePinWithin10m(37.6000,127.1000);
 
         assertThat(distance).isEmpty();
     }

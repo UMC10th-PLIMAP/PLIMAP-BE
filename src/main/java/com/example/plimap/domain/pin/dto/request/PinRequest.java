@@ -120,11 +120,12 @@ public class PinRequest {
 
             @NotNull(message = "zoomLevel은 널이어서는 안 됩니다.")
             @Min(value = 1,  message = "zoomLevel은 1 이상이어야 합니다.")
-            @Max(value = 20,  message = "zoomLevel은 20 이하여야 합니다.")
+            @Max(value = 21,  message = "zoomLevel은 21 이하여야 합니다.")
             @Schema(description = "현재 zoom level", example = "7")
             Integer zoomLevel
     ) {
 
+        @Schema(hidden = true)
         @AssertTrue(message = "southWestLat는 northEastLat보다 작거나 같아야 합니다.")
         public boolean isLatitudeRangeValid() {
             return southWestLat == null
@@ -132,6 +133,7 @@ public class PinRequest {
                     || southWestLat <= northEastLat;
         }
 
+        @Schema(hidden = true)
         @AssertTrue(message = "southWestLng는 northEastLng보다 작거나 같아야 합니다.")
         public boolean isLongitudeRangeValid() {
             return southWestLng == null

@@ -203,7 +203,7 @@ class PinQueryServiceImplTest {
         assertThat(result.nearestPinDistanceMeters()).isNull();
 
         verify(pinQueryRepository, never())
-                .findNearestActivePinWithin20m(anyDouble(), anyDouble());
+                .findNearestActivePinWithin10m(anyDouble(), anyDouble());
     }
 
     @Test
@@ -211,13 +211,13 @@ class PinQueryServiceImplTest {
         PinRequest.PinAvailability request = PinRequest.PinAvailability.builder()
                 .latitude(37.5282)
                 .longitude(126.9326)
-                .userLatitude(37.5278)
-                .userLongitude(126.9319)
+                .userLatitude(37.528240)
+                .userLongitude(126.932650)
                 .build();
         when(pinLocationValidator.calculateDistance(request.userLatitude(), request.userLongitude(), request.latitude(), request.longitude()))
                 .thenReturn(76.0836069534716);
 
-        when(pinQueryRepository.findNearestActivePinWithin20m(request.latitude(), request.longitude()))
+        when(pinQueryRepository.findNearestActivePinWithin10m(request.latitude(), request.longitude()))
                 .thenReturn(Optional.of(11.09875689));
 
         PinResponse.PinAvailability result = pinQueryService.validatePinAvailability(request);
@@ -321,10 +321,34 @@ class PinQueryServiceImplTest {
     }
 
     @Test
-    void 줌레벨이_14이상이면_핀목록을_조회한다() {
+    void 줌레벨이_14이상_19이하이면_geohash기반_클러스터와_핀목록을_조회한다() {
         // given
         PinRequest.Viewport request = new PinRequest.Viewport(
-                37.38,127.11, 37.40, 127.15, 14
+                37.38,127.11, 37.40, 127.15, 17
+        );
+
+        PinResponse.ClusterAndPin clusterAndPin = mock(PinResponse.ClusterAndPin.class);
+
+        given(pinQueryRepository.findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt()))
+                .willReturn(clusterAndPin);
+
+        // when
+        PinResponse.ClusterAndPin result = pinQueryService.getClusterPinList(request);
+
+        // then
+        assertThat(result).isSameAs(clusterAndPin);
+        verify(pinQueryRepository).findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt());
+        verify(pinQueryRepository, never())
+                .findPinPreviewListByViewport(any(), any());
+        verify(pinQueryRepository, never())
+                .findClusterListByViewport(any(), any(), anyInt());
+    }
+
+    @Test
+    void 줌레벨이_20이상이면_핀목록을_조회한다() {
+        // given
+        PinRequest.Viewport request = new PinRequest.Viewport(
+                37.38,127.11, 37.40, 127.15, 20
         );
 
         List<PinResponse.PinPreview> previews = List.of(mock(PinResponse.PinPreview.class));
