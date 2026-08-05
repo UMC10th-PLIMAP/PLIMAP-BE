@@ -69,15 +69,32 @@ class MemberPenaltyPointConcurrencyIntegrationTest {
 
     private Long ownerId;
     private final List<Long> pinIds = new ArrayList<>();
+    private final List<Long> placeTrackIds = new ArrayList<>();
+    private final List<Long> trackIds = new ArrayList<>();
+    private final List<Long> placeIds = new ArrayList<>();
 
     @AfterEach
     void tearDown() {
         for (Long pinId : pinIds) {
             jdbcTemplate.update("DELETE FROM pin WHERE id = ?", pinId);
         }
+        for (Long placeTrackId : placeTrackIds) {
+            jdbcTemplate.update("DELETE FROM place_track WHERE id = ?", placeTrackId);
+        }
+        for (Long trackId : trackIds) {
+            jdbcTemplate.update("DELETE FROM track WHERE id = ?", trackId);
+        }
+        for (Long placeId : placeIds) {
+            jdbcTemplate.update("DELETE FROM place WHERE id = ?", placeId);
+        }
         if (ownerId != null) {
             jdbcTemplate.update("DELETE FROM member WHERE id = ?", ownerId);
         }
+        pinIds.clear();
+        placeTrackIds.clear();
+        trackIds.clear();
+        placeIds.clear();
+        ownerId = null;
     }
 
     @Test
@@ -134,6 +151,10 @@ class MemberPenaltyPointConcurrencyIntegrationTest {
                 null
         ));
         PlaceTrack placeTrack = placeTrackRepository.save(PlaceTrack.create(place, track));
+        placeIds.add(place.getId());
+        trackIds.add(track.getId());
+        placeTrackIds.add(placeTrack.getId());
+
         Pin pin = Pin.builder()
                 .member(author)
                 .place(place)
