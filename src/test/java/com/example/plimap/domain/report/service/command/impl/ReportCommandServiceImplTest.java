@@ -271,6 +271,24 @@ class ReportCommandServiceImplTest {
         );
     }
 
+    @Test
+    void 회원_기준으로_신고당한_이력을_삭제한다() {
+        // when
+        reportCommandService.deleteReportsAgainstMember(TARGET_ID);
+
+        // then
+        verify(reportRepository).deleteAllByReportedMemberId(TARGET_ID);
+    }
+
+    @Test
+    void 회원이_신고한_이력을_삭제한다() {
+        // when
+        reportCommandService.deleteReportsByReporter(REPORTER_ID);
+
+        // then
+        verify(reportRepository).deleteAllByReporterId(REPORTER_ID);
+    }
+
     private Member member(Long id) {
         Member member = mock(Member.class);
         when(member.getId()).thenReturn(id);

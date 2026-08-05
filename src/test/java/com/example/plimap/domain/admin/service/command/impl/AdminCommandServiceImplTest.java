@@ -93,6 +93,7 @@ class AdminCommandServiceImplTest {
         order.verify(notificationCommandService).deleteByMemberId(MEMBER_ID);
         order.verify(reportCommandService).deleteReportsByPinIds(List.of(PIN_ID));
         order.verify(reportCommandService).deleteReportsAgainstMember(MEMBER_ID);
+        order.verify(reportCommandService).deleteReportsByReporter(MEMBER_ID);
         order.verify(pinCommandService).hardDeleteAllByMember(MEMBER_ID);
         order.verify(placeTrackCommandService).hardDeleteLikesByMember(MEMBER_ID);
     }
@@ -130,5 +131,6 @@ class AdminCommandServiceImplTest {
         verify(pinCommandService).hardDeleteAllByMember(MEMBER_ID);
         verify(placeTrackCommandService).hardDeleteLikesByMember(MEMBER_ID);
         verify(reportCommandService).deleteReportsAgainstMember(MEMBER_ID);
+        verify(reportCommandService).deleteReportsByReporter(MEMBER_ID);
     }
 }

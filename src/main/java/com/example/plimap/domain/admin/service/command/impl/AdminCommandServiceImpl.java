@@ -73,7 +73,10 @@ public class AdminCommandServiceImpl implements AdminCommandService {
         notificationCommandService.deleteByMemberId(memberId);
         // report.reported_pin_id도 ON DELETE RESTRICT라 마찬가지로 먼저 지운다.
         reportCommandService.deleteReportsByPinIds(pinIds);
+        // 이 회원이 신고당한 이력뿐 아니라, 이 회원이 다른 대상을 신고한 이력도 함께 지운다
+        // (자동 탈퇴는 자발적 탈퇴와 달리 기록을 남기지 않는다는 설계 원칙).
         reportCommandService.deleteReportsAgainstMember(memberId);
+        reportCommandService.deleteReportsByReporter(memberId);
 
         pinCommandService.hardDeleteAllByMember(memberId);
         placeTrackCommandService.hardDeleteLikesByMember(memberId);

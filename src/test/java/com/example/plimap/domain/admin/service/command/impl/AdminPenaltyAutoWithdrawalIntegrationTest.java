@@ -75,6 +75,7 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         entityManager.persist(SocialAccount.create(owner, AuthProvider.KAKAO, "kakao-subject", "owner@test.com"));
 
         Member reporter = saveMember("신고자");
+        Member thirdParty = saveMember("제3자");
         Pin pin = savePin(owner);
 
         entityManager.persist(Report.createPinReport(reporter, pin, ReportCategory.OBSCENE_OR_HARMFUL, null));
@@ -82,11 +83,15 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         // 핀과 무관한 팔로우 알림(pin_id 없음)도 탈퇴 시 함께 지워져야 한다.
         Notification followNotification = Notification.create(reporter, owner, null, NotificationType.FOLLOW);
         entityManager.persist(followNotification);
+        // 탈퇴 대상 회원이 다른 회원을 신고한 이력도 함께 지워져야 한다.
+        entityManager.persist(Report.createMemberReport(owner, thirdParty, ReportCategory.ABUSE_OR_HATE_SPEECH, null));
         entityManager.flush();
         entityManager.clear();
 
         Long pinId = pin.getId();
         Long ownerId = owner.getId();
+        Long reporterId = reporter.getId();
+        Long thirdPartyId = thirdParty.getId();
         Long followNotificationId = followNotification.getId();
 
         // when
@@ -96,7 +101,8 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
 
         // then
         assertThat(pinRepository.findById(pinId)).isEmpty();
-        assertThat(reportRepository.existsByReporter_IdAndReportedPin_Id(reporter.getId(), pinId)).isFalse();
+        assertThat(reportRepository.existsByReporter_IdAndReportedPin_Id(reporterId, pinId)).isFalse();
+        assertThat(reportRepository.existsByReporter_IdAndReportedMember_Id(ownerId, thirdPartyId)).isFalse();
         assertThat(notificationRepository.findById(followNotificationId)).isEmpty();
 
         Member withdrawn = memberRepository.findById(ownerId).orElseThrow();

@@ -99,6 +99,11 @@ public class ReportCommandServiceImpl implements ReportCommandService {
         reportRepository.deleteAllByReportedMemberId(memberId);
     }
 
+    @Override
+    public void deleteReportsByReporter(Long memberId) {
+        reportRepository.deleteAllByReporterId(memberId);
+    }
+
     private void saveReport(Report report, ReportErrorCode duplicateErrorCode) {
         try {
             reportRepository.saveAndFlush(report);
