@@ -279,13 +279,14 @@ class PinQueryServiceImplTest {
     @Test
     void 핀_상세조회에_성공한다() {
         // given
-        when(pinQueryRepository.getPinPreview(anyLong()))
+        when(pinQueryRepository.getPinPreview(pin.getId(), 1L))
                 .thenReturn(Optional.ofNullable(pin));
 
         // when
-        PinResponse.PinPreview result = pinQueryService.getPinPreview(pin.getId());
+        PinResponse.PinPreview result = pinQueryService.getPinPreview(pin.getId(), 1L);
 
         // then
+        verify(pinQueryRepository).getPinPreview(pin.getId(), 1L);
         assertThat(result.introduction()).isEqualTo(pin.getIntroduction());
         assertThat(result.clipStartMs()).isEqualTo(pin.getClipStartMs());
         assertThat(result.writerNickname()).isEqualTo(pin.getMember().getNickname());

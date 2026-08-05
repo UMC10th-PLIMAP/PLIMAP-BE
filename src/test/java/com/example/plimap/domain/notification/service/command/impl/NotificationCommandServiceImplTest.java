@@ -8,6 +8,7 @@ import com.example.plimap.domain.notification.repository.NotificationRepository;
 import com.example.plimap.domain.notification.sse.NotificationEmitterRegistry;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -27,8 +28,9 @@ class NotificationCommandServiceImplTest {
     private final MemberQueryService memberQueryService = mock(MemberQueryService.class);
     private final PinQueryService pinQueryService = mock(PinQueryService.class);
     private final NotificationEmitterRegistry notificationEmitterRegistry = mock(NotificationEmitterRegistry.class);
+    private final ProfileImageStorage profileImageStorage = mock(ProfileImageStorage.class);
     private final NotificationCommandServiceImpl notificationCommandService = new NotificationCommandServiceImpl(
-            notificationRepository, memberQueryService, pinQueryService, notificationEmitterRegistry);
+            notificationRepository, memberQueryService, pinQueryService, notificationEmitterRegistry, profileImageStorage);
 
     @Test
     void 팔로우_알림을_생성하고_실시간으로_푸시한다() {

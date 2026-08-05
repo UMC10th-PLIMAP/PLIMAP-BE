@@ -53,6 +53,11 @@ public enum PlaceSuccessCode implements BaseSuccessCode {
             HttpStatus.OK,
             "PLACE_BOOKMARK_LIST_SUCCESS",
             "저장한 장소 목록 조회에 성공했습니다."
+    ),
+    PLACE_POPULAR_LIST_SUCCESS(
+            HttpStatus.OK,
+            "PLACE_POPULAR_LIST_SUCCESS",
+            "인기 장소 목록 조회에 성공했습니다."
     );
 
     private final HttpStatus status;

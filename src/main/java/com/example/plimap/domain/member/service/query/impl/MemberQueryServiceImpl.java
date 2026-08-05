@@ -12,8 +12,10 @@ import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.vane.badwordfiltering.BadWordFiltering;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     private final MemberRepository memberRepository;
     private final MemberFollowRepository memberFollowRepository;
     private final MemberQueryRepository memberQueryRepository;
+    private final ProfileImageStorage profileImageStorage;
     private final BadWordFiltering badWordFiltering = new BadWordFiltering();
 
     @Override
@@ -88,7 +91,8 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         Member member = getActiveMember(memberId);
         long followerCount = memberFollowRepository.countByIdFollowingId(memberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(memberId);
-        return MemberConverter.toMyProfile(member, followerCount, followingCount);
+        String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
+        return MemberConverter.toMyProfile(member, profileImageUrl, followerCount, followingCount);
     }
 
     @Override
@@ -97,22 +101,40 @@ public class MemberQueryServiceImpl implements MemberQueryService {
             throw new MemberException(MemberErrorCode.CANNOT_VIEW_SELF_PROFILE);
         }
 
-        Member member = getActiveMember(targetMemberId);
+        Member member = getVisibleActiveMember(targetMemberId, viewerId);
         long followerCount = memberFollowRepository.countByIdFollowingId(targetMemberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
         boolean isFollowing = memberFollowRepository.existsById(new MemberFollowId(viewerId, targetMemberId));
-        return MemberConverter.toOtherProfile(member, followerCount, followingCount, isFollowing);
+        String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
+        return MemberConverter.toOtherProfile(member, profileImageUrl, followerCount, followingCount, isFollowing);
     }
 
     @Override
     public Pagination<MemberResDTO.FollowerItem> findFollowers(Long viewerId, Long memberId, String cursor, Integer pageSize) {
-        getActiveMember(memberId);
-        return memberQueryRepository.findFollowersByMemberId(viewerId, memberId, cursor, pageSize);
+        getVisibleActiveMember(memberId, viewerId);
+        Pagination<MemberFollowRow> rows = memberQueryRepository.findFollowersByMemberId(viewerId, memberId, cursor, pageSize);
+
+        List<MemberResDTO.FollowerItem> data = rows.data().stream()
+                .map(row -> MemberConverter.toFollowerItem(row, profileImageStorage.getPublicUrlOrNull(row.profileImageObjectKey())))
+                .toList();
+
+        return MemberConverter.toPagination(data, rows.nextCursor(), rows.hasNext(), rows.pageSize());
     }
 
     @Override
     public Pagination<MemberResDTO.FollowingItem> findFollowing(Long viewerId, Long memberId, String cursor, Integer pageSize) {
-        getActiveMember(memberId);
-        return memberQueryRepository.findFollowingByMemberId(viewerId, memberId, cursor, pageSize);
+        getVisibleActiveMember(memberId, viewerId);
+        Pagination<MemberFollowRow> rows = memberQueryRepository.findFollowingByMemberId(viewerId, memberId, cursor, pageSize);
+
+        List<MemberResDTO.FollowingItem> data = rows.data().stream()
+                .map(row -> MemberConverter.toFollowingItem(row, profileImageStorage.getPublicUrlOrNull(row.profileImageObjectKey())))
+                .toList();
+
+        return MemberConverter.toPagination(data, rows.nextCursor(), rows.hasNext(), rows.pageSize());
+    }
+
+    private Member getVisibleActiveMember(Long targetMemberId, Long viewerId) {
+        return memberQueryRepository.findVisibleActiveMember(targetMemberId, viewerId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 }

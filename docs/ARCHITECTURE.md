@@ -112,6 +112,8 @@ com.example.plimap/
 - 소셜 로그인
 - JWT 발급
 - JWT 재발급
+- Redis에는 Refresh Token 원문 대신 JWT ID(`jti`)를 TTL과 함께 저장
+- 재발급 시 Lua Script로 기존 `jti` 비교와 새 `jti` 교체를 원자적으로 수행
 - 인증 사용자 식별
 
 ### 3. Place

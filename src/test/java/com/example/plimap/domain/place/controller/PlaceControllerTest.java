@@ -23,6 +23,7 @@ import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.enums.MapSelectionStatus;
+import com.example.plimap.domain.place.enums.PopularPlaceScope;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.service.command.PlaceCommandService;
@@ -66,6 +67,7 @@ class PlaceControllerTest {
     private static final String DETAIL_ENDPOINT = "/api/v1/places/1";
     private static final String BOOKMARK_ENDPOINT = "/api/v1/places/1/bookmarks";
     private static final String BOOKMARK_LIST_ENDPOINT = "/api/v1/places/bookmarks";
+    private static final String POPULAR_ENDPOINT = "/api/v1/places/popular";
     private static final String ACCESS_TOKEN = "valid-access-token";
 
     @Autowired
@@ -106,6 +108,114 @@ class PlaceControllerTest {
         when(member.getId()).thenReturn(1L);
         when(member.getRole()).thenReturn(MemberRole.USER);
         when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
+    }
+
+    @Test
+    void 인기_장소_목록_조회에_성공하면_명세_응답을_반환한다() throws Exception {
+        when(placeQueryService.getPopularPlaces(
+                PopularPlaceScope.NEARBY,
+                37.5283,
+                126.9326
+        )).thenReturn(new PlaceResponse.PopularListResult(List.of(
+                new PlaceResponse.PopularListItem(
+                        1L,
+                        "뚝섬한강공원",
+                        50,
+                        30L,
+                        "https://image/1"
+                ),
+                new PlaceResponse.PopularListItem(2L, "이미지 없는 장소", 120, 20L, null)
+        )));
+
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("scope", "NEARBY")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("PLACE_POPULAR_LIST_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("인기 장소 목록 조회에 성공했습니다."))
+                .andExpect(jsonPath("$.result.items[0].placeId").value(1))
+                .andExpect(jsonPath("$.result.items[0].placeName").value("뚝섬한강공원"))
+                .andExpect(jsonPath("$.result.items[0].distanceMeters").value(50))
+                .andExpect(jsonPath("$.result.items[0].pinCount").value(30))
+                .andExpect(jsonPath("$.result.items[0].representativeImageUrl")
+                        .value("https://image/1"))
+                .andExpect(jsonPath("$.result.items[1].representativeImageUrl")
+                        .value(nullValue()));
+
+        verify(placeQueryService).getPopularPlaces(
+                PopularPlaceScope.NEARBY,
+                37.5283,
+                126.9326
+        );
+    }
+
+    @Test
+    void 인기_장소_목록의_scope가_잘못되면_공통_400을_반환한다() throws Exception {
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("scope", "LOCAL")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
+    void 인기_장소_목록의_scope와_좌표가_누락되거나_범위를_벗어나면_공통_400을_반환한다()
+            throws Exception {
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"));
+
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("scope", "NEARBY")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"));
+
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("scope", "GLOBAL")
+                        .param("latitude", "37.5283"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"));
+
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("scope", "GLOBAL")
+                        .param("latitude", "90.1")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"));
+
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("scope", "NEARBY")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "-180.1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"));
+
+        verifyNoInteractions(placeQueryService);
+    }
+
+    @Test
+    void 인기_장소_목록은_미인증_요청에_401을_반환한다() throws Exception {
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .param("scope", "GLOBAL")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("COMMON_401_UNAUTHORIZED"));
     }
 
     @Test

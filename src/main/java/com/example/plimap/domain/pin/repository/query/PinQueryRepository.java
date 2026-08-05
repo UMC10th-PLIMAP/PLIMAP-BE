@@ -18,7 +18,7 @@ public interface PinQueryRepository{
 
     Map<Long, PlacePinInfo> findPinInfosByPlaceIds(List<Long> placeIds);
 
-    Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, String cursor, Integer pageSize, PinRequest.UserLocation request);
+    Pagination<PinResponse.Feed> findFeedListByMemberId(Long memberId, Long viewerId, String cursor, Integer pageSize, PinRequest.UserLocation request);
 
     Pagination<PinResponse.MyPin> findMyPinList(Long memberId, String cursor, Integer pageSize);
 
@@ -26,7 +26,7 @@ public interface PinQueryRepository{
 
     Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId);
 
-    Optional<Pin> getPinPreview(Long pinId);
+    Optional<Pin> getPinPreview(Long pinId, Long viewerId);
 
     boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
 

@@ -9,13 +9,15 @@ public interface MemberCommandService {
 
     Member completeOnboarding(Long memberId, MemberReqDTO.Onboarding request);
 
-    Member updateProfile(Long memberId, MemberReqDTO.UpdateProfile request);
+    MemberResDTO.Profile updateProfile(Long memberId, MemberReqDTO.UpdateProfile request);
 
     MemberResDTO.ProfileImage uploadProfileImage(Long memberId, MultipartFile image);
 
     void follow(Long followerId, Long followingId);
 
     void unfollow(Long followerId, Long followingId);
+
+    void increaseReportCount(Long memberId);
 
     void withdraw(Long memberId);
 }

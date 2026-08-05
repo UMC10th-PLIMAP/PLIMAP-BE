@@ -19,6 +19,7 @@ import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.example.plimap.global.external.storage.ProfileImageStorageException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockMultipartFile;
@@ -32,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -212,16 +214,20 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
-    void 정상_요청이면_프로필을_수정하고_회원을_반환한다() {
+    void 정상_요청이면_프로필을_수정하고_수정된_프로필_정보를_반환한다() {
         Member member = mock(Member.class);
+        when(member.getId()).thenReturn(MEMBER_ID);
         when(member.getNickname()).thenReturn("기존닉네임");
+        when(member.getProfileImageObjectKey()).thenReturn("key");
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
         when(memberQueryService.isNicknameAvailable("새닉네임")).thenReturn(true);
+        when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         MemberReqDTO.UpdateProfile request = updateProfile("새닉네임", "새이름", "새소개");
-        Member result = memberCommandService.updateProfile(MEMBER_ID, request);
+        MemberResDTO.Profile result = memberCommandService.updateProfile(MEMBER_ID, request);
 
-        assertThat(result).isSameAs(member);
+        assertThat(result.id()).isEqualTo(MEMBER_ID);
+        assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
         verify(member).updateProfile("새닉네임", "새이름", "새소개");
         verify(memberRepository).flush();
     }
@@ -397,7 +403,56 @@ class MemberCommandServiceImplTest {
 
         memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
 
-        verify(profileImageStorage).delete("members/1/old.webp");
+        InOrder replacementOrder = inOrder(profileImageStorage, member, memberRepository);
+        replacementOrder.verify(profileImageStorage)
+                .upload(eq("members/1/new.webp"), any(), any());
+        replacementOrder.verify(member).updateProfileImage("members/1/new.webp");
+        replacementOrder.verify(memberRepository).saveAndFlush(member);
+        replacementOrder.verify(profileImageStorage).delete("members/1/old.webp");
+    }
+
+    @Test
+    void 프로필_이미지_DB_저장에_실패하면_업로드한_신규_이미지를_삭제한다() {
+        Member member = mock(Member.class);
+        RuntimeException persistenceFailure = new RuntimeException("DB 저장 실패");
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(profileImageObjectKeyGenerator.generate(MEMBER_ID)).thenReturn("members/1/new.webp");
+        when(memberRepository.saveAndFlush(member)).thenThrow(persistenceFailure);
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, webpFile()))
+                .isSameAs(persistenceFailure);
+
+        InOrder replacementOrder = inOrder(profileImageStorage, member, memberRepository);
+        replacementOrder.verify(profileImageStorage)
+                .upload(eq("members/1/new.webp"), any(), any());
+        replacementOrder.verify(member).updateProfileImage("members/1/new.webp");
+        replacementOrder.verify(memberRepository).saveAndFlush(member);
+        replacementOrder.verify(profileImageStorage).delete("members/1/new.webp");
+        verify(profileImageStorage, never()).delete("members/1/old.webp");
+    }
+
+    @Test
+    void DB_저장과_신규_이미지_삭제가_모두_실패하면_원래_DB_예외를_유지한다() {
+        Member member = mock(Member.class);
+        RuntimeException persistenceFailure = new RuntimeException("DB 저장 실패");
+        ProfileImageStorageException cleanupFailure = new ProfileImageStorageException(
+                "신규 이미지 삭제 실패",
+                new RuntimeException()
+        );
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(profileImageObjectKeyGenerator.generate(MEMBER_ID)).thenReturn("members/1/new.webp");
+        when(memberRepository.saveAndFlush(member)).thenThrow(persistenceFailure);
+        doThrow(cleanupFailure).when(profileImageStorage).delete("members/1/new.webp");
+
+        assertThatThrownBy(() -> memberCommandService.uploadProfileImage(MEMBER_ID, webpFile()))
+                .isSameAs(persistenceFailure)
+                .satisfies(exception ->
+                        assertThat(exception.getSuppressed()).containsExactly(cleanupFailure));
+
+        verify(profileImageStorage).delete("members/1/new.webp");
+        verify(profileImageStorage, never()).delete("members/1/old.webp");
     }
 
     @Test

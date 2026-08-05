@@ -52,6 +52,7 @@ class OAuthSuccessHandlerTest {
         handler.onAuthenticationSuccess(request, response, authentication(true));
 
         verify(csrfToken).getToken();
+        verify(refreshTokenService).save(1L, "refresh-token-jti", Duration.ofDays(14));
         assertThat(response.getHeaders("Set-Cookie"))
                 .anyMatch(header -> header.startsWith("accessToken=access-token-value"));
         assertThat(response.getHeaders("Set-Cookie"))
@@ -150,6 +151,7 @@ class OAuthSuccessHandlerTest {
     private void setUpTokenMocks() {
         when(jwtUtil.createAccessToken(any())).thenReturn("access-token-value");
         when(jwtUtil.createRefreshToken(any())).thenReturn("refresh-token-value");
+        when(jwtUtil.getJti("refresh-token-value")).thenReturn("refresh-token-jti");
         when(jwtUtil.getAccessTokenExpiry()).thenReturn(Duration.ofDays(1));
         when(jwtUtil.getRefreshTokenExpiry()).thenReturn(Duration.ofDays(14));
     }
@@ -175,6 +177,7 @@ class OAuthSuccessHandlerTest {
     private Authentication authentication(boolean isOnboarded) {
         Member member = mock(Member.class);
         when(member.isOnboarded()).thenReturn(isOnboarded);
+        when(member.getId()).thenReturn(1L);
         OAuthMember oAuthMember = new OAuthMember(member, Collections.emptyMap());
         Authentication authentication = mock(Authentication.class);
         when(authentication.getPrincipal()).thenReturn(oAuthMember);

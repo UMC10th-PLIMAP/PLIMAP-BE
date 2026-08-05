@@ -77,7 +77,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
     @Override
     @Transactional
-    public Member updateProfile(Long memberId, MemberReqDTO.UpdateProfile request) {
+    public MemberResDTO.Profile updateProfile(Long memberId, MemberReqDTO.UpdateProfile request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
@@ -104,7 +104,8 @@ public class MemberCommandServiceImpl implements MemberCommandService {
             throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE, e);
         }
 
-        return member;
+        String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
+        return MemberConverter.toProfile(member, profileImageUrl);
     }
 
     @Override
@@ -130,7 +131,12 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         }
 
         member.updateProfileImage(newObjectKey);
-        memberRepository.saveAndFlush(member);
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (RuntimeException persistenceException) {
+            deleteNewProfileImageAfterPersistenceFailure(newObjectKey, persistenceException);
+            throw persistenceException;
+        }
 
         if (oldObjectKey != null) {
             try {
@@ -142,6 +148,22 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
         URI publicUrl = profileImageStorage.getPublicUrl(newObjectKey);
         return MemberConverter.toProfileImage(newObjectKey, publicUrl);
+    }
+
+    private void deleteNewProfileImageAfterPersistenceFailure(
+            String newObjectKey,
+            RuntimeException persistenceException
+    ) {
+        try {
+            profileImageStorage.delete(newObjectKey);
+        } catch (ProfileImageStorageException cleanupException) {
+            persistenceException.addSuppressed(cleanupException);
+            log.warn(
+                    "프로필 이미지 DB 반영 실패 후 신규 이미지 삭제 실패: objectKey={}",
+                    newObjectKey,
+                    cleanupException
+            );
+        }
     }
 
     private void validateImageMetadata(MultipartFile image) {
@@ -226,6 +248,12 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         if (deletedCount == 0) {
             throw new MemberException(MemberErrorCode.NOT_FOLLOWING);
         }
+    }
+
+    @Override
+    @Transactional
+    public void increaseReportCount(Long memberId) {
+        memberRepository.increaseReportCount(memberId);
     }
 
     @Override

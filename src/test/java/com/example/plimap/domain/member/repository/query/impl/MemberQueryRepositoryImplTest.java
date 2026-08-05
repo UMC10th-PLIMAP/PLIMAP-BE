@@ -1,12 +1,15 @@
 package com.example.plimap.domain.member.repository.query.impl;
 
 import com.example.plimap.domain.member.dto.Pagination;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.domain.report.entity.Report;
+import com.example.plimap.domain.report.enums.ReportCategory;
+import com.example.plimap.domain.report.repository.ReportRepository;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,6 +39,9 @@ class MemberQueryRepositoryImplTest {
 
     @Autowired
     private MemberFollowRepository memberFollowRepository;
+
+    @Autowired
+    private ReportRepository reportRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -86,10 +93,10 @@ class MemberQueryRepositoryImplTest {
 
     @Test
     void 팔로워_목록을_최신순으로_조회한다() {
-        Pagination<MemberResDTO.FollowerItem> response =
+        Pagination<MemberFollowRow> response =
                 memberQueryRepository.findFollowersByMemberId(target.getId(), target.getId(), null, 10);
 
-        assertThat(response.data()).extracting(MemberResDTO.FollowerItem::nickname)
+        assertThat(response.data()).extracting(MemberFollowRow::nickname)
                 .containsExactly("팔로워2", "팔로워1");
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();
@@ -97,23 +104,23 @@ class MemberQueryRepositoryImplTest {
 
     @Test
     void 탈퇴한_회원은_팔로워_목록에서_제외된다() {
-        Pagination<MemberResDTO.FollowerItem> response =
+        Pagination<MemberFollowRow> response =
                 memberQueryRepository.findFollowersByMemberId(target.getId(), target.getId(), null, 10);
 
-        assertThat(response.data()).extracting(MemberResDTO.FollowerItem::nickname)
+        assertThat(response.data()).extracting(MemberFollowRow::nickname)
                 .doesNotContain("탈퇴한팔로워");
     }
 
     @Test
     void 팔로워_목록을_커서_기반_페이지네이션으로_조회한다() {
-        Pagination<MemberResDTO.FollowerItem> firstPage =
+        Pagination<MemberFollowRow> firstPage =
                 memberQueryRepository.findFollowersByMemberId(target.getId(), target.getId(), null, 1);
 
         assertThat(firstPage.data()).hasSize(1);
         assertThat(firstPage.hasNext()).isTrue();
         assertThat(firstPage.nextCursor()).isNotNull();
 
-        Pagination<MemberResDTO.FollowerItem> secondPage =
+        Pagination<MemberFollowRow> secondPage =
                 memberQueryRepository.findFollowersByMemberId(target.getId(), target.getId(), firstPage.nextCursor(), 1);
 
         assertThat(secondPage.data()).hasSize(1);
@@ -124,25 +131,54 @@ class MemberQueryRepositoryImplTest {
 
     @Test
     void 팔로워_목록에서_뷰어가_맞팔한_팔로워만_isFollowing이_true다() {
-        Pagination<MemberResDTO.FollowerItem> response =
+        Pagination<MemberFollowRow> response =
                 memberQueryRepository.findFollowersByMemberId(target.getId(), target.getId(), null, 10);
 
         assertThat(response.data())
                 .filteredOn(item -> item.nickname().equals("팔로워1"))
-                .extracting(MemberResDTO.FollowerItem::isFollowing)
+                .extracting(MemberFollowRow::isFollowing)
                 .containsExactly(true);
         assertThat(response.data())
                 .filteredOn(item -> item.nickname().equals("팔로워2"))
-                .extracting(MemberResDTO.FollowerItem::isFollowing)
+                .extracting(MemberFollowRow::isFollowing)
                 .containsExactly(false);
     }
 
     @Test
+    void 팔로워_목록에서_뷰어가_신고한_회원은_제외된다() {
+        reportRepository.save(Report.createMemberReport(outsider, follower1, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberFollowRow> response =
+                memberQueryRepository.findFollowersByMemberId(outsider.getId(), target.getId(), null, 10);
+
+        assertThat(response.data()).extracting(MemberFollowRow::nickname)
+                .doesNotContain("팔로워1")
+                .contains("팔로워2");
+    }
+
+    @Test
+    void 팔로워_목록에서_신고누적_10회_이상인_회원은_전원에게_숨겨진다() {
+        for (int i = 0; i < 10; i++) {
+            memberRepository.increaseReportCount(follower1.getId());
+        }
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberFollowRow> response =
+                memberQueryRepository.findFollowersByMemberId(target.getId(), target.getId(), null, 10);
+
+        assertThat(response.data()).extracting(MemberFollowRow::nickname)
+                .doesNotContain("팔로워1");
+    }
+
+    @Test
     void 팔로잉_목록을_최신순으로_조회한다() {
-        Pagination<MemberResDTO.FollowingItem> response =
+        Pagination<MemberFollowRow> response =
                 memberQueryRepository.findFollowingByMemberId(source.getId(), source.getId(), null, 10);
 
-        assertThat(response.data()).extracting(MemberResDTO.FollowingItem::nickname)
+        assertThat(response.data()).extracting(MemberFollowRow::nickname)
                 .containsExactly("팔로잉2", "팔로잉1");
         assertThat(response.hasNext()).isFalse();
         assertThat(response.nextCursor()).isNull();
@@ -150,23 +186,23 @@ class MemberQueryRepositoryImplTest {
 
     @Test
     void 탈퇴한_회원은_팔로잉_목록에서_제외된다() {
-        Pagination<MemberResDTO.FollowingItem> response =
+        Pagination<MemberFollowRow> response =
                 memberQueryRepository.findFollowingByMemberId(source.getId(), source.getId(), null, 10);
 
-        assertThat(response.data()).extracting(MemberResDTO.FollowingItem::nickname)
+        assertThat(response.data()).extracting(MemberFollowRow::nickname)
                 .doesNotContain("탈퇴한팔로잉");
     }
 
     @Test
     void 팔로잉_목록을_커서_기반_페이지네이션으로_조회한다() {
-        Pagination<MemberResDTO.FollowingItem> firstPage =
+        Pagination<MemberFollowRow> firstPage =
                 memberQueryRepository.findFollowingByMemberId(source.getId(), source.getId(), null, 1);
 
         assertThat(firstPage.data()).hasSize(1);
         assertThat(firstPage.hasNext()).isTrue();
         assertThat(firstPage.nextCursor()).isNotNull();
 
-        Pagination<MemberResDTO.FollowingItem> secondPage =
+        Pagination<MemberFollowRow> secondPage =
                 memberQueryRepository.findFollowingByMemberId(source.getId(), source.getId(), firstPage.nextCursor(), 1);
 
         assertThat(secondPage.data()).hasSize(1);
@@ -177,26 +213,64 @@ class MemberQueryRepositoryImplTest {
 
     @Test
     void 팔로잉_목록을_본인이_조회하면_모든_항목의_isFollowing이_true다() {
-        Pagination<MemberResDTO.FollowingItem> response =
+        Pagination<MemberFollowRow> response =
                 memberQueryRepository.findFollowingByMemberId(source.getId(), source.getId(), null, 10);
 
-        assertThat(response.data()).extracting(MemberResDTO.FollowingItem::isFollowing)
+        assertThat(response.data()).extracting(MemberFollowRow::isFollowing)
                 .containsOnly(true);
     }
 
     @Test
     void 팔로잉_목록을_제3자가_조회하면_본인이_팔로우한_항목만_isFollowing이_true다() {
-        Pagination<MemberResDTO.FollowingItem> response =
+        Pagination<MemberFollowRow> response =
                 memberQueryRepository.findFollowingByMemberId(outsider.getId(), source.getId(), null, 10);
 
         assertThat(response.data())
                 .filteredOn(item -> item.nickname().equals("팔로잉1"))
-                .extracting(MemberResDTO.FollowingItem::isFollowing)
+                .extracting(MemberFollowRow::isFollowing)
                 .containsExactly(true);
         assertThat(response.data())
                 .filteredOn(item -> item.nickname().equals("팔로잉2"))
-                .extracting(MemberResDTO.FollowingItem::isFollowing)
+                .extracting(MemberFollowRow::isFollowing)
                 .containsExactly(false);
+    }
+
+    @Test
+    void 활성이고_신고되지_않은_회원은_조회된다() {
+        Optional<Member> result = memberQueryRepository.findVisibleActiveMember(target.getId(), outsider.getId());
+
+        assertThat(result).isPresent();
+    }
+
+    @Test
+    void 뷰어가_신고한_회원은_조회되지_않는다() {
+        reportRepository.save(Report.createMemberReport(outsider, target, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        entityManager.flush();
+        entityManager.clear();
+
+        Optional<Member> result = memberQueryRepository.findVisibleActiveMember(target.getId(), outsider.getId());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void 신고누적_10회_이상인_회원은_전원에게_조회되지_않는다() {
+        for (int i = 0; i < 10; i++) {
+            memberRepository.increaseReportCount(target.getId());
+        }
+        entityManager.flush();
+        entityManager.clear();
+
+        Optional<Member> result = memberQueryRepository.findVisibleActiveMember(target.getId(), outsider.getId());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void 탈퇴한_회원은_조회되지_않는다() {
+        Optional<Member> result = memberQueryRepository.findVisibleActiveMember(follower3.getId(), outsider.getId());
+
+        assertThat(result).isEmpty();
     }
 
     private Member createMember(String nickname) {

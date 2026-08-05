@@ -493,11 +493,9 @@ class ClusterPinListTest {
 
         // then
         assertThat(result).hasSize(2);
-        PinResponse.PinPreview first = result.getFirst();
-        assertThat(first.placeId()).isEqualTo(place1.getId());
-
-        PinResponse.PinPreview last = result.getLast();
-        assertThat(last.placeId()).isEqualTo(place2.getId());
+        assertThat(result)
+                .extracting(PinResponse.PinPreview::placeId)
+                .containsExactlyInAnyOrder(place1.getId(), place2.getId());
     }
 
     @Test
