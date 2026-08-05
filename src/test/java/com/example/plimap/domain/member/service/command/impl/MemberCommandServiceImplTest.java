@@ -27,6 +27,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.URI;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -611,35 +612,56 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
-    void 벌점_1점을_부여하면_정지_상태로_전환된다() {
+    void 벌점_1점을_부여하면_1일_정지된다() {
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
         when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
 
+        Instant before = Instant.now();
         boolean withdrawn = memberCommandService.increasePenaltyPoint(MEMBER_ID);
+        Instant after = Instant.now();
 
         assertThat(withdrawn).isFalse();
         assertThat(member.getPenaltyPoint()).isEqualTo(1);
         assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
-        assertThat(member.getSuspendedUntil()).isAfter(Instant.now());
+        assertThat(member.getSuspendedUntil()).isBetween(before.plus(1, ChronoUnit.DAYS), after.plus(1, ChronoUnit.DAYS));
         verify(memberRepository).save(member);
         verify(memberFollowRepository, never()).deleteByIdFollowerId(any());
         verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
-    void 이미_1점인_회원이_벌점을_한번_더_받으면_정지일수가_늘어난다() {
+    void 이미_1점인_회원이_벌점을_한번_더_받으면_2점이_되어_3일_정지된다() {
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
         ReflectionTestUtils.setField(member, "penaltyPoint", 1);
         ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
         when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
 
+        Instant before = Instant.now();
         memberCommandService.increasePenaltyPoint(MEMBER_ID);
+        Instant after = Instant.now();
 
         assertThat(member.getPenaltyPoint()).isEqualTo(2);
         assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
-        assertThat(member.getSuspendedUntil()).isAfter(Instant.now().plusSeconds(86_000));
+        assertThat(member.getSuspendedUntil()).isBetween(before.plus(3, ChronoUnit.DAYS), after.plus(3, ChronoUnit.DAYS));
+    }
+
+    @Test
+    void 이미_2점인_회원이_벌점을_한번_더_받으면_3점이_되어_5일_정지된다() {
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        ReflectionTestUtils.setField(member, "penaltyPoint", 2);
+        ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
+        when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        Instant before = Instant.now();
+        memberCommandService.increasePenaltyPoint(MEMBER_ID);
+        Instant after = Instant.now();
+
+        assertThat(member.getPenaltyPoint()).isEqualTo(3);
+        assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
+        assertThat(member.getSuspendedUntil()).isBetween(before.plus(5, ChronoUnit.DAYS), after.plus(5, ChronoUnit.DAYS));
     }
 
     @Test
