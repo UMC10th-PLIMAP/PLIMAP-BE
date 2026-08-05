@@ -47,6 +47,8 @@ public class MemberQueryServiceImpl implements MemberQueryService {
             "방울새", "콩새", "되새", "개똥지빠귀", "파랑새", "후투티", "황조롱이", "붉은배새매", "매사촌", "검은딱새"
     );
     private static final Random RANDOM = new Random();
+    // 조류 이름 x 0~999 조합(최대 40,000개)도 이론상 소진될 수 있으므로 무한 루프 대신 시도 횟수를 제한한다.
+    private static final int FALLBACK_MAX_ATTEMPTS = 100;
 
     private final MemberRepository memberRepository;
     private final MemberFollowRepository memberFollowRepository;
@@ -81,13 +83,16 @@ public class MemberQueryServiceImpl implements MemberQueryService {
                 return candidate;
             }
         }
-        // 후보 풀이 전부 소진된 극단적 상황을 대비한 폴백
-        String fallback;
-        do {
+        // 후보 풀이 전부 소진된 극단적 상황을 대비한 폴백. 시도 횟수를 제한해 폴백 공간마저
+        // 소진됐을 때 무한 루프에 빠지지 않고 명시적인 오류로 실패한다.
+        for (int attempt = 0; attempt < FALLBACK_MAX_ATTEMPTS; attempt++) {
             String base = PENALTY_NICKNAME_POOL.get(RANDOM.nextInt(PENALTY_NICKNAME_POOL.size()));
-            fallback = base + RANDOM.nextInt(1000);
-        } while (!isNicknameAvailable(fallback));
-        return fallback;
+            String fallback = base + RANDOM.nextInt(1000);
+            if (isNicknameAvailable(fallback)) {
+                return fallback;
+            }
+        }
+        throw new MemberException(MemberErrorCode.PENALTY_NICKNAME_POOL_EXHAUSTED);
     }
 
     @Override

@@ -79,6 +79,30 @@ class MemberQueryServiceImplTest {
     }
 
     @Test
+    void 벌점_닉네임_후보_풀에_미사용_값이_있으면_그중_하나를_반환한다() {
+        // given
+        when(memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull(any())).thenReturn(false);
+
+        // when
+        String result = memberQueryService.pickAvailablePenaltyNickname();
+
+        // then
+        assertThat(result).isNotBlank();
+    }
+
+    @Test
+    void 벌점_닉네임_후보_풀과_폴백_공간이_모두_소진되면_예외가_발생한다() {
+        // given
+        when(memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull(any())).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> memberQueryService.pickAvailablePenaltyNickname())
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(MemberErrorCode.PENALTY_NICKNAME_POOL_EXHAUSTED));
+    }
+
+    @Test
     void 닉네임_검증을_모두_통과하면_실패_사유가_없다() {
         when(memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull("예림")).thenReturn(false);
 
