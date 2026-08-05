@@ -26,6 +26,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -607,6 +608,115 @@ class MemberCommandServiceImplTest {
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
 
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void 벌점_1점을_부여하면_정지_상태로_전환된다() {
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        boolean withdrawn = memberCommandService.increasePenaltyPoint(MEMBER_ID);
+
+        assertThat(withdrawn).isFalse();
+        assertThat(member.getPenaltyPoint()).isEqualTo(1);
+        assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
+        assertThat(member.getSuspendedUntil()).isAfter(Instant.now());
+        verify(memberRepository).save(member);
+        verify(memberFollowRepository, never()).deleteByIdFollowerId(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void 이미_1점인_회원이_벌점을_한번_더_받으면_정지일수가_늘어난다() {
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        ReflectionTestUtils.setField(member, "penaltyPoint", 1);
+        ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.increasePenaltyPoint(MEMBER_ID);
+
+        assertThat(member.getPenaltyPoint()).isEqualTo(2);
+        assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
+        assertThat(member.getSuspendedUntil()).isAfter(Instant.now().plusSeconds(86_000));
+    }
+
+    @Test
+    void 벌점_4점째를_받으면_자동_탈퇴로_전환되고_캐스케이드가_실행된다() {
+        Member member = Member.builder().nickname("예림").profileImageObjectKey("old-key").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        ReflectionTestUtils.setField(member, "penaltyPoint", 3);
+        ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        boolean withdrawn = memberCommandService.increasePenaltyPoint(MEMBER_ID);
+
+        assertThat(withdrawn).isTrue();
+        assertThat(member.getPenaltyPoint()).isEqualTo(4);
+        assertThat(member.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
+        assertThat(member.getWithdrawalReason()).isEqualTo(WithdrawalReason.PENALTY);
+        assertThat(member.getSuspendedUntil()).isNull();
+        assertThat(member.getNickname()).isEqualTo("플리맵사용자" + MEMBER_ID);
+        assertThat(member.getWithdrawnNickname()).isEqualTo("예림");
+        assertThat(member.isDeleted()).isTrue();
+
+        verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
+        verify(memberFollowRepository).deleteByIdFollowingId(MEMBER_ID);
+        verify(memberRepository).saveAndFlush(member);
+        verify(eventPublisher).publishEvent(new MemberWithdrawnEvent(MEMBER_ID, "old-key"));
+    }
+
+    @Test
+    void 존재하지_않는_회원에게_벌점을_부여하면_예외가_발생한다() {
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberCommandService.increasePenaltyPoint(MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Test
+    void 정지_해제시_ACTIVE로_복귀하고_정지일이_초기화된다() {
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
+        ReflectionTestUtils.setField(member, "suspendedUntil", Instant.now().minusSeconds(60));
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.liftSuspension(MEMBER_ID);
+
+        assertThat(member.getStatus()).isEqualTo(MemberStatus.ACTIVE);
+        assertThat(member.getSuspendedUntil()).isNull();
+        verify(memberRepository).save(member);
+    }
+
+    @Test
+    void 벌점_프로필_닉네임_치환시_닉네임과_신고누적이_초기화된다() {
+        Member member = Member.builder().nickname("기존닉네임").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        ReflectionTestUtils.setField(member, "reportCount", 12);
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.replacePenalizedNickname(MEMBER_ID, "참새");
+
+        assertThat(member.getNickname()).isEqualTo("참새");
+        assertThat(member.getReportCount()).isEqualTo(0);
+        verify(memberRepository).saveAndFlush(member);
+    }
+
+    @Test
+    void 벌점_미부여시_신고누적만_초기화된다() {
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        ReflectionTestUtils.setField(member, "reportCount", 10);
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.resetReportCount(MEMBER_ID);
+
+        assertThat(member.getReportCount()).isEqualTo(0);
+        assertThat(member.getNickname()).isEqualTo("예림");
+        verify(memberRepository).save(member);
     }
 
     private MockMultipartFile webpFile() {

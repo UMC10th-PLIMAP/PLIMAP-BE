@@ -333,6 +333,42 @@ class PinCommandServiceImplTest {
 
     }
 
+    // 관리자 벌점 처리 테스트
+    @Test
+    void 관리자가_벌점을_부여하면_핀이_삭제되고_신고누적이_초기화된다() {
+        ReflectionTestUtils.setField(pin, "id", 1L);
+        ReflectionTestUtils.setField(pin, "reportCount", 5);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+
+        pinCommandService.penalizePin(1L);
+
+        assertThat(pin.getDeletedAt()).isNotNull();
+        assertThat(pin.getReportCount()).isEqualTo(0);
+    }
+
+    @Test
+    void 관리자가_벌점을_부여하지_않으면_신고누적만_초기화된다() {
+        ReflectionTestUtils.setField(pin, "id", 1L);
+        ReflectionTestUtils.setField(pin, "reportCount", 5);
+
+        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
+                .thenReturn(Optional.of(pin));
+
+        pinCommandService.resetPinReportCount(1L);
+
+        assertThat(pin.getDeletedAt()).isNull();
+        assertThat(pin.getReportCount()).isEqualTo(0);
+    }
+
+    @Test
+    void 회원의_핀을_전부_하드삭제한다() {
+        pinCommandService.hardDeleteAllByMember(1L);
+
+        verify(pinRepository).deleteByMemberId(1L);
+    }
+
     // createPinLike 테스트
     @Test
     void 핀_좋아요_등록시_좋아요_개수가_증가한다() {

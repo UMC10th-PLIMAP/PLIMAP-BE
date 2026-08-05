@@ -13,8 +13,8 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.track.dto.request.TrackRequest;
 import com.example.plimap.domain.track.dto.response.TrackResponse;
 import com.example.plimap.domain.track.exception.TrackErrorCode;
@@ -84,6 +84,9 @@ class TrackControllerTest {
     private MemberRepository memberRepository;
 
     @MockitoBean
+    private MemberCommandService memberCommandService;
+
+    @MockitoBean
     private TokenBlacklistService tokenBlacklistService;
 
     @BeforeEach
@@ -93,7 +96,7 @@ class TrackControllerTest {
         when(jwtUtil.getJti(ACCESS_TOKEN)).thenReturn("test-jti");
         when(tokenBlacklistService.isBlacklisted("test-jti")).thenReturn(false);
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(Member.builder().build()));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(Member.builder().build()));
     }
 
     @Test

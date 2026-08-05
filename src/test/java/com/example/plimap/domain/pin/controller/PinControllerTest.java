@@ -4,8 +4,8 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
@@ -89,6 +89,9 @@ class PinControllerTest {
     MemberRepository memberRepository;
 
     @MockitoBean
+    private MemberCommandService memberCommandService;
+
+    @MockitoBean
     TokenBlacklistService tokenBlacklistService;
 
     @MockitoBean
@@ -110,7 +113,7 @@ class PinControllerTest {
         when(jwtUtil.getJti(ACCESS_TOKEN)).thenReturn("test-jti");
         when(tokenBlacklistService.isBlacklisted("test-jti")).thenReturn(false);
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(Member.builder().build()));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(Member.builder().build()));
     }
 
     @Test
@@ -300,7 +303,7 @@ class PinControllerTest {
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
 
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+        when(memberRepository.findById(1L))
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(MY_FEED_ENDPOINT)
@@ -352,7 +355,7 @@ class PinControllerTest {
         Member viewer = Member.builder().build();
         ReflectionTestUtils.setField(viewer, "id", 1L);
 
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+        when(memberRepository.findById(1L))
                 .thenReturn(Optional.of(viewer));
         PinRequest.UserLocation userLocation = PinRequest.UserLocation.builder()
                 .userLatitude(37.5283)
@@ -390,7 +393,7 @@ class PinControllerTest {
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
 
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+        when(memberRepository.findById(1L))
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(MY_PIN_ENDPOINT)
@@ -433,7 +436,7 @@ class PinControllerTest {
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
 
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+        when(memberRepository.findById(1L))
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(PLACE_TRACK_PIN_ENDPOINT, 1L)
@@ -524,7 +527,7 @@ class PinControllerTest {
     void 친구_최근핀_조회에_성공하면_200을_반환한다() throws Exception {
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+        when(memberRepository.findById(1L))
                 .thenReturn(Optional.of(member));
 
         given(pinQueryService.getFriendRecentPinList(eq(1L), isNull(), eq(10)))

@@ -17,9 +17,10 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.MemberRole;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.enums.MapSelectionStatus;
@@ -95,6 +96,9 @@ class PlaceControllerTest {
     private MemberRepository memberRepository;
 
     @MockitoBean
+    private MemberCommandService memberCommandService;
+
+    @MockitoBean
     private TokenBlacklistService tokenBlacklistService;
 
     @BeforeEach
@@ -107,7 +111,8 @@ class PlaceControllerTest {
         Member member = mock(Member.class);
         when(member.getId()).thenReturn(1L);
         when(member.getRole()).thenReturn(MemberRole.USER);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
+        when(member.getStatus()).thenReturn(MemberStatus.ACTIVE);
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
     }
 
     @Test

@@ -11,7 +11,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 
 @Entity
 @Table(name = "member")
@@ -20,6 +22,11 @@ import java.time.Instant;
 public class Member extends SoftDeleteEntity {
 
     private static final String WITHDRAWN_NICKNAME_PREFIX = "플리맵사용자";
+    private static final Map<Integer, Duration> SUSPENSION_DURATIONS = Map.of(
+            1, Duration.ofDays(1),
+            2, Duration.ofDays(3),
+            3, Duration.ofDays(5)
+    );
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -132,5 +139,47 @@ public class Member extends SoftDeleteEntity {
 
     public String getDisplayNickname() {
         return status == MemberStatus.WITHDRAWN ? WITHDRAWN_NICKNAME_PREFIX : nickname;
+    }
+
+    public void applyPenalty() {
+        this.penaltyPoint += 1;
+        Duration suspension = SUSPENSION_DURATIONS.get(penaltyPoint);
+        if (suspension != null) {
+            this.status = MemberStatus.SUSPENDED;
+            this.suspendedUntil = Instant.now().plus(suspension);
+        } else {
+            withdrawByPenalty();
+        }
+    }
+
+    public void withdrawByPenalty() {
+        this.withdrawnNickname = this.nickname;
+        this.nickname = WITHDRAWN_NICKNAME_PREFIX + this.id;
+        this.introduction = null;
+        this.profileImageObjectKey = null;
+        this.status = MemberStatus.WITHDRAWN;
+        this.withdrawalReason = WithdrawalReason.PENALTY;
+        this.suspendedUntil = null;
+        delete();
+    }
+
+    public void liftSuspension() {
+        this.status = MemberStatus.ACTIVE;
+        this.suspendedUntil = null;
+    }
+
+    public void replaceNicknameForPenalty(String newNickname) {
+        this.nickname = newNickname;
+        this.reportCount = 0;
+    }
+
+    public void resetReportCount() {
+        this.reportCount = 0;
+    }
+
+    public boolean isSuspensionExpired() {
+        return status == MemberStatus.SUSPENDED
+                && suspendedUntil != null
+                && !suspendedUntil.isAfter(Instant.now());
     }
 }

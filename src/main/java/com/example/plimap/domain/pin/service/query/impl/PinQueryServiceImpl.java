@@ -131,4 +131,9 @@ public class PinQueryServiceImpl implements PinQueryService {
         }
         return pinQueryRepository.findRepresentativePlaceTracksByPlaceIds(placeIds);
     }
+
+    @Override
+    public List<Long> findAllPinIdsByMemberId(Long memberId) {
+        return pinRepository.findIdsByMemberId(memberId);
+    }
 }

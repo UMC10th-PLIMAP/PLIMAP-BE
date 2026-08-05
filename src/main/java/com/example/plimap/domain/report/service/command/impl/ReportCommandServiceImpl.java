@@ -12,6 +12,7 @@ import com.example.plimap.domain.report.exception.ReportErrorCode;
 import com.example.plimap.domain.report.exception.ReportException;
 import com.example.plimap.domain.report.repository.ReportRepository;
 import com.example.plimap.domain.report.service.command.ReportCommandService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -83,6 +84,19 @@ public class ReportCommandServiceImpl implements ReportCommandService {
             return true;
         }
         return reporter.getId() != null && reporter.getId().equals(pinAuthor.getId());
+    }
+
+    @Override
+    public void deleteReportsByPinIds(List<Long> pinIds) {
+        if (pinIds.isEmpty()) {
+            return;
+        }
+        reportRepository.deleteAllByReportedPinIdIn(pinIds);
+    }
+
+    @Override
+    public void deleteReportsAgainstMember(Long memberId) {
+        reportRepository.deleteAllByReportedMemberId(memberId);
     }
 
     private void saveReport(Report report, ReportErrorCode duplicateErrorCode) {

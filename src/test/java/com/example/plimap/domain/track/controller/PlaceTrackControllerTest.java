@@ -14,8 +14,8 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
+import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 import com.example.plimap.domain.track.enums.PlaceTrackSort;
@@ -90,6 +90,9 @@ class PlaceTrackControllerTest {
     private MemberRepository memberRepository;
 
     @MockitoBean
+    private MemberCommandService memberCommandService;
+
+    @MockitoBean
     private TokenBlacklistService tokenBlacklistService;
 
     @BeforeEach
@@ -101,7 +104,7 @@ class PlaceTrackControllerTest {
         when(jwtUtil.getMemberId(ACCESS_TOKEN)).thenReturn(1L);
         Member member = Member.builder().nickname("사용자").build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
     }
 
     @Test

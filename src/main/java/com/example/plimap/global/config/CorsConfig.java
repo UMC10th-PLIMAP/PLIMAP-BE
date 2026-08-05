@@ -1,8 +1,11 @@
 package com.example.plimap.global.config;
 
+import com.example.plimap.domain.member.service.command.MemberCommandService;
+import com.example.plimap.global.security.MemberStatusInterceptor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -17,9 +20,11 @@ public class CorsConfig implements WebMvcConfigurer {
     };
 
     private final CorsProperties corsProperties;
+    private final MemberCommandService memberCommandService;
 
-    public CorsConfig(CorsProperties corsProperties) {
+    public CorsConfig(CorsProperties corsProperties, MemberCommandService memberCommandService) {
         this.corsProperties = corsProperties;
+        this.memberCommandService = memberCommandService;
     }
 
     @Override
@@ -29,5 +34,10 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedMethods(ALLOWED_METHODS)
                 .allowedHeaders(ALLOWED_HEADERS)
                 .allowCredentials(true);
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new MemberStatusInterceptor(memberCommandService));
     }
 }
