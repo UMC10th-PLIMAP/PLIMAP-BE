@@ -55,8 +55,8 @@ public class PinQueryServiceImpl implements PinQueryService {
             return PinConverter.toPinAvailability(AvailabilityStatus.OUT_OF_RANGE, false, distanceFromUserMeters, null);
         }
 
-        // 20m 이내에 PIN 존재하는지 검증
-        Double nearestPinDistanceMeters = pinQueryRepository.findNearestActivePinWithin20m(request.latitude(), request.longitude()).orElse(null);
+        // 10m 이내에 PIN 존재하는지 검증
+        Double nearestPinDistanceMeters = pinQueryRepository.findNearestActivePinWithin10m(request.latitude(), request.longitude()).orElse(null);
         if (nearestPinDistanceMeters != null) {
             return PinConverter.toPinAvailability(AvailabilityStatus.TOO_CLOSE_TO_PIN, false, distanceFromUserMeters, nearestPinDistanceMeters);
         }
@@ -110,13 +110,18 @@ public class PinQueryServiceImpl implements PinQueryService {
     public PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request) {
         Point minPoint = geometryFactory.createPoint(new Coordinate(request.southWestLng(), request.southWestLat()));
         Point maxPoint = geometryFactory.createPoint(new Coordinate(request.northEastLng(), request.northEastLat()));
-        if (request.zoomLevel() >= 14) {
+        if (request.zoomLevel() >= 20) {
             // 개별 Pin 조회
             List<PinResponse.PinPreview> pinPreviews = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
             return PinConverter.toClusterAndPin(null, pinPreviews, request.zoomLevel());
         }
 
-        // 클러스터 조회
+        if (request.zoomLevel() >= 14) {
+            // geohash 클러스터 (+개별핀 조회)
+            return pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, request.zoomLevel(), getPrecision(request.zoomLevel()));
+        }
+
+        // 행정구역 기반 클러스터 조회
         List<PinResponse.Cluster> clusters = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, request.zoomLevel());
         return PinConverter.toClusterAndPin(clusters, null, request.zoomLevel());
     }
@@ -142,5 +147,12 @@ public class PinQueryServiceImpl implements PinQueryService {
     @Override
     public List<Long> findPinIdsLikedByMember(Long memberId) {
         return pinLikeRepository.findPinIdsByMemberId(memberId);
+    }
+
+    private Integer getPrecision(Integer zoomLevel) {
+        if (zoomLevel <= 16) {
+            return 7;
+        }
+        return 8;
     }
 }

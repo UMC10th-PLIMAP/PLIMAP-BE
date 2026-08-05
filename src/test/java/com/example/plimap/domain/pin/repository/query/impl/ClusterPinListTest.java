@@ -62,11 +62,11 @@ class ClusterPinListTest {
     EntityManager entityManager;
 
     Pin pin1, pin2, pin3, pin4, pin5, pin6, pin7,
-            pin8, pin9, pin10, pin11, pin12, pin13, pin14;
-    Place place1, place2, place3, place4, place5, place6, place7;
+            pin8, pin9, pin10, pin11, pin12, pin13, pin14, pin15, pin16;
+    Place place1, place2, place3, place4, place5, place6, place7, place8, place9;
     Member member1, member2, member3;
     PlaceTrack placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6,
-            placeTrack7, placeTrack8, placeTrack9, placeTrack10;
+            placeTrack7, placeTrack8, placeTrack9, placeTrack10, placeTrack11, placeTrack12;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Autowired
@@ -154,6 +154,27 @@ class ClusterPinListTest {
                 35.1532
         );
 
+        // geohash 테스트용
+        place8 = createPlace(
+                "서울숲 카페",
+                "...",
+                "서울특별시",
+                "성동구",
+                "성수동",
+                127.03745,
+                37.54470
+        );
+
+        place9 = createPlace(
+                "뚝섬역",
+                "...",
+                "서울특별시",
+                "성동구",
+                "성수동",
+                127.0415,
+                37.5470
+        );
+
         Track track1 = Track.create(
                 "provider",
                 "providerTrackId",
@@ -197,6 +218,8 @@ class ClusterPinListTest {
         placeTrack8 = PlaceTrack.create(place6, track1); // 좋아요 2개
         placeTrack9 = PlaceTrack.create(place7, track1); // 좋아요 0개, 핀 2개
         placeTrack10 = PlaceTrack.create(place7, track2); // 좋아요 1개, 핀 1개
+        placeTrack11 = PlaceTrack.create(place8, track2);
+        placeTrack12 = PlaceTrack.create(place9, track2);
 
         // 성남시 3개
         pin1 = createPin(member1, place1, placeTrack1);
@@ -218,6 +241,8 @@ class ClusterPinListTest {
         pin9 = createPin(member1, place6, placeTrack6);
         pin10 = createPin(member2, place6, placeTrack7);
         pin11 = createPin(member3, place6, placeTrack8);
+        pin15 = createPin(member1, place8, placeTrack11);
+        pin16 = createPin(member1, place9, placeTrack12);
 
         // 부산 2개
         pin12 = createPin(member2, place7, placeTrack9);
@@ -225,11 +250,11 @@ class ClusterPinListTest {
         pin14 = createPin(member1, place7, placeTrack9);
 
         memberRepository.saveAll(List.of(member1, member2, member3));
-        placeRepository.saveAll(List.of(place1, place2, place3, place4, place5, place6, place7));
+        placeRepository.saveAll(List.of(place1, place2, place3, place4, place5, place6, place7, place8, place9));
         trackRepository.saveAll(List.of(track1, track2, track3));
         placeTrackRepository.saveAll(List.of(placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5,
-                placeTrack6, placeTrack7, placeTrack8, placeTrack9, placeTrack10));
-        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10, pin11, pin12, pin13, pin14));
+                placeTrack6, placeTrack7, placeTrack8, placeTrack9, placeTrack10, placeTrack11, placeTrack12));
+        pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10, pin11, pin12, pin13, pin14, pin15, pin16));
 
         placeTrack7.increaseLikeCount();
         placeTrack8.increaseLikeCount();
@@ -260,7 +285,7 @@ class ClusterPinListTest {
         PinResponse.Cluster first = result.getFirst();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION1);
         assertThat(first.regionName()).isEqualTo("경기도");
-        assertThat(first.pinCount()).isEqualTo(5);
+        assertThat(first.placeCount()).isEqualTo(3);
 
         assertThat(first.latitude())
                 .isCloseTo(37.3544, within(1e-6));
@@ -302,7 +327,7 @@ class ClusterPinListTest {
         PinResponse.Cluster first = result.getFirst();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION2);
         assertThat(first.regionName()).isEqualTo("경기도 성남시");
-        assertThat(first.pinCount()).isEqualTo(3);
+        assertThat(first.placeCount()).isEqualTo(2);
 
         assertThat(first.latitude())
                 .isCloseTo(37.38835, within(1e-6));
@@ -353,14 +378,14 @@ class ClusterPinListTest {
                 .findFirst()
                 .orElseThrow();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION3);
-        assertThat(first.pinCount()).isEqualTo(2);
+        assertThat(first.placeCount()).isEqualTo(1);
 
         PinResponse.Cluster last = result.stream()
                 .filter(c -> c.regionName().equals("세종특별자치시 연서면"))
                 .findFirst()
                 .orElseThrow();
         assertThat(last.clusterLevel()).isEqualTo(ClusterLevel.REGION3);
-        assertThat(last.pinCount()).isEqualTo(1);
+        assertThat(last.placeCount()).isEqualTo(1);
     }
 
     @Test
@@ -383,7 +408,7 @@ class ClusterPinListTest {
         PinResponse.Cluster first = result.getFirst();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION3);
         assertThat(first.regionName()).isEqualTo("경기도 성남시 백현동");
-        assertThat(first.pinCount()).isEqualTo(2);
+        assertThat(first.placeCount()).isEqualTo(1);
 
         assertThat(first.latitude())
                 .isCloseTo(37.3947, within(1e-6));
@@ -406,7 +431,54 @@ class ClusterPinListTest {
     }
 
     @Test
-    void 줌레벨이_14이상이면_핀목록을_반환한다() {
+    void 줌레벨이_14이상_16이하이면_precision7의_geohash클러스트링과_개별핀을_반환한다() {
+        // given
+        Point minPoint = geometryFactory.createPoint(
+                new Coordinate(127.0315, 37.5395)
+        );
+
+        Point maxPoint = geometryFactory.createPoint(
+                new Coordinate(127.0429, 37.5497)
+        );
+
+        // when
+        PinResponse.ClusterAndPin result = pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 15, 7);
+        List<PinResponse.Cluster> clusters = result.clusters();
+        List<PinResponse.PinPreview> pinPreviews = result.pins();
+
+        // then
+        assertThat(clusters).hasSize(1);
+        assertThat(clusters.getFirst().placeCount()).isEqualTo(2); // place6, place8
+        assertThat(pinPreviews).hasSize(1); // place9
+        assertThat(pinPreviews.getFirst().placeId()).isEqualTo(place9.getId());
+    }
+
+    @Test
+    void 줌레벨이_17이상_19이하이면_precision8의_geohash클러스트링과_개별핀을_반환한다() {
+        // given
+        Point minPoint = geometryFactory.createPoint(
+                new Coordinate(127.0365, 37.5440)
+        );
+
+        Point maxPoint = geometryFactory.createPoint(
+                new Coordinate(127.0390, 37.5460)
+        );
+
+        // when
+        PinResponse.ClusterAndPin result = pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 18, 8);
+        List<PinResponse.Cluster> clusters = result.clusters();
+        List<PinResponse.PinPreview> pinPreviews = result.pins();
+
+        // then
+        assertThat(clusters).hasSize(0);
+        assertThat(pinPreviews).hasSize(2); // place6, place8
+        assertThat(pinPreviews)
+                .extracting(PinResponse.PinPreview::placeId)
+                .containsExactlyInAnyOrder(place6.getId(), place8.getId());
+    }
+
+    @Test
+    void 줌레벨이_20이상이면_핀목록을_반환한다() {
         // given
         Point minPoint = geometryFactory.createPoint(
                 new Coordinate(127.11, 37.38)
@@ -441,7 +513,7 @@ class ClusterPinListTest {
         List<PinResponse.PinPreview> result = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
 
         // then
-        assertThat(result).hasSize(1);
+        assertThat(result).hasSize(3);
         PinResponse.PinPreview first = result.getFirst();
         assertThat(first.albumImageUrl()).isEqualTo("album");
     }
@@ -460,7 +532,7 @@ class ClusterPinListTest {
         List<PinResponse.PinPreview> result = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
 
         // then
-        assertThat(result).hasSize(1);
+        assertThat(result).hasSize(3);
         PinResponse.PinPreview first = result.getFirst();
         assertThat(first.albumImageUrl()).isEqualTo("album");
 
@@ -474,7 +546,7 @@ class ClusterPinListTest {
         List<PinResponse.PinPreview> result2 = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
 
         // then
-        assertThat(result2).hasSize(1);
+        assertThat(result2).hasSize(3);
         PinResponse.PinPreview first2 = result2.getFirst();
         assertThat(first2.albumImageUrl()).isEqualTo("album2");
     }

@@ -6,5 +6,6 @@ public enum ClusterLevel {
     // 시군구
     REGION2,
     // 읍면동
-    REGION3
+    REGION3,
+    GEOHASH
 }

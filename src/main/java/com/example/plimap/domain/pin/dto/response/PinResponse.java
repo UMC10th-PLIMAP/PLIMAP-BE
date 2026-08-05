@@ -108,9 +108,10 @@ public class PinResponse {
     public record Cluster(
             ClusterLevel clusterLevel,
             String regionName,
+            Integer precision,
             Double latitude,
             Double longitude,
-            Integer pinCount,
+            Integer placeCount,
             Bound bounds
     ) {}
 

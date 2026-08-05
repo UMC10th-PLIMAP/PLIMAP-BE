@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public interface PinQueryRepository{
-    Optional<Double> findNearestActivePinWithin20m(double latitude, double longitude);
+    Optional<Double> findNearestActivePinWithin10m(double latitude, double longitude);
 
     Map<Long, PlacePinInfo> findPinInfosByPlaceIds(List<Long> placeIds);
 
@@ -30,9 +30,13 @@ public interface PinQueryRepository{
 
     boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
 
+    List<PinResponse.PinPreview> findPinPreviewListByPlaceIds(List<Long> placeIds);
+
     List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint);
 
     List<PinResponse.Cluster> findClusterListByViewport(Point minPoint, Point maxPoint, Integer zoomLevel);
+
+    PinResponse.ClusterAndPin findGeohashClusterListByViewport(Point minPoint, Point maxPoint, Integer zoomLevel, Integer precision);
 
     Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize);
 
