@@ -42,4 +42,6 @@ public interface PinQueryService {
     List<Long> findAllPinIdsByMemberId(Long memberId);
 
     List<Long> findPinIdsLikedByMember(Long memberId);
+
+    long countPinsByMemberId(Long memberId);
 }

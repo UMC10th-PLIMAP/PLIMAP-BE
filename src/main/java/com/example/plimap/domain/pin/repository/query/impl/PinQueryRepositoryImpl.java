@@ -820,6 +820,19 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 ));
     }
 
+    @Override
+    public long countPinsByMemberId(Long memberId) {
+        return queryFactory
+                .select(pin.count())
+                .from(pin)
+                .where(
+                        pin.member.id.eq(memberId),
+                        pin.deletedAt.isNull(),
+                        pin.isFeedPublic.isTrue()
+                )
+                .fetchOne();
+    }
+
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {
         if (cursor == null) {
             return new CursorInfo(null, null, null);
