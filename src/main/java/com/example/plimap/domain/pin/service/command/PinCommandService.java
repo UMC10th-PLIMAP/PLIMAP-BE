@@ -19,9 +19,13 @@ public interface PinCommandService {
 
     void decreaseReportCount(Long pinId);
 
+    void decreaseLikeCount(Long pinId);
+
     void penalizePin(Long pinId);
 
     void resetPinReportCount(Long pinId);
 
     void hardDeleteAllByMember(Long memberId);
+
+    void hardDeleteLikesByMember(Long memberId);
 }

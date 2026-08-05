@@ -12,6 +12,7 @@ import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
@@ -37,6 +38,7 @@ public class PinQueryServiceImpl implements PinQueryService {
     private final PinLocationValidator pinLocationValidator;
     private final PinQueryRepository pinQueryRepository;
     private final PinRepository pinRepository;
+    private final PinLikeRepository pinLikeRepository;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override
@@ -135,5 +137,10 @@ public class PinQueryServiceImpl implements PinQueryService {
     @Override
     public List<Long> findAllPinIdsByMemberId(Long memberId) {
         return pinRepository.findIdsByMemberId(memberId);
+    }
+
+    @Override
+    public List<Long> findPinIdsLikedByMember(Long memberId) {
+        return pinLikeRepository.findPinIdsByMemberId(memberId);
     }
 }

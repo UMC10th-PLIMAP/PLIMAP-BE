@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -75,17 +76,21 @@ class AdminCommandServiceImplTest {
 
         verify(pinCommandService).penalizePin(PIN_ID);
         verify(memberCommandService).increasePenaltyPoint(MEMBER_ID);
+        verify(pinCommandService, never()).hardDeleteLikesByMember(any());
+        verify(pinQueryService, never()).findPinIdsLikedByMember(any());
         verifyNoInteractions(notificationCommandService, reportCommandService, placeTrackCommandService);
     }
 
     @Test
     void 핀_신고_벌점_부여로_4점에_도달하면_자동탈퇴_캐스케이드가_실행된다() {
+        Long likedPinId = 99L;
         Member owner = Member.builder().nickname("작성자").build();
         ReflectionTestUtils.setField(owner, "id", MEMBER_ID);
         Pin pin = Pin.builder().member(owner).build();
         when(pinQueryService.getActivePin(PIN_ID)).thenReturn(pin);
         when(memberCommandService.increasePenaltyPoint(MEMBER_ID)).thenReturn(true);
         when(pinQueryService.findAllPinIdsByMemberId(MEMBER_ID)).thenReturn(List.of(PIN_ID));
+        when(pinQueryService.findPinIdsLikedByMember(MEMBER_ID)).thenReturn(List.of(likedPinId));
 
         adminCommandService.reviewPinReport(PIN_ID, true);
 
@@ -94,6 +99,8 @@ class AdminCommandServiceImplTest {
         order.verify(reportCommandService).deleteReportsByPinIds(List.of(PIN_ID));
         order.verify(reportCommandService).deleteReportsAgainstMember(MEMBER_ID);
         order.verify(reportCommandService).deleteReportsByReporter(MEMBER_ID);
+        order.verify(pinCommandService).decreaseLikeCount(likedPinId);
+        order.verify(pinCommandService).hardDeleteLikesByMember(MEMBER_ID);
         order.verify(pinCommandService).hardDeleteAllByMember(MEMBER_ID);
         order.verify(placeTrackCommandService).hardDeleteLikesByMember(MEMBER_ID);
     }
@@ -121,13 +128,17 @@ class AdminCommandServiceImplTest {
 
     @Test
     void 프로필_신고_벌점_부여로_4점에_도달하면_자동탈퇴_캐스케이드가_실행된다() {
+        Long likedPinId = 99L;
         when(memberQueryService.pickAvailablePenaltyNickname()).thenReturn("참새");
         when(memberCommandService.increasePenaltyPoint(MEMBER_ID)).thenReturn(true);
         when(pinQueryService.findAllPinIdsByMemberId(MEMBER_ID)).thenReturn(List.of());
+        when(pinQueryService.findPinIdsLikedByMember(MEMBER_ID)).thenReturn(List.of(likedPinId));
 
         adminCommandService.reviewProfileReport(MEMBER_ID, true);
 
         verify(notificationCommandService).deleteByMemberId(MEMBER_ID);
+        verify(pinCommandService).decreaseLikeCount(likedPinId);
+        verify(pinCommandService).hardDeleteLikesByMember(MEMBER_ID);
         verify(pinCommandService).hardDeleteAllByMember(MEMBER_ID);
         verify(placeTrackCommandService).hardDeleteLikesByMember(MEMBER_ID);
         verify(reportCommandService).deleteReportsAgainstMember(MEMBER_ID);

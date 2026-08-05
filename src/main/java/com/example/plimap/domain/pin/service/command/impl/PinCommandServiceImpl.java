@@ -166,6 +166,11 @@ public class PinCommandServiceImpl implements PinCommandService {
     }
 
     @Override
+    public void decreaseLikeCount(Long pinId) {
+        pinRepository.decreaseLikeCount(pinId);
+    }
+
+    @Override
     public void penalizePin(Long pinId) {
         Pin pin = getPin(pinId);
         pin.penalize();
@@ -180,6 +185,11 @@ public class PinCommandServiceImpl implements PinCommandService {
     @Override
     public void hardDeleteAllByMember(Long memberId) {
         pinRepository.deleteByMemberId(memberId);
+    }
+
+    @Override
+    public void hardDeleteLikesByMember(Long memberId) {
+        pinLikeRepository.deleteByMemberId(memberId);
     }
 
     private Pin getPin(Long id) {

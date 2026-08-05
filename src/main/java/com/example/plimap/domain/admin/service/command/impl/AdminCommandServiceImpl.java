@@ -78,6 +78,14 @@ public class AdminCommandServiceImpl implements AdminCommandService {
         reportCommandService.deleteReportsAgainstMember(memberId);
         reportCommandService.deleteReportsByReporter(memberId);
 
+        // 이 회원이 다른 회원의 핀에 누른 좋아요(pin_like)도 하드삭제해야 한다. Member는 soft
+        // delete라 fk_pin_like_member의 ON DELETE CASCADE가 실행되지 않으므로 직접 지워야 하고,
+        // 삭제 전에 좋아요 대상 핀의 likeCount도 먼저 보정해야 한다(reportCount와 동일한 이유).
+        // 이 회원 소유 핀에 대한 좋아요는 어차피 그 핀이 곧 하드삭제되므로 보정이 무의미하지만,
+        // 걸러내지 않아도 해가 없어 그대로 둔다.
+        pinQueryService.findPinIdsLikedByMember(memberId).forEach(pinCommandService::decreaseLikeCount);
+        pinCommandService.hardDeleteLikesByMember(memberId);
+
         pinCommandService.hardDeleteAllByMember(memberId);
         placeTrackCommandService.hardDeleteLikesByMember(memberId);
 

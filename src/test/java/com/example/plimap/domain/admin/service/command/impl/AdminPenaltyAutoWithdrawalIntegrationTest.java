@@ -13,6 +13,9 @@ import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.enums.NotificationType;
 import com.example.plimap.domain.notification.repository.NotificationRepository;
 import com.example.plimap.domain.pin.entity.Pin;
+import com.example.plimap.domain.pin.entity.PinLike;
+import com.example.plimap.domain.pin.entity.PinLikeId;
+import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.report.entity.Report;
@@ -53,6 +56,9 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
 
     @Autowired
     private PinRepository pinRepository;
+
+    @Autowired
+    private PinLikeRepository pinLikeRepository;
 
     @Autowired
     private ReportRepository reportRepository;
@@ -143,6 +149,35 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         assertThat(reportRepository.existsByReporter_IdAndReportedPin_Id(reporterId, targetPinId)).isFalse();
         Pin reloadedPin = pinRepository.findById(targetPinId).orElseThrow();
         assertThat(reloadedPin.getReportCount()).isEqualTo(9);
+    }
+
+    @Test
+    void 벌점_4점_도달시_다른_회원_핀에_누른_좋아요도_하드삭제하고_대상_좋아요수를_보정한다() {
+        // given
+        Member pinOwner = saveMember("핀주인");
+        Pin targetPin = savePin(pinOwner);
+        ReflectionTestUtils.setField(targetPin, "likeCount", 5);
+
+        Member withdrawingLiker = saveMember("탈퇴예정좋아요");
+        ReflectionTestUtils.setField(withdrawingLiker, "penaltyPoint", 3);
+        ReflectionTestUtils.setField(withdrawingLiker, "status", MemberStatus.SUSPENDED);
+
+        entityManager.persist(PinLike.create(targetPin, withdrawingLiker));
+        entityManager.flush();
+        entityManager.clear();
+
+        Long targetPinId = targetPin.getId();
+        Long likerId = withdrawingLiker.getId();
+
+        // when
+        adminCommandService.reviewProfileReport(likerId, true);
+        entityManager.flush();
+        entityManager.clear();
+
+        // then: 좋아요 row는 삭제되고, 그 좋아요가 반영돼 있던 핀의 likeCount는 5에서 4로 보정된다.
+        assertThat(pinLikeRepository.findById(new PinLikeId(targetPinId, likerId))).isEmpty();
+        Pin reloadedPin = pinRepository.findById(targetPinId).orElseThrow();
+        assertThat(reloadedPin.getLikeCount()).isEqualTo(4);
     }
 
     private Member saveMember(String nickname) {

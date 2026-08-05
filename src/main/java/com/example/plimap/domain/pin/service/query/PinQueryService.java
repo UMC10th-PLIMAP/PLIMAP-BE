@@ -40,4 +40,6 @@ public interface PinQueryService {
     Map<Long, AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds);
 
     List<Long> findAllPinIdsByMemberId(Long memberId);
+
+    List<Long> findPinIdsLikedByMember(Long memberId);
 }

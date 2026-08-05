@@ -9,6 +9,7 @@ import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
@@ -51,6 +52,9 @@ class PinQueryServiceImplTest {
 
     @Mock
     private PinRepository pinRepository;
+
+    @Mock
+    private PinLikeRepository pinLikeRepository;
 
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
@@ -382,5 +386,17 @@ class PinQueryServiceImplTest {
         assertThat(result.get(1L).albumImageUrl()).isEqualTo("url1");
         assertThat(result.get(2L).albumImageUrl()).isEqualTo("url2");
         verify(pinQueryRepository).findRepresentativePlaceTracksByPlaceIds(placeIds);
+    }
+
+    @Test
+    void 회원이_좋아요한_핀_ID_목록을_조회한다() {
+        // given
+        when(pinLikeRepository.findPinIdsByMemberId(1L)).thenReturn(List.of(10L, 20L));
+
+        // when
+        List<Long> result = pinQueryService.findPinIdsLikedByMember(1L);
+
+        // then
+        assertThat(result).containsExactly(10L, 20L);
     }
 }
