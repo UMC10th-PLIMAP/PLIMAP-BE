@@ -141,8 +141,9 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         Member member = getActiveMember(memberId);
         long followerCount = memberFollowRepository.countByIdFollowingId(memberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(memberId);
+        long pinCount = pinQueryService.countPinsByMemberId(memberId);
         String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
-        return MemberConverter.toMyProfile(member, profileImageUrl, followerCount, followingCount);
+        return MemberConverter.toMyProfile(member, profileImageUrl, followerCount, followingCount, pinCount);
     }
 
     @Override
