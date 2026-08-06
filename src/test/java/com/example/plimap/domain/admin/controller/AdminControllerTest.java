@@ -177,7 +177,7 @@ class AdminControllerTest {
     void 회원_목록_조회에_성공하면_200을_반환한다() throws Exception {
         mockAdminAuth();
         AdminResDTO.MemberSummary summary = new AdminResDTO.MemberSummary(
-                2L, "닉네임", "이름", MemberStatus.ACTIVE, null, 0, Instant.now());
+                2L, "닉네임", "이름", MemberStatus.ACTIVE, null, 0, null, Instant.now());
         when(adminQueryService.getMembers("검색어", MemberStatus.ACTIVE, 1, 10))
                 .thenReturn(new AdminResDTO.MemberPage(List.of(summary), 1, 1, 10));
 

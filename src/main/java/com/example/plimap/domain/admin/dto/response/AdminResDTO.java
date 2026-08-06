@@ -58,6 +58,7 @@ public class AdminResDTO {
             MemberStatus status,
             AuthProvider joinProvider,
             int penaltyPoint,
+            Instant suspendedUntil,
             Instant createdAt
     ) {
         public static MemberSummary from(Member member) {
@@ -68,6 +69,7 @@ public class AdminResDTO {
                     member.getStatus(),
                     member.getJoinProvider(),
                     member.getPenaltyPoint(),
+                    member.getSuspendedUntil(),
                     member.getCreatedAt()
             );
         }
