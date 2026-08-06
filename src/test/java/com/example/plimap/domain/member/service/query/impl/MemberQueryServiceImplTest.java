@@ -12,6 +12,7 @@ import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -34,8 +35,9 @@ class MemberQueryServiceImplTest {
     private final MemberFollowRepository memberFollowRepository = mock(MemberFollowRepository.class);
     private final MemberQueryRepository memberQueryRepository = mock(MemberQueryRepository.class);
     private final ProfileImageStorage profileImageStorage = mock(ProfileImageStorage.class);
+    private final PinQueryService pinQueryService = mock(PinQueryService.class);
     private final MemberQueryServiceImpl memberQueryService =
-            new MemberQueryServiceImpl(memberRepository, memberFollowRepository, memberQueryRepository, profileImageStorage);
+            new MemberQueryServiceImpl(memberRepository, memberFollowRepository, memberQueryRepository, profileImageStorage, pinQueryService);
 
     @Test
     void 활성_회원을_조회한다() {
@@ -283,6 +285,7 @@ class MemberQueryServiceImplTest {
         when(memberFollowRepository.countByIdFollowingId(2L)).thenReturn(3L);
         when(memberFollowRepository.countByIdFollowerId(2L)).thenReturn(5L);
         when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
+        when(pinQueryService.countPinsByMemberId(2L)).thenReturn(7L);
         when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
@@ -294,6 +297,23 @@ class MemberQueryServiceImplTest {
         assertThat(result.followerCount()).isEqualTo(3L);
         assertThat(result.followingCount()).isEqualTo(5L);
         assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
+        assertThat(result.pinCount()).isEqualTo(7L);
+    }
+
+    @Test
+    void 다른_회원이_작성한_핀이_없으면_pinCount는_0이다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
+                .thenReturn(Optional.of(member));
+        when(pinQueryService.countPinsByMemberId(2L)).thenReturn(0L);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.pinCount()).isZero();
     }
 
     @Test

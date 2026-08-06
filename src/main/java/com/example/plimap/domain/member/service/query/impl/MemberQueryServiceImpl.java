@@ -15,6 +15,7 @@ import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.vane.badwordfiltering.BadWordFiltering;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +55,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     private final MemberFollowRepository memberFollowRepository;
     private final MemberQueryRepository memberQueryRepository;
     private final ProfileImageStorage profileImageStorage;
+    private final PinQueryService pinQueryService;
     private final BadWordFiltering badWordFiltering = new BadWordFiltering();
 
     @Override
@@ -140,8 +142,9 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         long followerCount = memberFollowRepository.countByIdFollowingId(targetMemberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
         boolean isFollowing = memberFollowRepository.existsById(new MemberFollowId(viewerId, targetMemberId));
+        long pinCount = pinQueryService.countPinsByMemberId(targetMemberId);
         String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
-        return MemberConverter.toOtherProfile(member, profileImageUrl, followerCount, followingCount, isFollowing);
+        return MemberConverter.toOtherProfile(member, profileImageUrl, followerCount, followingCount, isFollowing, pinCount);
     }
 
     @Override
