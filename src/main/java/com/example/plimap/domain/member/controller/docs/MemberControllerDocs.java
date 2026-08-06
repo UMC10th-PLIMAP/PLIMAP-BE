@@ -63,7 +63,7 @@ public interface MemberControllerDocs {
 
     @Operation(
             summary = "다른 사용자 프로필 조회",
-            description = "경로의 memberId에 해당하는 회원의 프로필을 조회합니다. 팔로워/팔로잉 수, 내가 이 회원을 팔로우 중인지 여부, 이 회원이 작성한 핀 개수를 함께 반환합니다. 본인의 memberId로는 조회할 수 없으며, 내 프로필 조회는 `GET /api/v1/members/me`를 이용해야 합니다."
+            description = "경로의 memberId에 해당하는 회원의 프로필을 조회합니다. 팔로워/팔로잉 수, 내가 이 회원을 팔로우 중인지 여부, 이 회원이 작성한 핀 개수(pinCount)를 함께 반환합니다. pinCount는 삭제되지 않고 피드에 공개된 핀만 집계한 값입니다. 본인의 memberId로는 조회할 수 없으며, 내 프로필 조회는 `GET /api/v1/members/me`를 이용해야 합니다."
     )
     ApiResponse<MemberResDTO.OtherProfile> getOtherProfile(AuthMember authMember, Long memberId);
 
