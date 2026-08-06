@@ -20,6 +20,7 @@ import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -43,6 +44,7 @@ public class PinQueryServiceImpl implements PinQueryService {
     private final PinQueryRepository pinQueryRepository;
     private final PinRepository pinRepository;
     private final PinLikeRepository pinLikeRepository;
+    private final ProfileImageStorage profileImageStorage;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override
@@ -102,7 +104,7 @@ public class PinQueryServiceImpl implements PinQueryService {
         Pin pin = pinQueryRepository.getPinPreview(pinId, viewerId)
                 .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
 
-        return PinConverter.toPinPreview(pin);
+        return PinConverter.toPinPreview(pin, profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey()));
     }
 
     @Override

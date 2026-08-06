@@ -22,6 +22,7 @@ import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -275,6 +276,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     private final EntityManager entityManager;
     private final JPAQueryFactory queryFactory;
+    private final ProfileImageStorage profileImageStorage;
 
     QPin pin = QPin.pin;
     QPinLike pinLike = QPinLike.pinLike;
@@ -546,7 +548,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         PinConverter.toPinDetail(
                                 p,
                                 likedPinIdSet.contains(p.getId()),
-                                p.getMember().getId().equals(memberId)
+                                p.getMember().getId().equals(memberId),
+                                profileImageStorage.getPublicUrlOrNull(p.getMember().getProfileImageObjectKey())
                         )
                 )
                 .toList();
@@ -641,7 +644,13 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .fetch();
 
         return pins.stream()
-                .map(PinConverter::toPinPreview)
+                .map(pin ->
+                            PinConverter.toPinPreview(
+                                    pin,
+                                    profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey()
+                                    )
+                            )
+                )
                 .toList();
     }
 
@@ -777,7 +786,11 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .fetch();
 
         List<PinResponse.FriendPin> data = pins.stream()
-                .map(PinConverter::toFriendPin).toList();
+                .map(pin ->
+                        PinConverter.toFriendPin(
+                                pin,
+                                profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey())
+                        )).toList();
 
         if (data.isEmpty()) {
             return PinConverter.toPagination(
