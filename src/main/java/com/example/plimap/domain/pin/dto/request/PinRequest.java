@@ -86,7 +86,6 @@ public class PinRequest {
             @Schema(description = "노래 소개글", example = "i am all you need")
             String introduction,
 
-            @NotNull(message = "tags는 널이어서는 안 됩니다.")
             @Size(min = 1, max = 5, message = "tags는 1개 이상 5개 이하만 입력할 수 있습니다.")
             @Schema(description = "노래 태그 리스트", example = "[\"청량\"]")
             List<String> tags,
