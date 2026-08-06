@@ -59,6 +59,10 @@ public class Report extends BaseEntity {
     @Column(name = "detail", columnDefinition = "TEXT")
     private String detail;
 
+    // 관리자가 반려(벌점 미부여)해도 재신고 방지를 위해 row는 유지하고, 이후 조회에서만 제외되도록 표시한다.
+    @Column(name = "reviewed", nullable = false)
+    private boolean reviewed = false;
+
     @Builder
     private Report(
             Member reporter,

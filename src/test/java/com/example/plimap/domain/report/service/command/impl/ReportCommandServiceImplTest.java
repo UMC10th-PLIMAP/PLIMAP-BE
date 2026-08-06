@@ -305,6 +305,18 @@ class ReportCommandServiceImplTest {
         order.verify(reportRepository).deleteAllByReporterId(reporterId);
     }
 
+    @Test
+    void 핀_신고를_리뷰_완료로_표시한다() {
+        // given
+        Long pinId = 10L;
+
+        // when
+        reportCommandService.markPinReportsReviewed(pinId);
+
+        // then
+        verify(reportRepository).markReviewedByReportedPinId(pinId);
+    }
+
     private Member member(Long id) {
         Member member = mock(Member.class);
         when(member.getId()).thenReturn(id);

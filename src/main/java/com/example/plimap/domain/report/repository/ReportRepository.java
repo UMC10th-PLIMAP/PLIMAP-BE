@@ -35,8 +35,12 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
             select new com.example.plimap.domain.report.dto.ReportReason(
                 r.reportedPin.id, r.category, r.detail, r.reporter.nickname, r.createdAt)
             from Report r
-            where r.reportedPin.id in :pinIds
+            where r.reportedPin.id in :pinIds and r.reviewed = false
             order by r.createdAt desc
             """)
     List<ReportReason> findReasonsByReportedPinIds(List<Long> pinIds);
+
+    @Modifying
+    @Query("update Report r set r.reviewed = true where r.reportedPin.id = :pinId and r.reviewed = false")
+    void markReviewedByReportedPinId(Long pinId);
 }

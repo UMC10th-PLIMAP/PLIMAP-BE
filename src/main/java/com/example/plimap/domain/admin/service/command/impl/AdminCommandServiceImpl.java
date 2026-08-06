@@ -40,6 +40,7 @@ public class AdminCommandServiceImpl implements AdminCommandService {
     public void reviewPinReport(Long pinId, boolean grantPenalty) {
         if (!grantPenalty) {
             pinCommandService.resetPinReportCount(pinId);
+            reportCommandService.markPinReportsReviewed(pinId);
             return;
         }
 

@@ -67,6 +67,7 @@ class AdminCommandServiceImplTest {
         adminCommandService.reviewPinReport(PIN_ID, false);
 
         verify(pinCommandService).resetPinReportCount(PIN_ID);
+        verify(reportCommandService).markPinReportsReviewed(PIN_ID);
         verify(pinQueryService, never()).getActivePin(PIN_ID);
         verifyNoInteractions(memberCommandService);
     }

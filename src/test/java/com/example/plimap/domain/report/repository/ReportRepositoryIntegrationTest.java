@@ -193,6 +193,36 @@ class ReportRepositoryIntegrationTest {
     }
 
     @Test
+    void 반려_후_재신고하면_반려된_사유는_제외하고_새_신고_사유만_조회된다() {
+        // given: 신고 2건이 쌓인 핀을 관리자가 반려(markReviewedByReportedPinId) 처리
+        Member reporter1 = saveMember("신고자1");
+        Member reporter2 = saveMember("신고자2");
+        Pin targetPin = savePin(saveMember("핀작성자"));
+
+        reportRepository.saveAndFlush(
+                Report.createPinReport(reporter1, targetPin, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        reportRepository.saveAndFlush(
+                Report.createPinReport(reporter2, targetPin, ReportCategory.ABUSE_OR_HATE_SPEECH, null));
+        entityManager.flush();
+
+        reportRepository.markReviewedByReportedPinId(targetPin.getId());
+        entityManager.clear();
+
+        // when: 반려 이후 다른 회원이 같은 핀을 재신고
+        Member reporter3 = saveMember("신고자3");
+        reportRepository.saveAndFlush(
+                Report.createPinReport(reporter3, targetPin, ReportCategory.OTHER, "새로운 신고"));
+        entityManager.clear();
+
+        List<ReportReason> result = reportRepository.findReasonsByReportedPinIds(List.of(targetPin.getId()));
+
+        // then: 반려된 과거 사유 2건은 제외되고 재신고 사유만 조회된다
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).reporterNickname()).isEqualTo("신고자3");
+        assertThat(result.get(0).category()).isEqualTo(ReportCategory.OTHER);
+    }
+
+    @Test
     void DB에서도_기타가_아닌_신고의_상세_내용을_허용하지_않는다() {
         // given
         Member reporter = saveMember("신고자");
