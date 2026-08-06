@@ -234,7 +234,7 @@ $frontendRedirectUrl = Get-HttpsUrl `
     -ExpectedOrigin $publicOrigin
 
 if ([string]::IsNullOrWhiteSpace($CorsAllowedOrigins)) {
-    $CorsAllowedOrigins = "$publicOrigin,http://localhost:5173"
+    $CorsAllowedOrigins = "$publicOrigin,https://admin.plimap.kr,http://localhost:5173"
 }
 $corsOrigins = Get-AllowedOrigins `
     -Name "CorsAllowedOrigins" `
@@ -242,7 +242,7 @@ $corsOrigins = Get-AllowedOrigins `
     -RequiredOrigin $publicOrigin
 
 if ([string]::IsNullOrWhiteSpace($OAuthAllowedFrontendOrigins)) {
-    $OAuthAllowedFrontendOrigins = "$publicOrigin,http://localhost:5173"
+    $OAuthAllowedFrontendOrigins = "$publicOrigin,https://admin.plimap.kr,http://localhost:5173"
 }
 $oauthFrontendOrigins = Get-AllowedOrigins `
     -Name "OAuthAllowedFrontendOrigins" `
