@@ -87,6 +87,16 @@ public interface MemberControllerDocs {
     ApiResponse<MemberResDTO.ProfileImage> uploadProfileImage(AuthMember authMember, MultipartFile image);
 
     @Operation(
+            summary = "프로필 이미지 제거",
+            description = """
+                    로그인한 회원 자신의 프로필 이미지를 제거하고 기본(없음) 상태로 되돌립니다.
+
+                    - 이미 프로필 이미지가 없는 상태에서 호출하면 404로 실패합니다.
+                    """
+    )
+    ApiResponse<Void> removeProfileImage(AuthMember authMember);
+
+    @Operation(
             summary = "팔로우",
             description = "경로의 memberId에 해당하는 회원을 팔로우합니다. 자기 자신은 팔로우할 수 없고, 이미 팔로우 중이면 실패합니다."
     )

@@ -519,4 +519,27 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_PROFILE_IMAGE"));
     }
+
+    @Test
+    void 프로필_이미지_제거에_성공하면_200과_PROFILE_IMAGE_REMOVED_응답을_반환한다() throws Exception {
+        mockMvc.perform(delete("/api/v1/members/me/profile-image")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_200_PROFILE_IMAGE_REMOVED"));
+
+        verify(memberCommandService).removeProfileImage(AUTH_MEMBER_ID);
+    }
+
+    @Test
+    void 이미_프로필_이미지가_없는_상태에서_제거를_요청하면_404를_반환한다() throws Exception {
+        doThrow(new MemberException(MemberErrorCode.PROFILE_IMAGE_NOT_FOUND))
+                .when(memberCommandService).removeProfileImage(AUTH_MEMBER_ID);
+
+        mockMvc.perform(delete("/api/v1/members/me/profile-image")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("MEMBER_404_PROFILE_IMAGE_NOT_FOUND"));
+    }
 }

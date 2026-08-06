@@ -151,6 +151,27 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         return MemberConverter.toProfileImage(newObjectKey, publicUrl);
     }
 
+    @Override
+    public void removeProfileImage(Long memberId) {
+        // uploadProfileImage와 동일한 이유로 @Transactional을 붙이지 않는다: 스토리지 삭제는
+        // DB 갱신이 실제로 커밋된 뒤에만 실행되어야 커밋 실패 시 파일이 먼저 사라지는 불일치를 막는다.
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+        String oldObjectKey = member.getProfileImageObjectKey();
+        if (oldObjectKey == null) {
+            throw new MemberException(MemberErrorCode.PROFILE_IMAGE_NOT_FOUND);
+        }
+
+        member.removeProfileImage();
+        memberRepository.saveAndFlush(member);
+
+        try {
+            profileImageStorage.delete(oldObjectKey);
+        } catch (ProfileImageStorageException e) {
+            log.warn("프로필 이미지 삭제 실패: objectKey={}", oldObjectKey, e);
+        }
+    }
+
     private void deleteNewProfileImageAfterPersistenceFailure(
             String newObjectKey,
             RuntimeException persistenceException
