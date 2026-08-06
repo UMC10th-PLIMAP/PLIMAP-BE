@@ -19,6 +19,8 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.vane.badwordfiltering.BadWordFiltering;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,6 +64,17 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     public Member getActiveMember(Long memberId) {
         return memberRepository.findByIdAndStatusAndDeletedAtIsNull(memberId, MemberStatus.ACTIVE)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Override
+    public Member getMemberById(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Override
+    public Page<Member> searchMembers(String query, MemberStatus status, Pageable pageable) {
+        return memberQueryRepository.searchMembers(query, status, pageable);
     }
 
     @Override

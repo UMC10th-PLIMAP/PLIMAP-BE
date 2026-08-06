@@ -353,4 +353,18 @@ public class MemberCommandServiceImpl implements MemberCommandService {
         member.resetReportCount();
         memberRepository.save(member);
     }
+
+    @Override
+    @Transactional
+    public void regenerateNickname(Long memberId, String newNickname) {
+        Member member = memberRepository.findByIdAndDeletedAtIsNull(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        try {
+            member.regenerateNickname(newNickname);
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            throw new MemberException(MemberErrorCode.NICKNAME_DUPLICATE, e);
+        }
+    }
 }

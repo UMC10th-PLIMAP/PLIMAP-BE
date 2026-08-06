@@ -3,12 +3,17 @@ package com.example.plimap.domain.admin.controller.docs;
 import com.example.plimap.domain.admin.dto.request.AdminReqDTO;
 import com.example.plimap.domain.admin.dto.response.AdminResDTO;
 import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.pin.enums.PinReportFilter;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Tag(name = "Admin", description = "관리자 API")
 public interface AdminControllerDocs {
@@ -53,4 +58,50 @@ public interface AdminControllerDocs {
             @PathVariable Long memberId,
             @RequestBody @Valid AdminReqDTO.PenaltyDecision request
     );
+
+    @Operation(
+            summary = "신고 누적 게시물 목록 조회",
+            description = """
+                    신고가 1건 이상 누적된 PIN을 신고 누적 수(reportCount) 내림차순으로 조회합니다.
+                    각 항목에는 신고 사유(카테고리/상세/신고자/신고일) 목록이 함께 포함됩니다.
+
+                    - filter=ALL: 신고가 1건 이상인 모든 PIN
+                    - filter=AUTO_HIDDEN: 신고 누적 수가 10회 이상이라 피드에서 자동숨김된 PIN
+                    - filter=BELOW_THRESHOLD: 신고 누적 수가 10회 미만인 PIN
+                    """
+    )
+    ApiResponse<AdminResDTO.ReportedPinPage> getReportedPins(
+            @RequestParam(defaultValue = "ALL") PinReportFilter filter,
+            @Min(1) @RequestParam(defaultValue = "1") Integer page,
+            @Min(1) @Max(100) @RequestParam(defaultValue = "10") Integer pageSize
+    );
+
+    @Operation(
+            summary = "회원 검색/목록 조회",
+            description = """
+                    닉네임/이름/이메일로 회원을 검색하고, 상태(status)로 필터링해 조회합니다.
+                    query와 status는 모두 선택값이며, 지정하지 않으면 전체 회원을 대상으로 합니다.
+                    """
+    )
+    ApiResponse<AdminResDTO.MemberPage> getMembers(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) MemberStatus status,
+            @Min(1) @RequestParam(defaultValue = "1") Integer page,
+            @Min(1) @Max(100) @RequestParam(defaultValue = "10") Integer pageSize
+    );
+
+    @Operation(
+            summary = "회원 상세 조회",
+            description = "경로의 memberId에 해당하는 회원의 상세 정보(상태, 역할, 벌점, 정지 해제일, 탈퇴 사유 등)를 조회합니다. 탈퇴/정지 회원도 조회할 수 있습니다."
+    )
+    ApiResponse<AdminResDTO.MemberDetail> getMemberDetail(@PathVariable Long memberId);
+
+    @Operation(
+            summary = "회원 닉네임 강제 재생성(벌점 없이)",
+            description = """
+                    벌점 부여 없이 회원의 닉네임만 후보 풀에서 미사용 값으로 강제 치환합니다.
+                    신고 검토(POST /members/{memberId}/penalty)와 달리 penaltyPoint와 reportCount는 변경되지 않습니다.
+                    """
+    )
+    ApiResponse<AdminResDTO.MemberDetail> regenerateMemberNickname(@PathVariable Long memberId);
 }

@@ -1,6 +1,9 @@
 package com.example.plimap.domain.admin.service.command.impl;
 
+import com.example.plimap.domain.admin.dto.response.AdminResDTO;
 import com.example.plimap.domain.admin.service.command.AdminCommandService;
+import com.example.plimap.domain.auth.service.query.AuthQueryService;
+import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.notification.service.command.NotificationCommandService;
@@ -31,6 +34,7 @@ public class AdminCommandServiceImpl implements AdminCommandService {
     private final NotificationCommandService notificationCommandService;
     private final ReportCommandService reportCommandService;
     private final PlaceTrackCommandService placeTrackCommandService;
+    private final AuthQueryService authQueryService;
 
     @Override
     public void reviewPinReport(Long pinId, boolean grantPenalty) {
@@ -61,6 +65,16 @@ public class AdminCommandServiceImpl implements AdminCommandService {
         if (memberCommandService.increasePenaltyPoint(memberId)) {
             cascadeAutoWithdrawal(memberId);
         }
+    }
+
+    @Override
+    public AdminResDTO.MemberDetail regenerateMemberNickname(Long memberId) {
+        String newNickname = memberQueryService.pickAvailablePenaltyNickname();
+        memberCommandService.regenerateNickname(memberId, newNickname);
+
+        Member updated = memberQueryService.getMemberById(memberId);
+        String email = authQueryService.findEmailByMemberId(memberId).orElse(null);
+        return AdminResDTO.MemberDetail.from(updated, email);
     }
 
     private void cascadeAutoWithdrawal(Long memberId) {

@@ -10,6 +10,7 @@ import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.QPin;
 import com.example.plimap.domain.pin.entity.QPinLike;
 import com.example.plimap.domain.pin.enums.ClusterLevel;
+import com.example.plimap.domain.pin.enums.PinReportFilter;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
@@ -22,12 +23,16 @@ import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Point;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -831,6 +836,52 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pin.isFeedPublic.isTrue()
                 )
                 .fetchOne();
+    }
+
+    @Override
+    public Page<ReportedPinInfo> findReportedPins(PinReportFilter filter, Pageable pageable) {
+        BooleanExpression condition = reportFilterCondition(filter);
+
+        List<ReportedPinInfo> content = queryFactory
+                .select(Projections.constructor(
+                        ReportedPinInfo.class,
+                        pin.id,
+                        track.title,
+                        place.name,
+                        member.id,
+                        member.nickname,
+                        member.status,
+                        pin.reportCount,
+                        pin.createdAt
+                ))
+                .from(pin)
+                .join(pin.member, member)
+                .join(pin.place, place)
+                .join(pin.placeTrack, placeTrack)
+                .join(placeTrack.track, track)
+                .where(pin.deletedAt.isNull(), condition)
+                .orderBy(pin.reportCount.desc(), pin.id.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        long total = Optional.ofNullable(
+                queryFactory
+                        .select(pin.count())
+                        .from(pin)
+                        .where(pin.deletedAt.isNull(), condition)
+                        .fetchOne()
+        ).orElse(0L);
+
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    private BooleanExpression reportFilterCondition(PinReportFilter filter) {
+        return switch (filter) {
+            case ALL -> pin.reportCount.gt(0);
+            case AUTO_HIDDEN -> pin.reportCount.goe(REPORT_HIDE_THRESHOLD);
+            case BELOW_THRESHOLD -> pin.reportCount.gt(0).and(pin.reportCount.lt(REPORT_HIDE_THRESHOLD));
+        };
     }
 
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {

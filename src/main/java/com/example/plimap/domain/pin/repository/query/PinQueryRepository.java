@@ -2,12 +2,16 @@ package com.example.plimap.domain.pin.repository.query;
 
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.ReportedPinInfo;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
+import com.example.plimap.domain.pin.enums.PinReportFilter;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import org.locationtech.jts.geom.Point;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
@@ -43,4 +47,6 @@ public interface PinQueryRepository{
     Map<Long, AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds);
 
     long countPinsByMemberId(Long memberId);
+
+    Page<ReportedPinInfo> findReportedPins(PinReportFilter filter, Pageable pageable);
 }

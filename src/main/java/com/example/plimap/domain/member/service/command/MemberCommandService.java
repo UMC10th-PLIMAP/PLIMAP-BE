@@ -30,4 +30,6 @@ public interface MemberCommandService {
     void replacePenalizedNickname(Long memberId, String newNickname);
 
     void resetReportCount(Long memberId);
+
+    void regenerateNickname(Long memberId, String newNickname);
 }

@@ -1,5 +1,6 @@
 package com.example.plimap.domain.report.repository;
 
+import com.example.plimap.domain.report.dto.ReportReason;
 import com.example.plimap.domain.report.entity.Report;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -29,4 +30,13 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
 
     @Query("select r.reportedMember.id from Report r where r.reporter.id = :memberId and r.reportedMember.id is not null")
     List<Long> findReportedMemberIdsByReporterId(Long memberId);
+
+    @Query("""
+            select new com.example.plimap.domain.report.dto.ReportReason(
+                r.reportedPin.id, r.category, r.detail, r.reporter.nickname, r.createdAt)
+            from Report r
+            where r.reportedPin.id in :pinIds
+            order by r.createdAt desc
+            """)
+    List<ReportReason> findReasonsByReportedPinIds(List<Long> pinIds);
 }

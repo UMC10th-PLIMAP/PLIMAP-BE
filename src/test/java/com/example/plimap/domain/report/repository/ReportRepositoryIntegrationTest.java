@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.report.dto.ReportReason;
 import com.example.plimap.domain.report.entity.Report;
 import com.example.plimap.domain.report.enums.ReportCategory;
 import com.example.plimap.domain.track.entity.PlaceTrack;
@@ -166,6 +167,32 @@ class ReportRepositoryIntegrationTest {
     }
 
     @Test
+    void findReasonsByReportedPinIds는_핀별_신고_사유를_최신순으로_반환한다() {
+        // given
+        Member reporter1 = saveMember("신고자1");
+        Member reporter2 = saveMember("신고자2");
+        Pin targetPin = savePin(saveMember("핀작성자"));
+        Pin otherPin = savePin(saveMember("다른핀작성자"));
+
+        reportRepository.saveAndFlush(
+                Report.createPinReport(reporter1, targetPin, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        reportRepository.saveAndFlush(
+                Report.createPinReport(reporter2, targetPin, ReportCategory.OTHER, "상세"));
+        reportRepository.saveAndFlush(
+                Report.createPinReport(reporter1, otherPin, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null));
+        entityManager.clear();
+
+        // when
+        List<ReportReason> result = reportRepository.findReasonsByReportedPinIds(List.of(targetPin.getId()));
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(ReportReason::pinId).containsOnly(targetPin.getId());
+        assertThat(result).extracting(ReportReason::category)
+                .containsExactlyInAnyOrder(ReportCategory.OBSCENE_OR_HARMFUL, ReportCategory.OTHER);
+    }
+
+    @Test
     void DB에서도_기타가_아닌_신고의_상세_내용을_허용하지_않는다() {
         // given
         Member reporter = saveMember("신고자");
@@ -199,7 +226,7 @@ class ReportRepositoryIntegrationTest {
         );
         Track track = Track.create(
                 "YOUTUBE",
-                "report-test-track",
+                "report-test-track-" + java.util.UUID.randomUUID(),
                 "테스트 곡",
                 "테스트 가수",
                 null,
