@@ -22,6 +22,7 @@ import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.dto.request.TrackCommand;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.service.command.TrackCommandService;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -45,6 +46,7 @@ public class PinCommandServiceImpl implements PinCommandService {
     private final TagQueryService tagQueryService;
     private final PinLikeRepository pinLikeRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final ProfileImageStorage profileImageStorage;
 
     @Override
     public PinResponse.Summary createPin(Member currentMember, PinRequest.Create request) {
@@ -70,7 +72,9 @@ public class PinCommandServiceImpl implements PinCommandService {
 
         eventPublisher.publishEvent(new PinCreatedEvent(pin.getId(), currentMember.getId()));
 
-        return PinConverter.toSummary(currentMember, pin, placeTrack.getTrack(), place.getId());
+        String profileImageUrl = profileImageStorage.getPublicUrlOrNull(currentMember.getProfileImageObjectKey());
+
+        return PinConverter.toSummary(currentMember, pin, place.getId(), profileImageUrl);
     }
 
     private List<PinTag> toPinTags(List<String> stringTags, Pin pin) {
