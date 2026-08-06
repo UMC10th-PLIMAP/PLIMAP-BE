@@ -57,7 +57,7 @@ public interface MemberControllerDocs {
 
     @Operation(
             summary = "내 프로필 조회",
-            description = "로그인한 회원 자신의 프로필 정보를 조회합니다. 팔로워/팔로잉 수를 함께 반환합니다."
+            description = "로그인한 회원 자신의 프로필 정보를 조회합니다. 팔로워/팔로잉 수, 내가 작성한 핀 개수(pinCount)를 함께 반환합니다. pinCount는 삭제되지 않고 피드에 공개된 핀만 집계한 값입니다."
     )
     ApiResponse<MemberResDTO.MyProfile> getMyProfile(AuthMember authMember);
 

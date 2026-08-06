@@ -120,7 +120,7 @@ class MemberControllerTest {
     @Test
     void 내_프로필_조회에_성공하면_200과_MY_PROFILE_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.MyProfile profile = new MemberResDTO.MyProfile(
-                AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"));
+                AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L);
         when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
 
         mockMvc.perform(get("/api/v1/members/me")
@@ -130,7 +130,8 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("MEMBER_200_MY_PROFILE_FETCHED"))
                 .andExpect(jsonPath("$.result.nickname").value("예림"))
                 .andExpect(jsonPath("$.result.followerCount").value(3))
-                .andExpect(jsonPath("$.result.followingCount").value(5));
+                .andExpect(jsonPath("$.result.followingCount").value(5))
+                .andExpect(jsonPath("$.result.pinCount").value(7));
     }
 
     @Test

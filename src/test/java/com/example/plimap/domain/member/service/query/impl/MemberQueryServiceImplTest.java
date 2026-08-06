@@ -232,6 +232,7 @@ class MemberQueryServiceImplTest {
                 .thenReturn(Optional.of(member));
         when(memberFollowRepository.countByIdFollowingId(1L)).thenReturn(3L);
         when(memberFollowRepository.countByIdFollowerId(1L)).thenReturn(5L);
+        when(pinQueryService.countPinsByMemberId(1L)).thenReturn(9L);
         when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
@@ -243,6 +244,7 @@ class MemberQueryServiceImplTest {
         assertThat(result.followerCount()).isEqualTo(3L);
         assertThat(result.followingCount()).isEqualTo(5L);
         assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
+        assertThat(result.pinCount()).isEqualTo(9L);
     }
 
     @Test
@@ -261,6 +263,22 @@ class MemberQueryServiceImplTest {
         // then
         assertThat(result.followerCount()).isZero();
         assertThat(result.followingCount()).isZero();
+    }
+
+    @Test
+    void 작성한_핀이_없으면_내_프로필의_pinCount는_0이다() {
+        // given
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
+                .thenReturn(Optional.of(member));
+        when(pinQueryService.countPinsByMemberId(1L)).thenReturn(0L);
+
+        // when
+        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+
+        // then
+        assertThat(result.pinCount()).isZero();
     }
 
     @Test

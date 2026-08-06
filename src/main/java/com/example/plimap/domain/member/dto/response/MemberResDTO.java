@@ -48,7 +48,8 @@ public class MemberResDTO {
             String profileImageUrl,
             long followerCount,
             long followingCount,
-            Instant onboardingCompletedAt
+            Instant onboardingCompletedAt,
+            long pinCount
     ) {
     }
 
