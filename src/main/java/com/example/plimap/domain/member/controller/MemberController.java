@@ -85,6 +85,13 @@ public class MemberController implements MemberControllerDocs {
     }
 
     @Override
+    @DeleteMapping("/me/profile-image")
+    public ApiResponse<Void> removeProfileImage(@AuthenticationPrincipal AuthMember authMember) {
+        memberCommandService.removeProfileImage(authMember.getMember().getId());
+        return ApiResponse.success(MemberSuccessCode.PROFILE_IMAGE_REMOVED, null);
+    }
+
+    @Override
     @PostMapping("/{memberId}/follow")
     public ApiResponse<Void> follow(
             @AuthenticationPrincipal AuthMember authMember,

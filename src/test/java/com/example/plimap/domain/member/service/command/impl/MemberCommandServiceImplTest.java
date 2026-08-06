@@ -489,6 +489,58 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
+    void 프로필_이미지를_제거한다() {
+        Member member = mock(Member.class);
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.removeProfileImage(MEMBER_ID);
+
+        InOrder order = inOrder(member, memberRepository, profileImageStorage);
+        order.verify(member).removeProfileImage();
+        order.verify(memberRepository).saveAndFlush(member);
+        order.verify(profileImageStorage).delete("members/1/old.webp");
+    }
+
+    @Test
+    void 이미_프로필_이미지가_없으면_제거_요청은_예외가_발생한다() {
+        Member member = mock(Member.class);
+        when(member.getProfileImageObjectKey()).thenReturn(null);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        assertThatThrownBy(() -> memberCommandService.removeProfileImage(MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.PROFILE_IMAGE_NOT_FOUND));
+
+        verify(member, never()).removeProfileImage();
+        verify(memberRepository, never()).saveAndFlush(any());
+        verify(profileImageStorage, never()).delete(any());
+    }
+
+    @Test
+    void 존재하지_않는_회원의_프로필_이미지는_제거할_수_없다() {
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberCommandService.removeProfileImage(MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Test
+    void 스토리지_삭제가_실패해도_프로필_이미지_제거_자체는_성공한다() {
+        Member member = mock(Member.class);
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        doThrow(new ProfileImageStorageException("실패", new RuntimeException()))
+                .when(profileImageStorage).delete("members/1/old.webp");
+
+        memberCommandService.removeProfileImage(MEMBER_ID);
+
+        verify(member).removeProfileImage();
+        verify(memberRepository).saveAndFlush(member);
+    }
+
+    @Test
     void 빈_파일이면_스토리지를_호출하지_않고_예외가_발생한다() {
         MockMultipartFile emptyFile = new MockMultipartFile("image", "empty.webp", "image/webp", new byte[0]);
 
