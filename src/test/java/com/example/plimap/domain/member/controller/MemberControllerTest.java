@@ -136,7 +136,7 @@ class MemberControllerTest {
     @Test
     void 다른_사용자_프로필_조회에_성공하면_200과_OTHER_PROFILE_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.OtherProfile profile = new MemberResDTO.OtherProfile(
-                TARGET_MEMBER_ID, "상대방", "김상대", "소개", "key", 3L, 5L, true);
+                TARGET_MEMBER_ID, "상대방", "김상대", "소개", "key", 3L, 5L, true, 7L);
         when(memberQueryService.getOtherProfile(AUTH_MEMBER_ID, TARGET_MEMBER_ID)).thenReturn(profile);
 
         mockMvc.perform(get("/api/v1/members/{memberId}", TARGET_MEMBER_ID)
@@ -145,7 +145,8 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("MEMBER_200_OTHER_PROFILE_FETCHED"))
                 .andExpect(jsonPath("$.result.nickname").value("상대방"))
-                .andExpect(jsonPath("$.result.isFollowing").value(true));
+                .andExpect(jsonPath("$.result.isFollowing").value(true))
+                .andExpect(jsonPath("$.result.pinCount").value(7));
     }
 
     @Test

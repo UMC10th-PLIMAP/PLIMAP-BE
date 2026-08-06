@@ -60,7 +60,8 @@ public class MemberResDTO {
             String profileImageUrl,
             long followerCount,
             long followingCount,
-            boolean isFollowing
+            boolean isFollowing,
+            long pinCount
     ) {
     }
 
