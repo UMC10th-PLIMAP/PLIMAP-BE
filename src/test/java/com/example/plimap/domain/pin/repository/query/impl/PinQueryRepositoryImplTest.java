@@ -22,6 +22,7 @@ import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
 import com.example.plimap.domain.track.repository.TrackRepository;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import jakarta.persistence.EntityManager;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -75,6 +76,9 @@ class PinQueryRepositoryImplTest {
 
     @Autowired
     private ReportRepository reportRepository;
+
+    @Autowired
+    private ProfileImageStorage profileImageStorage;
 
     @Autowired
     EntityManager entityManager;
@@ -650,7 +654,7 @@ class PinQueryRepositoryImplTest {
         assertThat(result.data().size()).isEqualTo(4);
         assertThat(first.pinId()).isEqualTo(pin9.getId());
         assertThat(first.writerNickname()).isEqualTo(deletedMember.getNickname());
-        assertThat(first.writerProfileImage()).isEqualTo(deletedMember.getProfileImageObjectKey());
+        assertThat(first.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(deletedMember.getProfileImageObjectKey()));
         assertThat(first.placeName()).isEqualTo(pin9.getPlace().getName());
         assertThat(first.latitude()).isEqualTo(pin9.getPlace().getLocation().getY());
         assertThat(first.longitude()).isEqualTo(pin9.getPlace().getLocation().getX());
@@ -666,7 +670,7 @@ class PinQueryRepositoryImplTest {
         assertThat(result.data().size()).isEqualTo(2);
         assertThat(first.pinId()).isEqualTo(pin8.getId());
         assertThat(first.writerNickname()).isEqualTo(member3.getNickname());
-        assertThat(first.writerProfileImage()).isEqualTo(member3.getProfileImageObjectKey());
+        assertThat(first.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(member3.getProfileImageObjectKey()));
         assertThat(first.placeName()).isEqualTo(pin8.getPlace().getName());
         assertThat(first.latitude()).isEqualTo(pin8.getPlace().getLocation().getY());
         assertThat(first.longitude()).isEqualTo(pin8.getPlace().getLocation().getX());
@@ -691,7 +695,7 @@ class PinQueryRepositoryImplTest {
         assertThat(result.data().size()).isEqualTo(3);
         assertThat(last.pinId()).isEqualTo(pin3.getId());
         assertThat(last.writerNickname()).isEqualTo(member2.getNickname());
-        assertThat(last.writerProfileImage()).isEqualTo(member2.getProfileImageObjectKey());
+        assertThat(last.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(member2.getProfileImageObjectKey()));
         assertThat(last.placeName()).isEqualTo(pin3.getPlace().getName());
         assertThat(last.latitude()).isEqualTo(pin3.getPlace().getLocation().getY());
         assertThat(last.longitude()).isEqualTo(pin3.getPlace().getLocation().getX());
@@ -716,7 +720,7 @@ class PinQueryRepositoryImplTest {
                 .name(name)
                 .nickname(nickname)
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.webp")
                 .build();
     }
 

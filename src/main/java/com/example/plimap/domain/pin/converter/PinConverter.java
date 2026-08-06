@@ -177,8 +177,8 @@ public class PinConverter {
                 .placeName(pin.getPlace().getName())
                 .latitude(pin.getPlace().getLocation().getY())
                 .longitude(pin.getPlace().getLocation().getX())
-                .writerNickname(writerProfileImage)
-                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .writerNickname(pin.getMember().getNickname())
+                .writerProfileImage(writerProfileImage)
                 .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
                 .createdAt(pin.getCreatedAt())
                 .build();

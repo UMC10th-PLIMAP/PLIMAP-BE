@@ -23,6 +23,7 @@ import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.domain.track.service.command.impl.TrackCommandServiceImpl;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -78,6 +79,9 @@ class PinCommandServiceImplTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private ProfileImageStorage profileImageStorage;
+
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
@@ -94,14 +98,14 @@ class PinCommandServiceImplTest {
                 .name("이서윤")
                 .nickname("이서")
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.webp")
                 .build();
 
         member2 = Member.builder()
                 .name("홍길동")
                 .nickname("동길")
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.webp")
                 .build();
 
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
