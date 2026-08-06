@@ -12,13 +12,13 @@ import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
-import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,6 +56,9 @@ class PinQueryServiceImplTest {
     @Mock
     private PinLikeRepository pinLikeRepository;
 
+    @Mock
+    private ProfileImageStorage profileImageStorage;
+
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
@@ -73,14 +76,14 @@ class PinQueryServiceImplTest {
                 .name("이서윤")
                 .nickname("이서")
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.web")
                 .build();
 
         member2 = Member.builder()
                 .name("홍길동")
                 .nickname("동길")
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.web")
                 .build();
 
         Point point = geometryFactory.createPoint(
@@ -294,7 +297,7 @@ class PinQueryServiceImplTest {
         assertThat(result.introduction()).isEqualTo(pin.getIntroduction());
         assertThat(result.clipStartMs()).isEqualTo(pin.getClipStartMs());
         assertThat(result.writerNickname()).isEqualTo(pin.getMember().getNickname());
-        assertThat(result.writerProfileImage()).isEqualTo(pin.getMember().getProfileImageObjectKey());
+        assertThat(result.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey()));
         assertThat(result.placeId()).isEqualTo(pin.getPlace().getId());
         assertThat(result.latitude()).isEqualTo(pin.getPlace().getLocation().getY());
         assertThat(result.longitude()).isEqualTo(pin.getPlace().getLocation().getX());
