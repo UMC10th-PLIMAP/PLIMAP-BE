@@ -177,6 +177,10 @@ public class Member extends SoftDeleteEntity {
         this.reportCount = 0;
     }
 
+    public void regenerateNickname(String newNickname) {
+        this.nickname = newNickname;
+    }
+
     public boolean isSuspensionExpired() {
         return status == MemberStatus.SUSPENDED
                 && suspendedUntil != null

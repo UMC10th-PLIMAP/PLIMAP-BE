@@ -748,6 +748,43 @@ class MemberCommandServiceImplTest {
         verify(memberRepository).decreaseReportCount(MEMBER_ID);
     }
 
+    @Test
+    void 닉네임_강제_재생성시_벌점과_신고누적은_변경되지_않는다() {
+        Member member = Member.builder().nickname("기존닉네임").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        ReflectionTestUtils.setField(member, "reportCount", 3);
+        ReflectionTestUtils.setField(member, "penaltyPoint", 1);
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.regenerateNickname(MEMBER_ID, "참새");
+
+        assertThat(member.getNickname()).isEqualTo("참새");
+        assertThat(member.getReportCount()).isEqualTo(3);
+        assertThat(member.getPenaltyPoint()).isEqualTo(1);
+        verify(memberRepository).saveAndFlush(member);
+    }
+
+    @Test
+    void 닉네임_강제_재생성시_새_닉네임이_이미_사용중이면_예외가_발생한다() {
+        Member member = Member.builder().nickname("기존닉네임").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberRepository.saveAndFlush(member)).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> memberCommandService.regenerateNickname(MEMBER_ID, "참새"))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
+    }
+
+    @Test
+    void 탈퇴한_회원의_닉네임은_재생성할_수_없다() {
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberCommandService.regenerateNickname(MEMBER_ID, "참새"))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
     private MockMultipartFile webpFile() {
         return new MockMultipartFile("image", "profile.webp", "image/webp", WEBP_CONTENT);
     }

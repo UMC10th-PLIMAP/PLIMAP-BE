@@ -108,6 +108,11 @@ public class ReportCommandServiceImpl implements ReportCommandService {
         reportRepository.deleteAllByReporterId(memberId);
     }
 
+    @Override
+    public void markPinReportsReviewed(Long pinId) {
+        reportRepository.markReviewedByReportedPinId(pinId);
+    }
+
     private void saveReport(Report report, ReportErrorCode duplicateErrorCode) {
         try {
             reportRepository.saveAndFlush(report);

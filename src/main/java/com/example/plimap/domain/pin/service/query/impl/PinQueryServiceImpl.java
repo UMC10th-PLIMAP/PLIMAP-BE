@@ -4,11 +4,13 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.ReportedPinInfo;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
+import com.example.plimap.domain.pin.enums.PinReportFilter;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
@@ -24,6 +26,8 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -154,6 +158,11 @@ public class PinQueryServiceImpl implements PinQueryService {
     @Override
     public long countPinsByMemberId(Long memberId) {
         return pinQueryRepository.countPinsByMemberId(memberId);
+    }
+
+    @Override
+    public Page<ReportedPinInfo> findReportedPins(PinReportFilter filter, Pageable pageable) {
+        return pinQueryRepository.findReportedPins(filter, pageable);
     }
 
     private Integer getPrecision(Integer zoomLevel) {

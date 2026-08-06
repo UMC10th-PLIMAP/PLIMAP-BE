@@ -15,4 +15,6 @@ public interface ReportCommandService {
     void deleteReportsAgainstMember(Long memberId);
 
     void deleteReportsByReporter(Long memberId);
+
+    void markPinReportsReviewed(Long pinId);
 }
