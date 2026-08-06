@@ -26,7 +26,6 @@ import com.example.plimap.global.security.HttpCookieOAuth2AuthorizationRequestRe
 import com.example.plimap.global.security.JwtUtil;
 import com.example.plimap.global.security.SecurityErrorResponseHandler;
 import com.example.plimap.global.security.TokenBlacklistService;
-import com.nimbusds.oauth2.sdk.GeneralException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,8 +44,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -144,6 +142,19 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.result.writerProfileImage").value("image_url"))
                 .andExpect(jsonPath("$.result.introduction").value("feeling love attack!"))
                 .andExpect(jsonPath("$.result.clipStartMs").value(70000));
+    }
+
+    @Test
+    void 태그_개수가_0개면_400을_반환한다() throws Exception {
+        mockMvc.perform(post(PIN_CREATE_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidTagCreateRequest()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("tags는 1개 이상 5개 이하만 입력할 수 있습니다."));
+        verifyNoInteractions(pinCommandService);
     }
 
     @Test
@@ -568,6 +579,21 @@ class PinControllerTest {
                    "tags": [
                       "몽환"
                    ],
+                   "feedOpen": true
+                 }
+                """;
+    }
+
+    private String invalidTagCreateRequest() {
+        return """
+                {
+                   "userLatitude": 37.5297,
+                   "userLongitude": 126.9333,
+                   "placeId": 1,
+                   "itunesTrackId": 1764485170,
+                   "clipStartMs": 70000,
+                   "introduction": "feeling love attack!",
+                   "tags": [],
                    "feedOpen": true
                  }
                 """;
