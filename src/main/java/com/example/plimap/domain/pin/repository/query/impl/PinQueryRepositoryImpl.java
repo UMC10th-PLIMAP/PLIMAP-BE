@@ -241,6 +241,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     private static final String FEED_QUERY =  """
         SELECT
             p.id,
+            pl.id,
             t.album_image_url,
             ST_Y(pl.location::geometry) AS latitude,
             ST_X(pl.location::geometry) AS longitude,
@@ -358,13 +359,14 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         List<PinResponse.Feed> data = new ArrayList<>(rows.stream()
                 .map(row -> PinResponse.Feed.builder()
                         .pinId(((Number) row[0]).longValue())
-                        .albumImageUrl((String) row[1])
-                        .latitude(((Number) row[2]).doubleValue())
-                        .longitude(((Number) row[3]).doubleValue())
-                        .placeName((String) row[4])
-                        .distanceFromUser(((Number) row[5]).intValue())
-                        .pinCount(((Number) row[6]).longValue())
-                        .createdAt((Instant) row[7])
+                        .placeId(((Number) row[1]).longValue())
+                        .albumImageUrl((String) row[2])
+                        .latitude(((Number) row[3]).doubleValue())
+                        .longitude(((Number) row[4]).doubleValue())
+                        .placeName((String) row[5])
+                        .distanceFromUser(((Number) row[6]).intValue())
+                        .pinCount(((Number) row[7]).longValue())
+                        .createdAt((Instant) row[8])
                         .build())
                 .toList());
 
