@@ -110,6 +110,15 @@ final class TrackSwaggerErrorExamples {
             }
             """;
 
+    static final String PLAYBACK_UNAVAILABLE = """
+            {
+              "isSuccess": false,
+              "code": "TRACK_404_PLAYBACK_UNAVAILABLE",
+              "message": "최근 재생 실패가 확인된 곡입니다.",
+              "result": null
+            }
+            """;
+
     static final String PLAYBACK_FAILURE_REPORTED = """
             {
               "isSuccess": true,

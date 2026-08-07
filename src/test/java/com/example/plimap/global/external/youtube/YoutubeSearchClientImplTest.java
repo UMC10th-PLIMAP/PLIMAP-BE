@@ -45,22 +45,11 @@ class YoutubeSearchClientImplTest {
 
     @Test
     void Official_Audio_검색에_한국_지역과_임베드_가능_조건을_적용한다() {
-        server.expect(once(), request -> {
-                    var parameters = UriComponentsBuilder.fromUri(request.getURI())
-                            .build()
-                            .getQueryParams();
-                    assertThat(request.getURI().getPath()).isEqualTo("/search");
-                    assertThat(parameters.getFirst("part")).isEqualTo("snippet");
-                    assertThat(parameters.getFirst("type")).isEqualTo("video");
-                    assertThat(parameters.getFirst("regionCode")).isEqualTo("KR");
-                    assertThat(parameters.getFirst("videoEmbeddable")).isEqualTo("true");
-                    assertThat(UriUtils.decode(
-                            parameters.getFirst("q"),
-                            StandardCharsets.UTF_8
-                    )).isEqualTo("아이유 밤편지 Official Audio");
-                    assertThat(parameters.getFirst("maxResults")).isEqualTo("5");
-                    assertThat(parameters.getFirst("key")).isEqualTo(TEST_API_KEY);
-                })
+        server.expect(once(), request -> assertSearchRequest(
+                        request.getURI(),
+                        "아이유 밤편지 Official Audio",
+                        5
+                ))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(multipleResults(), MediaType.APPLICATION_JSON));
 
@@ -74,10 +63,17 @@ class YoutubeSearchClientImplTest {
 
     @Test
     void Official_Audio_결과가_없을_때만_기본_검색어로_fallback한다() {
-        server.expect(once(), request -> assertQuery(request.getURI(),
-                        "아이유 밤편지 Official Audio"))
+        server.expect(once(), request -> assertSearchRequest(
+                        request.getURI(),
+                        "아이유 밤편지 Official Audio",
+                        5
+                ))
                 .andRespond(withSuccess("{\"items\":[]}", MediaType.APPLICATION_JSON));
-        server.expect(once(), request -> assertQuery(request.getURI(), "아이유 밤편지"))
+        server.expect(once(), request -> assertSearchRequest(
+                        request.getURI(),
+                        "아이유 밤편지",
+                        5
+                ))
                 .andRespond(withSuccess(multipleResults(), MediaType.APPLICATION_JSON));
 
         YoutubeSearchResponse response = client.search("아이유 밤편지", 5);
@@ -140,8 +136,17 @@ class YoutubeSearchClientImplTest {
         server.verify();
     }
 
-    private void assertQuery(URI uri, String expectedQuery) {
-        String query = UriComponentsBuilder.fromUri(uri).build().getQueryParams().getFirst("q");
+    private void assertSearchRequest(URI uri, String expectedQuery, int expectedMaxResults) {
+        var parameters = UriComponentsBuilder.fromUri(uri).build().getQueryParams();
+        assertThat(uri.getPath()).isEqualTo("/search");
+        assertThat(parameters.getFirst("part")).isEqualTo("snippet");
+        assertThat(parameters.getFirst("type")).isEqualTo("video");
+        assertThat(parameters.getFirst("regionCode")).isEqualTo("KR");
+        assertThat(parameters.getFirst("videoEmbeddable")).isEqualTo("true");
+        assertThat(parameters.getFirst("maxResults"))
+                .isEqualTo(String.valueOf(expectedMaxResults));
+        assertThat(parameters.getFirst("key")).isEqualTo(TEST_API_KEY);
+        String query = parameters.getFirst("q");
         assertThat(UriUtils.decode(query, StandardCharsets.UTF_8)).isEqualTo(expectedQuery);
     }
 

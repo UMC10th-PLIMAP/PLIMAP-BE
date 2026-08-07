@@ -11,6 +11,7 @@ import com.example.plimap.domain.track.enums.YoutubePlaybackFailureType;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -29,11 +30,14 @@ class RedisPlaybackFailureCacheRepositoryTest {
 
     @Test
     void 재생_실패를_정확한_키와_24시간_TTL로_저장한다() {
+        // given
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
 
+        // when
         repository.save(failure());
 
+        // then
         verify(valueOperations).set(eq(KEY), valueCaptor.capture(), eq(Duration.ofHours(24)));
         assertThat(objectMapper.readValue(valueCaptor.getValue(), PlaybackFailureCache.class))
                 .isEqualTo(failure());
@@ -41,14 +45,20 @@ class RedisPlaybackFailureCacheRepositoryTest {
 
     @Test
     void 재생_실패를_저장하고_단건_조회한다() {
+        // given
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(KEY)).thenReturn(objectMapper.writeValueAsString(failure()));
 
-        assertThat(repository.findByItunesTrackId(123L)).contains(failure());
+        // when
+        Optional<PlaybackFailureCache> result = repository.findByItunesTrackId(123L);
+
+        // then
+        assertThat(result).contains(failure());
     }
 
     @Test
     void 여러_트랙의_실패_캐시는_multiGet으로_한번에_조회한다() {
+        // given
         PlaybackFailureCache secondFailure = PlaybackFailureCache.create(
                 456L,
                 "secondVideo",
@@ -62,9 +72,11 @@ class RedisPlaybackFailureCacheRepositoryTest {
                 objectMapper.writeValueAsString(secondFailure)
         ));
 
+        // when
         Map<Long, PlaybackFailureCache> result =
                 repository.findAllByItunesTrackIds(List.of(123L, 456L));
 
+        // then
         assertThat(result).containsEntry(123L, failure()).containsEntry(456L, secondFailure);
         verify(valueOperations).multiGet(keys);
     }

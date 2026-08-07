@@ -107,12 +107,17 @@ public interface TrackControllerDocs {
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
-                    description = "메타데이터 만료 또는 YouTube 매칭 실패",
+                    description = "재생 불가, 메타데이터 만료 또는 YouTube 매칭 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(
                                     ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
                             examples = {
+                                    @ExampleObject(
+                                            name = "최근 재생 실패",
+                                            value = TrackSwaggerErrorExamples
+                                                .PLAYBACK_UNAVAILABLE
+                                    ),
                                     @ExampleObject(
                                             name = "메타데이터 만료",
                                             value = TrackSwaggerErrorExamples

@@ -118,7 +118,19 @@ class TrackControllerTest {
                 .andExpect(jsonPath("$.message").value("음악 검색에 성공했습니다."))
                 .andExpect(jsonPath("$.result.tracks[0].itunesTrackId").value(123))
                 .andExpect(jsonPath("$.result.tracks[0].trackName").value("밤편지"))
-                .andExpect(jsonPath("$.result.tracks[0].durationMs").value(253000));
+                .andExpect(jsonPath("$.result.tracks[0].durationMs").value(253000))
+                .andExpect(jsonPath("$.result.tracks[0].isUnavailable").value(false));
+
+        verify(trackQueryService).searchTracks(new TrackRequest.Search("아이유", 20));
+    }
+
+    @Test
+    void 재생_불가_검색_결과의_isUnavailable을_true로_반환한다() throws Exception {
+        when(trackQueryService.searchTracks(any())).thenReturn(searchResult(true));
+
+        mockMvc.perform(authenticatedSearch().queryParam("keyword", "아이유"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.tracks[0].isUnavailable").value(true));
 
         verify(trackQueryService).searchTracks(new TrackRequest.Search("아이유", 20));
     }
@@ -386,6 +398,10 @@ class TrackControllerTest {
     }
 
     private TrackResponse.TrackSearchResult searchResult() {
+        return searchResult(false);
+    }
+
+    private TrackResponse.TrackSearchResult searchResult(boolean unavailable) {
         return new TrackResponse.TrackSearchResult(List.of(
                 new TrackResponse.TrackSearchItem(
                 123L,
@@ -394,7 +410,8 @@ class TrackControllerTest {
                 "Palette",
                 "https://image.example/cover.jpg",
                 "https://audio.example/preview.m4a",
-                253000
+                253000,
+                unavailable
                 )));
     }
 

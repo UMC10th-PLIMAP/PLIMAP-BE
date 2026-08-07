@@ -250,7 +250,8 @@ class TrackOpenApiIntegrationTest {
                 "ApiResponsePlaybackPreparationResult",
                 Set.of(
                         "TRACK_404_METADATA_CACHE_NOT_FOUND",
-                        "TRACK_404_YOUTUBE_MATCH_NOT_FOUND"
+                        "TRACK_404_YOUTUBE_MATCH_NOT_FOUND",
+                        "TRACK_404_PLAYBACK_UNAVAILABLE"
                 )
         );
 
