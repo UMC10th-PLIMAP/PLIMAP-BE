@@ -10,6 +10,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.JacksonException;
 
 import java.time.Duration;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -39,5 +40,21 @@ public class PlaceAccessTokenRepositoryImpl implements PlaceAccessTokenRepositor
                 value,
                 TTL
         );
+    }
+
+    @Override
+    public Optional<PlaceAccessToken> findByToken(String token) {
+
+        String value = redisTemplate.opsForValue().get(KEY_PREFIX + token);
+
+        if (value == null) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(objectMapper.readValue(value, PlaceAccessToken.class));
+        } catch (JacksonException e) {
+            throw new CacheSerializationException("역직렬화 실패", e);
+        }
     }
 }

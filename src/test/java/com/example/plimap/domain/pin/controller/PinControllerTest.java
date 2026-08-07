@@ -438,14 +438,22 @@ class PinControllerTest {
 
     @Test
     void 특정_장소_노래의_핀_목록_조회에_성공하면_200을_반환한다() throws Exception {
-        when(pinQueryService.findPinListByPlaceTrackIdAndSortType(
-                1L, null, 10, PinSortType.LATEST, 1L
-        )).thenReturn(Pagination.<PinResponse.PinDetail>builder()
-                .data(new ArrayList<>())
-                .pageSize(10)
-                .nextCursor(null)
-                .hasNext(false)
-                .build());
+        given(pinQueryService.findPinListByPlaceTrackIdAndSortType(
+                any(Member.class),
+                isNull(),
+                eq(10),
+                eq(PinSortType.LATEST),
+                eq(1L),
+                any(PinRequest.UserLocation.class),
+                eq("token")
+        )).willReturn(
+                Pagination.<PinResponse.PinDetail>builder()
+                        .data(new ArrayList<>())
+                        .pageSize(10)
+                        .nextCursor(null)
+                        .hasNext(false)
+                        .build()
+        );
 
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
@@ -454,7 +462,10 @@ class PinControllerTest {
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(PLACE_TRACK_PIN_ENDPOINT, 1L)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                .param("userLatitude", "37.123")
+                .param("userLongitude", "127.123")
+                .param("token", "token"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))

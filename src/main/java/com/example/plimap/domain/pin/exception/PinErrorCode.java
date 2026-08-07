@@ -55,6 +55,12 @@ public enum PinErrorCode implements BaseErrorCode {
             HttpStatus.BAD_REQUEST,
             "FRIEND_PIN_ACCESS_DENIED",
             "친구가 등록한 핀이 아니므로 접근 권한을 발급할 수 없습니다."
+    ),
+
+    PIN_ACCESS_DENIED(
+            HttpStatus.UNAUTHORIZED,
+            "PIN_ACCESS_DENIED",
+            "접근할 수 없는 핀입니다."
     );
 
     private final HttpStatus status;
