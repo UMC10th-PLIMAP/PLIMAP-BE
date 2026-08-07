@@ -11,17 +11,26 @@ import org.springframework.web.client.RestClientException;
 @RequiredArgsConstructor
 public class YoutubeSearchClientImpl implements YoutubeSearchClient {
 
+    private static final String OFFICIAL_AUDIO_SUFFIX = " Official Audio";
+
     private final RestClient youtubeRestClient;
     private final YoutubeProperties properties;
 
     @Override
     public YoutubeSearchResponse search(String query, int maxResults) {
+        YoutubeSearchResponse response = request(query + OFFICIAL_AUDIO_SUFFIX, maxResults);
+        return response.items().isEmpty() ? request(query, maxResults) : response;
+    }
+
+    private YoutubeSearchResponse request(String query, int maxResults) {
         try {
             YoutubeSearchResponse response = youtubeRestClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/search")
                             .queryParam("part", "snippet")
                             .queryParam("type", "video")
+                            .queryParam("regionCode", "KR")
+                            .queryParam("videoEmbeddable", true)
                             .queryParam("q", query)
                             .queryParam("maxResults", maxResults)
                             .queryParam("key", properties.key())

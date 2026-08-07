@@ -11,12 +11,15 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.plimap.domain.track.dto.TrackMetadataCache;
+import com.example.plimap.domain.track.dto.PlaybackFailureCache;
 import com.example.plimap.domain.track.dto.TrackSearchCache;
 import com.example.plimap.domain.track.dto.request.TrackRequest;
 import com.example.plimap.domain.track.dto.response.TrackResponse;
 import com.example.plimap.domain.track.exception.TrackErrorCode;
 import com.example.plimap.domain.track.exception.TrackException;
+import com.example.plimap.domain.track.enums.YoutubePlaybackFailureType;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
+import com.example.plimap.domain.track.repository.PlaybackFailureCacheRepository;
 import com.example.plimap.domain.track.repository.TrackMetadataCacheRepository;
 import com.example.plimap.domain.track.repository.TrackRepository;
 import com.example.plimap.domain.track.repository.TrackSearchCacheRepository;
@@ -25,6 +28,7 @@ import com.example.plimap.global.external.itunes.ItunesClientException;
 import com.example.plimap.global.external.itunes.ItunesSearchClient;
 import com.example.plimap.global.external.itunes.dto.ItunesSearchResponse;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.QueryTimeoutException;
@@ -40,13 +44,16 @@ class TrackQueryServiceImplTest {
             mock(TrackMetadataCacheRepository.class);
     private final TrackSearchCacheRepository trackSearchCacheRepository =
             mock(TrackSearchCacheRepository.class);
+    private final PlaybackFailureCacheRepository playbackFailureCacheRepository =
+            mock(PlaybackFailureCacheRepository.class);
     private final TrackRepository trackRepository = mock(TrackRepository.class);
     private final PlaceTrackRepository placeTrackRepository = mock(PlaceTrackRepository.class);
 
     private final TrackQueryServiceImpl trackQueryService = new TrackQueryServiceImpl(
             itunesSearchClient,
             trackMetadataCacheRepository,
-            trackSearchCacheRepository
+            trackSearchCacheRepository,
+            playbackFailureCacheRepository
     );
 
     @Test
@@ -83,6 +90,38 @@ class TrackQueryServiceImplTest {
                 trackRepository,
                 placeTrackRepository
         );
+    }
+
+    @Test
+    void 실패_캐시가_존재하면_검색_응답에_isUnavailable_true를_합성한다() {
+        TrackSearchCache cached = new TrackSearchCache(List.of(metadata()));
+        PlaybackFailureCache failure = PlaybackFailureCache.create(
+                123L,
+                "BzYnNdJhZQw",
+                101,
+                YoutubePlaybackFailureType.EMBED_BLOCKED
+        );
+        when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenReturn(Optional.of(cached));
+        when(playbackFailureCacheRepository.findAllByItunesTrackIds(List.of(123L)))
+                .thenReturn(Map.of(123L, failure));
+
+        TrackResponse.TrackSearchResult result = trackQueryService.searchTracks(request());
+
+        assertThat(result.tracks().getFirst().isUnavailable()).isTrue();
+        verify(playbackFailureCacheRepository).findAllByItunesTrackIds(List.of(123L));
+        verify(trackSearchCacheRepository, never()).save(KEYWORD, LIMIT, cached);
+    }
+
+    @Test
+    void 실패_캐시가_없으면_검색_응답의_isUnavailable은_false다() {
+        TrackSearchCache cached = new TrackSearchCache(List.of(metadata()));
+        when(trackSearchCacheRepository.find(KEYWORD, LIMIT)).thenReturn(Optional.of(cached));
+        when(playbackFailureCacheRepository.findAllByItunesTrackIds(List.of(123L)))
+                .thenReturn(Map.of());
+
+        TrackResponse.TrackSearchResult result = trackQueryService.searchTracks(request());
+
+        assertThat(result.tracks().getFirst().isUnavailable()).isFalse();
     }
 
     @Test
