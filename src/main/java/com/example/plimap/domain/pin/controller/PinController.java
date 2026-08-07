@@ -158,7 +158,7 @@ public class PinController implements PinControllerDocs {
             PinSortType pinSortType,
             @PathVariable Long placeTrackId,
             @ModelAttribute @Valid PinRequest.UserLocation request,
-            @RequestParam(required = false) String token
+            @RequestHeader(value = "Place-Access-Token", required = false) String token
     ) {
         Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackIdAndSortType(currentMember.getMember(), cursor, pageSize, pinSortType,
                 placeTrackId, request, token);

@@ -1,15 +1,12 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
-import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.ReportedPinInfo;
 import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
-import com.example.plimap.domain.place.repository.PlaceRepository;
-import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -26,9 +23,8 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.track.entity.PlaceTrack;
+import com.example.plimap.domain.track.service.query.PlaceTrackFinder;
 import com.example.plimap.domain.track.service.query.PlaceTrackLikeQueryService;
-import com.example.plimap.domain.track.service.query.PlaceTrackQueryService;
-import com.example.plimap.domain.track.service.query.impl.PlaceTrackFinder;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;

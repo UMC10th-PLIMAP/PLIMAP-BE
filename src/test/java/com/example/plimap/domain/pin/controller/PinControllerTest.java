@@ -463,9 +463,9 @@ class PinControllerTest {
 
         mockMvc.perform(get(PLACE_TRACK_PIN_ENDPOINT, 1L)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .header("Place-Access-Token", "token")
                 .param("userLatitude", "37.123")
-                .param("userLongitude", "127.123")
-                .param("token", "token"))
+                .param("userLongitude", "127.123"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))

@@ -13,10 +13,7 @@ import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 public interface PinControllerDocs {
 
@@ -131,7 +128,7 @@ public interface PinControllerDocs {
             PinSortType pinSortType,
             @PathVariable Long placeTrackId,
             @ModelAttribute @Valid PinRequest.UserLocation request,
-            @RequestParam(required = false) String token
+            @RequestHeader(value = "Place-Access-Token", required = false) String token
     );
 
     @Operation(

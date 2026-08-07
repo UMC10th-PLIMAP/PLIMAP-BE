@@ -58,7 +58,7 @@ public enum PinErrorCode implements BaseErrorCode {
     ),
 
     PIN_ACCESS_DENIED(
-            HttpStatus.UNAUTHORIZED,
+            HttpStatus.FORBIDDEN,
             "PIN_ACCESS_DENIED",
             "접근할 수 없는 핀입니다."
     );

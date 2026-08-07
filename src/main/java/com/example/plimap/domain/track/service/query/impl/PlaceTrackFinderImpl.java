@@ -4,12 +4,13 @@ import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.exception.TrackErrorCode;
 import com.example.plimap.domain.track.exception.TrackException;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
+import com.example.plimap.domain.track.service.query.PlaceTrackFinder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class PlaceTrackFinder {
+public class PlaceTrackFinderImpl implements PlaceTrackFinder {
 
     private final PlaceTrackRepository placeTrackRepository;
 

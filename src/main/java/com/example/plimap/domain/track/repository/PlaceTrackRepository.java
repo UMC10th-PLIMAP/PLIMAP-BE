@@ -48,6 +48,7 @@ public interface PlaceTrackRepository extends JpaRepository<PlaceTrack, Long> {
         join fetch pt.place
         where pt.id = :id
           and pt.deletedAt is null
+          and pt.place.deletedAt is null
     """)
     Optional<PlaceTrack> findWithPlaceById(Long id);
 }
