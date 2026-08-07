@@ -161,4 +161,13 @@ public interface PinControllerDocs {
             Integer pageSize,
             @RequestParam(required = false) String cursor
     );
+
+    @Operation(
+            summary = "내 친구 피드 접근 권한 요청",
+            description = "친구 피드에서 특정 핀을 선택한 경우, 해당 장소의 곡 상세(PIN 목록/Track 상세) 조회를 위한 임시 접근 권한을 발급한다. (Figma 기준 화면: FD-02-01)"
+    )
+    public ResponseEntity<ApiResponse<PinResponse.PlaceAccessToken>> createPlaceAccessToken(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long placeId
+    );
 }

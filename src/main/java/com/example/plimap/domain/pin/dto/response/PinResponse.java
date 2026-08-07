@@ -141,4 +141,10 @@ public class PinResponse {
             String albumImageUrl,
             Instant createdAt
     ) {}
+
+    @Builder
+    public record PlaceAccessToken(
+            String placeAccessToken,
+            Long placeId
+    ) {}
 }
