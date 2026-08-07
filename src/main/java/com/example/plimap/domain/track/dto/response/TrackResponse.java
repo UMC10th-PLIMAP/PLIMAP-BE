@@ -3,6 +3,7 @@ package com.example.plimap.domain.track.dto.response;
 import com.example.plimap.domain.track.dto.SelectedTrackCache;
 import com.example.plimap.global.external.itunes.dto.ItunesSearchResponse;
 import java.util.List;
+import java.util.Set;
 
 public final class TrackResponse {
 
@@ -20,6 +21,14 @@ public final class TrackResponse {
                     .map(TrackSearchItem::from)
                     .toList());
         }
+
+        public TrackSearchResult withUnavailable(Set<Long> unavailableTrackIds) {
+            return new TrackSearchResult(tracks.stream()
+                    .map(track -> track.withUnavailable(
+                            unavailableTrackIds.contains(track.itunesTrackId())
+                    ))
+                    .toList());
+        }
     }
 
     public record TrackSearchItem(
@@ -29,8 +38,30 @@ public final class TrackResponse {
             String albumName,
             String artworkUrl,
             String previewUrl,
-            Integer durationMs
+            Integer durationMs,
+            boolean isUnavailable
     ) {
+
+        public TrackSearchItem(
+                Long itunesTrackId,
+                String trackName,
+                String artistName,
+                String albumName,
+                String artworkUrl,
+                String previewUrl,
+                Integer durationMs
+        ) {
+            this(
+                    itunesTrackId,
+                    trackName,
+                    artistName,
+                    albumName,
+                    artworkUrl,
+                    previewUrl,
+                    durationMs,
+                    false
+            );
+        }
 
         public static TrackSearchItem from(ItunesSearchResponse.Item item) {
             return new TrackSearchItem(
@@ -40,7 +71,21 @@ public final class TrackResponse {
                     item.collectionName(),
                     item.artworkUrl100(),
                     item.previewUrl(),
-                    item.trackTimeMillis()
+                    item.trackTimeMillis(),
+                    false
+            );
+        }
+
+        public TrackSearchItem withUnavailable(boolean unavailable) {
+            return new TrackSearchItem(
+                    itunesTrackId,
+                    trackName,
+                    artistName,
+                    albumName,
+                    artworkUrl,
+                    previewUrl,
+                    durationMs,
+                    unavailable
             );
         }
     }

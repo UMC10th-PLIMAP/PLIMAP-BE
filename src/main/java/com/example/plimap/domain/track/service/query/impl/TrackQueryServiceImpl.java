@@ -1,18 +1,23 @@
 package com.example.plimap.domain.track.service.query.impl;
 
+import com.example.plimap.domain.track.dto.PlaybackFailureCache;
 import com.example.plimap.domain.track.dto.TrackSearchCache;
 import com.example.plimap.domain.track.dto.request.TrackRequest;
 import com.example.plimap.domain.track.dto.response.TrackResponse;
 import com.example.plimap.domain.track.exception.TrackErrorCode;
 import com.example.plimap.domain.track.exception.TrackException;
+import com.example.plimap.domain.track.repository.PlaybackFailureCacheRepository;
 import com.example.plimap.domain.track.repository.TrackMetadataCacheRepository;
 import com.example.plimap.domain.track.repository.TrackSearchCacheRepository;
 import com.example.plimap.domain.track.service.query.TrackQueryService;
-import com.example.plimap.global.external.itunes.ItunesSearchClient;
 import com.example.plimap.global.external.itunes.ItunesClientException;
+import com.example.plimap.global.external.itunes.ItunesSearchClient;
 import com.example.plimap.global.external.itunes.dto.ItunesSearchResponse;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.QueryTimeoutException;
@@ -29,6 +34,7 @@ public class TrackQueryServiceImpl implements TrackQueryService {
     private final ItunesSearchClient itunesSearchClient;
     private final TrackMetadataCacheRepository trackMetadataCacheRepository;
     private final TrackSearchCacheRepository trackSearchCacheRepository;
+    private final PlaybackFailureCacheRepository playbackFailureCacheRepository;
 
     @Override
     public TrackResponse.TrackSearchResult searchTracks(TrackRequest.Search request) {
@@ -38,7 +44,7 @@ public class TrackQueryServiceImpl implements TrackQueryService {
         if (cachedResult.isPresent()) {
             TrackSearchCache searchCache = cachedResult.get();
             saveMetadata(searchCache);
-            return searchCache.toResponse();
+            return combinePlaybackFailures(searchCache.toResponse());
         }
 
         ItunesSearchResponse itunesResponse;
@@ -54,7 +60,30 @@ public class TrackQueryServiceImpl implements TrackQueryService {
         saveMetadata(searchCache);
         saveSearchResult(request, searchCache);
 
-        return result;
+        return combinePlaybackFailures(result);
+    }
+
+    private TrackResponse.TrackSearchResult combinePlaybackFailures(
+            TrackResponse.TrackSearchResult result
+    ) {
+        List<Long> itunesTrackIds = result.tracks().stream()
+                .map(TrackResponse.TrackSearchItem::itunesTrackId)
+                .toList();
+        if (itunesTrackIds.isEmpty()) {
+            return result;
+        }
+
+        try {
+            Map<Long, PlaybackFailureCache> failures =
+                    playbackFailureCacheRepository.findAllByItunesTrackIds(itunesTrackIds);
+            Set<Long> unavailableTrackIds = failures == null
+                    ? Set.of()
+                    : Set.copyOf(failures.keySet());
+            return result.withUnavailable(unavailableTrackIds);
+        } catch (RedisConnectionFailureException | QueryTimeoutException exception) {
+            log.warn("재생 실패 Redis 캐시 조회에 실패하여 실패 상태 없이 반환합니다.", exception);
+            return result;
+        }
     }
 
     private Optional<TrackSearchCache> findCachedResult(TrackRequest.Search request) {

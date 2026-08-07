@@ -149,4 +149,56 @@ public interface TrackControllerDocs {
     ResponseEntity<ApiResponse<TrackResponse.PlaybackPreparationResult>> preparePlayback(
             @Valid TrackRequest.PlaybackPreparation request
     );
+
+    @Operation(
+            summary = "YouTube 재생 실패 보고",
+            description = "IFrame Player 오류 코드를 분류하고 확정적인 재생 실패를 24시간 캐시합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "YouTube 재생 실패 보고 성공",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(ref = "#/components/schemas/ApiResponseVoid"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples
+                                            .PLAYBACK_FAILURE_REPORTED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "재생 실패 요청 검증 실패",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(ref = "#/components/schemas/ApiResponseVoid"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples
+                                            .PLAYBACK_FAILURE_VALIDATION_FAILED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(ref = "#/components/schemas/ApiResponseVoid"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "캐시 처리 실패",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(ref = "#/components/schemas/ApiResponseVoid"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples.TRACK_CACHE_ERROR
+                            )
+                    ))
+    })
+    ResponseEntity<ApiResponse<Void>> reportPlaybackFailure(
+            @Valid TrackRequest.PlaybackFailure request
+    );
 }
