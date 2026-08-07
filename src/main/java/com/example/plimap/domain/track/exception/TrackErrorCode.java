@@ -50,6 +50,11 @@ public enum TrackErrorCode implements BaseErrorCode {
             "곡 캐시 처리 중 오류가 발생했습니다."
     ),
 
+    PLAYBACK_UNAVAILABLE(
+            HttpStatus.NOT_FOUND,
+            "TRACK_404_PLAYBACK_UNAVAILABLE",
+            "최근 재생 실패가 확인된 곡입니다."
+    ),
     SELECTED_TRACK_CACHE_READER_NOT_AVAILABLE(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "TRACK_500_SELECTED_TRACK_CACHE_READER_NOT_AVAILABLE",

@@ -24,6 +24,11 @@ public enum TrackSuccessCode implements BaseSuccessCode {
             "TRACK_PLAYBACK_PREPARATION_SUCCESS",
             "구간 재생 준비에 성공했습니다."
     ),
+    PLAYBACK_FAILURE_REPORTED(
+            HttpStatus.OK,
+            "TRACK_PLAYBACK_FAILURE_REPORTED",
+            "YouTube 재생 실패가 보고되었습니다."
+    ),
     PLACE_TRACK_LIST_SUCCESS(
             HttpStatus.OK,
             "PLACE_TRACK_LIST_SUCCESS",

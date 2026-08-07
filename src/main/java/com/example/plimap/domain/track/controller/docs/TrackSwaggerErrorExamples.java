@@ -110,6 +110,33 @@ final class TrackSwaggerErrorExamples {
             }
             """;
 
+    static final String PLAYBACK_UNAVAILABLE = """
+            {
+              "isSuccess": false,
+              "code": "TRACK_404_PLAYBACK_UNAVAILABLE",
+              "message": "최근 재생 실패가 확인된 곡입니다.",
+              "result": null
+            }
+            """;
+
+    static final String PLAYBACK_FAILURE_REPORTED = """
+            {
+              "isSuccess": true,
+              "code": "TRACK_PLAYBACK_FAILURE_REPORTED",
+              "message": "YouTube 재생 실패가 보고되었습니다.",
+              "result": null
+            }
+            """;
+
+    static final String PLAYBACK_FAILURE_VALIDATION_FAILED = """
+            {
+              "isSuccess": false,
+              "code": "COMMON_400_VALIDATION_FAILED",
+              "message": "YouTube video ID를 입력해주세요.",
+              "result": null
+            }
+            """;
+
     static final String PLACE_TRACK_NOT_FOUND = """
             {
               "isSuccess": false,
