@@ -15,10 +15,9 @@ import com.example.plimap.domain.pin.enums.ClusterLevel;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
-import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
+import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
+import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
-import com.example.plimap.global.apiPayload.code.BaseErrorCode;
-import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -70,6 +69,7 @@ class PinControllerTest {
     private static final String PLACE_TRACK_PIN_ENDPOINT = "/api/v1/place-tracks/{placeTrackId}/pins";
     private static final String VIEWPORT_CLUSTER_ENDPOINT = "/api/v1/pins/map";
     private static final String FRIEND_RECENT_PIN_ENDPOINT = "/api/v1/pins/friends";
+    private static final String FRIEND_FEED_AUTHORIZE_ENDPOINT = "/api/v1/feeds/places/{placeId}";
 
     @Autowired
     private MockMvc mockMvc;
@@ -93,7 +93,10 @@ class PinControllerTest {
     TokenBlacklistService tokenBlacklistService;
 
     @MockitoBean
-    private PinCommandServiceImpl pinCommandService;
+    private PinCommandService pinCommandService;
+
+    @MockitoBean
+    private PinQueryRepository pinQueryRepository;
 
     @MockitoBean
     private PinQueryService pinQueryService;
@@ -435,14 +438,22 @@ class PinControllerTest {
 
     @Test
     void 특정_장소_노래의_핀_목록_조회에_성공하면_200을_반환한다() throws Exception {
-        when(pinQueryService.findPinListByPlaceTrackIdAndSortType(
-                1L, null, 10, PinSortType.LATEST, 1L
-        )).thenReturn(Pagination.<PinResponse.PinDetail>builder()
-                .data(new ArrayList<>())
-                .pageSize(10)
-                .nextCursor(null)
-                .hasNext(false)
-                .build());
+        given(pinQueryService.findPinListByPlaceTrackIdAndSortType(
+                any(Member.class),
+                isNull(),
+                eq(10),
+                eq(PinSortType.LATEST),
+                eq(1L),
+                any(PinRequest.UserLocation.class),
+                eq("token")
+        )).willReturn(
+                Pagination.<PinResponse.PinDetail>builder()
+                        .data(new ArrayList<>())
+                        .pageSize(10)
+                        .nextCursor(null)
+                        .hasNext(false)
+                        .build()
+        );
 
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
@@ -451,7 +462,10 @@ class PinControllerTest {
                 .thenReturn(Optional.of(member));
 
         mockMvc.perform(get(PLACE_TRACK_PIN_ENDPOINT, 1L)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .header("Place-Access-Token", "token")
+                .param("userLatitude", "37.123")
+                .param("userLongitude", "127.123"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
@@ -565,6 +579,49 @@ class PinControllerTest {
 
         verify(pinQueryService)
                 .getFriendRecentPinList(eq(1L), isNull(), eq(10));
+    }
+
+    @Test
+    void 친구_피드_접근_권한_요청_성공시_200을_반환한다() throws Exception{
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findById(1L))
+                .thenReturn(Optional.of(member));
+
+        given(pinCommandService.createPlaceAccessToken(eq(1L), eq(1L)))
+                .willReturn(PinConverter.toPlaceAccessToken(
+                        1L,
+                        "token"
+                ));
+
+        mockMvc.perform(post(FRIEND_FEED_AUTHORIZE_ENDPOINT, 1L)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("FRIEND_FEED_TOKEN_REQUEST_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("내 친구 피드 접근 권한 요청에 성공했습니다."))
+                .andExpect(jsonPath("$.result.placeAccessToken").value("token"))
+                .andExpect(jsonPath("$.result.placeId").value(1L));
+    }
+
+    @Test
+    void 친구가_등록한_핀이_아니면_400을_반환한다() throws Exception{
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        when(memberRepository.findById(1L))
+                .thenReturn(Optional.of(member));
+
+        given(pinCommandService.createPlaceAccessToken(anyLong(), anyLong()))
+                .willThrow(new PinException(PinErrorCode.FRIEND_PIN_ACCESS_DENIED));
+
+        mockMvc.perform(post(FRIEND_FEED_AUTHORIZE_ENDPOINT, 1L)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("FRIEND_PIN_ACCESS_DENIED"))
+                .andExpect(jsonPath("$.message").value("친구가 등록한 핀이 아니므로 접근 권한을 발급할 수 없습니다."));
     }
 
     private String validCreateRequest() {

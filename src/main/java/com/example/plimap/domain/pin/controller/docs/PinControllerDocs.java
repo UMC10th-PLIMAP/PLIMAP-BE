@@ -13,10 +13,7 @@ import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 public interface PinControllerDocs {
 
@@ -129,7 +126,9 @@ public interface PinControllerDocs {
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false, defaultValue = "LATEST")
             PinSortType pinSortType,
-            @PathVariable Long placeTrackId
+            @PathVariable Long placeTrackId,
+            @ModelAttribute @Valid PinRequest.UserLocation request,
+            @RequestHeader(value = "Place-Access-Token", required = false) String token
     );
 
     @Operation(
@@ -160,5 +159,14 @@ public interface PinControllerDocs {
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,
             @RequestParam(required = false) String cursor
+    );
+
+    @Operation(
+            summary = "내 친구 피드 접근 권한 요청",
+            description = "친구 피드에서 특정 핀을 선택한 경우, 해당 장소의 곡 상세(PIN 목록/Track 상세) 조회를 위한 임시 접근 권한을 발급한다. (Figma 기준 화면: FD-02-01)"
+    )
+    public ResponseEntity<ApiResponse<PinResponse.PlaceAccessToken>> createPlaceAccessToken(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long placeId
     );
 }
