@@ -433,7 +433,6 @@ class PinQueryServiceImplTest {
     void 반경_500m_이내이면_핀_목록_조회에_성공한다() {
         // given
         given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
-        given(memberQueryService.getActiveMember(1L)).willReturn(member);
         given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                 .willReturn(300.0);
 
@@ -454,7 +453,6 @@ class PinQueryServiceImplTest {
     void 내가_등록한_핀이_있으면_핀_목록_조회에_성공한다() {
         // given
         given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
-        given(memberQueryService.getActiveMember(1L)).willReturn(member);
 
         given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                 .willReturn(700.0);
@@ -479,7 +477,6 @@ class PinQueryServiceImplTest {
     void 좋아요한_노래가_있으면_핀_목록_조회에_성공한다() {
         // given
         given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
-        given(memberQueryService.getActiveMember(1L)).willReturn(member);
 
         given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                 .willReturn(700.0);
@@ -507,7 +504,6 @@ class PinQueryServiceImplTest {
     void 유효한_친구_피드_토큰이_있으면_핀_목록_조회에_성공한다() {
         // given
         given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
-        given(memberQueryService.getActiveMember(1L)).willReturn(member);
 
         given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                 .willReturn(700.0);
@@ -542,7 +538,6 @@ class PinQueryServiceImplTest {
     void 모든_접근_조건을_만족하지_않으면_핀_목록_조회에_실패한다() {
         // given
         given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
-        given(memberQueryService.getActiveMember(1L)).willReturn(member);
 
         given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                 .willReturn(700.0);
