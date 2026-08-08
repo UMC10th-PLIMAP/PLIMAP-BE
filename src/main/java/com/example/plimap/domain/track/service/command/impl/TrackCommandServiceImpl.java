@@ -9,6 +9,7 @@ import com.example.plimap.domain.track.exception.TrackErrorCode;
 import com.example.plimap.domain.track.exception.TrackException;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
 import com.example.plimap.domain.track.repository.TrackRepository;
+import com.example.plimap.domain.track.service.command.AlbumImageUrlResolver;
 import com.example.plimap.domain.track.service.command.TrackCommandService;
 import com.example.plimap.domain.track.service.query.SelectedTrackCacheReader;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class TrackCommandServiceImpl implements TrackCommandService {
     private final TrackRepository trackRepository;
     private final PlaceTrackRepository placeTrackRepository;
     private final ObjectProvider<SelectedTrackCacheReader> selectedTrackCacheReaderProvider;
+    private final AlbumImageUrlResolver albumImageUrlResolver;
 
     @Override
     @Transactional
@@ -55,16 +57,21 @@ public class TrackCommandServiceImpl implements TrackCommandService {
     private Track getOrCreateTrack(SelectedTrackCache selectedTrack, String youtubeVideoId) {
         return trackRepository
                 .findByProviderAndProviderTrackId(YOUTUBE_PROVIDER, youtubeVideoId)
-                .orElseGet(() -> trackRepository.save(Track.create(
-                        YOUTUBE_PROVIDER,
-                        youtubeVideoId,
-                        selectedTrack.title(),
-                        selectedTrack.artistName(),
-                        selectedTrack.albumTitle(),
-                        selectedTrack.albumImageUrl(),
-                        selectedTrack.previewUrl(),
-                        selectedTrack.durationMs()
-                )));
+                .orElseGet(() -> createTrack(selectedTrack, youtubeVideoId));
+    }
+
+    private Track createTrack(SelectedTrackCache selectedTrack, String youtubeVideoId) {
+        String albumImageUrl = albumImageUrlResolver.resolve(selectedTrack.albumImageUrl());
+        return trackRepository.save(Track.create(
+                YOUTUBE_PROVIDER,
+                youtubeVideoId,
+                selectedTrack.title(),
+                selectedTrack.artistName(),
+                selectedTrack.albumTitle(),
+                albumImageUrl,
+                selectedTrack.previewUrl(),
+                selectedTrack.durationMs()
+        ));
     }
 
     private String getYoutubeVideoId(SelectedTrackCache selectedTrack) {

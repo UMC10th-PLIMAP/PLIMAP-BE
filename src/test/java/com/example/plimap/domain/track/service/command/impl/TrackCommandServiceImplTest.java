@@ -9,6 +9,7 @@ import com.example.plimap.domain.track.exception.TrackErrorCode;
 import com.example.plimap.domain.track.exception.TrackException;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
 import com.example.plimap.domain.track.repository.TrackRepository;
+import com.example.plimap.domain.track.service.command.AlbumImageUrlResolver;
 import com.example.plimap.domain.track.service.query.SelectedTrackCacheReader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ class TrackCommandServiceImplTest {
     private final PlaceTrackRepository placeTrackRepository = mock(PlaceTrackRepository.class);
     private final SelectedTrackCacheReader selectedTrackCacheReader = mock(SelectedTrackCacheReader.class);
     private final ObjectProvider<SelectedTrackCacheReader> selectedTrackCacheReaderProvider = mock(ObjectProvider.class);
+    private final AlbumImageUrlResolver albumImageUrlResolver = mock(AlbumImageUrlResolver.class);
 
     private TrackCommandServiceImpl trackCommandService;
 
@@ -46,7 +48,8 @@ class TrackCommandServiceImplTest {
         trackCommandService = new TrackCommandServiceImpl(
                 trackRepository,
                 placeTrackRepository,
-                selectedTrackCacheReaderProvider
+                selectedTrackCacheReaderProvider,
+                albumImageUrlResolver
         );
     }
 
@@ -99,6 +102,7 @@ class TrackCommandServiceImplTest {
         flow.verify(selectedTrackCacheReader).findByItunesTrackId(ITUNES_TRACK_ID);
         flow.verify(trackRepository).findByProviderAndProviderTrackId("YOUTUBE", YOUTUBE_VIDEO_ID);
         verify(trackRepository, never()).save(any(Track.class));
+        verifyNoInteractions(albumImageUrlResolver);
         verify(placeTrackRepository, never())
                 .findFirstByPlace_IdAndTrack_IdAndDeletedAtIsNotNullOrderByIdDesc(any(), any());
         verify(placeTrackRepository, never()).save(any(PlaceTrack.class));
@@ -115,6 +119,8 @@ class TrackCommandServiceImplTest {
                 .thenReturn(Optional.of(selectedTrackCache(YOUTUBE_VIDEO_ID)));
         when(trackRepository.findByProviderAndProviderTrackId("YOUTUBE", YOUTUBE_VIDEO_ID))
                 .thenReturn(Optional.empty());
+        when(albumImageUrlResolver.resolve("https://example.com/album.jpg"))
+                .thenReturn("https://example.com/album-600.jpg");
         when(trackRepository.save(any(Track.class))).thenReturn(savedTrack);
         when(placeTrackRepository.findByPlace_IdAndTrack_IdAndDeletedAtIsNull(1L, 2L))
                 .thenReturn(Optional.empty());
@@ -132,9 +138,10 @@ class TrackCommandServiceImplTest {
         assertThat(createdTrack.getTitle()).isEqualTo("title");
         assertThat(createdTrack.getArtistName()).isEqualTo("artist");
         assertThat(createdTrack.getAlbumTitle()).isEqualTo("album");
-        assertThat(createdTrack.getAlbumImageUrl()).isEqualTo("https://example.com/album.jpg");
+        assertThat(createdTrack.getAlbumImageUrl()).isEqualTo("https://example.com/album-600.jpg");
         assertThat(createdTrack.getPreviewUrl()).isEqualTo("https://example.com/preview");
         assertThat(createdTrack.getDurationMs()).isEqualTo(180_000);
+        verify(albumImageUrlResolver).resolve("https://example.com/album.jpg");
         verify(placeTrackRepository).save(any(PlaceTrack.class));
     }
 
