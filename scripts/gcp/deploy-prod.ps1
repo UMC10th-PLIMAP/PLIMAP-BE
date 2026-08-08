@@ -4,7 +4,7 @@ param(
     [string]$ProjectId = "plimap",
     [ValidatePattern("^[a-z]+-[a-z]+[0-9]$")]
     [string]$Region = "asia-northeast3",
-    [ValidatePattern("^[a-z](?:[a-z0-9-]{0,47}[a-z0-9])?$")]
+    [ValidatePattern("^[a-z](?:[a-z0-9-]{0,33}[a-z0-9])?$")]
     [string]$ServiceName = "plimap-api-prod",
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
@@ -455,6 +455,7 @@ function Assert-HttpStatus {
                 $null
             }
             if ($null -ne $errorResponse) {
+                $webResponse = $errorResponse
                 $actualStatus = [int]$errorResponse.StatusCode
             } else {
                 $lastErrorMessage = $_.Exception.Message
@@ -504,6 +505,53 @@ function Assert-PublicProdEndpoints {
     $setCookieHeader = @($csrfResponse.Headers["Set-Cookie"]) -join ";"
     if ($setCookieHeader -notmatch "(?:^|[,;]\s*)XSRF-TOKEN=") {
         throw "Prod CSRF endpoint did not issue the XSRF-TOKEN cookie."
+    }
+
+    $encodedFrontendOrigin = [Uri]::EscapeDataString($BaseUrl)
+    $oauthResponse = Assert-HttpStatus `
+        -Uri "$BaseUrl/oauth/authorization/google?frontendOrigin=$encodedFrontendOrigin" `
+        -ExpectedStatuses @(302, 303, 307, 308)
+    $locationHeader = [string](@($oauthResponse.Headers["Location"])[0])
+    if ([string]::IsNullOrWhiteSpace($locationHeader)) {
+        throw "Prod OAuth endpoint did not return a Location header."
+    }
+    try {
+        $oauthLocation = [Uri]::new($locationHeader, [UriKind]::Absolute)
+    } catch {
+        throw "Prod OAuth endpoint returned an invalid Location header."
+    }
+    if ($oauthLocation.Scheme -ne "https" -or
+        $oauthLocation.Host -ne "accounts.google.com" -or
+        $oauthLocation.AbsolutePath -ne "/o/oauth2/v2/auth") {
+        throw "Prod OAuth endpoint returned an unexpected authorization Location."
+    }
+
+    $oauthQuery = @{}
+    foreach ($parameter in $oauthLocation.Query.TrimStart("?").Split("&")) {
+        if ([string]::IsNullOrWhiteSpace($parameter)) {
+            continue
+        }
+        $pair = $parameter.Split("=", 2)
+        $key = [System.Net.WebUtility]::UrlDecode($pair[0])
+        $value = if ($pair.Length -eq 2) {
+            [System.Net.WebUtility]::UrlDecode($pair[1])
+        } else {
+            ""
+        }
+        if (-not $oauthQuery.ContainsKey($key)) {
+            $oauthQuery[$key] = @()
+        }
+        $oauthQuery[$key] += $value
+    }
+
+    $redirectUris = @($oauthQuery["redirect_uri"])
+    if ($redirectUris.Count -ne 1 -or
+        $redirectUris[0] -ne "$BaseUrl/oauth/callback/google" -or
+        @($oauthQuery["client_id"]).Count -ne 1 -or
+        [string]::IsNullOrWhiteSpace([string]@($oauthQuery["client_id"])[0]) -or
+        @($oauthQuery["state"]).Count -ne 1 -or
+        [string]::IsNullOrWhiteSpace([string]@($oauthQuery["state"])[0])) {
+        throw "Prod OAuth authorization Location is missing required query parameters."
     }
 
     foreach ($blockedPath in @(

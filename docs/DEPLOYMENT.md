@@ -319,7 +319,7 @@ Public Access Prevention 조직 정책이 강제되어 있다면 공개 URL 방�
 6. 입력 리소스와 기존 서비스의 기본 URL 비활성 bootstrap 또는 단일 revision 100% 트래픽 상태, 공개 Invoker IAM을 확인하고 각 Prod Secret의 `ENABLED` 숫자 버전을 고정합니다.
 7. 공개 traffic tag 없이 `--no-traffic`과 deploy health check로 신규 revision을 시작하고 Ready 상태와 실제 image digest를 확인합니다.
 8. 검증된 revision으로 트래픽을 100% 전환하고 실제 서비스 트래픽이 단일 revision 100%로 수렴하는지 확인합니다. 기본 `run.app` URL은 계속 비활성화합니다.
-9. 서비스 ingress와 기본 URL 비활성 상태를 재검증합니다. DNS와 Managed TLS가 활성화된 뒤 `PROD_PUBLIC_SMOKE_ENABLED=true`이면 `plimap.kr`의 프론트, CSRF 응답·cookie와 문서·Actuator 차단도 검증합니다.
+9. 서비스 ingress와 기본 URL 비활성 상태를 재검증합니다. DNS와 Managed TLS가 활성화된 뒤 `PROD_PUBLIC_SMOKE_ENABLED=true`이면 `plimap.kr`의 프론트, CSRF 응답·cookie, Google OAuth 3xx·`Location`과 문서·Actuator 차단도 검증합니다.
 10. 실패 시 현재 트래픽 상태를 다시 조회하고 직전 revision으로 100% 복구한 뒤 트래픽 수렴과 LB 전용 상태를 재검증합니다.
 11. Commit, image digest, Secret ID·숫자 버전, 이전·신규 revision, 내부·공개 검증과 rollback 결과를 Actions Summary에 기록합니다.
 
@@ -344,6 +344,7 @@ Public Access Prevention 조직 정책이 강제되어 있다면 공개 URL 방�
 두 Cloud Run 애플리케이션 revision, 가비아 DNS와 Managed TLS가 준비되면 `PROD_PUBLIC_SMOKE_ENABLED=true`로 바꾸고 `plimap.kr`의 실제 사용자 경로를 확인합니다.
 
 - `https://plimap.kr/api/v1/auth/csrf`가 예상한 API 응답과 CSRF cookie를 반환하는지 확인합니다.
+- `https://plimap.kr/oauth/authorization/google?frontendOrigin=https%3A%2F%2Fplimap.kr`가 3xx를 반환하고 `Location`이 Google authorization endpoint와 `https://plimap.kr/oauth/callback/google` callback을 포함하는지 확인합니다.
 - `/api/**`, `/oauth/**`가 `plimap-api-prod`로 전달되고 다른 프론트 경로는 `plimap-web-prod`로 전달되는지 확인합니다.
 - `/swagger-ui/**`, `/v3/api-docs/**`, `/actuator/**`가 Cloud Run으로 전달되지 않고 명시적인 `404`를 반환하는지 확인합니다.
 - 로그인 응답의 `Set-Cookie`와 OAuth 응답의 `Location` header가 Load Balancer를 거쳐도 유지되는지 확인합니다.

@@ -7,6 +7,8 @@
 - `deploy-dev.ps1`: Cloud Run dev 서비스를 배포하고 health, Swagger UI, OpenAPI 응답을 검증합니다.
 - `PROD_INFRASTRUCTURE.md`: 비용 승인 경계, 고정 리소스 이름, VPC·Cloud SQL·IAM·WIF·GCS·Load Balancer 구성과 운영자 후속 작업을 정의합니다.
 - `PROD_DATABASE.md`: PG17/PostGIS 검증 게이트와 Prod DB 역할 bootstrap 순서를 설명합니다.
+- `configure-prod-database-grants.sql`: `plimap_migrator`가 Flyway 전에 실행해 이후 생성 객체의 runtime 기본 권한을 설정합니다.
+- `grant-prod-database-existing-objects.sql`: 각 기존 객체 owner가 별도로 실행해 자신이 소유한 객체에 runtime 권한을 부여합니다.
 - `bootstrap-prod-cloud-run.ps1`: 관리자가 LB 전용 ingress의 Prod API Cloud Run 서비스와 공개 Invoker·서비스 단위 deployer IAM을 최초 한 번 준비합니다. 기본 실행은 plan-only이며 `-Apply`가 있어야 변경합니다.
 - `deploy-prod.ps1`: Prod revision을 공개 traffic tag 없이 0%로 기동하고 Ready·image digest를 검증한 뒤 트래픽을 전환하며, LB 전용 상태 또는 선택적 공개 smoke 검증 실패 시 직전 revision을 복구합니다.
 - `SECRETS.md`: 환경변수, GitHub Environment Variable, Secret Manager 매핑과 값 교체 방법을 설명합니다.
@@ -69,7 +71,7 @@ Prod는 GitHub Actions의 `Deploy Prod` 워크플로 사용을 원칙으로 합�
 3. 사전 생성된 서비스의 공개 Invoker, LB 전용 ingress와 기본 URL 비활성 상태를 확인한 뒤 새 revision을 공개 tag 없이 `--no-traffic`과 deploy health check로 기동합니다.
 4. 후보 revision이 Ready이고 실제 resolved image digest가 승인된 digest와 일치하는지 확인합니다.
 5. 후보 revision으로 트래픽을 100% 전환하고 실제 트래픽 상태가 단일 100%로 수렴하는지 확인합니다. 기본 URL은 계속 비활성화합니다.
-6. `-PublicSmokeEnabled`가 켜진 경우 `https://plimap.kr`에서 프론트, CSRF 응답·cookie, Swagger/OpenAPI·Actuator 차단을 검증합니다.
+6. `-PublicSmokeEnabled`가 켜진 경우 `https://plimap.kr`에서 프론트, CSRF 응답·cookie, Google OAuth 3xx·`Location`, Swagger/OpenAPI·Actuator 차단을 검증합니다.
 7. 실패 시 실제 트래픽 상태를 다시 조회하고 직전 revision으로 100% 복구한 뒤 트래픽과 LB 전용 상태를 재검증합니다.
 
 후보 revision에는 외부에서 호출할 수 있는 traffic tag URL을 만들지 않고 기본 URL도 계속 비활성화합니다. 최초 배포 실패 시 공식 sample bootstrap revision으로 복구합니다. Deploy health check가 후보 컨테이너를 시작하므로 Flyway는 트래픽 전환 전에도 운영 DB에 Migration을 적용할 수 있고, 애플리케이션 rollback은 적용된 Migration을 되돌리지 않습니다. DNS/TLS 활성화 전에는 공개 smoke를 끄고, 두 실제 애플리케이션 revision과 인증서가 준비된 뒤 켭니다.

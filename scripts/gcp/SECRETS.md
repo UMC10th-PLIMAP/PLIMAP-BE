@@ -175,7 +175,7 @@ DB_PASSWORD={prod-database-password}
 Prod HikariCP는 `maximum-pool-size=8`, `minimum-idle=0`, `connection-timeout=5000ms`를 사용합니다. Cloud Run 서비스 최대 3개 인스턴스 기준 애플리케이션 최대 연결은 24개입니다.
 Flyway는 `FLYWAY_USERNAME`, `FLYWAY_PASSWORD`로 Migration 전용 DB 사용자를 사용하며, 애플리케이션 runtime의 `DB_USERNAME`, `DB_PASSWORD`와 분리합니다.
 
-Prod targets Cloud SQL PostgreSQL 17 and PostGIS 3.5.2. Before the permanent instance is created, the separately approved temporary validation must record the live default, confirm 3.5.2 is installable, install that exact version, and complete Flyway, CRUD, and privilege checks. After that gate passes, run `scripts/gcp/bootstrap-prod-database.sql` as `postgres` or another `cloudsqlsuperuser` administrator, then run `scripts/gcp/configure-prod-database-grants.sql` as `plimap_migrator`. Keep `FLYWAY_USERNAME` and `FLYWAY_PASSWORD` separate; do not elevate the Flyway account.
+Prod targets Cloud SQL PostgreSQL 17 and PostGIS 3.5.2. Before the permanent instance is created, the separately approved temporary validation must record the live default, confirm 3.5.2 is installable, install that exact version, and complete Flyway, CRUD, and privilege checks. After that gate passes, run `scripts/gcp/bootstrap-prod-database.sql` as `postgres` or another `cloudsqlsuperuser` administrator, then run `scripts/gcp/configure-prod-database-grants.sql` as `plimap_migrator` before Flyway. Pre-existing objects require `scripts/gcp/grant-prod-database-existing-objects.sql` to run separately as each owner. Keep `FLYWAY_USERNAME` and `FLYWAY_PASSWORD` separate; do not elevate the Flyway account. Runtime sequence privileges are limited to `USAGE`.
 
 ### Prod Redis
 
@@ -185,7 +185,7 @@ Dev 무료 Redis와 데이터를 섞지 않도록 Prod 전용 Redis Cloud databa
 REDIS_URL=rediss://default:{url-encoded-password}@{host}:{port}
 ```
 
-애플리케이션 기동 시 Prod는 `rediss://` TLS URL, PostgreSQL JDBC DB URL, `plimap_app` runtime 사용자, `plimap_migrator` Flyway 사용자와 32바이트 이상의 JWT Secret을 검증합니다. DB URL에는 사용자·비밀번호를 포함할 수 없고 검증 오류에는 실제 설정값을 출력하지 않습니다.
+애플리케이션 기동 시 Prod는 `rediss://` TLS URL, Cloud SQL private IP의 PostgreSQL JDBC DB URL, `plimap_app` runtime 사용자, `plimap_migrator` Flyway 사용자와 32바이트 이상의 JWT Secret을 검증합니다. DB URL은 기본 5432 port와 `sslmode=require`를 사용해야 하며 loopback, custom port, 사용자·비밀번호 포함 URL을 거부합니다. 검증 오류에는 실제 설정값을 출력하지 않습니다.
 ### Prod OAuth
 
 Kakao와 Google에는 Prod 전용 OAuth client를 사용하고 callback URI를 `https://plimap.kr/oauth/callback/{provider}`와 일치시킵니다. 운영 client secret을 Dev Secret에 재사용하지 않습니다.

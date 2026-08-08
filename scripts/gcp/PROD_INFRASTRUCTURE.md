@@ -207,9 +207,10 @@ After creation, verify there is no public IP, the private network is exact, back
 Set the built-in administrator password and the two dedicated role passwords through a no-history operator path. Follow `PROD_DATABASE.md` and run, in order:
 
 1. `bootstrap-prod-database.sql` as a Cloud SQL administrator against `plimap_prod`.
-2. `configure-prod-database-grants.sql` as `plimap_migrator`.
-3. Store the JDBC URL without credentials and the two role credential pairs in their separate Secret versions.
-4. Verify the final Flyway Migration revoked all `plimap_app` access to `flyway_schema_history`. Run the grant script again only for tables or sequences that predate the migrator ownership; it repeats the revoke as defense in depth.
+2. `configure-prod-database-grants.sql` as `plimap_migrator` before the first Flyway run.
+3. For pre-existing objects, run `grant-prod-database-existing-objects.sql` separately as each object owner.
+4. Store the JDBC URL without credentials and the two role credential pairs in their separate Secret versions.
+5. Verify the final Flyway Migration revoked all `plimap_app` access to `flyway_schema_history`.
 
 ### 8. Apply remaining IAM and bootstrap Cloud Run
 

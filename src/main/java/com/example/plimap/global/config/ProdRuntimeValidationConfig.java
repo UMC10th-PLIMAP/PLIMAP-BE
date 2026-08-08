@@ -1,7 +1,10 @@
 package com.example.plimap.global.config;
 
 import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -67,16 +70,23 @@ public class ProdRuntimeValidationConfig {
         if (!"postgresql".equalsIgnoreCase(uri.getScheme())
                 || host == null
                 || host.isBlank()
-                || (nonStandardPort && !isLoopbackHost(host))
+                || nonStandardPort
+                || isLoopbackHost(host)
                 || path == null
                 || !path.matches("^/[^/]+$")
                 || uri.getFragment() != null) {
             throw new IllegalArgumentException("Prod database URL is invalid.");
         }
 
-        if (uri.getUserInfo() != null || containsCredentialQuery(uri.getRawQuery())) {
+        List<QueryParameter> queryParameters = parseQueryParameters(uri.getRawQuery());
+        if (uri.getUserInfo() != null || containsCredentialQuery(queryParameters)) {
             throw new IllegalArgumentException(
                     "Prod database URL must not contain credentials."
+            );
+        }
+        if (!hasRequiredSslMode(queryParameters)) {
+            throw new IllegalArgumentException(
+                    "Prod database URL must use sslmode=require."
             );
         }
     }
@@ -84,20 +94,50 @@ public class ProdRuntimeValidationConfig {
     private static boolean isLoopbackHost(String host) {
         return "localhost".equalsIgnoreCase(host)
                 || "127.0.0.1".equals(host)
-                || "::1".equals(host);
+                || "::1".equals(host)
+                || "[::1]".equals(host);
     }
 
-    private static boolean containsCredentialQuery(String rawQuery) {
+    private static List<QueryParameter> parseQueryParameters(String rawQuery) {
         if (rawQuery == null || rawQuery.isBlank()) {
-            return false;
+            return List.of();
         }
-        for (String parameter : rawQuery.split("&")) {
-            String key = parameter.split("=", 2)[0];
-            if ("user".equalsIgnoreCase(key) || "password".equalsIgnoreCase(key)) {
-                return true;
+
+        List<QueryParameter> parameters = new ArrayList<>();
+        try {
+            for (String parameter : rawQuery.split("&", -1)) {
+                String[] parts = parameter.split("=", 2);
+                if (parts[0].isBlank()) {
+                    throw new IllegalArgumentException();
+                }
+                String key = URLDecoder.decode(parts[0], StandardCharsets.UTF_8);
+                String value = parts.length == 2
+                        ? URLDecoder.decode(parts[1], StandardCharsets.UTF_8)
+                        : "";
+                parameters.add(new QueryParameter(key, value));
             }
+        } catch (IllegalArgumentException ignored) {
+            throw new IllegalArgumentException("Prod database URL is invalid.");
         }
-        return false;
+        return List.copyOf(parameters);
+    }
+
+    private static boolean containsCredentialQuery(List<QueryParameter> queryParameters) {
+        return queryParameters.stream()
+                .map(QueryParameter::key)
+                .anyMatch(key -> "user".equalsIgnoreCase(key)
+                        || "password".equalsIgnoreCase(key));
+    }
+
+    private static boolean hasRequiredSslMode(List<QueryParameter> queryParameters) {
+        List<String> sslModes = queryParameters.stream()
+                .filter(parameter -> "sslmode".equalsIgnoreCase(parameter.key()))
+                .map(QueryParameter::value)
+                .toList();
+        return sslModes.size() == 1 && "require".equalsIgnoreCase(sslModes.getFirst());
+    }
+
+    private record QueryParameter(String key, String value) {
     }
 
     static void validateDatabaseUsers(String databaseUsername, String flywayUsername) {

@@ -50,6 +50,7 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT USAGE ON SCHEMA public TO plimap_app;
 GRANT USAGE, CREATE ON SCHEMA public TO plimap_migrator;
 
--- Table and sequence grants must be run by plimap_migrator after Flyway,
--- because that role owns the objects created by its migrations. Use the
--- companion configure-prod-database-grants.sql file for that step.
+-- Run configure-prod-database-grants.sql as plimap_migrator before Flyway so
+-- objects created by that role inherit runtime privileges. Existing objects
+-- owned by another role require grant-prod-database-existing-objects.sql run
+-- separately as each owner.
