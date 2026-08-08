@@ -2,13 +2,18 @@ package com.example.plimap.domain.pin.service.query;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.Pagination;
+import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.ReportedPinInfo;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
+import com.example.plimap.domain.pin.enums.PinReportFilter;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.place.entity.Place;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
@@ -27,7 +32,8 @@ public interface PinQueryService {
 
     Boolean validatePlacePinAccessByMember(Member member, Place place);
 
-    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId);
+    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Member member, String cursor, Integer pageSize, PinSortType pinSortType,
+                                                                           Long placeTrackId, PinRequest.UserLocation request, String token);
 
     PinResponse.PinPreview getPinPreview(Long pinId, Long viewerId);
 
@@ -42,4 +48,9 @@ public interface PinQueryService {
     List<Long> findAllPinIdsByMemberId(Long memberId);
 
     List<Long> findPinIdsLikedByMember(Long memberId);
+
+    long countPinsByMemberId(Long memberId);
+
+    Page<ReportedPinInfo> findReportedPins(PinReportFilter filter, Pageable pageable);
+
 }

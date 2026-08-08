@@ -65,11 +65,17 @@ function Get-HttpsOrigin {
 function Get-WebOrigin {
     param(
         [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][string]$Value
+        [Parameter(Mandatory)][string]$Value,
+        [switch]$AllowPreviewPattern
     )
 
+    $origin = $Value.Trim()
+    if ($AllowPreviewPattern -and $origin -eq "https://pr-*.plimap.kr") {
+        return $origin
+    }
+
     try {
-        $uri = [Uri]::new($Value.Trim(), [UriKind]::Absolute)
+        $uri = [Uri]::new($origin, [UriKind]::Absolute)
     } catch {
         throw "$Name contains an invalid Origin: $Value"
     }
@@ -91,13 +97,16 @@ function Get-AllowedOrigins {
     param(
         [Parameter(Mandatory)][string]$Name,
         [Parameter(Mandatory)][string]$Value,
-        [Parameter(Mandatory)][string]$RequiredOrigin
+        [Parameter(Mandatory)][string]$RequiredOrigin,
+        [switch]$AllowPreviewPattern
     )
 
     $origins = @($Value.Split(",") |
         ForEach-Object { $_.Trim() } |
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-        ForEach-Object { Get-WebOrigin -Name $Name -Value $_ } |
+        ForEach-Object {
+            Get-WebOrigin -Name $Name -Value $_ -AllowPreviewPattern:$AllowPreviewPattern
+        } |
         Select-Object -Unique)
 
     if ($origins.Count -eq 0) {
@@ -234,15 +243,16 @@ $frontendRedirectUrl = Get-HttpsUrl `
     -ExpectedOrigin $publicOrigin
 
 if ([string]::IsNullOrWhiteSpace($CorsAllowedOrigins)) {
-    $CorsAllowedOrigins = "$publicOrigin,http://localhost:5173"
+    $CorsAllowedOrigins = "$publicOrigin,https://admin.plimap.kr,http://localhost:5173,https://pr-*.plimap.kr"
 }
 $corsOrigins = Get-AllowedOrigins `
     -Name "CorsAllowedOrigins" `
     -Value $CorsAllowedOrigins `
-    -RequiredOrigin $publicOrigin
+    -RequiredOrigin $publicOrigin `
+    -AllowPreviewPattern
 
 if ([string]::IsNullOrWhiteSpace($OAuthAllowedFrontendOrigins)) {
-    $OAuthAllowedFrontendOrigins = "$publicOrigin,http://localhost:5173"
+    $OAuthAllowedFrontendOrigins = "$publicOrigin,https://admin.plimap.kr,http://localhost:5173"
 }
 $oauthFrontendOrigins = Get-AllowedOrigins `
     -Name "OAuthAllowedFrontendOrigins" `

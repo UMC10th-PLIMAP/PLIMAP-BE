@@ -1,6 +1,7 @@
 package com.example.plimap.domain.pin.service.command.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
@@ -15,6 +16,8 @@ import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
+import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
+import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.TagQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
@@ -23,6 +26,7 @@ import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.domain.track.service.command.impl.TrackCommandServiceImpl;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -78,6 +82,15 @@ class PinCommandServiceImplTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private ProfileImageStorage profileImageStorage;
+
+    @Mock
+    private PlaceAccessTokenRepository placeAccessTokenRepository;
+
+    @Mock
+    private PinQueryRepository pinQueryRepository;
+
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
@@ -94,14 +107,14 @@ class PinCommandServiceImplTest {
                 .name("이서윤")
                 .nickname("이서")
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.webp")
                 .build();
 
         member2 = Member.builder()
                 .name("홍길동")
                 .nickname("동길")
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.webp")
                 .build();
 
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
@@ -457,5 +470,25 @@ class PinCommandServiceImplTest {
         assertThatThrownBy(() -> pinCommandService.deletePinLike(member, 1L))
                 .isInstanceOf(PinLikeException.class)
                 .hasMessage("핀 좋아요을 찾을 수 없습니다.");
+    }
+
+    @Test
+    void 친구_피드_접근_권한_토큰을_생성한다() {
+        // given
+        when(pinQueryRepository.existsPinByMemberFollowAndPlace(member.getId(), place.getId()))
+                .thenReturn(true);
+
+        // when
+        PinResponse.PlaceAccessToken response =
+                pinCommandService.createPlaceAccessToken(member.getId(), place.getId());
+
+        // then
+        verify(placeAccessTokenRepository).save(
+                any(PlaceAccessToken.class),
+                anyString()
+        );
+
+        assertThat(response.placeAccessToken()).isNotBlank();
+        assertThat(response.placeId()).isEqualTo(place.getId());
     }
 }

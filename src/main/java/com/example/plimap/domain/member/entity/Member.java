@@ -127,6 +127,10 @@ public class Member extends SoftDeleteEntity {
         this.profileImageObjectKey = profileImageObjectKey;
     }
 
+    public void removeProfileImage() {
+        this.profileImageObjectKey = null;
+    }
+
     public void withdrawVoluntarily() {
         this.withdrawnNickname = this.nickname;
         this.nickname = WITHDRAWN_NICKNAME_PREFIX + this.id;
@@ -175,6 +179,10 @@ public class Member extends SoftDeleteEntity {
 
     public void resetReportCount() {
         this.reportCount = 0;
+    }
+
+    public void regenerateNickname(String newNickname) {
+        this.nickname = newNickname;
     }
 
     public boolean isSuspensionExpired() {

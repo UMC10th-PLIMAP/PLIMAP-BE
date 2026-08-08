@@ -1,24 +1,31 @@
 package com.example.plimap.domain.pin.service.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.domain.pin.dto.Pagination;
+import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.enums.AvailabilityStatus;
+import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
+import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
-import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
+import com.example.plimap.domain.track.service.query.PlaceTrackFinder;
+import com.example.plimap.domain.track.service.query.PlaceTrackLikeQueryService;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,6 +63,21 @@ class PinQueryServiceImplTest {
     @Mock
     private PinLikeRepository pinLikeRepository;
 
+    @Mock
+    private ProfileImageStorage profileImageStorage;
+
+    @Mock
+    private PlaceTrackFinder placeTrackFinder;
+
+    @Mock
+    private MemberQueryService memberQueryService;
+
+    @Mock
+    private PlaceTrackLikeQueryService placeTrackLikeQueryService;
+
+    @Mock
+    private PlaceAccessTokenRepository placeAccessTokenRepository;
+
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
 
@@ -64,6 +86,18 @@ class PinQueryServiceImplTest {
     Tag tag1, tag2, tag3, tag4, tag5;
     PlaceTrack placeTrack;
     Pin pin;
+    PinRequest.UserLocation request = PinRequest.UserLocation.builder()
+            .userLatitude(37.123)
+            .userLongitude(127.123)
+            .build();
+
+    Pagination<PinResponse.PinDetail> pagination =
+            Pagination.<PinResponse.PinDetail>builder()
+                    .data(List.of())
+                    .nextCursor(null)
+                    .hasNext(false)
+                    .pageSize(10)
+                    .build();
 
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -73,14 +107,14 @@ class PinQueryServiceImplTest {
                 .name("이서윤")
                 .nickname("이서")
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.web")
                 .build();
 
         member2 = Member.builder()
                 .name("홍길동")
                 .nickname("동길")
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.web")
                 .build();
 
         Point point = geometryFactory.createPoint(
@@ -251,36 +285,6 @@ class PinQueryServiceImplTest {
     }
 
     @Test
-    void 팔로우한_사람이_핀을_등록했다면_true를_반환한다() {
-        // given
-        when(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
-                .thenReturn(false);
-        when(pinQueryRepository.existsPinByMemberFollowAndPlace(anyLong(), anyLong()))
-                .thenReturn(true);
-
-        // when
-        boolean result = pinQueryService.validatePlacePinAccessByMember(member, place);
-
-        // then
-        assertThat(result).isTrue();
-    }
-
-    @Test
-    void 둘_다_핀을_등록하지_않았다면_false를_반환한다() {
-        // given
-        when(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
-                .thenReturn(false);
-        when(pinQueryRepository.existsPinByMemberFollowAndPlace(anyLong(), anyLong()))
-                .thenReturn(false);
-
-        // when
-        boolean result = pinQueryService.validatePlacePinAccessByMember(member, place);
-
-        // then
-        assertThat(result).isFalse();
-    }
-
-    @Test
     void 핀_상세조회에_성공한다() {
         // given
         when(pinQueryRepository.getPinPreview(pin.getId(), 1L))
@@ -294,7 +298,7 @@ class PinQueryServiceImplTest {
         assertThat(result.introduction()).isEqualTo(pin.getIntroduction());
         assertThat(result.clipStartMs()).isEqualTo(pin.getClipStartMs());
         assertThat(result.writerNickname()).isEqualTo(pin.getMember().getNickname());
-        assertThat(result.writerProfileImage()).isEqualTo(pin.getMember().getProfileImageObjectKey());
+        assertThat(result.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey()));
         assertThat(result.placeId()).isEqualTo(pin.getPlace().getId());
         assertThat(result.latitude()).isEqualTo(pin.getPlace().getLocation().getY());
         assertThat(result.longitude()).isEqualTo(pin.getPlace().getLocation().getX());
@@ -422,5 +426,135 @@ class PinQueryServiceImplTest {
 
         // then
         assertThat(result).containsExactly(10L, 20L);
+    }
+
+    @Test
+    void 반경_500m_이내이면_핀_목록_조회에_성공한다() {
+        // given
+        given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
+        given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(300.0);
+
+        given(pinQueryRepository.findPinListByPlaceTrackIdAndSortType(
+                anyLong(), any(), anyInt(), any(), anyLong()
+        )).willReturn(pagination);
+
+        // when
+        Pagination<PinResponse.PinDetail> result =
+                pinQueryService.findPinListByPlaceTrackIdAndSortType(
+                        member, null, 10, PinSortType.LATEST, 1L, request, null);
+
+        // then
+        assertThat(result).isEqualTo(pagination);
+    }
+
+    @Test
+    void 내가_등록한_핀이_있으면_핀_목록_조회에_성공한다() {
+        // given
+        given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
+
+        given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(700.0);
+
+        given(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
+                .willReturn(true);
+
+        given(pinQueryRepository.findPinListByPlaceTrackIdAndSortType(
+                anyLong(), any(), anyInt(), any(), anyLong()
+        )).willReturn(pagination);
+
+        // when
+        Pagination<PinResponse.PinDetail> result =
+                pinQueryService.findPinListByPlaceTrackIdAndSortType(
+                        member, null, 10, PinSortType.LATEST, 1L, request, null);
+
+        // then
+        assertThat(result).isEqualTo(pagination);
+    }
+
+    @Test
+    void 좋아요한_노래가_있으면_핀_목록_조회에_성공한다() {
+        // given
+        given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
+
+        given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(700.0);
+
+        given(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
+                .willReturn(false);
+
+        given(placeTrackLikeQueryService.existsActivePlaceTrackLikedByMemberAtPlace(1L, place.getId()))
+                .willReturn(true);
+
+        given(pinQueryRepository.findPinListByPlaceTrackIdAndSortType(
+                anyLong(), any(), anyInt(), any(), anyLong()
+        )).willReturn(pagination);
+
+        // when
+        Pagination<PinResponse.PinDetail> result =
+                pinQueryService.findPinListByPlaceTrackIdAndSortType(
+                        member, null, 10, PinSortType.LATEST, 1L, request, null);
+
+        // then
+        assertThat(result).isEqualTo(pagination);
+    }
+
+    @Test
+    void 유효한_친구_피드_토큰이_있으면_핀_목록_조회에_성공한다() {
+        // given
+        given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
+
+        given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(700.0);
+
+        given(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
+                .willReturn(false);
+
+        given(placeTrackLikeQueryService.existsActivePlaceTrackLikedByMemberAtPlace(1L, place.getId()))
+                .willReturn(false);
+
+        given(placeAccessTokenRepository.findByToken("token"))
+                .willReturn(Optional.of(new PlaceAccessToken(
+                        1L,
+                        place.getId(),
+                        100L
+                )));
+
+        given(pinQueryRepository.findPinListByPlaceTrackIdAndSortType(
+                anyLong(), any(), anyInt(), any(), anyLong()
+        )).willReturn(pagination);
+
+        // when
+        Pagination<PinResponse.PinDetail> result =
+                pinQueryService.findPinListByPlaceTrackIdAndSortType(
+                        member, null, 10, PinSortType.LATEST, 1L, request, "token");
+
+        // then
+        assertThat(result).isEqualTo(pagination);
+    }
+
+    @Test
+    void 모든_접근_조건을_만족하지_않으면_핀_목록_조회에_실패한다() {
+        // given
+        given(placeTrackFinder.getActivePlaceTrack(1L)).willReturn(placeTrack);
+
+        given(pinLocationValidator.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(700.0);
+
+        given(pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place))
+                .willReturn(false);
+
+        given(placeTrackLikeQueryService.existsActivePlaceTrackLikedByMemberAtPlace(1L, place.getId()))
+                .willReturn(false);
+
+        given(placeAccessTokenRepository.findByToken("token"))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() ->
+                pinQueryService.findPinListByPlaceTrackIdAndSortType(
+                        member, null, 10, PinSortType.LATEST, 1L, request, "token"))
+                .isInstanceOf(PinException.class)
+                .hasMessage(PinErrorCode.PIN_ACCESS_DENIED.getMessage());
     }
 }

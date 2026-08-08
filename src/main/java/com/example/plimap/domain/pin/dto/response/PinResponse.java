@@ -53,6 +53,7 @@ public class PinResponse {
     @Builder
     public record Feed(
             Long pinId,
+            Long placeId,
             String albumImageUrl,
             Double latitude,
             Double longitude,
@@ -140,5 +141,11 @@ public class PinResponse {
             String writerProfileImage,
             String albumImageUrl,
             Instant createdAt
+    ) {}
+
+    @Builder
+    public record PlaceAccessToken(
+            String placeAccessToken,
+            Long placeId
     ) {}
 }

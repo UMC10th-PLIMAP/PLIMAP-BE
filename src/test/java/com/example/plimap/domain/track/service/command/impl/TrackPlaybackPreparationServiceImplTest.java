@@ -11,11 +11,14 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.plimap.domain.track.dto.SelectedTrackCache;
+import com.example.plimap.domain.track.dto.PlaybackFailureCache;
 import com.example.plimap.domain.track.dto.TrackMetadataCache;
 import com.example.plimap.domain.track.dto.request.TrackRequest;
 import com.example.plimap.domain.track.dto.response.TrackResponse;
 import com.example.plimap.domain.track.exception.TrackErrorCode;
 import com.example.plimap.domain.track.exception.TrackException;
+import com.example.plimap.domain.track.enums.YoutubePlaybackFailureType;
+import com.example.plimap.domain.track.repository.PlaybackFailureCacheRepository;
 import com.example.plimap.domain.track.repository.SelectedTrackCacheRepository;
 import com.example.plimap.domain.track.repository.TrackMetadataCacheRepository;
 import com.example.plimap.global.external.youtube.YoutubeClientException;
@@ -29,7 +32,10 @@ import org.springframework.data.redis.RedisConnectionFailureException;
 class TrackPlaybackPreparationServiceImplTest {
 
     private static final Long ITUNES_TRACK_ID = 123L;
-    private static final String QUERY = "밤편지 아이유 official audio";
+    private static final String QUERY = "아이유 밤편지";
+
+    private final PlaybackFailureCacheRepository playbackFailureCacheRepository =
+            mock(PlaybackFailureCacheRepository.class);
 
     private final SelectedTrackCacheRepository selectedTrackCacheRepository =
             mock(SelectedTrackCacheRepository.class);
@@ -38,6 +44,7 @@ class TrackPlaybackPreparationServiceImplTest {
     private final YoutubeSearchClient youtubeSearchClient = mock(YoutubeSearchClient.class);
     private final TrackPlaybackPreparationServiceImpl service =
             new TrackPlaybackPreparationServiceImpl(
+                    playbackFailureCacheRepository,
                     selectedTrackCacheRepository,
                     trackMetadataCacheRepository,
                     youtubeSearchClient
@@ -54,6 +61,30 @@ class TrackPlaybackPreparationServiceImplTest {
         verify(selectedTrackCacheRepository).findByItunesTrackId(ITUNES_TRACK_ID);
         verifyNoMoreInteractions(selectedTrackCacheRepository);
         verifyNoInteractions(trackMetadataCacheRepository, youtubeSearchClient);
+    }
+
+    @Test
+    void failure_캐시가_있으면_가장_먼저_재생_불가로_처리한다() {
+        PlaybackFailureCache failure = PlaybackFailureCache.create(
+                ITUNES_TRACK_ID,
+                "abcdefghijk",
+                101,
+                YoutubePlaybackFailureType.EMBED_BLOCKED
+        );
+        when(playbackFailureCacheRepository.findByItunesTrackId(ITUNES_TRACK_ID))
+                .thenReturn(Optional.of(failure));
+
+        assertTrackError(
+                () -> service.prepare(request()),
+                TrackErrorCode.PLAYBACK_UNAVAILABLE
+        );
+
+        verify(playbackFailureCacheRepository).findByItunesTrackId(ITUNES_TRACK_ID);
+        verifyNoInteractions(
+                selectedTrackCacheRepository,
+                trackMetadataCacheRepository,
+                youtubeSearchClient
+        );
     }
 
     @Test

@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | 스크립트 고정값 | `dev` |
 | `PUBLIC_BASE_URL` | `PublicBaseUrl` | `https://dev.plimap.kr` |
-| `CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | `https://dev.plimap.kr,http://localhost:5173` |
+| `CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | `https://dev.plimap.kr,http://localhost:5173,https://pr-*.plimap.kr` |
 | `OAUTH_REDIRECT_URI` | 기본 `FrontendRedirectUri` 또는 `PublicBaseUrl` + `/app/oauth/callback` | `https://dev.plimap.kr/app/oauth/callback` |
 | `OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | `https://dev.plimap.kr,http://localhost:5173` |
 | `KAKAO_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/kakao` |
@@ -20,14 +20,16 @@
 | `PROFILE_IMAGE_STORAGE_PROVIDER` | 스크립트 고정값 | `supabase` |
 | `PROFILE_IMAGE_BUCKET` | `ProfileImageBucket` | `profile-images` |
 
+When `DEV_CORS_ALLOWED_ORIGINS` is not provided, Dev deployments include the Spring CORS pattern `https://pr-*.plimap.kr` in the default CORS allowlist. An explicit CORS override is preserved as provided. The OAuth frontend allowlist remains exact-origin based.
+
 GitHub Actions에서는 다음 Repository Variable로 공개 주소와 allowlist를 덮어쓸 수 있습니다. `DEV_PUBLIC_BASE_URL`이 없으면 스크립트의 dev 기본값을 사용하고, `DEV_FRONTEND_REDIRECT_URI`가 없으면 선택된 공개 origin에 `/app/oauth/callback`을 붙여 기본 로그인 완료 주소를 생성합니다. CORS와 OAuth 프론트 allowlist가 없으면 Dev 배포 프론트와 로컬 프론트 Origin을 모두 포함합니다.
 
 | Repository Variable | 스크립트 인자 | dev 기본 동작 |
 | --- | --- | --- |
 | `DEV_PUBLIC_BASE_URL` | `PublicBaseUrl` | `https://dev.plimap.kr` |
 | `DEV_FRONTEND_REDIRECT_URI` | `FrontendRedirectUri` | 미설정 시 `PublicBaseUrl` + `/app/oauth/callback` |
-| `DEV_CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | 미설정 시 `PublicBaseUrl,http://localhost:5173` |
-| `DEV_OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | 미설정 시 `PublicBaseUrl,http://localhost:5173` |
+| `DEV_CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | 미설정 시 `PublicBaseUrl,https://admin.plimap.kr,http://localhost:5173,https://pr-*.plimap.kr` |
+| `DEV_OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | 미설정 시 `PublicBaseUrl,https://admin.plimap.kr,http://localhost:5173` |
 
 `PublicBaseUrl`은 경로, query, fragment, credentials, custom port가 없는 HTTPS Origin이어야 합니다. `FrontendRedirectUri`는 `frontendOrigin`이 없거나 저장된 값이 유효하지 않을 때 사용하는 안전한 기본 주소이므로 HTTPS와 `PublicBaseUrl` 동일 origin 조건을 유지합니다.
 

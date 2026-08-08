@@ -57,13 +57,13 @@ public interface MemberControllerDocs {
 
     @Operation(
             summary = "내 프로필 조회",
-            description = "로그인한 회원 자신의 프로필 정보를 조회합니다. 팔로워/팔로잉 수를 함께 반환합니다."
+            description = "로그인한 회원 자신의 프로필 정보를 조회합니다. 팔로워/팔로잉 수, 내가 작성한 핀 개수(pinCount)를 함께 반환합니다. pinCount는 삭제되지 않고 피드에 공개된 핀만 집계한 값입니다."
     )
     ApiResponse<MemberResDTO.MyProfile> getMyProfile(AuthMember authMember);
 
     @Operation(
             summary = "다른 사용자 프로필 조회",
-            description = "경로의 memberId에 해당하는 회원의 프로필을 조회합니다. 팔로워/팔로잉 수와 내가 이 회원을 팔로우 중인지 여부를 함께 반환합니다. 본인의 memberId로는 조회할 수 없으며, 내 프로필 조회는 `GET /api/v1/members/me`를 이용해야 합니다."
+            description = "경로의 memberId에 해당하는 회원의 프로필을 조회합니다. 팔로워/팔로잉 수, 내가 이 회원을 팔로우 중인지 여부, 이 회원이 작성한 핀 개수(pinCount)를 함께 반환합니다. pinCount는 삭제되지 않고 피드에 공개된 핀만 집계한 값입니다. 본인의 memberId로는 조회할 수 없으며, 내 프로필 조회는 `GET /api/v1/members/me`를 이용해야 합니다."
     )
     ApiResponse<MemberResDTO.OtherProfile> getOtherProfile(AuthMember authMember, Long memberId);
 
@@ -85,6 +85,16 @@ public interface MemberControllerDocs {
                     """
     )
     ApiResponse<MemberResDTO.ProfileImage> uploadProfileImage(AuthMember authMember, MultipartFile image);
+
+    @Operation(
+            summary = "프로필 이미지 제거",
+            description = """
+                    로그인한 회원 자신의 프로필 이미지를 제거하고 기본(없음) 상태로 되돌립니다.
+
+                    - 이미 프로필 이미지가 없는 상태에서 호출하면 404로 실패합니다.
+                    """
+    )
+    ApiResponse<Void> removeProfileImage(AuthMember authMember);
 
     @Operation(
             summary = "팔로우",

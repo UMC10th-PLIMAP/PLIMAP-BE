@@ -120,7 +120,7 @@ class MemberControllerTest {
     @Test
     void 내_프로필_조회에_성공하면_200과_MY_PROFILE_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.MyProfile profile = new MemberResDTO.MyProfile(
-                AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"));
+                AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L);
         when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
 
         mockMvc.perform(get("/api/v1/members/me")
@@ -130,13 +130,14 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("MEMBER_200_MY_PROFILE_FETCHED"))
                 .andExpect(jsonPath("$.result.nickname").value("예림"))
                 .andExpect(jsonPath("$.result.followerCount").value(3))
-                .andExpect(jsonPath("$.result.followingCount").value(5));
+                .andExpect(jsonPath("$.result.followingCount").value(5))
+                .andExpect(jsonPath("$.result.pinCount").value(7));
     }
 
     @Test
     void 다른_사용자_프로필_조회에_성공하면_200과_OTHER_PROFILE_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.OtherProfile profile = new MemberResDTO.OtherProfile(
-                TARGET_MEMBER_ID, "상대방", "김상대", "소개", "key", 3L, 5L, true);
+                TARGET_MEMBER_ID, "상대방", "김상대", "소개", "key", 3L, 5L, true, 7L);
         when(memberQueryService.getOtherProfile(AUTH_MEMBER_ID, TARGET_MEMBER_ID)).thenReturn(profile);
 
         mockMvc.perform(get("/api/v1/members/{memberId}", TARGET_MEMBER_ID)
@@ -145,7 +146,8 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("MEMBER_200_OTHER_PROFILE_FETCHED"))
                 .andExpect(jsonPath("$.result.nickname").value("상대방"))
-                .andExpect(jsonPath("$.result.isFollowing").value(true));
+                .andExpect(jsonPath("$.result.isFollowing").value(true))
+                .andExpect(jsonPath("$.result.pinCount").value(7));
     }
 
     @Test
@@ -517,5 +519,28 @@ class MemberControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_PROFILE_IMAGE"));
+    }
+
+    @Test
+    void 프로필_이미지_제거에_성공하면_200과_PROFILE_IMAGE_REMOVED_응답을_반환한다() throws Exception {
+        mockMvc.perform(delete("/api/v1/members/me/profile-image")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_200_PROFILE_IMAGE_REMOVED"));
+
+        verify(memberCommandService).removeProfileImage(AUTH_MEMBER_ID);
+    }
+
+    @Test
+    void 이미_프로필_이미지가_없는_상태에서_제거를_요청하면_404를_반환한다() throws Exception {
+        doThrow(new MemberException(MemberErrorCode.PROFILE_IMAGE_NOT_FOUND))
+                .when(memberCommandService).removeProfileImage(AUTH_MEMBER_ID);
+
+        mockMvc.perform(delete("/api/v1/members/me/profile-image")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("MEMBER_404_PROFILE_IMAGE_NOT_FOUND"));
     }
 }

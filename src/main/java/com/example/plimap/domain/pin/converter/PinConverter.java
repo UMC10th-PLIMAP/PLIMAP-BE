@@ -2,6 +2,7 @@ package com.example.plimap.domain.pin.converter;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.Pagination;
+import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
@@ -17,14 +18,14 @@ public class PinConverter {
     public static PinResponse.Summary toSummary(
             Member member,
             Pin pin,
-            Track track,
-            Long placeId
+            Long placeId,
+            String writerProfileImage
     ) {
         return PinResponse.Summary.builder()
                 .pinId(pin.getId())
                 .placeId(placeId)
                 .writerNickname(member.getDisplayNickname())
-                .writerProfileImage(member.getProfileImageObjectKey())
+                .writerProfileImage(writerProfileImage)
                 .introduction(pin.getIntroduction())
                 .clipStartMs(pin.getClipStartMs())
                 .youtubeVideoId(pin.getPlaceTrack().getTrack().getProviderTrackId())
@@ -96,13 +97,14 @@ public class PinConverter {
     public static PinResponse.PinDetail toPinDetail(
             Pin pin,
             Boolean userLike,
-            Boolean pinByMe
+            Boolean pinByMe,
+            String writerProfileImage
     ) {
         return PinResponse.PinDetail.builder()
                 .memberId(pin.getMember().getId())
                 .pinId(pin.getId())
                 .writerNickname(pin.getMember().getDisplayNickname())
-                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .writerProfileImage(writerProfileImage)
                 .introduction(pin.getIntroduction())
                 .tags(pin.getPinTagList().stream().map(pinTag -> pinTag.getTag().getName()).toList())
                 .clipStartMs(pin.getClipStartMs())
@@ -139,14 +141,15 @@ public class PinConverter {
     }
 
     public static PinResponse.PinPreview toPinPreview(
-            Pin pin
+            Pin pin,
+            String writerProfileImage
     ) {
         return PinResponse.PinPreview.builder()
                 .placeId(pin.getPlace().getId())
                 .latitude(pin.getPlace().getLocation().getY())
                 .longitude(pin.getPlace().getLocation().getX())
                 .writerNickname(pin.getMember().getDisplayNickname())
-                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .writerProfileImage(writerProfileImage)
                 .introduction(pin.getIntroduction())
                 .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
                 .youtubeVideoId(pin.getPlaceTrack().getTrack().getProviderTrackId())
@@ -167,17 +170,28 @@ public class PinConverter {
     }
 
     public static PinResponse.FriendPin toFriendPin(
-            Pin pin
+            Pin pin,
+            String writerProfileImage
     ) {
         return PinResponse.FriendPin.builder()
                 .pinId(pin.getId())
                 .placeName(pin.getPlace().getName())
                 .latitude(pin.getPlace().getLocation().getY())
                 .longitude(pin.getPlace().getLocation().getX())
-                .writerNickname(pin.getMember().getDisplayNickname())
-                .writerProfileImage(pin.getMember().getProfileImageObjectKey())
+                .writerNickname(pin.getMember().getNickname())
+                .writerProfileImage(writerProfileImage)
                 .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
                 .createdAt(pin.getCreatedAt())
+                .build();
+    }
+
+    public static PinResponse.PlaceAccessToken toPlaceAccessToken(
+            Long placeId,
+            String token
+    ) {
+        return PinResponse.PlaceAccessToken.builder()
+                .placeAccessToken(token)
+                .placeId(placeId)
                 .build();
     }
 }

@@ -1,13 +1,19 @@
 package com.example.plimap.domain.admin.controller;
 
+import com.example.plimap.domain.admin.dto.response.AdminResDTO;
 import com.example.plimap.domain.admin.service.command.AdminCommandService;
+import com.example.plimap.domain.admin.service.query.AdminQueryService;
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberRole;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
+import com.example.plimap.domain.pin.enums.PinReportFilter;
+import java.time.Instant;
+import java.util.List;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -72,6 +78,9 @@ class AdminControllerTest {
 
     @MockitoBean
     private AdminCommandService adminCommandService;
+
+    @MockitoBean
+    private AdminQueryService adminQueryService;
 
     @MockitoBean
     private TokenBlacklistService tokenBlacklistService;
@@ -145,5 +154,73 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.code").value("ADMIN_200_PROFILE_PENALTY_REVIEWED"));
 
         verify(adminCommandService).reviewProfileReport(eq(2L), eq(false));
+    }
+
+    @Test
+    void 신고_누적_게시물_목록_조회에_성공하면_200을_반환한다() throws Exception {
+        mockAdminAuth();
+        AdminResDTO.ReportedPinItem item = new AdminResDTO.ReportedPinItem(
+                1L, "제목", "장소", 2L, "작성자", MemberStatus.ACTIVE, 12, true, Instant.now(), List.of());
+        when(adminQueryService.getReportedPins(PinReportFilter.ALL, 1, 10))
+                .thenReturn(new AdminResDTO.ReportedPinPage(List.of(item), 1, 1, 10));
+
+        mockMvc.perform(get("/api/v1/admin/pins/reports")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_REPORTED_PINS_FETCHED"))
+                .andExpect(jsonPath("$.result.total").value(1))
+                .andExpect(jsonPath("$.result.items[0].pinId").value(1))
+                .andExpect(jsonPath("$.result.items[0].autoHidden").value(true));
+    }
+
+    @Test
+    void 회원_목록_조회에_성공하면_200을_반환한다() throws Exception {
+        mockAdminAuth();
+        AdminResDTO.MemberSummary summary = new AdminResDTO.MemberSummary(
+                2L, "닉네임", "이름", MemberStatus.ACTIVE, null, 0, null, Instant.now());
+        when(adminQueryService.getMembers("검색어", MemberStatus.ACTIVE, 1, 10))
+                .thenReturn(new AdminResDTO.MemberPage(List.of(summary), 1, 1, 10));
+
+        mockMvc.perform(get("/api/v1/admin/members")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN)
+                        .param("query", "검색어")
+                        .param("status", "ACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBERS_FETCHED"))
+                .andExpect(jsonPath("$.result.items[0].id").value(2));
+    }
+
+    @Test
+    void 회원_상세_조회에_성공하면_200을_반환한다() throws Exception {
+        mockAdminAuth();
+        AdminResDTO.MemberDetail detail = new AdminResDTO.MemberDetail(
+                2L, "닉네임", "이름", "a@example.com", MemberStatus.ACTIVE, MemberRole.USER, null, 0, null, null, Instant.now());
+        when(adminQueryService.getMemberDetail(2L)).thenReturn(detail);
+
+        mockMvc.perform(get("/api/v1/admin/members/2")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBER_DETAIL_FETCHED"))
+                .andExpect(jsonPath("$.result.email").value("a@example.com"));
+    }
+
+    @Test
+    void 회원_닉네임_강제_재생성에_성공하면_200을_반환한다() throws Exception {
+        mockAdminAuth();
+        AdminResDTO.MemberDetail detail = new AdminResDTO.MemberDetail(
+                2L, "참새", "이름", null, MemberStatus.ACTIVE, MemberRole.USER, null, 0, null, null, Instant.now());
+        when(adminCommandService.regenerateMemberNickname(2L)).thenReturn(detail);
+
+        mockMvc.perform(post("/api/v1/admin/members/2/nickname/regenerate")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBER_NICKNAME_REGENERATED"))
+                .andExpect(jsonPath("$.result.nickname").value("참새"));
+    }
+
+    private void mockAdminAuth() {
+        Member admin = Member.builder().nickname("운영자").role(MemberRole.ADMIN).build();
+        ReflectionTestUtils.setField(admin, "id", MEMBER_ID);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(admin));
     }
 }

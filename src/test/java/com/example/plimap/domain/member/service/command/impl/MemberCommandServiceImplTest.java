@@ -489,6 +489,58 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
+    void 프로필_이미지를_제거한다() {
+        Member member = mock(Member.class);
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.removeProfileImage(MEMBER_ID);
+
+        InOrder order = inOrder(member, memberRepository, profileImageStorage);
+        order.verify(member).removeProfileImage();
+        order.verify(memberRepository).saveAndFlush(member);
+        order.verify(profileImageStorage).delete("members/1/old.webp");
+    }
+
+    @Test
+    void 이미_프로필_이미지가_없으면_제거_요청은_예외가_발생한다() {
+        Member member = mock(Member.class);
+        when(member.getProfileImageObjectKey()).thenReturn(null);
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        assertThatThrownBy(() -> memberCommandService.removeProfileImage(MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.PROFILE_IMAGE_NOT_FOUND));
+
+        verify(member, never()).removeProfileImage();
+        verify(memberRepository, never()).saveAndFlush(any());
+        verify(profileImageStorage, never()).delete(any());
+    }
+
+    @Test
+    void 존재하지_않는_회원의_프로필_이미지는_제거할_수_없다() {
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberCommandService.removeProfileImage(MEMBER_ID))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Test
+    void 스토리지_삭제가_실패해도_프로필_이미지_제거_자체는_성공한다() {
+        Member member = mock(Member.class);
+        when(member.getProfileImageObjectKey()).thenReturn("members/1/old.webp");
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+        doThrow(new ProfileImageStorageException("실패", new RuntimeException()))
+                .when(profileImageStorage).delete("members/1/old.webp");
+
+        memberCommandService.removeProfileImage(MEMBER_ID);
+
+        verify(member).removeProfileImage();
+        verify(memberRepository).saveAndFlush(member);
+    }
+
+    @Test
     void 빈_파일이면_스토리지를_호출하지_않고_예외가_발생한다() {
         MockMultipartFile emptyFile = new MockMultipartFile("image", "empty.webp", "image/webp", new byte[0]);
 
@@ -746,6 +798,43 @@ class MemberCommandServiceImplTest {
         memberCommandService.decreaseReportCount(MEMBER_ID);
 
         verify(memberRepository).decreaseReportCount(MEMBER_ID);
+    }
+
+    @Test
+    void 닉네임_강제_재생성시_벌점과_신고누적은_변경되지_않는다() {
+        Member member = Member.builder().nickname("기존닉네임").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        ReflectionTestUtils.setField(member, "reportCount", 3);
+        ReflectionTestUtils.setField(member, "penaltyPoint", 1);
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.regenerateNickname(MEMBER_ID, "참새");
+
+        assertThat(member.getNickname()).isEqualTo("참새");
+        assertThat(member.getReportCount()).isEqualTo(3);
+        assertThat(member.getPenaltyPoint()).isEqualTo(1);
+        verify(memberRepository).saveAndFlush(member);
+    }
+
+    @Test
+    void 닉네임_강제_재생성시_새_닉네임이_이미_사용중이면_예외가_발생한다() {
+        Member member = Member.builder().nickname("기존닉네임").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.of(member));
+        when(memberRepository.saveAndFlush(member)).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> memberCommandService.regenerateNickname(MEMBER_ID, "참새"))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.NICKNAME_DUPLICATE));
+    }
+
+    @Test
+    void 탈퇴한_회원의_닉네임은_재생성할_수_없다() {
+        when(memberRepository.findByIdAndDeletedAtIsNull(MEMBER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberCommandService.regenerateNickname(MEMBER_ID, "참새"))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 
     private MockMultipartFile webpFile() {

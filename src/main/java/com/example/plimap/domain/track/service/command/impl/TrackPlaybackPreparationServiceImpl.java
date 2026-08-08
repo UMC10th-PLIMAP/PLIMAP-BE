@@ -1,11 +1,13 @@
 package com.example.plimap.domain.track.service.command.impl;
 
+import com.example.plimap.domain.track.dto.PlaybackFailureCache;
 import com.example.plimap.domain.track.dto.SelectedTrackCache;
 import com.example.plimap.domain.track.dto.TrackMetadataCache;
 import com.example.plimap.domain.track.dto.request.TrackRequest;
 import com.example.plimap.domain.track.dto.response.TrackResponse;
 import com.example.plimap.domain.track.exception.TrackErrorCode;
 import com.example.plimap.domain.track.exception.TrackException;
+import com.example.plimap.domain.track.repository.PlaybackFailureCacheRepository;
 import com.example.plimap.domain.track.repository.SelectedTrackCacheRepository;
 import com.example.plimap.domain.track.repository.TrackMetadataCacheRepository;
 import com.example.plimap.domain.track.service.command.TrackPlaybackPreparationService;
@@ -24,8 +26,9 @@ public class TrackPlaybackPreparationServiceImpl
         implements TrackPlaybackPreparationService {
 
     private static final int MAX_RESULTS = 5;
-    private static final String QUERY_SUFFIX = " official audio";
+    private static final String QUERY_SEPARATOR = " ";
 
+    private final PlaybackFailureCacheRepository playbackFailureCacheRepository;
     private final SelectedTrackCacheRepository selectedTrackCacheRepository;
     private final TrackMetadataCacheRepository trackMetadataCacheRepository;
     private final YoutubeSearchClient youtubeSearchClient;
@@ -35,6 +38,10 @@ public class TrackPlaybackPreparationServiceImpl
             TrackRequest.PlaybackPreparation request
     ) {
         Objects.requireNonNull(request, "request must not be null");
+
+        if (findPlaybackFailure(request.itunesTrackId()).isPresent()) {
+            throw new TrackException(TrackErrorCode.PLAYBACK_UNAVAILABLE);
+        }
 
         Optional<SelectedTrackCache> cachedSelection = findSelection(request.itunesTrackId());
         if (cachedSelection.isPresent()) {
@@ -48,6 +55,14 @@ public class TrackPlaybackPreparationServiceImpl
         saveSelection(selectedTrack);
 
         return TrackResponse.PlaybackPreparationResult.from(selectedTrack);
+    }
+
+    private Optional<PlaybackFailureCache> findPlaybackFailure(Long itunesTrackId) {
+        try {
+            return playbackFailureCacheRepository.findByItunesTrackId(itunesTrackId);
+        } catch (DataAccessException exception) {
+            throw new TrackException(TrackErrorCode.TRACK_CACHE_ERROR, exception);
+        }
     }
 
     private Optional<SelectedTrackCache> findSelection(Long itunesTrackId) {
@@ -70,8 +85,8 @@ public class TrackPlaybackPreparationServiceImpl
     }
 
     private YoutubeSearchResponse searchYoutube(TrackMetadataCache metadata) {
-        String query = metadata.title() + " " + metadata.artistName() + QUERY_SUFFIX;
         try {
+            String query = metadata.artistName() + QUERY_SEPARATOR + metadata.title();
             return youtubeSearchClient.search(query, MAX_RESULTS);
         } catch (YoutubeClientException exception) {
             throw new TrackException(TrackErrorCode.YOUTUBE_EXTERNAL_API_ERROR, exception);
