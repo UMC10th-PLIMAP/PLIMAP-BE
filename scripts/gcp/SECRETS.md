@@ -28,8 +28,8 @@ GitHub Actions에서는 다음 Repository Variable로 공개 주소와 allowlist
 | --- | --- | --- |
 | `DEV_PUBLIC_BASE_URL` | `PublicBaseUrl` | `https://dev.plimap.kr` |
 | `DEV_FRONTEND_REDIRECT_URI` | `FrontendRedirectUri` | 미설정 시 `PublicBaseUrl` + `/app/oauth/callback` |
-| `DEV_CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | 미설정 시 `PublicBaseUrl,http://localhost:5173`에 `https://pr-*.plimap.kr` 추가 |
-| `DEV_OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | 미설정 시 `PublicBaseUrl,http://localhost:5173` |
+| `DEV_CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | 미설정 시 `PublicBaseUrl,https://admin.plimap.kr,http://localhost:5173,https://pr-*.plimap.kr` |
+| `DEV_OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | 미설정 시 `PublicBaseUrl,https://admin.plimap.kr,http://localhost:5173` |
 
 `PublicBaseUrl`은 경로, query, fragment, credentials, custom port가 없는 HTTPS Origin이어야 합니다. `FrontendRedirectUri`는 `frontendOrigin`이 없거나 저장된 값이 유효하지 않을 때 사용하는 안전한 기본 주소이므로 HTTPS와 `PublicBaseUrl` 동일 origin 조건을 유지합니다.
 

@@ -11,6 +11,7 @@ import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.domain.auth.entity.QSocialAccount;
 import com.example.plimap.domain.report.entity.QReport;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -18,6 +19,9 @@ import com.querydsl.core.types.dsl.NumberPath;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -146,6 +150,46 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                 )
                 .fetchOne()
         );
+    }
+
+    @Override
+    public Page<Member> searchMembers(String query, MemberStatus status, Pageable pageable) {
+        QMember target = QMember.member;
+        BooleanExpression statusCondition = status != null ? target.status.eq(status) : null;
+        BooleanExpression queryCondition = searchQueryCondition(target, query);
+
+        List<Member> content = queryFactory
+                .selectFrom(target)
+                .where(statusCondition, queryCondition)
+                .orderBy(target.createdAt.desc(), target.id.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        long total = Optional.ofNullable(
+                queryFactory
+                        .select(target.count())
+                        .from(target)
+                        .where(statusCondition, queryCondition)
+                        .fetchOne()
+        ).orElse(0L);
+
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    private BooleanExpression searchQueryCondition(QMember target, String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        QSocialAccount socialAccount = QSocialAccount.socialAccount;
+        BooleanExpression emailMatches = JPAExpressions
+                .selectOne()
+                .from(socialAccount)
+                .where(socialAccount.member.id.eq(target.id), socialAccount.email.containsIgnoreCase(query))
+                .exists();
+        return target.nickname.containsIgnoreCase(query)
+                .or(target.name.containsIgnoreCase(query))
+                .or(emailMatches);
     }
 
     private BooleanExpression notReportedByViewer(Long viewerId, NumberPath<Long> targetId) {

@@ -10,6 +10,7 @@ import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.QPin;
 import com.example.plimap.domain.pin.entity.QPinLike;
 import com.example.plimap.domain.pin.enums.ClusterLevel;
+import com.example.plimap.domain.pin.enums.PinReportFilter;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
@@ -21,13 +22,18 @@ import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Point;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -235,6 +241,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     private static final String FEED_QUERY =  """
         SELECT
             p.id,
+            pl.id,
             t.album_image_url,
             ST_Y(pl.location::geometry) AS latitude,
             ST_X(pl.location::geometry) AS longitude,
@@ -270,6 +277,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
 
     private final EntityManager entityManager;
     private final JPAQueryFactory queryFactory;
+    private final ProfileImageStorage profileImageStorage;
 
     QPin pin = QPin.pin;
     QPinLike pinLike = QPinLike.pinLike;
@@ -351,13 +359,14 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         List<PinResponse.Feed> data = new ArrayList<>(rows.stream()
                 .map(row -> PinResponse.Feed.builder()
                         .pinId(((Number) row[0]).longValue())
-                        .albumImageUrl((String) row[1])
-                        .latitude(((Number) row[2]).doubleValue())
-                        .longitude(((Number) row[3]).doubleValue())
-                        .placeName((String) row[4])
-                        .distanceFromUser(((Number) row[5]).intValue())
-                        .pinCount(((Number) row[6]).longValue())
-                        .createdAt((Instant) row[7])
+                        .placeId(((Number) row[1]).longValue())
+                        .albumImageUrl((String) row[2])
+                        .latitude(((Number) row[3]).doubleValue())
+                        .longitude(((Number) row[4]).doubleValue())
+                        .placeName((String) row[5])
+                        .distanceFromUser(((Number) row[6]).intValue())
+                        .pinCount(((Number) row[7]).longValue())
+                        .createdAt((Instant) row[8])
                         .build())
                 .toList());
 
@@ -541,7 +550,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         PinConverter.toPinDetail(
                                 p,
                                 likedPinIdSet.contains(p.getId()),
-                                p.getMember().getId().equals(memberId)
+                                p.getMember().getId().equals(memberId),
+                                profileImageStorage.getPublicUrlOrNull(p.getMember().getProfileImageObjectKey())
                         )
                 )
                 .toList();
@@ -636,7 +646,13 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .fetch();
 
         return pins.stream()
-                .map(PinConverter::toPinPreview)
+                .map(pin ->
+                            PinConverter.toPinPreview(
+                                    pin,
+                                    profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey()
+                                    )
+                            )
+                )
                 .toList();
     }
 
@@ -772,7 +788,11 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 .fetch();
 
         List<PinResponse.FriendPin> data = pins.stream()
-                .map(PinConverter::toFriendPin).toList();
+                .map(pin ->
+                        PinConverter.toFriendPin(
+                                pin,
+                                profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey())
+                        )).toList();
 
         if (data.isEmpty()) {
             return PinConverter.toPagination(
@@ -818,6 +838,65 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pt -> pt.getPlace().getId(),
                         PlaceTrackConverter::toAlbumImage
                 ));
+    }
+
+    @Override
+    public long countPinsByMemberId(Long memberId) {
+        return queryFactory
+                .select(pin.count())
+                .from(pin)
+                .where(
+                        pin.member.id.eq(memberId),
+                        pin.deletedAt.isNull(),
+                        pin.isFeedPublic.isTrue()
+                )
+                .fetchOne();
+    }
+
+    @Override
+    public Page<ReportedPinInfo> findReportedPins(PinReportFilter filter, Pageable pageable) {
+        BooleanExpression condition = reportFilterCondition(filter);
+
+        List<ReportedPinInfo> content = queryFactory
+                .select(Projections.constructor(
+                        ReportedPinInfo.class,
+                        pin.id,
+                        track.title,
+                        place.name,
+                        member.id,
+                        member.nickname,
+                        member.status,
+                        pin.reportCount,
+                        pin.createdAt
+                ))
+                .from(pin)
+                .join(pin.member, member)
+                .join(pin.place, place)
+                .join(pin.placeTrack, placeTrack)
+                .join(placeTrack.track, track)
+                .where(pin.deletedAt.isNull(), condition)
+                .orderBy(pin.reportCount.desc(), pin.id.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        long total = Optional.ofNullable(
+                queryFactory
+                        .select(pin.count())
+                        .from(pin)
+                        .where(pin.deletedAt.isNull(), condition)
+                        .fetchOne()
+        ).orElse(0L);
+
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    private BooleanExpression reportFilterCondition(PinReportFilter filter) {
+        return switch (filter) {
+            case ALL -> pin.reportCount.gt(0);
+            case AUTO_HIDDEN -> pin.reportCount.goe(REPORT_HIDE_THRESHOLD);
+            case BELOW_THRESHOLD -> pin.reportCount.gt(0).and(pin.reportCount.lt(REPORT_HIDE_THRESHOLD));
+        };
     }
 
     private CursorInfo parseCursor(String cursor, PinSortType pinSortType) {

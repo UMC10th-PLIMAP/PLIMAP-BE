@@ -13,6 +13,8 @@ public interface MemberCommandService {
 
     MemberResDTO.ProfileImage uploadProfileImage(Long memberId, MultipartFile image);
 
+    void removeProfileImage(Long memberId);
+
     void follow(Long followerId, Long followingId);
 
     void unfollow(Long followerId, Long followingId);
@@ -30,4 +32,6 @@ public interface MemberCommandService {
     void replacePenalizedNickname(Long memberId, String newNickname);
 
     void resetReportCount(Long memberId);
+
+    void regenerateNickname(Long memberId, String newNickname);
 }

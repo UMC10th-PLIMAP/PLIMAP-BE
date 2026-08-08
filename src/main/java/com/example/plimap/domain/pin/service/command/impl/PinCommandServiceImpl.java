@@ -2,6 +2,7 @@ package com.example.plimap.domain.pin.service.command.impl;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.converter.PinConverter;
+import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
@@ -14,6 +15,9 @@ import com.example.plimap.domain.pin.exception.*;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
+import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
+import com.example.plimap.domain.pin.repository.impl.PlaceAccessTokenRepositoryImpl;
+import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.TagQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
@@ -22,6 +26,7 @@ import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.dto.request.TrackCommand;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.service.command.TrackCommandService;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -45,6 +51,9 @@ public class PinCommandServiceImpl implements PinCommandService {
     private final TagQueryService tagQueryService;
     private final PinLikeRepository pinLikeRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final ProfileImageStorage profileImageStorage;
+    private final PlaceAccessTokenRepository placeAccessTokenRepository;
+    private final PinQueryRepository pinQueryRepository;
 
     @Override
     public PinResponse.Summary createPin(Member currentMember, PinRequest.Create request) {
@@ -70,7 +79,9 @@ public class PinCommandServiceImpl implements PinCommandService {
 
         eventPublisher.publishEvent(new PinCreatedEvent(pin.getId(), currentMember.getId()));
 
-        return PinConverter.toSummary(currentMember, pin, placeTrack.getTrack(), place.getId());
+        String profileImageUrl = profileImageStorage.getPublicUrlOrNull(currentMember.getProfileImageObjectKey());
+
+        return PinConverter.toSummary(currentMember, pin, place.getId(), profileImageUrl);
     }
 
     private List<PinTag> toPinTags(List<String> stringTags, Pin pin) {
@@ -190,6 +201,23 @@ public class PinCommandServiceImpl implements PinCommandService {
     @Override
     public void hardDeleteLikesByMember(Long memberId) {
         pinLikeRepository.deleteByMemberId(memberId);
+    }
+
+    @Override
+    public PinResponse.PlaceAccessToken createPlaceAccessToken(Long memberId, Long placeId) {
+        if (!pinQueryRepository.existsPinByMemberFollowAndPlace(memberId, placeId)) {
+            throw new PinException(PinErrorCode.FRIEND_PIN_ACCESS_DENIED);
+        }
+
+        String token = UUID.randomUUID().toString();
+
+        PlaceAccessToken accessToken = PlaceAccessToken.builder()
+                .memberId(memberId)
+                .placeId(placeId)
+                .build();
+
+        placeAccessTokenRepository.save(accessToken, token);
+        return PinConverter.toPlaceAccessToken(placeId, token);
     }
 
     private Pin getPin(Long id) {

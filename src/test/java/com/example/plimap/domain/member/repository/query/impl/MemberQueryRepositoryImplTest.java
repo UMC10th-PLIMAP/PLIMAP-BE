@@ -1,8 +1,12 @@
 package com.example.plimap.domain.member.repository.query.impl;
 
+import com.example.plimap.domain.auth.entity.SocialAccount;
+import com.example.plimap.domain.auth.enums.AuthProvider;
+import com.example.plimap.domain.auth.repository.SocialAccountRepository;
 import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
@@ -17,7 +21,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -42,6 +49,9 @@ class MemberQueryRepositoryImplTest {
 
     @Autowired
     private ReportRepository reportRepository;
+
+    @Autowired
+    private SocialAccountRepository socialAccountRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -271,6 +281,58 @@ class MemberQueryRepositoryImplTest {
         Optional<Member> result = memberQueryRepository.findVisibleActiveMember(follower3.getId(), outsider.getId());
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void searchMembers는_닉네임으로_부분일치_검색한다() {
+        Page<Member> result =
+                memberQueryRepository.searchMembers("팔로워", null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).extracting(Member::getNickname)
+                .containsExactlyInAnyOrder("팔로워1", "팔로워2", "탈퇴한팔로워");
+    }
+
+    @Test
+    void searchMembers는_이메일로_검색한다() {
+        socialAccountRepository.save(
+                SocialAccount.create(target, AuthProvider.KAKAO, "target-subject", "target@example.com"));
+        entityManager.flush();
+        entityManager.clear();
+
+        Page<Member> result =
+                memberQueryRepository.searchMembers("target@example.com", null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).extracting(Member::getId).containsExactly(target.getId());
+    }
+
+    @Test
+    void searchMembers는_상태로_필터링한다() {
+        ReflectionTestUtils.setField(follower1, "status", MemberStatus.SUSPENDED);
+        memberRepository.save(follower1);
+        entityManager.flush();
+        entityManager.clear();
+
+        Page<Member> result =
+                memberQueryRepository.searchMembers(null, MemberStatus.SUSPENDED, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).extracting(Member::getId).containsExactly(follower1.getId());
+    }
+
+    @Test
+    void searchMembers는_삭제된_회원도_포함한다() {
+        Page<Member> result =
+                memberQueryRepository.searchMembers("탈퇴한팔로워", null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).extracting(Member::getId).containsExactly(follower3.getId());
+    }
+
+    @Test
+    void searchMembers는_페이지네이션을_지원한다() {
+        Page<Member> firstPage =
+                memberQueryRepository.searchMembers(null, null, PageRequest.of(0, 3));
+
+        assertThat(firstPage.getTotalElements()).isEqualTo(9);
+        assertThat(firstPage.getContent()).hasSize(3);
     }
 
     private Member createMember(String nickname) {

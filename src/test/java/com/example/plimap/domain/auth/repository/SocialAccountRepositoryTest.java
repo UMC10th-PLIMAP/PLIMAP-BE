@@ -14,6 +14,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -60,5 +62,30 @@ class SocialAccountRepositoryTest {
         assertThat(socialAccountRepository.count()).isEqualTo(1);
         assertThat(socialAccountRepository.findByProviderAndProviderSubject(AuthProvider.KAKAO, "other-kakao-subject"))
                 .isPresent();
+    }
+
+    @Test
+    void findByMember_IdInOrderByCreatedAtAsc는_해당_회원들의_소셜_계정을_모두_반환한다() {
+        // when
+        List<SocialAccount> result = socialAccountRepository
+                .findByMember_IdInOrderByCreatedAtAsc(List.of(member.getId(), otherMember.getId()));
+
+        // then
+        assertThat(result).hasSize(3);
+        assertThat(result).extracting(SocialAccount::getEmail)
+                .containsExactlyInAnyOrder("kakao@example.com", "google@example.com", "other@example.com");
+    }
+
+    @Test
+    void findByMember_IdInOrderByCreatedAtAsc는_대상이_없는_회원id는_결과에서_제외한다() {
+        // given
+        Member memberWithoutSocialAccount = memberRepository.save(Member.builder().build());
+
+        // when
+        List<SocialAccount> result = socialAccountRepository
+                .findByMember_IdInOrderByCreatedAtAsc(List.of(memberWithoutSocialAccount.getId()));
+
+        // then
+        assertThat(result).isEmpty();
     }
 }

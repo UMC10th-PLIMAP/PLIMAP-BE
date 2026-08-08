@@ -1,5 +1,7 @@
 package com.example.plimap.domain.admin.service.command.impl;
 
+import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.auth.service.query.AuthQueryService;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
@@ -10,6 +12,7 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.report.service.command.ReportCommandService;
 import com.example.plimap.domain.track.service.command.PlaceTrackCommandService;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -18,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -55,11 +59,15 @@ class AdminCommandServiceImplTest {
     @Mock
     private PlaceTrackCommandService placeTrackCommandService;
 
+    @Mock
+    private AuthQueryService authQueryService;
+
     @Test
     void 핀_신고에_벌점을_부여하지_않으면_신고누적만_초기화한다() {
         adminCommandService.reviewPinReport(PIN_ID, false);
 
         verify(pinCommandService).resetPinReportCount(PIN_ID);
+        verify(reportCommandService).markPinReportsReviewed(PIN_ID);
         verify(pinQueryService, never()).getActivePin(PIN_ID);
         verifyNoInteractions(memberCommandService);
     }
@@ -143,5 +151,22 @@ class AdminCommandServiceImplTest {
         verify(placeTrackCommandService).hardDeleteLikesByMember(MEMBER_ID);
         verify(reportCommandService).deleteReportsAgainstMember(MEMBER_ID);
         verify(reportCommandService).deleteReportsByReporter(MEMBER_ID);
+    }
+
+    @Test
+    void 닉네임_강제_재생성은_벌점_없이_닉네임만_치환한다() {
+        Member updated = Member.builder().nickname("참새").build();
+        ReflectionTestUtils.setField(updated, "id", MEMBER_ID);
+        when(memberQueryService.pickAvailablePenaltyNickname()).thenReturn("참새");
+        when(memberQueryService.getMemberById(MEMBER_ID)).thenReturn(updated);
+        when(authQueryService.findEmailByMemberId(MEMBER_ID)).thenReturn(Optional.of("a@example.com"));
+
+        AdminResDTO.MemberDetail result = adminCommandService.regenerateMemberNickname(MEMBER_ID);
+
+        verify(memberCommandService).regenerateNickname(MEMBER_ID, "참새");
+        verify(memberCommandService, never()).increasePenaltyPoint(any());
+        assertThat(result.nickname()).isEqualTo("참새");
+        assertThat(result.email()).isEqualTo("a@example.com");
+        verifyNoInteractions(notificationCommandService, reportCommandService, placeTrackCommandService, pinCommandService);
     }
 }

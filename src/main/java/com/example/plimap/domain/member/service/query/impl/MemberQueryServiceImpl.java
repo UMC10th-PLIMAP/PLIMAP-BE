@@ -15,9 +15,12 @@ import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.vane.badwordfiltering.BadWordFiltering;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,12 +57,24 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     private final MemberFollowRepository memberFollowRepository;
     private final MemberQueryRepository memberQueryRepository;
     private final ProfileImageStorage profileImageStorage;
+    private final PinQueryService pinQueryService;
     private final BadWordFiltering badWordFiltering = new BadWordFiltering();
 
     @Override
     public Member getActiveMember(Long memberId) {
         return memberRepository.findByIdAndStatusAndDeletedAtIsNull(memberId, MemberStatus.ACTIVE)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Override
+    public Member getMemberById(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    @Override
+    public Page<Member> searchMembers(String query, MemberStatus status, Pageable pageable) {
+        return memberQueryRepository.searchMembers(query, status, pageable);
     }
 
     @Override
@@ -126,8 +141,9 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         Member member = getActiveMember(memberId);
         long followerCount = memberFollowRepository.countByIdFollowingId(memberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(memberId);
+        long pinCount = pinQueryService.countPinsByMemberId(memberId);
         String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
-        return MemberConverter.toMyProfile(member, profileImageUrl, followerCount, followingCount);
+        return MemberConverter.toMyProfile(member, profileImageUrl, followerCount, followingCount, pinCount);
     }
 
     @Override
@@ -140,8 +156,9 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         long followerCount = memberFollowRepository.countByIdFollowingId(targetMemberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
         boolean isFollowing = memberFollowRepository.existsById(new MemberFollowId(viewerId, targetMemberId));
+        long pinCount = pinQueryService.countPinsByMemberId(targetMemberId);
         String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
-        return MemberConverter.toOtherProfile(member, profileImageUrl, followerCount, followingCount, isFollowing);
+        return MemberConverter.toOtherProfile(member, profileImageUrl, followerCount, followingCount, isFollowing, pinCount);
     }
 
     @Override

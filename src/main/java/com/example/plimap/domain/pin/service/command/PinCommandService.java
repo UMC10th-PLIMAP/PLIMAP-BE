@@ -28,4 +28,6 @@ public interface PinCommandService {
     void hardDeleteAllByMember(Long memberId);
 
     void hardDeleteLikesByMember(Long memberId);
+
+    PinResponse.PlaceAccessToken createPlaceAccessToken(Long memberId, Long pinId);
 }

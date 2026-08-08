@@ -618,7 +618,7 @@ class ClusterPinListTest {
                 .name(name)
                 .nickname(nickname)
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.webp")
                 .build();
     }
 

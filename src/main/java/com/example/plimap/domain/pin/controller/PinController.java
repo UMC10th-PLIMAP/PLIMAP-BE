@@ -2,13 +2,12 @@ package com.example.plimap.domain.pin.controller;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.pin.controller.docs.PinControllerDocs;
-import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinSuccessCode;
-import com.example.plimap.domain.pin.service.command.impl.PinCommandServiceImpl;
+import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,7 +15,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Pin", description = "Pin 관련 api")
 public class PinController implements PinControllerDocs {
 
-    private final PinCommandServiceImpl pinCommandService;
+    private final PinCommandService pinCommandService;
     private final PinQueryService pinQueryService;
 
     @PostMapping("/pins")
@@ -158,9 +156,12 @@ public class PinController implements PinControllerDocs {
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false, defaultValue = "LATEST")
             PinSortType pinSortType,
-            @PathVariable Long placeTrackId
+            @PathVariable Long placeTrackId,
+            @ModelAttribute @Valid PinRequest.UserLocation request,
+            @RequestHeader(value = "Place-Access-Token", required = false) String token
     ) {
-        Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackIdAndSortType(currentMember.getMember().getId(), cursor, pageSize, pinSortType, placeTrackId);
+        Pagination<PinResponse.PinDetail> response = pinQueryService.findPinListByPlaceTrackIdAndSortType(currentMember.getMember(), cursor, pageSize, pinSortType,
+                placeTrackId, request, token);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS, response));
@@ -200,5 +201,16 @@ public class PinController implements PinControllerDocs {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.FRIENDS_RECENT_LIST_SEARCH_SUCCESS, response));
+    }
+
+    @PostMapping("/feeds/places/{placeId}")
+    public ResponseEntity<ApiResponse<PinResponse.PlaceAccessToken>> createPlaceAccessToken(
+            @AuthenticationPrincipal AuthMember currentMember,
+            @PathVariable Long placeId
+    ) {
+        PinResponse.PlaceAccessToken response = pinCommandService.createPlaceAccessToken(currentMember.getMember().getId(), placeId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(PinSuccessCode.FRIEND_FEED_TOKEN_REQUEST_SUCCESS, response));
     }
 }

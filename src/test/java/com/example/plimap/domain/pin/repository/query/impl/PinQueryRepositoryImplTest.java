@@ -6,9 +6,11 @@ import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.pin.dto.Pagination;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
+import com.example.plimap.domain.pin.dto.ReportedPinInfo;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
+import com.example.plimap.domain.pin.enums.PinReportFilter;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
@@ -22,6 +24,7 @@ import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
 import com.example.plimap.domain.track.repository.TrackRepository;
+import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import jakarta.persistence.EntityManager;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -33,6 +36,8 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,6 +80,9 @@ class PinQueryRepositoryImplTest {
 
     @Autowired
     private ReportRepository reportRepository;
+
+    @Autowired
+    private ProfileImageStorage profileImageStorage;
 
     @Autowired
     EntityManager entityManager;
@@ -650,7 +658,7 @@ class PinQueryRepositoryImplTest {
         assertThat(result.data().size()).isEqualTo(4);
         assertThat(first.pinId()).isEqualTo(pin9.getId());
         assertThat(first.writerNickname()).isEqualTo(deletedMember.getNickname());
-        assertThat(first.writerProfileImage()).isEqualTo(deletedMember.getProfileImageObjectKey());
+        assertThat(first.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(deletedMember.getProfileImageObjectKey()));
         assertThat(first.placeName()).isEqualTo(pin9.getPlace().getName());
         assertThat(first.latitude()).isEqualTo(pin9.getPlace().getLocation().getY());
         assertThat(first.longitude()).isEqualTo(pin9.getPlace().getLocation().getX());
@@ -666,7 +674,7 @@ class PinQueryRepositoryImplTest {
         assertThat(result.data().size()).isEqualTo(2);
         assertThat(first.pinId()).isEqualTo(pin8.getId());
         assertThat(first.writerNickname()).isEqualTo(member3.getNickname());
-        assertThat(first.writerProfileImage()).isEqualTo(member3.getProfileImageObjectKey());
+        assertThat(first.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(member3.getProfileImageObjectKey()));
         assertThat(first.placeName()).isEqualTo(pin8.getPlace().getName());
         assertThat(first.latitude()).isEqualTo(pin8.getPlace().getLocation().getY());
         assertThat(first.longitude()).isEqualTo(pin8.getPlace().getLocation().getX());
@@ -691,19 +699,95 @@ class PinQueryRepositoryImplTest {
         assertThat(result.data().size()).isEqualTo(3);
         assertThat(last.pinId()).isEqualTo(pin3.getId());
         assertThat(last.writerNickname()).isEqualTo(member2.getNickname());
-        assertThat(last.writerProfileImage()).isEqualTo(member2.getProfileImageObjectKey());
+        assertThat(last.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(member2.getProfileImageObjectKey()));
         assertThat(last.placeName()).isEqualTo(pin3.getPlace().getName());
         assertThat(last.latitude()).isEqualTo(pin3.getPlace().getLocation().getY());
         assertThat(last.longitude()).isEqualTo(pin3.getPlace().getLocation().getX());
     }
 
+    @Test
+    void 특정_사용자가_작성한_핀_개수를_반환한다() {
+        // when
+        long countMember1Pin = pinQueryRepository.countPinsByMemberId(member1.getId());
+        long countMember2Pin = pinQueryRepository.countPinsByMemberId(member2.getId());
+        long countMember3Pin = pinQueryRepository.countPinsByMemberId(member3.getId());
+
+        // then
+        assertThat(countMember1Pin).isEqualTo(2);
+        assertThat(countMember2Pin).isEqualTo(3);
+        assertThat(countMember3Pin).isEqualTo(2);
+    }
+
+    @Test
+    void 신고_누적_핀_목록을_필터로_구분해서_조회한다() {
+        // given
+        Pin lowReportPin = createPin(member1, place3, placeTrack5);
+        Pin highReportPin = createPin(member2, place3, placeTrack5);
+        pinRepository.saveAll(List.of(lowReportPin, highReportPin));
+        increaseReportCount(lowReportPin, 3);
+        increaseReportCount(highReportPin, 12);
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        Page<ReportedPinInfo> allPage =
+                pinQueryRepository.findReportedPins(PinReportFilter.ALL, PageRequest.of(0, 10));
+        Page<ReportedPinInfo> autoHiddenPage =
+                pinQueryRepository.findReportedPins(PinReportFilter.AUTO_HIDDEN, PageRequest.of(0, 10));
+        Page<ReportedPinInfo> belowThresholdPage =
+                pinQueryRepository.findReportedPins(PinReportFilter.BELOW_THRESHOLD, PageRequest.of(0, 10));
+
+        // then
+        assertThat(allPage.getTotalElements()).isEqualTo(2);
+        assertThat(allPage.getContent()).extracting(ReportedPinInfo::pinId)
+                .containsExactly(highReportPin.getId(), lowReportPin.getId());
+
+        ReportedPinInfo topInfo = allPage.getContent().get(0);
+        assertThat(topInfo.reportCount()).isEqualTo(12);
+        assertThat(topInfo.authorMemberId()).isEqualTo(member2.getId());
+        assertThat(topInfo.authorNickname()).isEqualTo(member2.getNickname());
+        assertThat(topInfo.pinTitle()).isEqualTo(placeTrack5.getTrack().getTitle());
+        assertThat(topInfo.pinLocation()).isEqualTo(place3.getName());
+
+        assertThat(autoHiddenPage.getContent()).extracting(ReportedPinInfo::pinId)
+                .containsExactly(highReportPin.getId());
+        assertThat(belowThresholdPage.getContent()).extracting(ReportedPinInfo::pinId)
+                .containsExactly(lowReportPin.getId());
+    }
+
+    @Test
+    void 신고_누적_핀_목록은_페이지네이션을_지원한다() {
+        // given
+        Pin pinA = createPin(member1, place3, placeTrack5);
+        Pin pinB = createPin(member2, place3, placeTrack5);
+        Pin pinC = createPin(member3, place3, placeTrack5);
+        pinRepository.saveAll(List.of(pinA, pinB, pinC));
+        increaseReportCount(pinA, 1);
+        increaseReportCount(pinB, 2);
+        increaseReportCount(pinC, 3);
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        Page<ReportedPinInfo> firstPage =
+                pinQueryRepository.findReportedPins(PinReportFilter.ALL, PageRequest.of(0, 2));
+        Page<ReportedPinInfo> secondPage =
+                pinQueryRepository.findReportedPins(PinReportFilter.ALL, PageRequest.of(1, 2));
+
+        // then
+        assertThat(firstPage.getTotalElements()).isEqualTo(3);
+        assertThat(firstPage.getContent()).extracting(ReportedPinInfo::pinId)
+                .containsExactly(pinC.getId(), pinB.getId());
+        assertThat(secondPage.getContent()).extracting(ReportedPinInfo::pinId)
+                .containsExactly(pinA.getId());
+    }
 
     private Member createMember(String name, String nickname) {
         return Member.builder()
                 .name(name)
                 .nickname(nickname)
                 .introduction("안녕하세요")
-                .profileImageObjectKey("image_url")
+                .profileImageObjectKey("members/12/b7c277d4-31d3-470b-8bb7-ec89c114016c.webp")
                 .build();
     }
 

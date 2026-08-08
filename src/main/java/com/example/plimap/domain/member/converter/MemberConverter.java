@@ -52,7 +52,7 @@ public class MemberConverter {
         );
     }
 
-    public static MemberResDTO.MyProfile toMyProfile(Member member, String profileImageUrl, long followerCount, long followingCount) {
+    public static MemberResDTO.MyProfile toMyProfile(Member member, String profileImageUrl, long followerCount, long followingCount, long pinCount) {
         return new MemberResDTO.MyProfile(
                 member.getId(),
                 member.getNickname(),
@@ -61,11 +61,12 @@ public class MemberConverter {
                 profileImageUrl,
                 followerCount,
                 followingCount,
-                member.getOnboardingCompletedAt()
+                member.getOnboardingCompletedAt(),
+                pinCount
         );
     }
 
-    public static MemberResDTO.OtherProfile toOtherProfile(Member member, String profileImageUrl, long followerCount, long followingCount, boolean isFollowing) {
+    public static MemberResDTO.OtherProfile toOtherProfile(Member member, String profileImageUrl, long followerCount, long followingCount, boolean isFollowing, long pinCount) {
         return new MemberResDTO.OtherProfile(
                 member.getId(),
                 member.getNickname(),
@@ -74,7 +75,8 @@ public class MemberConverter {
                 profileImageUrl,
                 followerCount,
                 followingCount,
-                isFollowing
+                isFollowing,
+                pinCount
         );
     }
 
