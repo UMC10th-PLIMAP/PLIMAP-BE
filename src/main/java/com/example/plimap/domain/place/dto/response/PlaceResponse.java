@@ -38,6 +38,12 @@ public final class PlaceResponse {
             boolean withinAccessRange,
             @Schema(description = "전체 활성 PIN 존재 여부", example = "true")
             boolean hasPin,
+            @Schema(
+                    description = "최초 활성 PIN 작성자 닉네임. 활성 PIN이 없으면 null이며, 작성자가 탈퇴한 경우 플리맵사용자",
+                    example = "홍길동",
+                    nullable = true
+            )
+            String firstPinCreatorNickname,
             @Schema(description = "전체 활성 PIN 개수", example = "3")
             Long pinCount,
             @Schema(description = "인증 사용자의 장소 북마크 여부", example = "false")
