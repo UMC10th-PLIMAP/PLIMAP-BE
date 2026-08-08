@@ -8,6 +8,8 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -51,8 +53,15 @@ public class AlbumImageUrlResolver {
             boolean available = restClient.get()
                     .uri(highResolutionUri)
                     .header(HttpHeaders.RANGE, "bytes=0-0")
-                    .exchange((request, response) ->
-                            response.getStatusCode().is2xxSuccessful());
+                    .exchange((request, response) -> {
+                        HttpStatus status = HttpStatus.resolve(
+                                response.getStatusCode().value());
+                        MediaType contentType = response.getHeaders().getContentType();
+                        return (status == HttpStatus.OK
+                                || status == HttpStatus.PARTIAL_CONTENT)
+                                && contentType != null
+                                && "image".equalsIgnoreCase(contentType.getType());
+                    });
             return available ? highResolutionUrl : artworkUrl100;
         } catch (Exception exception) {
             log.debug(

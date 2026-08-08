@@ -18,6 +18,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -39,11 +40,23 @@ class AlbumImageUrlResolverTest {
     }
 
     @Test
-    void 고해상도_URL이_2xx이면_600x600_URL을_반환한다() {
+    void 고해상도_URL이_200이고_image이면_600x600_URL을_반환한다() {
         server.expect(once(), requestTo(HIGH_RESOLUTION_URL))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header(HttpHeaders.RANGE, "bytes=0-0"))
-                .andRespond(withSuccess());
+                .andRespond(withSuccess().contentType(MediaType.IMAGE_JPEG));
+
+        String result = resolver.resolve(ORIGINAL_URL);
+
+        assertThat(result).isEqualTo(HIGH_RESOLUTION_URL);
+        server.verify();
+    }
+
+    @Test
+    void 고해상도_URL이_206이고_image이면_600x600_URL을_반환한다() {
+        server.expect(once(), requestTo(HIGH_RESOLUTION_URL))
+                .andRespond(withStatus(HttpStatus.PARTIAL_CONTENT)
+                        .contentType(MediaType.IMAGE_JPEG));
 
         String result = resolver.resolve(ORIGINAL_URL);
 
@@ -56,7 +69,7 @@ class AlbumImageUrlResolverTest {
         String originalUrl = ORIGINAL_URL + "?source=100x100";
         String highResolutionUrl = HIGH_RESOLUTION_URL + "?source=100x100";
         server.expect(once(), requestTo(highResolutionUrl))
-                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+                .andRespond(withSuccess().contentType(MediaType.IMAGE_JPEG));
 
         String result = resolver.resolve(originalUrl);
 
@@ -69,11 +82,44 @@ class AlbumImageUrlResolverTest {
         String originalUrl = "https://is2-ssl.mzstatic.com/100x100.webp";
         String highResolutionUrl = "https://is2-ssl.mzstatic.com/600x600.webp";
         server.expect(once(), requestTo(highResolutionUrl))
-                .andRespond(withSuccess());
+                .andRespond(withSuccess().contentType(MediaType.IMAGE_JPEG));
 
         String result = resolver.resolve(originalUrl);
 
         assertThat(result).isEqualTo(highResolutionUrl);
+        server.verify();
+    }
+
+    @Test
+    void 고해상도_URL이_204이면_원본_URL을_반환한다() {
+        server.expect(once(), requestTo(HIGH_RESOLUTION_URL))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        String result = resolver.resolve(ORIGINAL_URL);
+
+        assertThat(result).isEqualTo(ORIGINAL_URL);
+        server.verify();
+    }
+
+    @Test
+    void 고해상도_URL이_200이어도_text이면_원본_URL을_반환한다() {
+        server.expect(once(), requestTo(HIGH_RESOLUTION_URL))
+                .andRespond(withSuccess().contentType(MediaType.TEXT_HTML));
+
+        String result = resolver.resolve(ORIGINAL_URL);
+
+        assertThat(result).isEqualTo(ORIGINAL_URL);
+        server.verify();
+    }
+
+    @Test
+    void 고해상도_URL에_Content_Type이_없으면_원본_URL을_반환한다() {
+        server.expect(once(), requestTo(HIGH_RESOLUTION_URL))
+                .andRespond(withSuccess());
+
+        String result = resolver.resolve(ORIGINAL_URL);
+
+        assertThat(result).isEqualTo(ORIGINAL_URL);
         server.verify();
     }
 
