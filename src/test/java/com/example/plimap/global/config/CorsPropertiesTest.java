@@ -15,13 +15,13 @@ class CorsPropertiesTest {
                 " http://localhost:5173 ",
                 "",
                 "  ",
-                "https://dev.plimap.com",
+                "https://dev.plimap.kr",
                 "https://pr-*.plimap.kr"
         ));
 
         assertThat(properties.allowedOrigins()).containsExactly(
                 "http://localhost:5173",
-                "https://dev.plimap.com",
+                "https://dev.plimap.kr",
                 "https://pr-*.plimap.kr"
         );
     }

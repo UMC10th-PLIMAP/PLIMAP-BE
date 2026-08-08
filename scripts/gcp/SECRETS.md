@@ -20,7 +20,7 @@
 | `PROFILE_IMAGE_STORAGE_PROVIDER` | 스크립트 고정값 | `supabase` |
 | `PROFILE_IMAGE_BUCKET` | `ProfileImageBucket` | `profile-images` |
 
-Dev deployments append the Spring CORS pattern `https://pr-*.plimap.kr` to the Dev CORS allowlist. The OAuth frontend allowlist remains exact-origin based.
+When `DEV_CORS_ALLOWED_ORIGINS` is not provided, Dev deployments include the Spring CORS pattern `https://pr-*.plimap.kr` in the default CORS allowlist. An explicit CORS override is preserved as provided. The OAuth frontend allowlist remains exact-origin based.
 
 GitHub Actions에서는 다음 Repository Variable로 공개 주소와 allowlist를 덮어쓸 수 있습니다. `DEV_PUBLIC_BASE_URL`이 없으면 스크립트의 dev 기본값을 사용하고, `DEV_FRONTEND_REDIRECT_URI`가 없으면 선택된 공개 origin에 `/app/oauth/callback`을 붙여 기본 로그인 완료 주소를 생성합니다. CORS와 OAuth 프론트 allowlist가 없으면 Dev 배포 프론트와 로컬 프론트 Origin을 모두 포함합니다.
 
