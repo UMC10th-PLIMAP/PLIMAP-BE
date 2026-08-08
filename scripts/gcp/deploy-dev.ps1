@@ -68,8 +68,13 @@ function Get-WebOrigin {
         [Parameter(Mandatory)][string]$Value
     )
 
+    $origin = $Value.Trim()
+    if ($origin -eq "https://pr-*.plimap.kr") {
+        return $origin
+    }
+
     try {
-        $uri = [Uri]::new($Value.Trim(), [UriKind]::Absolute)
+        $uri = [Uri]::new($origin, [UriKind]::Absolute)
     } catch {
         throw "$Name contains an invalid Origin: $Value"
     }
@@ -236,6 +241,7 @@ $frontendRedirectUrl = Get-HttpsUrl `
 if ([string]::IsNullOrWhiteSpace($CorsAllowedOrigins)) {
     $CorsAllowedOrigins = "$publicOrigin,http://localhost:5173"
 }
+$CorsAllowedOrigins = "$CorsAllowedOrigins,https://pr-*.plimap.kr"
 $corsOrigins = Get-AllowedOrigins `
     -Name "CorsAllowedOrigins" `
     -Value $CorsAllowedOrigins `
