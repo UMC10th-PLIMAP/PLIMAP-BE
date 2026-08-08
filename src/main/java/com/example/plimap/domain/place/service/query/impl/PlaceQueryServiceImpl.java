@@ -138,6 +138,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 roundToMeters(distance),
                 distance <= ACCESS_RANGE_METERS + DISTANCE_COMPARISON_EPSILON_METERS,
                 pinInfo.hasPin(),
+                pinInfo.firstPinCreatorNickname(),
                 pinInfo.pinCount(),
                 bookmarkedByMe,
                 pinnedByMe
