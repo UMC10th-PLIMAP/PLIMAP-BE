@@ -13,6 +13,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import java.net.SocketTimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -64,14 +66,42 @@ class AlbumImageUrlResolverTest {
 
     @Test
     void bb가_없는_webp_URL도_600x600으로_변환한다() {
-        String originalUrl = "https://image.example/100x100.webp";
-        String highResolutionUrl = "https://image.example/600x600.webp";
+        String originalUrl = "https://is2-ssl.mzstatic.com/100x100.webp";
+        String highResolutionUrl = "https://is2-ssl.mzstatic.com/600x600.webp";
         server.expect(once(), requestTo(highResolutionUrl))
                 .andRespond(withSuccess());
 
         String result = resolver.resolve(originalUrl);
 
         assertThat(result).isEqualTo(highResolutionUrl);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "http://is1-ssl.mzstatic.com/image/thumb/album/100x100bb.jpg",
+            "https://127.0.0.1/image/thumb/album/100x100bb.jpg",
+            "https://localhost/image/thumb/album/100x100bb.jpg",
+            "https://evil-mzstatic.com/image/thumb/album/100x100bb.jpg",
+            "https://mzstatic.com.evil.com/image/thumb/album/100x100bb.jpg"
+    })
+    void 허용되지_않은_URL이면_HTTP_요청_없이_원본_URL을_반환한다(String originalUrl) {
+        server.expect(never(), request -> { });
+
+        String result = resolver.resolve(originalUrl);
+
+        assertThat(result).isEqualTo(originalUrl);
+        server.verify();
+    }
+
+    @Test
+    void 잘못된_URI이면_예외를_전파하지_않고_원본_URL을_반환한다() {
+        String originalUrl = "https://[invalid]/image/thumb/album/100x100bb.jpg";
+        server.expect(never(), request -> { });
+
+        String result = resolver.resolve(originalUrl);
+
+        assertThat(result).isEqualTo(originalUrl);
         server.verify();
     }
 

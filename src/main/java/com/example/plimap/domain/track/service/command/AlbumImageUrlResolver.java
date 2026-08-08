@@ -3,6 +3,7 @@ package com.example.plimap.domain.track.service.command;
 import com.example.plimap.global.external.itunes.ItunesProperties;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,20 +43,35 @@ public class AlbumImageUrlResolver {
         }
 
         try {
+            URI highResolutionUri = URI.create(highResolutionUrl);
+            if (!isAllowedArtworkUri(highResolutionUri)) {
+                return artworkUrl100;
+            }
+
             boolean available = restClient.get()
-                    .uri(URI.create(highResolutionUrl))
+                    .uri(highResolutionUri)
                     .header(HttpHeaders.RANGE, "bytes=0-0")
                     .exchange((request, response) ->
                             response.getStatusCode().is2xxSuccessful());
             return available ? highResolutionUrl : artworkUrl100;
         } catch (Exception exception) {
             log.debug(
-                    "고해상도 앨범 이미지 확인에 실패하여 원본 URL을 사용합니다: {}",
-                    highResolutionUrl,
+                    "고해상도 앨범 이미지 확인에 실패하여 원본 URL을 사용합니다.",
                     exception
             );
             return artworkUrl100;
         }
+    }
+
+    private boolean isAllowedArtworkUri(URI uri) {
+        String host = uri.getHost();
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || host == null) {
+            return false;
+        }
+
+        String normalizedHost = host.toLowerCase(Locale.ROOT);
+        return normalizedHost.equals("mzstatic.com")
+                || normalizedHost.endsWith(".mzstatic.com");
     }
 
     private String toHighResolutionUrl(String artworkUrl100) {
