@@ -241,6 +241,7 @@ class PlaceQueryServiceImplTest {
                 0,
                 true,
                 true,
+                "홍길동",
                 3L,
                 true,
                 true
@@ -265,6 +266,7 @@ class PlaceQueryServiceImplTest {
         );
 
         assertThat(result.hasPin()).isFalse();
+        assertThat(result.firstPinCreatorNickname()).isNull();
         assertThat(result.pinCount()).isZero();
         assertThat(result.bookmarkedByMe()).isFalse();
         assertThat(result.pinnedByMe()).isFalse();
