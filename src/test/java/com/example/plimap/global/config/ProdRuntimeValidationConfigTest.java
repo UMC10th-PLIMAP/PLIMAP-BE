@@ -75,6 +75,7 @@ class ProdRuntimeValidationConfigTest {
         List<String> databaseUrls = List.of(
                 "jdbc:postgresql://localhost:5432/plimap_prod?sslmode=require",
                 "jdbc:postgresql://127.0.0.1:5432/plimap_prod?sslmode=require",
+                "jdbc:postgresql://127.0.0.2:5432/plimap_prod?sslmode=require",
                 "jdbc:postgresql://[::1]:5432/plimap_prod?sslmode=require"
         );
 

@@ -93,7 +93,7 @@ public class ProdRuntimeValidationConfig {
 
     private static boolean isLoopbackHost(String host) {
         return "localhost".equalsIgnoreCase(host)
-                || "127.0.0.1".equals(host)
+                || host.matches("^127(?:\\.[0-9]{1,3}){3}$")
                 || "::1".equals(host)
                 || "[::1]".equals(host);
     }
