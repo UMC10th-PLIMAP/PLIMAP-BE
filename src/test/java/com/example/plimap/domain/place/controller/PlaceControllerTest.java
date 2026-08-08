@@ -397,6 +397,7 @@ class PlaceControllerTest {
                         470,
                         true,
                         true,
+                        "홍길동",
                         3L,
                         false,
                         true
@@ -419,6 +420,7 @@ class PlaceControllerTest {
                 .andExpect(jsonPath("$.result.distanceMeters").value(470))
                 .andExpect(jsonPath("$.result.withinAccessRange").value(true))
                 .andExpect(jsonPath("$.result.hasPin").value(true))
+                .andExpect(jsonPath("$.result.firstPinCreatorNickname").value("홍길동"))
                 .andExpect(jsonPath("$.result.pinCount").value(3))
                 .andExpect(jsonPath("$.result.bookmarkedByMe").value(false))
                 .andExpect(jsonPath("$.result.pinnedByMe").value(true))
