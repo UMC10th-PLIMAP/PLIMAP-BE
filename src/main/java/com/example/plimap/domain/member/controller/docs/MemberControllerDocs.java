@@ -115,7 +115,10 @@ public interface MemberControllerDocs {
 
                     커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
 
-                    각 항목의 isFollowing은 목록 대상(memberId)이 아니라 로그인한 나(요청자)를 기준으로, 내가 그 사람을 팔로우하고 있는지를 나타냅니다. 즉 맞팔 여부를 판단할 때 씁니다.
+                    각 항목은 목록 대상(memberId)이 아니라 로그인한 나(요청자, 뷰어) 기준의 양방향 팔로우 정보를 담습니다.
+                    - isFollowing: 내가 이 사람을 팔로우하고 있는지
+                    - isFollowingViewer: 이 사람이 나를 팔로우하고 있는지
+                    두 값이 모두 true여야 실제 맞팔이며, isFollowing만으로는 맞팔 여부를 판단할 수 없습니다(내가 이 사람을 팔로우 중이라도 상대가 나를 팔로우하지 않을 수 있습니다).
                     """
     )
     ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
@@ -134,7 +137,10 @@ public interface MemberControllerDocs {
 
                     커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
 
-                    각 항목의 isFollowing은 로그인한 나(요청자)를 기준으로, 내가 그 사람을 팔로우하고 있는지를 나타냅니다. memberId 본인의 팔로잉 목록을 조회하는 경우 항상 true입니다.
+                    각 항목은 목록 대상(memberId)이 아니라 로그인한 나(요청자, 뷰어) 기준의 양방향 팔로우 정보를 담습니다.
+                    - isFollowing: 내가 이 사람을 팔로우하고 있는지 (memberId 본인의 팔로잉 목록을 조회하는 경우 항상 true입니다)
+                    - isFollowingViewer: 이 사람이 나를 팔로우하고 있는지
+                    두 값이 모두 true여야 실제 맞팔이며, isFollowing만으로는 맞팔 여부를 판단할 수 없습니다.
                     """
     )
     ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(

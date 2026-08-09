@@ -252,7 +252,7 @@ class MemberControllerTest {
     @Test
     void 팔로워_목록_조회에_성공하면_200과_FOLLOWERS_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(
-                3L, "팔로워", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true);
+                3L, "팔로워", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true, false);
         Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
                 .data(List.of(follower))
                 .nextCursor(null)
@@ -268,6 +268,7 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("MEMBER_200_FOLLOWERS_FETCHED"))
                 .andExpect(jsonPath("$.result.data[0].nickname").value("팔로워"))
                 .andExpect(jsonPath("$.result.data[0].isFollowing").value(true))
+                .andExpect(jsonPath("$.result.data[0].isFollowingViewer").value(false))
                 .andExpect(jsonPath("$.result.hasNext").value(false));
     }
 
@@ -360,7 +361,7 @@ class MemberControllerTest {
     @Test
     void 팔로잉_목록_조회에_성공하면_200과_FOLLOWING_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(
-                3L, "팔로잉", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true);
+                3L, "팔로잉", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true, false);
         Pagination<MemberResDTO.FollowingItem> page = Pagination.<MemberResDTO.FollowingItem>builder()
                 .data(List.of(following))
                 .nextCursor(null)
@@ -376,6 +377,7 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("MEMBER_200_FOLLOWING_FETCHED"))
                 .andExpect(jsonPath("$.result.data[0].nickname").value("팔로잉"))
                 .andExpect(jsonPath("$.result.data[0].isFollowing").value(true))
+                .andExpect(jsonPath("$.result.data[0].isFollowingViewer").value(false))
                 .andExpect(jsonPath("$.result.hasNext").value(false));
     }
 

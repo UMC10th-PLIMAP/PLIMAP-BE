@@ -52,7 +52,8 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                                 follower.name,
                                 follower.profileImageObjectKey,
                                 memberFollow.createdAt,
-                                isFollowedByViewer(viewerId, follower.id)
+                                isFollowedByViewer(viewerId, follower.id),
+                                isViewerFollowedByTarget(viewerId, follower.id)
                         )
                 )
                 .from(memberFollow)
@@ -101,7 +102,8 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                                 following.name,
                                 following.profileImageObjectKey,
                                 memberFollow.createdAt,
-                                isFollowedByViewer(viewerId, following.id)
+                                isFollowedByViewer(viewerId, following.id),
+                                isViewerFollowedByTarget(viewerId, following.id)
                         )
                 )
                 .from(memberFollow)
@@ -223,6 +225,8 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
         }
     }
 
+    // 뷰어 -> targetId 방향. 목록 대상(memberId)과 무관하게 "내가 이 사람을 팔로우하는지"만 나타내므로,
+    // 단독으로는 맞팔 여부를 의미하지 않는다(내 목록을 내가 볼 때만 우연히 일치).
     private BooleanExpression isFollowedByViewer(Long viewerId, NumberPath<Long> targetId) {
         QMemberFollow viewerFollow = new QMemberFollow("viewerFollow");
         return JPAExpressions
@@ -231,6 +235,19 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                 .where(
                         viewerFollow.follower.id.eq(viewerId),
                         viewerFollow.following.id.eq(targetId)
+                )
+                .exists();
+    }
+
+    // targetId -> 뷰어 방향(역방향). isFollowedByViewer와 함께 봐야 실제 맞팔(양방향) 여부를 판단할 수 있다.
+    private BooleanExpression isViewerFollowedByTarget(Long viewerId, NumberPath<Long> targetId) {
+        QMemberFollow targetFollow = new QMemberFollow("targetFollow");
+        return JPAExpressions
+                .selectOne()
+                .from(targetFollow)
+                .where(
+                        targetFollow.follower.id.eq(targetId),
+                        targetFollow.following.id.eq(viewerId)
                 )
                 .exists();
     }
