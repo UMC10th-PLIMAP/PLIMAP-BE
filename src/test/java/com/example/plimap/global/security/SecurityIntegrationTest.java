@@ -68,6 +68,8 @@ class SecurityIntegrationTest {
     private static final String ALLOWED_ORIGIN = "http://localhost:5173";
     private static final String DEV_ORIGIN = "https://dev.plimap.kr";
     private static final String PREVIEW_ORIGIN = "https://pr-123.plimap.kr";
+    private static final String PRIVATE_NETWORK_ORIGIN = "http://192.168.1.10:5173";
+    private static final String PRIVATE_NETWORK_LOOKALIKE_ORIGIN = "http://192.168.1.10.evil:5173";
     private static final String PROTECTED_PATH = "/api/v1/security-test";
     private static final String ADMIN_PATH = "/api/v1/admin/security-test";
     private static final String ACCESS_TOKEN = "valid-access-token";
@@ -264,6 +266,17 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void 사설망_Origin의_credential_Preflight를_처리한다() throws Exception {
+        mockMvc.perform(options(PROTECTED_PATH)
+                        .header(HttpHeaders.ORIGIN, PRIVATE_NETWORK_ORIGIN)
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "X-XSRF-TOKEN"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, PRIVATE_NETWORK_ORIGIN))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
+    }
+
+    @Test
     void previewOriginCredentialPreflightIsProcessed() throws Exception {
         mockMvc.perform(options(PROTECTED_PATH)
                         .header(HttpHeaders.ORIGIN, PREVIEW_ORIGIN)
@@ -296,6 +309,15 @@ class SecurityIntegrationTest {
     void 허용되지_않은_Origin의_Preflight를_차단한다() throws Exception {
         mockMvc.perform(options(PROTECTED_PATH)
                         .header(HttpHeaders.ORIGIN, "https://attacker.example")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
+
+    @Test
+    void 사설망_유사_호스트의_Preflight를_차단한다() throws Exception {
+        mockMvc.perform(options(PROTECTED_PATH)
+                        .header(HttpHeaders.ORIGIN, PRIVATE_NETWORK_LOOKALIKE_ORIGIN)
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
                 .andExpect(status().isForbidden())
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
