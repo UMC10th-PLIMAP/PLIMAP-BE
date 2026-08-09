@@ -1,6 +1,7 @@
 package com.example.plimap.domain.pin.service.command.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
@@ -15,6 +16,8 @@ import com.example.plimap.domain.pin.exception.TagException;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
+import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
+import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.TagQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
@@ -81,6 +84,12 @@ class PinCommandServiceImplTest {
 
     @Mock
     private ProfileImageStorage profileImageStorage;
+
+    @Mock
+    private PlaceAccessTokenRepository placeAccessTokenRepository;
+
+    @Mock
+    private PinQueryRepository pinQueryRepository;
 
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
@@ -461,5 +470,25 @@ class PinCommandServiceImplTest {
         assertThatThrownBy(() -> pinCommandService.deletePinLike(member, 1L))
                 .isInstanceOf(PinLikeException.class)
                 .hasMessage("핀 좋아요을 찾을 수 없습니다.");
+    }
+
+    @Test
+    void 친구_피드_접근_권한_토큰을_생성한다() {
+        // given
+        when(pinQueryRepository.existsPinByMemberFollowAndPlace(member.getId(), place.getId()))
+                .thenReturn(true);
+
+        // when
+        PinResponse.PlaceAccessToken response =
+                pinCommandService.createPlaceAccessToken(member.getId(), place.getId());
+
+        // then
+        verify(placeAccessTokenRepository).save(
+                any(PlaceAccessToken.class),
+                anyString()
+        );
+
+        assertThat(response.placeAccessToken()).isNotBlank();
+        assertThat(response.placeId()).isEqualTo(place.getId());
     }
 }

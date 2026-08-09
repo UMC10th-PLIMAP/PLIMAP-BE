@@ -99,7 +99,7 @@ public interface PlaceControllerDocs {
 
     @Operation(
             summary = "장소 상세 조회",
-            description = "활성 장소의 기본 정보와 현재 위치 기준 거리, 전체 활성 PIN 집계, "
+            description = "활성 장소의 기본 정보와 현재 위치 기준 거리, 전체 활성 PIN 집계와 최초 활성 PIN 작성자, "
                     + "인증 사용자의 북마크 및 활성 PIN 등록 여부를 조회합니다. "
                     + "장소별 곡 접근 가능 여부는 장소별 곡 목록 API의 "
                     + "isTrackDetailAccessible을 사용합니다. "

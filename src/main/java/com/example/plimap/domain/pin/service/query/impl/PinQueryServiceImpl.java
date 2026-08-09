@@ -3,8 +3,10 @@ package com.example.plimap.domain.pin.service.query.impl;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.Pagination;
+import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.ReportedPinInfo;
+import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -20,6 +22,9 @@ import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.track.entity.PlaceTrack;
+import com.example.plimap.domain.track.service.query.PlaceTrackFinder;
+import com.example.plimap.domain.track.service.query.PlaceTrackLikeQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
@@ -34,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +51,9 @@ public class PinQueryServiceImpl implements PinQueryService {
     private final PinRepository pinRepository;
     private final PinLikeRepository pinLikeRepository;
     private final ProfileImageStorage profileImageStorage;
+    private final PlaceTrackFinder placeTrackFinder;
+    private final PlaceAccessTokenRepository placeAccessTokenRepository;
+    private final PlaceTrackLikeQueryService placeTrackLikeQueryService;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override
@@ -90,13 +99,27 @@ public class PinQueryServiceImpl implements PinQueryService {
 
     @Override
     public Boolean validatePlacePinAccessByMember(Member member, Place place) {
-        return pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place)
-                || pinQueryRepository.existsPinByMemberFollowAndPlace(member.getId(), place.getId());
+        return pinRepository.existsByMemberAndPlaceAndDeletedAtIsNull(member, place);
     }
 
     @Override
-    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId) {
-        return pinQueryRepository.findPinListByPlaceTrackIdAndSortType(memberId, cursor, pageSize, pinSortType, placeTrackId);
+    public Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Member member, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId, PinRequest.UserLocation request, String token) {
+        PlaceTrack placeTrack = placeTrackFinder.getActivePlaceTrack(placeTrackId);
+        Place place = placeTrack.getPlace();
+        double distance = pinLocationValidator.calculateDistance(request.userLatitude(), request.userLongitude(),
+                place.getLocation().getY(), place.getLocation().getX());
+
+        boolean hasDistanceAccess = distance <= 500;
+        boolean hasMyPinAccess = validatePlacePinAccessByMember(member, place);
+        boolean hasLikeAccess = placeTrackLikeQueryService.existsActivePlaceTrackLikedByMemberAtPlace(member.getId(), place.getId());
+
+        if (!hasDistanceAccess && !hasLikeAccess && !hasMyPinAccess) {
+            if (!hasValidFeedToken(token, member.getId(), place.getId())) {
+                throw new PinException(PinErrorCode.PIN_ACCESS_DENIED);
+            }
+        }
+
+        return pinQueryRepository.findPinListByPlaceTrackIdAndSortType(member.getId(), cursor, pageSize, pinSortType, placeTrackId);
     }
 
     @Override
@@ -170,5 +193,19 @@ public class PinQueryServiceImpl implements PinQueryService {
             return 7;
         }
         return 8;
+    }
+
+    @Override
+    public boolean hasValidFeedToken(String token, Long memberId, Long placeId) {
+        Optional<PlaceAccessToken> optional = placeAccessTokenRepository.findByToken(token);
+
+        if (optional.isEmpty()) {
+            return false;
+        }
+
+        PlaceAccessToken placeAccessToken = optional.get();
+
+        return placeAccessToken.memberId().equals(memberId)
+                && placeAccessToken.placeId().equals(placeId);
     }
 }

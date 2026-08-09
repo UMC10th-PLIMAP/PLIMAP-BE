@@ -4,7 +4,7 @@ param(
     [string]$ProjectId = "plimap",
     [ValidatePattern("^[a-z]+-[a-z]+[0-9]$")]
     [string]$Region = "asia-northeast3",
-    [ValidatePattern("^[a-z](?:[a-z0-9-]{0,47}[a-z0-9])?$")]
+    [ValidatePattern("^[a-z](?:[a-z0-9-]{0,33}[a-z0-9])?$")]
     [string]$ServiceName = "plimap-api-prod",
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
@@ -28,6 +28,7 @@ param(
     [ValidateNotNullOrEmpty()]
     [ValidatePattern("^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$")]
     [string]$VpcSubnet,
+    [switch]$PublicSmokeEnabled,
     [string]$ResultPath = ""
 )
 
@@ -39,6 +40,8 @@ $secretMap = [ordered]@{
     DB_URL                = "plimap-prod-db-url"
     DB_USERNAME           = "plimap-prod-db-username"
     DB_PASSWORD           = "plimap-prod-db-password"
+    FLYWAY_USERNAME       = "plimap-prod-flyway-username"
+    FLYWAY_PASSWORD       = "plimap-prod-flyway-password"
     REDIS_URL             = "plimap-prod-redis-url"
     JWT_SECRET            = "plimap-prod-jwt-secret"
     KAKAO_REST_API_KEY    = "plimap-prod-kakao-rest-api-key"
@@ -57,13 +60,15 @@ $result = [ordered]@{
     candidateVerification = "not-started"
     trafficPromotion      = "not-started"
     serviceVerification   = "not-started"
+    publicVerification    = if ($PublicSmokeEnabled) { "not-started" } else { "skipped" }
     rollback              = "not-required"
     secretVersions        = [ordered]@{}
-    serviceUrl            = ""
+    publicBaseUrl         = ""
     error                 = ""
 }
 $environmentFile = $null
 $trafficPromotionAttempted = $false
+$bootstrapRevisionName = "$ServiceName-bootstrap"
 
 function Invoke-Gcloud {
     param([Parameter(Mandatory)][string[]]$Arguments)
@@ -146,6 +151,66 @@ function Get-ServiceState {
     }
 
     return ($serviceStateJson -join "`n") | ConvertFrom-Json
+}
+
+function Assert-PublicInvoker {
+    $policyJson = Get-GcloudText -Arguments @(
+        "run", "services", "get-iam-policy", $ServiceName,
+        "--project=$ProjectId",
+        "--region=$Region",
+        "--format=json"
+    )
+    $policy = $policyJson | ConvertFrom-Json
+    $bindings = @(Get-JsonProperty -Object $policy -Name "bindings")
+    $publicBindings = @($bindings | Where-Object {
+        [string](Get-JsonProperty -Object $_ -Name "role") -eq "roles/run.invoker" -and
+        @(Get-JsonProperty -Object $_ -Name "members") -contains "allUsers"
+    })
+    if ($publicBindings.Count -ne 1) {
+        throw "Cloud Run service must be bootstrapped with allUsers roles/run.invoker."
+    }
+}
+
+function Assert-LoadBalancerOnlyService {
+    param([Parameter(Mandatory)][object]$ServiceState)
+
+    $metadata = Get-JsonProperty -Object $ServiceState -Name "metadata"
+    $annotations = Get-JsonProperty -Object $metadata -Name "annotations"
+    $ingress = [string](Get-JsonProperty `
+        -Object $annotations `
+        -Name "run.googleapis.com/ingress")
+    if ($ingress -ne "internal-and-cloud-load-balancing") {
+        throw "Prod Cloud Run ingress must allow only internal traffic and Cloud Load Balancing."
+    }
+
+    $defaultUrlDisabled = [string](Get-JsonProperty `
+        -Object $annotations `
+        -Name "run.googleapis.com/default-url-disabled")
+    if ($defaultUrlDisabled -ne "true") {
+        throw "Prod Cloud Run default URL must remain disabled."
+    }
+
+    $status = Get-JsonProperty -Object $ServiceState -Name "status"
+    $serviceUrl = [string](Get-JsonProperty -Object $status -Name "url")
+    if (-not [string]::IsNullOrWhiteSpace($serviceUrl) -and $serviceUrl -ne "None") {
+        throw "Prod Cloud Run status still exposes a default URL: $serviceUrl"
+    }
+}
+
+function Assert-ZeroTrafficBootstrap {
+    param([Parameter(Mandatory)][object]$ServiceState)
+
+    $metadata = Get-JsonProperty -Object $ServiceState -Name "metadata"
+    $labels = Get-JsonProperty -Object $metadata -Name "labels"
+    if ([string](Get-JsonProperty -Object $labels -Name "plimap-bootstrap") -ne "prod") {
+        throw "Zero-traffic Cloud Run service is not the approved Prod bootstrap service."
+    }
+
+    $status = Get-JsonProperty -Object $ServiceState -Name "status"
+    $serviceUrl = [string](Get-JsonProperty -Object $status -Name "url")
+    if (-not [string]::IsNullOrWhiteSpace($serviceUrl) -and $serviceUrl -ne "None") {
+        throw "Zero-traffic Prod bootstrap service must keep the default URL disabled."
+    }
 }
 
 function Get-ActiveTrafficAllocations {
@@ -390,6 +455,7 @@ function Assert-HttpStatus {
                 $null
             }
             if ($null -ne $errorResponse) {
+                $webResponse = $errorResponse
                 $actualStatus = [int]$errorResponse.StatusCode
             } else {
                 $lastErrorMessage = $_.Exception.Message
@@ -418,64 +484,82 @@ function Assert-HttpStatus {
     }
 }
 
-function Assert-HealthEndpoint {
-    param([Parameter(Mandatory)][string]$Uri)
 
-    $response = Assert-HttpStatus -Uri $Uri -ExpectedStatus 200
-    if ($null -eq $response -or [string]::IsNullOrWhiteSpace([string]$response.Content)) {
-        throw "Health endpoint returned an empty response body: $Uri"
-    }
-
-    try {
-        $health = $response.Content | ConvertFrom-Json
-    } catch {
-        throw "Health endpoint did not return valid JSON: $Uri"
-    }
-
-    $status = [string](Get-JsonProperty -Object $health -Name "status")
-    if ($status -ne "UP") {
-        throw "Health endpoint status is not UP: $Uri (actual=$status)"
-    }
-    foreach ($sensitiveField in @("components", "details")) {
-        if ($null -ne $health.PSObject.Properties[$sensitiveField]) {
-            throw "Health endpoint exposed a forbidden field: $Uri ($sensitiveField)"
-        }
-    }
-}
-
-function Assert-ProdEndpoints {
+function Assert-PublicProdEndpoints {
     param([Parameter(Mandatory)][string]$BaseUrl)
 
-    foreach ($healthPath in @(
-        "/actuator/health/liveness",
-        "/actuator/health/readiness",
+    Assert-HttpStatus -Uri "$BaseUrl/" -ExpectedStatus 200 | Out-Null
+
+    $csrfResponse = Assert-HttpStatus `
+        -Uri "$BaseUrl/api/v1/auth/csrf" `
+        -ExpectedStatus 200
+    try {
+        $csrfBody = $csrfResponse.Content | ConvertFrom-Json
+    } catch {
+        throw "Prod CSRF endpoint did not return valid JSON."
+    }
+    $csrfCode = [string](Get-JsonProperty -Object $csrfBody -Name "code")
+    if ($csrfCode -ne "AUTH_200_CSRF_TOKEN_ISSUED") {
+        throw "Prod CSRF endpoint returned an unexpected response code: $csrfCode"
+    }
+    $setCookieHeader = @($csrfResponse.Headers["Set-Cookie"]) -join ";"
+    if ($setCookieHeader -notmatch "(?:^|[,;]\s*)XSRF-TOKEN=") {
+        throw "Prod CSRF endpoint did not issue the XSRF-TOKEN cookie."
+    }
+
+    $encodedFrontendOrigin = [Uri]::EscapeDataString($BaseUrl)
+    $oauthResponse = Assert-HttpStatus `
+        -Uri "$BaseUrl/oauth/authorization/google?frontendOrigin=$encodedFrontendOrigin" `
+        -ExpectedStatuses @(302, 303, 307, 308)
+    $locationHeader = [string](@($oauthResponse.Headers["Location"])[0])
+    if ([string]::IsNullOrWhiteSpace($locationHeader)) {
+        throw "Prod OAuth endpoint did not return a Location header."
+    }
+    try {
+        $oauthLocation = [Uri]::new($locationHeader, [UriKind]::Absolute)
+    } catch {
+        throw "Prod OAuth endpoint returned an invalid Location header."
+    }
+    if ($oauthLocation.Scheme -ne "https" -or
+        $oauthLocation.Host -ne "accounts.google.com" -or
+        $oauthLocation.AbsolutePath -ne "/o/oauth2/v2/auth") {
+        throw "Prod OAuth endpoint returned an unexpected authorization Location."
+    }
+
+    $oauthQuery = @{}
+    foreach ($parameter in $oauthLocation.Query.TrimStart("?").Split("&")) {
+        if ([string]::IsNullOrWhiteSpace($parameter)) {
+            continue
+        }
+        $pair = $parameter.Split("=", 2)
+        $key = [System.Net.WebUtility]::UrlDecode($pair[0])
+        $value = if ($pair.Length -eq 2) {
+            [System.Net.WebUtility]::UrlDecode($pair[1])
+        } else {
+            ""
+        }
+        if (-not $oauthQuery.ContainsKey($key)) {
+            $oauthQuery[$key] = @()
+        }
+        $oauthQuery[$key] += $value
+    }
+
+    $redirectUris = @($oauthQuery["redirect_uri"])
+    if ($redirectUris.Count -ne 1 -or
+        $redirectUris[0] -ne "$BaseUrl/oauth/callback/google" -or
+        @($oauthQuery["client_id"]).Count -ne 1 -or
+        [string]::IsNullOrWhiteSpace([string]@($oauthQuery["client_id"])[0]) -or
+        @($oauthQuery["state"]).Count -ne 1 -or
+        [string]::IsNullOrWhiteSpace([string]@($oauthQuery["state"])[0])) {
+        throw "Prod OAuth authorization Location is missing required query parameters."
+    }
+
+    foreach ($blockedPath in @(
+        "/swagger-ui/index.html",
+        "/v3/api-docs",
         "/actuator/health"
     )) {
-        Assert-HealthEndpoint -Uri "$BaseUrl$healthPath"
-    }
-
-    foreach ($documentationPath in @(
-        "/swagger-ui/index.html",
-        "/v3/api-docs"
-    )) {
-        Assert-HttpStatus -Uri "$BaseUrl$documentationPath" -ExpectedStatus 404 | Out-Null
-    }
-
-    foreach ($blockedActuatorPath in @(
-        "/actuator",
-        "/actuator/info",
-        "/actuator/env",
-        "/actuator/configprops",
-        "/actuator/heapdump",
-        "/actuator/threaddump",
-        "/actuator/mappings",
-        "/actuator/loggers",
-        "/actuator/beans",
-        "/actuator/metrics"
-    )) {
-        Assert-HttpStatus `
-            -Uri "$BaseUrl$blockedActuatorPath" `
-            -ExpectedStatuses @(401, 403, 404) | Out-Null
+        Assert-HttpStatus -Uri "$BaseUrl$blockedPath" -ExpectedStatus 404 | Out-Null
     }
 }
 
@@ -603,13 +687,16 @@ try {
         $result.secretVersions[$entry.Key] = "$($entry.Value):$version"
     }
 
-    $serviceState = Get-ServiceState -AllowMissing
-    if ($null -ne $serviceState) {
-        $activeTraffic = @(Get-ActiveTrafficAllocations -ServiceState $serviceState)
-        if ($activeTraffic.Count -ne 1 -or [int]$activeTraffic[0].percent -ne 100) {
-            throw "Existing Cloud Run service must have exactly one revision serving 100% traffic."
-        }
+    $serviceState = Get-ServiceState
+    Assert-PublicInvoker
+    Assert-LoadBalancerOnlyService -ServiceState $serviceState
+    $activeTraffic = @(Get-ActiveTrafficAllocations -ServiceState $serviceState)
+    if ($activeTraffic.Count -eq 0) {
+        Assert-ZeroTrafficBootstrap -ServiceState $serviceState
+    } elseif ($activeTraffic.Count -eq 1 -and [int]$activeTraffic[0].percent -eq 100) {
         $result.previousRevision = [string]$activeTraffic[0].revisionName
+    } else {
+        throw "Existing Cloud Run service must be the approved zero-traffic bootstrap or have exactly one revision serving 100% traffic."
     }
 
     $environmentFile = New-TemporaryFile
@@ -647,8 +734,8 @@ try {
         "--timeout=60",
         "--min=0",
         "--max=3",
-        "--ingress=all",
-        "--allow-unauthenticated",
+        "--ingress=internal-and-cloud-load-balancing",
+        "--no-default-url",
         "--cpu-throttling",
         "--cpu-boost",
         "--network=$VpcNetwork",
@@ -678,19 +765,16 @@ try {
     Wait-ForSingleRevisionTraffic -ExpectedRevision $result.candidateRevision
     $result.trafficPromotion = "passed"
 
-    $serviceUrl = Get-GcloudText -Arguments @(
-        "run", "services", "describe", $ServiceName,
-        "--project=$ProjectId",
-        "--region=$Region",
-        "--format=value(status.url)"
-    )
-    if ([string]::IsNullOrWhiteSpace($serviceUrl)) {
-        throw "Could not read the Cloud Run service URL after traffic promotion."
-    }
-    $result.serviceUrl = $serviceUrl.TrimEnd('/')
-
-    Assert-ProdEndpoints -BaseUrl $result.serviceUrl
+    Assert-LoadBalancerOnlyService -ServiceState (Get-ServiceState)
     $result.serviceVerification = "passed"
+
+    $result.publicBaseUrl = $publicOrigin
+    if ($PublicSmokeEnabled) {
+        Assert-PublicProdEndpoints -BaseUrl $publicOrigin
+        $result.publicVerification = "passed"
+    } else {
+        Write-Warning "Public smoke test is disabled until plimap.kr DNS and managed TLS are active."
+    }
 
     $result.status = "succeeded"
 
@@ -723,8 +807,9 @@ try {
                     "--quiet"
                 )
                 Wait-ForSingleRevisionTraffic -ExpectedRevision $result.previousRevision
-                if (-not [string]::IsNullOrWhiteSpace($result.serviceUrl)) {
-                    Assert-ProdEndpoints -BaseUrl $result.serviceUrl
+                Assert-LoadBalancerOnlyService -ServiceState (Get-ServiceState)
+                if ($result.previousRevision -ne $bootstrapRevisionName -and $PublicSmokeEnabled) {
+                    Assert-PublicProdEndpoints -BaseUrl $publicOrigin
                 }
                 $result.rollback = "succeeded"
             } catch {

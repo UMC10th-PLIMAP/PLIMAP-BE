@@ -38,6 +38,8 @@ class TrackOpenApiIntegrationTest {
     private static final String TRACK_SEARCH_PATH = "/api/v1/tracks/search";
     private static final String PLAYBACK_PREPARATION_PATH =
             "/api/v1/tracks/playback-preparations";
+    private static final String PLAYBACK_FAILURE_PATH =
+            "/api/v1/tracks/playback-failures";
 
     @Autowired
     private MockMvc mockMvc;
@@ -95,6 +97,27 @@ class TrackOpenApiIntegrationTest {
                 "post",
                 "200"
         ))).isEqualTo("ApiResponsePlaybackPreparationResult");
+        assertThat(referenceName(responseSchemaReference(
+                openApi,
+                PLAYBACK_FAILURE_PATH,
+                "post",
+                "200"
+        ))).isEqualTo("ApiResponseVoid");
+
+        JsonNode playbackFailureSuccessContent = responseContent(
+                openApi,
+                PLAYBACK_FAILURE_PATH,
+                "post",
+                "200"
+        ).path("application/json");
+        JsonNode playbackFailureSuccessExample =
+                exampleValues(playbackFailureSuccessContent).getFirst();
+        assertThat(playbackFailureSuccessExample.path("isSuccess").asBoolean()).isTrue();
+        assertThat(playbackFailureSuccessExample.path("code").asText())
+                .isEqualTo("TRACK_PLAYBACK_FAILURE_REPORTED");
+        assertThat(playbackFailureSuccessExample.path("message").asText())
+                .isEqualTo("YouTube 재생 실패가 보고되었습니다.");
+        assertThat(playbackFailureSuccessExample.path("result").isNull()).isTrue();
 
         JsonNode placeTrackResult =
                 responseResultSchema(openApi, PLACE_TRACK_PATH, "get");
@@ -227,8 +250,34 @@ class TrackOpenApiIntegrationTest {
                 "ApiResponsePlaybackPreparationResult",
                 Set.of(
                         "TRACK_404_METADATA_CACHE_NOT_FOUND",
-                        "TRACK_404_YOUTUBE_MATCH_NOT_FOUND"
+                        "TRACK_404_YOUTUBE_MATCH_NOT_FOUND",
+                        "TRACK_404_PLAYBACK_UNAVAILABLE"
                 )
+        );
+
+        assertFailureResponse(
+                openApi,
+                PLAYBACK_FAILURE_PATH,
+                "post",
+                "400",
+                "ApiResponseVoid",
+                Set.of("COMMON_400_VALIDATION_FAILED")
+        );
+        assertFailureResponse(
+                openApi,
+                PLAYBACK_FAILURE_PATH,
+                "post",
+                "401",
+                "ApiResponseVoid",
+                Set.of("COMMON_401_UNAUTHORIZED")
+        );
+        assertFailureResponse(
+                openApi,
+                PLAYBACK_FAILURE_PATH,
+                "post",
+                "500",
+                "ApiResponseVoid",
+                Set.of("TRACK_500_CACHE_ERROR")
         );
         assertFailureResponse(
                 openApi,
@@ -285,6 +334,14 @@ class TrackOpenApiIntegrationTest {
                 "401",
                 "ApiResponsePlaceTrackDetail",
                 Set.of(GeneralErrorCode.UNAUTHORIZED.getCode())
+        );
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_DETAIL_PATH,
+                "get",
+                "403",
+                "ApiResponseVoid",
+                Set.of(TrackErrorCode.PLACE_TRACK_ACCESS_DENIED.getCode())
         );
         assertFailureResponse(
                 openApi,

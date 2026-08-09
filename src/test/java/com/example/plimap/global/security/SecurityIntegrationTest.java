@@ -67,6 +67,7 @@ class SecurityIntegrationTest {
 
     private static final String ALLOWED_ORIGIN = "http://localhost:5173";
     private static final String DEV_ORIGIN = "https://dev.plimap.kr";
+    private static final String PREVIEW_ORIGIN = "https://pr-123.plimap.kr";
     private static final String PROTECTED_PATH = "/api/v1/security-test";
     private static final String ADMIN_PATH = "/api/v1/admin/security-test";
     private static final String ACCESS_TOKEN = "valid-access-token";
@@ -263,6 +264,17 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void previewOriginCredentialPreflightIsProcessed() throws Exception {
+        mockMvc.perform(options(PROTECTED_PATH)
+                        .header(HttpHeaders.ORIGIN, PREVIEW_ORIGIN)
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "X-XSRF-TOKEN"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, PREVIEW_ORIGIN))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
+    }
+
+    @Test
     void 관리자_전용_경로는_일반_회원이면_거부한다() throws Exception {
         mockMvc.perform(get(ADMIN_PATH)
                         .cookie(new Cookie("accessToken", ACCESS_TOKEN)))
@@ -285,7 +297,8 @@ class SecurityIntegrationTest {
         mockMvc.perform(options(PROTECTED_PATH)
                         .header(HttpHeaders.ORIGIN, "https://attacker.example")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
     }
 
     private Cookie issueCsrfCookie() throws Exception {

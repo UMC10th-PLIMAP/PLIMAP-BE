@@ -24,6 +24,11 @@ public enum TrackErrorCode implements BaseErrorCode {
             "PLACE_TRACK_LIKE_NOT_FOUND",
             "장소별 곡 좋아요를 찾을 수 없습니다."
     ),
+    PLACE_TRACK_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "PLACE_TRACK_ACCESS_DENIED",
+            "해당 장소의 곡 상세에 접근할 수 없습니다."
+    ),
     TRACK_EXTERNAL_API_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "TRACK_EXTERNAL_API_ERROR",
@@ -50,6 +55,11 @@ public enum TrackErrorCode implements BaseErrorCode {
             "곡 캐시 처리 중 오류가 발생했습니다."
     ),
 
+    PLAYBACK_UNAVAILABLE(
+            HttpStatus.NOT_FOUND,
+            "TRACK_404_PLAYBACK_UNAVAILABLE",
+            "최근 재생 실패가 확인된 곡입니다."
+    ),
     SELECTED_TRACK_CACHE_READER_NOT_AVAILABLE(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "TRACK_500_SELECTED_TRACK_CACHE_READER_NOT_AVAILABLE",

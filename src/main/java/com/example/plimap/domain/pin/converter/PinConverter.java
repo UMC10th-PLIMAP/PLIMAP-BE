@@ -2,6 +2,7 @@ package com.example.plimap.domain.pin.converter;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.Pagination;
+import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
@@ -181,6 +182,16 @@ public class PinConverter {
                 .writerProfileImage(writerProfileImage)
                 .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
                 .createdAt(pin.getCreatedAt())
+                .build();
+    }
+
+    public static PinResponse.PlaceAccessToken toPlaceAccessToken(
+            Long placeId,
+            String token
+    ) {
+        return PinResponse.PlaceAccessToken.builder()
+                .placeAccessToken(token)
+                .placeId(placeId)
                 .build();
     }
 }

@@ -15,7 +15,11 @@ class CorsConfigTest {
 
     @Test
     void 쿠키_인증과_CSRF_헤더를_허용한다() {
-        CorsProperties properties = new CorsProperties(List.of("http://localhost:5173", "https://dev.plimap.kr"));
+        CorsProperties properties = new CorsProperties(List.of(
+                "http://localhost:5173",
+                "https://dev.plimap.kr",
+                "https://pr-*.plimap.kr"
+        ));
         CorsConfig config = new CorsConfig(properties, mock(MemberCommandService.class));
         TestCorsRegistry registry = new TestCorsRegistry();
 
@@ -23,7 +27,13 @@ class CorsConfigTest {
 
         CorsConfiguration cors = registry.configurations().get("/**");
         assertThat(cors).isNotNull();
-        assertThat(cors.getAllowedOrigins()).containsExactly("http://localhost:5173", "https://dev.plimap.kr");
+        assertThat(cors.getAllowedOriginPatterns()).containsExactly(
+                "http://localhost:5173",
+                "https://dev.plimap.kr",
+                "https://pr-*.plimap.kr"
+        );
+        assertThat(cors.checkOrigin("https://pr-123.plimap.kr")).isEqualTo("https://pr-123.plimap.kr");
+        assertThat(cors.checkOrigin("https://evil.plimap.kr")).isNull();
         assertThat(cors.getAllowedMethods())
                 .containsExactly("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
         assertThat(cors.getAllowedHeaders())

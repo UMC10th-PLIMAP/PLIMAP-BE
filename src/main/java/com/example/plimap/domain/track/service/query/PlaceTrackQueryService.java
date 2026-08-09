@@ -13,7 +13,9 @@ public interface PlaceTrackQueryService {
 
     PlaceTrackResponse.PlaceTrackDetail getPlaceTrackDetail(
             Long memberId,
-            Long placeTrackId
+            Long placeTrackId,
+            PlaceTrackRequest.UserLocation request,
+            String token
     );
 
     PlaceTrackResponse.PlaceTrackListResult getPlaceTracks(
