@@ -738,6 +738,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         List<Long> pinIds = queryFactory
                 .select(pin.id)
                 .from(pin)
+                .join(pin.placeTrack, placeTrack)
                 .join(pin.member, member)
                 .join(memberFollow)
                 .on(
@@ -749,19 +750,40 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pin.deletedAt.isNull(),
                         pin.createdAt.goe(Instant.now().minus(24, ChronoUnit.HOURS)),
                         pin.isFeedPublic.isTrue(),
-                        member.deletedAt.isNull()
+                        member.deletedAt.isNull(),
+                        placeTrack.deletedAt.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
-        if (pinIds.isEmpty()) {
-            return emptyPagination(pageSize);
-        }
+        boolean fallback = pinIds.isEmpty() && cursor == null;
 
         boolean hasNext = pinIds.size() > pageSize;
 
-        if (hasNext) {
+        if (fallback) {
+                pinIds = queryFactory
+                        .select(pin.id)
+                        .from(pin)
+                        .join(pin.placeTrack, placeTrack)
+                        .join(pin.member, member)
+                        .join(memberFollow)
+                        .on(
+                            memberFollow.follower.id.eq(memberId)
+                                    .and(memberFollow.following.id.eq(pin.member.id))
+                        )
+                        .where(
+                                pin.deletedAt.isNull(),
+                                pin.isFeedPublic.isTrue(),
+                                member.deletedAt.isNull(),
+                                placeTrack.deletedAt.isNull()
+                        )
+                        .orderBy(pin.createdAt.desc(), pin.id.desc())
+                        .limit(10)
+                        .fetch();
+
+            hasNext = false;
+        } else if (hasNext) {
             pinIds.remove(pageSize.intValue());
         }
 
@@ -808,7 +830,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 ? last.createdAt() + "/" + last.pinId()
                 : null;
 
-        return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
+        return PinConverter.toPagination(data, nextCursor, hasNext, fallback ? 10 : pageSize);
     }
 
     @Override

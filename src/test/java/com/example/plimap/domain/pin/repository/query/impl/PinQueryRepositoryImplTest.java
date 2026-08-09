@@ -706,6 +706,39 @@ class PinQueryRepositoryImplTest {
     }
 
     @Test
+    void _24시간_내에_등록한_핀이_하나도_없으면_그냥_최신핀을_조회한다() {
+        // given
+        Instant now = Instant.now();
+
+        jdbcTemplate.update(
+                "UPDATE pin SET created_at = ? WHERE id = ?",
+                Timestamp.from(now.minus(26, ChronoUnit.HOURS)),
+                pin8.getId()
+        );
+
+        jdbcTemplate.update(
+                "UPDATE pin SET created_at = ? WHERE id = ?",
+                Timestamp.from(now.minus(27, ChronoUnit.HOURS)),
+                deletedPin.getId()
+        );
+
+        // when
+        Pagination<PinResponse.FriendPin> result = pinQueryRepository.getFriendRecentPinList(member2.getId(), null, 10);
+        PinResponse.FriendPin last = result.data().getLast();
+
+        // then
+        assertThat(result.data().size()).isEqualTo(2);
+        assertThat(result.nextCursor()).isNull();
+        assertThat(result.hasNext()).isFalse();
+        assertThat(last.pinId()).isEqualTo(deletedPin.getId());
+        assertThat(last.writerNickname()).isEqualTo(member3.getNickname());
+        assertThat(last.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(member3.getProfileImageObjectKey()));
+        assertThat(last.placeName()).isEqualTo(deletedPin.getPlace().getName());
+        assertThat(last.latitude()).isEqualTo(deletedPin.getPlace().getLocation().getY());
+        assertThat(last.longitude()).isEqualTo(deletedPin.getPlace().getLocation().getX());
+    }
+
+    @Test
     void 특정_사용자가_작성한_핀_개수를_반환한다() {
         // when
         long countMember1Pin = pinQueryRepository.countPinsByMemberId(member1.getId());
