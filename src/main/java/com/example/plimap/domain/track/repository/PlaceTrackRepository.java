@@ -14,6 +14,7 @@ public interface PlaceTrackRepository extends JpaRepository<PlaceTrack, Long> {
             SELECT placeTrack
             FROM PlaceTrack placeTrack
             JOIN FETCH placeTrack.track
+            JOIN FETCH placeTrack.place
             WHERE placeTrack.id = :placeTrackId
               AND placeTrack.deletedAt IS NULL
               AND placeTrack.place.deletedAt IS NULL
@@ -41,4 +42,14 @@ public interface PlaceTrackRepository extends JpaRepository<PlaceTrack, Long> {
             Long placeId,
             Long trackId
     );
+
+    @Query("""
+        select pt
+        from PlaceTrack pt
+        join fetch pt.place
+        where pt.id = :id
+          and pt.deletedAt is null
+          and pt.place.deletedAt is null
+    """)
+    Optional<PlaceTrack> findWithPlaceById(Long id);
 }

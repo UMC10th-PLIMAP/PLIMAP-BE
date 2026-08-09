@@ -93,6 +93,7 @@ class PlaceDetailIntegrationTest {
 
         assertThat(result.placeId()).isEqualTo(place.getId());
         assertThat(result.hasPin()).isTrue();
+        assertThat(result.firstPinCreatorNickname()).isEqualTo("핀작성자");
         assertThat(result.pinCount()).isEqualTo(2L);
         assertThat(result.bookmarkedByMe()).isTrue();
         assertThat(result.pinnedByMe()).isTrue();

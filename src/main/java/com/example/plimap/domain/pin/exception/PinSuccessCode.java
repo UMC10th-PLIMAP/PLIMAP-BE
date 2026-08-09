@@ -85,6 +85,12 @@ public enum PinSuccessCode implements BaseSuccessCode {
             HttpStatus.OK,
             "FRIENDS_RECENT_LIST_SEARCH_SUCCESS",
             "내 친구 최근 핀 목록이 조회되었습니다."
+    ),
+
+    FRIEND_FEED_TOKEN_REQUEST_SUCCESS(
+            HttpStatus.OK,
+            "FRIEND_FEED_TOKEN_REQUEST_SUCCESS",
+            "내 친구 피드 접근 권한 요청에 성공했습니다."
     );
 
     private final HttpStatus status;

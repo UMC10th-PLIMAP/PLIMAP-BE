@@ -9,6 +9,9 @@ spring:
       maximum-pool-size: 8
       minimum-idle: 0
       connection-timeout: 5000
+  flyway:
+    user: ${FLYWAY_USERNAME}
+    password: ${FLYWAY_PASSWORD}
   data:
     redis:
       url: ${REDIS_URL}

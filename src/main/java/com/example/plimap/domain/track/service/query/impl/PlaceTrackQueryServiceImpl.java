@@ -19,6 +19,7 @@ import com.example.plimap.domain.track.repository.PlaceTrackLikeRepository;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
 import com.example.plimap.domain.track.repository.query.PlaceTrackQueryRepository;
 import com.example.plimap.domain.track.service.query.PlaceTrackQueryService;
+import com.example.plimap.domain.track.service.query.PlaceTrackLikeQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +41,7 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
     private final PlaceTrackRepository placeTrackRepository;
     private final PlaceTrackLikeRepository placeTrackLikeRepository;
     private final PlaceTrackQueryRepository placeTrackQueryRepository;
+    private final PlaceTrackLikeQueryService placeTrackLikeQueryService;
 
     @Override
     public PlaceTrackResponse.LikedPlaceTrackListResult getLikedPlaceTracks(
@@ -60,18 +62,55 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
     @Override
     public PlaceTrackResponse.PlaceTrackDetail getPlaceTrackDetail(
             Long memberId,
-            Long placeTrackId
+            Long placeTrackId,
+            PlaceTrackRequest.UserLocation request,
+            String token
     ) {
         PlaceTrack placeTrack = placeTrackRepository
                 .findDetailByIdAndDeletedAtIsNull(placeTrackId)
                 .orElseThrow(() -> new TrackException(
                         TrackErrorCode.PLACE_TRACK_NOT_FOUND
                 ));
+        validatePlaceTrackDetailAccess(memberId, placeTrack, request, token);
+
         boolean userLike = placeTrackLikeRepository.existsById(
                 new PlaceTrackLikeId(placeTrackId, memberId)
         );
 
         return PlaceTrackResponse.PlaceTrackDetail.from(placeTrack, userLike);
+    }
+
+    private void validatePlaceTrackDetailAccess(
+            Long memberId,
+            PlaceTrack placeTrack,
+            PlaceTrackRequest.UserLocation request,
+            String token
+    ) {
+        Place place = placeTrack.getPlace();
+        double distance = pinLocationValidator.calculateDistance(
+                request.userLatitude(),
+                request.userLongitude(),
+                place.getLocation().getY(),
+                place.getLocation().getX()
+        );
+        boolean hasDistanceAccess = distance <= ACCESSIBLE_RADIUS_METERS;
+        Member member = memberQueryService.getActiveMember(memberId);
+        boolean hasMyPinAccess = pinQueryService
+                .validatePlacePinAccessByMember(member, place);
+        boolean hasLikeAccess = placeTrackLikeQueryService
+                .existsActivePlaceTrackLikedByMemberAtPlace(
+                        memberId,
+                        place.getId()
+                );
+
+        if (!hasDistanceAccess && !hasMyPinAccess && !hasLikeAccess
+                && !pinQueryService.hasValidFeedToken(
+                        token,
+                        memberId,
+                        place.getId()
+                )) {
+            throw new TrackException(TrackErrorCode.PLACE_TRACK_ACCESS_DENIED);
+        }
     }
 
     @Override

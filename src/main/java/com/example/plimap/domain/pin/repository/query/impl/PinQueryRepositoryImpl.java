@@ -241,6 +241,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     private static final String FEED_QUERY =  """
         SELECT
             p.id,
+            pl.id,
             t.album_image_url,
             ST_Y(pl.location::geometry) AS latitude,
             ST_X(pl.location::geometry) AS longitude,
@@ -358,13 +359,14 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         List<PinResponse.Feed> data = new ArrayList<>(rows.stream()
                 .map(row -> PinResponse.Feed.builder()
                         .pinId(((Number) row[0]).longValue())
-                        .albumImageUrl((String) row[1])
-                        .latitude(((Number) row[2]).doubleValue())
-                        .longitude(((Number) row[3]).doubleValue())
-                        .placeName((String) row[4])
-                        .distanceFromUser(((Number) row[5]).intValue())
-                        .pinCount(((Number) row[6]).longValue())
-                        .createdAt((Instant) row[7])
+                        .placeId(((Number) row[1]).longValue())
+                        .albumImageUrl((String) row[2])
+                        .latitude(((Number) row[3]).doubleValue())
+                        .longitude(((Number) row[4]).doubleValue())
+                        .placeName((String) row[5])
+                        .distanceFromUser(((Number) row[6]).intValue())
+                        .pinCount(((Number) row[7]).longValue())
+                        .createdAt((Instant) row[8])
                         .build())
                 .toList());
 
@@ -736,6 +738,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
         List<Long> pinIds = queryFactory
                 .select(pin.id)
                 .from(pin)
+                .join(pin.placeTrack, placeTrack)
                 .join(pin.member, member)
                 .join(memberFollow)
                 .on(
@@ -747,19 +750,40 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         pin.deletedAt.isNull(),
                         pin.createdAt.goe(Instant.now().minus(24, ChronoUnit.HOURS)),
                         pin.isFeedPublic.isTrue(),
-                        member.deletedAt.isNull()
+                        member.deletedAt.isNull(),
+                        placeTrack.deletedAt.isNull()
                 )
                 .orderBy(pin.createdAt.desc(), pin.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
-        if (pinIds.isEmpty()) {
-            return emptyPagination(pageSize);
-        }
+        boolean fallback = pinIds.isEmpty() && cursor == null;
 
         boolean hasNext = pinIds.size() > pageSize;
 
-        if (hasNext) {
+        if (fallback) {
+                pinIds = queryFactory
+                        .select(pin.id)
+                        .from(pin)
+                        .join(pin.placeTrack, placeTrack)
+                        .join(pin.member, member)
+                        .join(memberFollow)
+                        .on(
+                            memberFollow.follower.id.eq(memberId)
+                                    .and(memberFollow.following.id.eq(pin.member.id))
+                        )
+                        .where(
+                                pin.deletedAt.isNull(),
+                                pin.isFeedPublic.isTrue(),
+                                member.deletedAt.isNull(),
+                                placeTrack.deletedAt.isNull()
+                        )
+                        .orderBy(pin.createdAt.desc(), pin.id.desc())
+                        .limit(10)
+                        .fetch();
+
+            hasNext = false;
+        } else if (hasNext) {
             pinIds.remove(pageSize.intValue());
         }
 
@@ -806,7 +830,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 ? last.createdAt() + "/" + last.pinId()
                 : null;
 
-        return PinConverter.toPagination(data, nextCursor, hasNext, pageSize);
+        return PinConverter.toPagination(data, nextCursor, hasNext, fallback ? 10 : pageSize);
     }
 
     @Override

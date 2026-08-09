@@ -29,7 +29,7 @@ cookie:
 
 plimap:
   cors:
-    allowed-origins: http://localhost:5173,https://dev.plimap.kr
+    allowed-origins: http://localhost:5173,https://dev.plimap.kr,https://pr-*.plimap.kr
 
 kakao:
   local:

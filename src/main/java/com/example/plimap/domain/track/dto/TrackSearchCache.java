@@ -24,7 +24,8 @@ public record TrackSearchCache(List<TrackMetadataCache> tracks) {
                         track.albumTitle(),
                         track.albumImageUrl(),
                         track.previewUrl(),
-                        track.durationMs()
+                        track.durationMs(),
+                        false
                 ))
                 .toList());
     }

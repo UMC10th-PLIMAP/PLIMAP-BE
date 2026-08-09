@@ -2,6 +2,7 @@ package com.example.plimap.domain.pin.service.query;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.pin.dto.Pagination;
+import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.ReportedPinInfo;
 import com.example.plimap.domain.track.dto.AlbumImage;
@@ -31,7 +32,8 @@ public interface PinQueryService {
 
     Boolean validatePlacePinAccessByMember(Member member, Place place);
 
-    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Long memberId, String cursor, Integer pageSize, PinSortType pinSortType, Long placeTrackId);
+    Pagination<PinResponse.PinDetail> findPinListByPlaceTrackIdAndSortType(Member member, String cursor, Integer pageSize, PinSortType pinSortType,
+                                                                           Long placeTrackId, PinRequest.UserLocation request, String token);
 
     PinResponse.PinPreview getPinPreview(Long pinId, Long viewerId);
 
@@ -50,4 +52,6 @@ public interface PinQueryService {
     long countPinsByMemberId(Long memberId);
 
     Page<ReportedPinInfo> findReportedPins(PinReportFilter filter, Pageable pageable);
+
+    boolean hasValidFeedToken(String token, Long memberId, Long placeId);
 }

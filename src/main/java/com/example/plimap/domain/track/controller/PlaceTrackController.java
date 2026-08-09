@@ -15,9 +15,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -90,12 +92,17 @@ public class PlaceTrackController implements PlaceTrackControllerDocs {
     public ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackDetail>>
             getPlaceTrackDetail(
                     @AuthenticationPrincipal AuthMember currentMember,
-                    @PathVariable Long placeTrackId
+                    @PathVariable Long placeTrackId,
+                    @ModelAttribute PlaceTrackRequest.UserLocation request,
+                    @RequestHeader(value = "Place-Access-Token", required = false)
+                    String token
             ) {
         PlaceTrackResponse.PlaceTrackDetail result =
                 placeTrackQueryService.getPlaceTrackDetail(
                         currentMember.getMember().getId(),
-                        placeTrackId
+                        placeTrackId,
+                        request,
+                        token
                 );
 
         return ResponseEntity

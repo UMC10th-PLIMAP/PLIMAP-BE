@@ -64,8 +64,8 @@ jobs:
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           project_id: plimap
-          workload_identity_provider: projects/902362979890/locations/global/workloadIdentityPools/github-actions/providers/plimap-be
-          service_account: plimap-github-deployer@plimap.iam.gserviceaccount.com
+          workload_identity_provider: projects/902362979890/locations/global/workloadIdentityPools/github-actions/providers/plimap-be-prod
+          service_account: plimap-github-prod-deployer@plimap.iam.gserviceaccount.com
 
       - name: Set up Google Cloud CLI
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -116,12 +116,19 @@ jobs:
           PROD_GCS_BUCKET: ${{ vars.PROD_GCS_BUCKET }}
           PROD_VPC_NETWORK: ${{ vars.PROD_VPC_NETWORK }}
           PROD_VPC_SUBNET: ${{ vars.PROD_VPC_SUBNET }}
+          PROD_PUBLIC_SMOKE_ENABLED: ${{ vars.PROD_PUBLIC_SMOKE_ENABLED }}
           DEPLOYMENT_RESULT_PATH: ${{ runner.temp }}/prod-deployment-result.json
         run: |
           $publicBaseUrl = if ($env:PROD_PUBLIC_BASE_URL) {
             $env:PROD_PUBLIC_BASE_URL
           } else {
             "https://plimap.kr"
+          }
+          $publicSmokeEnabled = switch ($env:PROD_PUBLIC_SMOKE_ENABLED) {
+            "true" { $true }
+            "false" { $false }
+            "" { $false }
+            default { throw "PROD_PUBLIC_SMOKE_ENABLED must be true or false." }
           }
 
           ./scripts/gcp/deploy-prod.ps1 `
@@ -134,6 +141,7 @@ jobs:
             -ProfileImageBucket $env:PROD_GCS_BUCKET `
             -VpcNetwork $env:PROD_VPC_NETWORK `
             -VpcSubnet $env:PROD_VPC_SUBNET `
+            -PublicSmokeEnabled:$publicSmokeEnabled `
             -ResultPath $env:DEPLOYMENT_RESULT_PATH
 
       - name: Write deployment summary
@@ -169,8 +177,9 @@ jobs:
               "| Candidate verification | $($result.candidateVerification) |",
               "| Traffic promotion | $($result.trafficPromotion) |",
               "| Service verification | $($result.serviceVerification) |",
+              "| Public verification | $($result.publicVerification) |",
               "| Rollback | $($result.rollback) |",
-              "| Service URL | $($result.serviceUrl) |"
+              "| Public base URL | $($result.publicBaseUrl) |"
             )
             if ($result.error) {
               $lines += "| Error | $($result.error) |"

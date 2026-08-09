@@ -82,6 +82,8 @@ class PlaceOpenApiIntegrationTest {
         assertThat(properties.has("distanceMeters")).isTrue();
         assertThat(properties.has("withinAccessRange")).isTrue();
         assertThat(properties.has("hasPin")).isTrue();
+        assertThat(properties.has("firstPinCreatorNickname")).isTrue();
+        assertThat(isNullableSchema(properties.path("firstPinCreatorNickname"))).isTrue();
         assertThat(properties.has("pinCount")).isTrue();
         assertThat(properties.has("bookmarkedByMe")).isTrue();
         assertThat(properties.has("pinnedByMe")).isTrue();
