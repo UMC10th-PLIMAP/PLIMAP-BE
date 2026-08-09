@@ -728,6 +728,8 @@ class PinQueryRepositoryImplTest {
 
         // then
         assertThat(result.data().size()).isEqualTo(2);
+        assertThat(result.nextCursor()).isNull();
+        assertThat(result.hasNext()).isFalse();
         assertThat(last.pinId()).isEqualTo(deletedPin.getId());
         assertThat(last.writerNickname()).isEqualTo(member3.getNickname());
         assertThat(last.writerProfileImage()).isEqualTo(profileImageStorage.getPublicUrlOrNull(member3.getProfileImageObjectKey()));
