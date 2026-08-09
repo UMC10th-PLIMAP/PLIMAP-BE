@@ -29,7 +29,8 @@ public final class InquiryRequest {
 
             @NotBlank(message = "답변받을 이메일을 입력해주세요.")
             @Email(message = "이메일 형식이 올바르지 않습니다.")
-            @Schema(description = "답변받을 이메일 (로그인 시 가입 이메일 자동 입력, 수정 가능)", example = "user@example.com")
+            @Size(max = 320, message = "답변받을 이메일은 320자 이하로 입력해주세요.")
+            @Schema(description = "답변받을 이메일 (로그인 사용자의 가입 이메일 자동 입력은 프론트엔드가 담당하며, 수정 가능)", example = "user@example.com")
             String contactEmail
     ) {
     }

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,10 +31,11 @@ public interface InquiryControllerDocs {
                     - OTHER: 기타
 
                     **답변받을 이메일(contactEmail)**
-                    - 로그인 사용자: 가입 이메일을 기본값으로 프론트에서 자동 입력하되 수정 가능
-                    - 비로그인·탈퇴 사용자: 직접 입력 필수
+                    - 요청에 항상 값을 담아 보내야 합니다. 로그인 사용자의 가입 이메일 자동 입력은 프론트엔드가 담당하며, 이 API는 전달받은 값을 그대로 저장합니다.
+                    - 비로그인·탈퇴 사용자는 직접 입력해야 합니다.
                     """
     )
+    @SecurityRequirements
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "201",
