@@ -14,6 +14,7 @@ public interface PlaceTrackRepository extends JpaRepository<PlaceTrack, Long> {
             SELECT placeTrack
             FROM PlaceTrack placeTrack
             JOIN FETCH placeTrack.track
+            JOIN FETCH placeTrack.place
             WHERE placeTrack.id = :placeTrackId
               AND placeTrack.deletedAt IS NULL
               AND placeTrack.place.deletedAt IS NULL

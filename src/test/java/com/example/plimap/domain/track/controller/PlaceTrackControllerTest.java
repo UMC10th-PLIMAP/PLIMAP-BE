@@ -64,6 +64,7 @@ class PlaceTrackControllerTest {
     private static final String LIKE_ENDPOINT = "/api/v1/place-tracks/10/likes";
     private static final String LIKED_TRACKS_ENDPOINT = "/api/v1/place-tracks/likes";
     private static final String ACCESS_TOKEN = "valid-access-token";
+    private static final String PLACE_ACCESS_TOKEN = "place-access-token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -145,10 +146,18 @@ class PlaceTrackControllerTest {
 
     @Test
     void 장소_노래_상세의_모든_필드를_반환한다() throws Exception {
-        when(placeTrackQueryService.getPlaceTrackDetail(1L, 10L))
+        PlaceTrackRequest.UserLocation request =
+                new PlaceTrackRequest.UserLocation(37.5665, 126.9780);
+        when(placeTrackQueryService.getPlaceTrackDetail(
+                1L,
+                10L,
+                request,
+                PLACE_ACCESS_TOKEN
+        ))
                 .thenReturn(detailResponse());
 
-        mockMvc.perform(authenticatedGet(DETAIL_ENDPOINT))
+        mockMvc.perform(authenticatedDetailRequest(DETAIL_ENDPOINT)
+                        .header("Place-Access-Token", PLACE_ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value(
@@ -168,12 +177,18 @@ class PlaceTrackControllerTest {
                 .andExpect(jsonPath("$.result.likeCount").value(33))
                 .andExpect(jsonPath("$.result.userLike").value(true));
 
-        verify(placeTrackQueryService).getPlaceTrackDetail(1L, 10L);
+        verify(placeTrackQueryService).getPlaceTrackDetail(
+                1L,
+                10L,
+                request,
+                PLACE_ACCESS_TOKEN
+        );
     }
 
     @Test
     void 장소_노래_ID_타입이_잘못되면_400을_반환한다() throws Exception {
-        mockMvc.perform(authenticatedGet("/api/v1/place-tracks/not-number"))
+        mockMvc.perform(authenticatedDetailRequest(
+                        "/api/v1/place-tracks/not-number"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code")
@@ -185,7 +200,7 @@ class PlaceTrackControllerTest {
 
     @Test
     void 장소_노래_ID가_0이면_400을_반환한다() throws Exception {
-        mockMvc.perform(authenticatedGet("/api/v1/place-tracks/0"))
+        mockMvc.perform(authenticatedDetailRequest("/api/v1/place-tracks/0"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code")
                         .value(GeneralErrorCode.VALIDATION_FAILED.getCode()));
@@ -195,7 +210,7 @@ class PlaceTrackControllerTest {
 
     @Test
     void 장소_노래_ID가_음수이면_400을_반환한다() throws Exception {
-        mockMvc.perform(authenticatedGet("/api/v1/place-tracks/-1"))
+        mockMvc.perform(authenticatedDetailRequest("/api/v1/place-tracks/-1"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code")
                         .value(GeneralErrorCode.VALIDATION_FAILED.getCode()));
@@ -217,12 +232,17 @@ class PlaceTrackControllerTest {
 
     @Test
     void 장소_노래가_없으면_PLACE_TRACK_NOT_FOUND를_반환한다() throws Exception {
-        when(placeTrackQueryService.getPlaceTrackDetail(1L, 10L))
+        when(placeTrackQueryService.getPlaceTrackDetail(
+                1L,
+                10L,
+                new PlaceTrackRequest.UserLocation(37.5665, 126.9780),
+                null
+        ))
                 .thenThrow(new TrackException(
                         TrackErrorCode.PLACE_TRACK_NOT_FOUND
                 ));
 
-        mockMvc.perform(authenticatedGet(DETAIL_ENDPOINT))
+        mockMvc.perform(authenticatedDetailRequest(DETAIL_ENDPOINT))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code")
@@ -232,6 +252,45 @@ class PlaceTrackControllerTest {
                                 .PLACE_TRACK_NOT_FOUND
                                 .getMessage()))
                 .andExpect(jsonPath("$.result").isEmpty());
+    }
+
+    @Test
+    void 장소_노래_상세_접근_권한이_없으면_403을_반환한다() throws Exception {
+        when(placeTrackQueryService.getPlaceTrackDetail(
+                1L,
+                10L,
+                new PlaceTrackRequest.UserLocation(37.5665, 126.9780),
+                null
+        )).thenThrow(new TrackException(
+                TrackErrorCode.PLACE_TRACK_ACCESS_DENIED
+        ));
+
+        mockMvc.perform(authenticatedDetailRequest(DETAIL_ENDPOINT))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value(
+                        TrackErrorCode.PLACE_TRACK_ACCESS_DENIED.getCode()))
+                .andExpect(jsonPath("$.message").value(
+                        TrackErrorCode.PLACE_TRACK_ACCESS_DENIED.getMessage()))
+                .andExpect(jsonPath("$.result").isEmpty());
+    }
+
+    @Test
+    void 장소_노래_상세의_위도가_누락되면_400을_반환한다() throws Exception {
+        mockMvc.perform(authenticatedGet(DETAIL_ENDPOINT)
+                        .queryParam("userLongitude", "126.9780"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(placeTrackQueryService);
+    }
+
+    @Test
+    void 장소_노래_상세의_경도가_누락되면_400을_반환한다() throws Exception {
+        mockMvc.perform(authenticatedGet(DETAIL_ENDPOINT)
+                        .queryParam("userLatitude", "37.5665"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(placeTrackQueryService);
     }
 
     @Test
@@ -559,6 +618,12 @@ class PlaceTrackControllerTest {
     private MockHttpServletRequestBuilder authenticatedGet(String endpoint) {
         return get(endpoint)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN);
+    }
+
+    private MockHttpServletRequestBuilder authenticatedDetailRequest(String endpoint) {
+        return authenticatedGet(endpoint)
+                .queryParam("userLatitude", "37.5665")
+                .queryParam("userLongitude", "126.9780");
     }
 
     private MockHttpServletRequestBuilder authenticatedPut(String endpoint) {
