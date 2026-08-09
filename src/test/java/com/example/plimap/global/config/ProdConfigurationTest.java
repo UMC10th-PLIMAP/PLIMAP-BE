@@ -26,6 +26,12 @@ class ProdConfigurationTest {
                 .isEqualTo(0);
         assertThat(properties.getProperty("spring.datasource.hikari.connection-timeout"))
                 .isEqualTo(5000);
+        assertThat(properties.getProperty("spring.flyway.user"))
+                .isEqualTo("${FLYWAY_USERNAME}");
+        assertThat(properties.getProperty("spring.flyway.password"))
+                .isEqualTo("${FLYWAY_PASSWORD}");
+        assertThat(properties.getProperty("spring.data.redis.url"))
+                .isEqualTo("${REDIS_URL}");
         assertThat(properties.getProperty("profile-image.storage.gcs.bucket"))
                 .isEqualTo("${PROFILE_IMAGE_BUCKET}");
         assertThat(properties.getProperty("springdoc.api-docs.enabled"))
