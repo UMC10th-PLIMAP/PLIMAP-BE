@@ -146,6 +146,15 @@ final class TrackSwaggerErrorExamples {
             }
             """;
 
+    static final String PLACE_TRACK_ACCESS_DENIED = """
+            {
+              "isSuccess": false,
+              "code": "PLACE_TRACK_ACCESS_DENIED",
+              "message": "해당 장소의 곡 상세에 접근할 수 없습니다.",
+              "result": null
+            }
+            """;
+
     static final String PLACE_TRACK_ALREADY_LIKED = """
             {
               "isSuccess": false,

@@ -53,4 +53,5 @@ public interface PinQueryService {
 
     Page<ReportedPinInfo> findReportedPins(PinReportFilter filter, Pageable pageable);
 
+    boolean hasValidFeedToken(String token, Long memberId, Long placeId);
 }

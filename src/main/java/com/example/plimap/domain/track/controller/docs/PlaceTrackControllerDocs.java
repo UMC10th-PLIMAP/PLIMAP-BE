@@ -1,6 +1,7 @@
 package com.example.plimap.domain.track.controller.docs;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 import com.example.plimap.domain.track.enums.PlaceTrackSort;
 import com.example.plimap.global.apiPayload.ApiResponse;
@@ -16,9 +17,12 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 @Tag(name = "Track", description = "음악 API")
 public interface PlaceTrackControllerDocs {
@@ -180,6 +184,18 @@ public interface PlaceTrackControllerDocs {
                             )
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "장소별 곡 상세 접근 권한 없음",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponseVoid"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples
+                                            .PLACE_TRACK_ACCESS_DENIED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
                     description = "장소 노래 없음",
                     content = @Content(
@@ -197,7 +213,10 @@ public interface PlaceTrackControllerDocs {
                     @AuthenticationPrincipal AuthMember currentMember,
                     @Parameter(description = "장소 노래 ID", required = true)
                     @Positive(message = "장소 노래 ID는 양수여야 합니다.")
-                    Long placeTrackId
+                    Long placeTrackId,
+                    @ModelAttribute @Valid PlaceTrackRequest.UserLocation request,
+                    @RequestHeader(value = "Place-Access-Token", required = false)
+                    String token
             );
 
     @Operation(

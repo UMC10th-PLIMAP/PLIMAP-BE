@@ -31,7 +31,9 @@ public class MemberStatusInterceptor implements HandlerInterceptor {
             new AllowedRequest(HttpMethod.GET, "/api/v1/auth/csrf"),
             new AllowedRequest(HttpMethod.DELETE, "/api/v1/auth/logout"),
             new AllowedRequest(HttpMethod.GET, "/api/v1/members/me"),
-            new AllowedRequest(HttpMethod.DELETE, "/api/v1/members/me")
+            new AllowedRequest(HttpMethod.DELETE, "/api/v1/members/me"),
+            // 정지/탈퇴 회원도 제재 이의제기 등 문의는 남길 수 있어야 한다.
+            new AllowedRequest(HttpMethod.POST, "/api/v1/inquiries")
     );
 
     private final MemberCommandService memberCommandService;

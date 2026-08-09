@@ -195,6 +195,7 @@ public class PinQueryServiceImpl implements PinQueryService {
         return 8;
     }
 
+    @Override
     public boolean hasValidFeedToken(String token, Long memberId, Long placeId) {
         Optional<PlaceAccessToken> optional = placeAccessTokenRepository.findByToken(token);
 

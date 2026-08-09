@@ -58,6 +58,7 @@ com.example.plimap/
 │   ├── notification/               # 알림·SSE
 │   ├── report/                     # 회원·PIN 신고 접수
 │   ├── admin/                      # 관리자 전용 API
+│   ├── inquiry/                    # 로그인 여부와 무관한 1:1 문의 접수
 │   └── pin/                        # PIN 핵심 도메인
 │       ├── controller/             # REST API 컨트롤러
 │       │   └── docs/               # Swagger 문서용 인터페이스/설명
@@ -92,7 +93,7 @@ com.example.plimap/
 └── PlimapApplication
 ```
 
-> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report`, `admin` 도메인도 동일한 내부 패키지 구조를 따릅니다. `admin`은 자체 엔티티가 필요한 경우에만 `entity`, `repository` 패키지를 추가합니다. 다른 도메인의 데이터는 해당 도메인의 Service 인터페이스를 통해 접근하며, 다른 도메인의 Repository를 직접 주입하지 않습니다.
+> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report`, `admin`, `inquiry` 도메인도 동일한 내부 패키지 구조를 따릅니다. `admin`은 자체 엔티티가 필요한 경우에만 `entity`, `repository` 패키지를 추가합니다. 다른 도메인의 데이터는 해당 도메인의 Service 인터페이스를 통해 접근하며, 다른 도메인의 Repository를 직접 주입하지 않습니다.
 
 ## Domain Structure
 
@@ -185,6 +186,13 @@ Member/Pin Command Service
 
 - 관리자 로그인 게이트(현재 로그인한 계정의 관리자 권한 확인)
 - 향후 회원 벌점·정지 처리, 신고 누적 게시물 조회 등 관리자 전용 기능 추가 예정
+
+### 8. Inquiry
+
+로그인 여부와 무관한 1:1 문의 접수를 담당합니다. `POST /api/v1/inquiries`는 `SecurityConfig`에서 `permitAll()`로 등록되어 있어 비로그인 사용자도 접근할 수 있고, `MemberStatusInterceptor`의 예외 목록에도 포함되어 정지·탈퇴 회원도 이용할 수 있습니다.
+
+- 문의 등록(카테고리·제목·내용·답변받을 이메일). 로그인 상태면 작성자(`member`)가 자동으로 연결되고, 비로그인·탈퇴 상태면 연결되지 않습니다.
+- 관리자 문의 목록/상세 조회는 `admin` 도메인의 `AdminController`가 `InquiryQueryService`를 조합해 제공합니다.
 
 ## Partial CQRS
 
