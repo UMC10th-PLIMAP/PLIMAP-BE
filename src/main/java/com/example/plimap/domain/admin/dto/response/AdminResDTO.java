@@ -1,6 +1,8 @@
 package com.example.plimap.domain.admin.dto.response;
 
 import com.example.plimap.domain.auth.enums.AuthProvider;
+import com.example.plimap.domain.inquiry.entity.Inquiry;
+import com.example.plimap.domain.inquiry.enums.InquiryCategory;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.MemberStatus;
@@ -109,6 +111,62 @@ public class AdminResDTO {
                     member.getSuspendedUntil(),
                     member.getWithdrawalReason(),
                     member.getCreatedAt()
+            );
+        }
+    }
+
+    public record InquirySummary(
+            Long id,
+            InquiryCategory category,
+            String title,
+            Long memberId,
+            String memberNickname,
+            String contactEmail,
+            Instant createdAt
+    ) {
+        public static InquirySummary from(Inquiry inquiry) {
+            Member member = inquiry.getMember();
+            return new InquirySummary(
+                    inquiry.getId(),
+                    inquiry.getCategory(),
+                    inquiry.getTitle(),
+                    member != null ? member.getId() : null,
+                    member != null ? member.getNickname() : null,
+                    inquiry.getContactEmail(),
+                    inquiry.getCreatedAt()
+            );
+        }
+    }
+
+    public record InquiryPage(
+            List<InquirySummary> items,
+            long total,
+            int page,
+            int pageSize
+    ) {
+    }
+
+    public record InquiryDetail(
+            Long id,
+            InquiryCategory category,
+            String title,
+            String content,
+            Long memberId,
+            String memberNickname,
+            String contactEmail,
+            Instant createdAt
+    ) {
+        public static InquiryDetail from(Inquiry inquiry) {
+            Member member = inquiry.getMember();
+            return new InquiryDetail(
+                    inquiry.getId(),
+                    inquiry.getCategory(),
+                    inquiry.getTitle(),
+                    inquiry.getContent(),
+                    member != null ? member.getId() : null,
+                    member != null ? member.getNickname() : null,
+                    inquiry.getContactEmail(),
+                    inquiry.getCreatedAt()
             );
         }
     }

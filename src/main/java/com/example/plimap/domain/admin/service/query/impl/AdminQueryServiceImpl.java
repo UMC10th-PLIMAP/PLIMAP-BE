@@ -2,6 +2,9 @@ package com.example.plimap.domain.admin.service.query.impl;
 
 import com.example.plimap.domain.admin.dto.response.AdminResDTO;
 import com.example.plimap.domain.auth.service.query.AuthQueryService;
+import com.example.plimap.domain.inquiry.entity.Inquiry;
+import com.example.plimap.domain.inquiry.enums.InquiryCategory;
+import com.example.plimap.domain.inquiry.service.query.InquiryQueryService;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
@@ -21,7 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * pin/member/report/auth 도메인 QueryService만 조합하는 최상위 조회 오케스트레이터.
+ * pin/member/report/auth/inquiry 도메인 QueryService만 조합하는 최상위 조회 오케스트레이터.
  * AdminCommandServiceImpl과 동일한 이유(순환 빈 의존 회피)로 admin 도메인에 둔다.
  */
 @Service
@@ -35,6 +38,7 @@ public class AdminQueryServiceImpl implements AdminQueryService {
     private final MemberQueryService memberQueryService;
     private final ReportQueryService reportQueryService;
     private final AuthQueryService authQueryService;
+    private final InquiryQueryService inquiryQueryService;
 
     @Override
     public AdminResDTO.ReportedPinPage getReportedPins(PinReportFilter filter, int page, int pageSize) {
@@ -70,6 +74,23 @@ public class AdminQueryServiceImpl implements AdminQueryService {
         Member member = memberQueryService.getMemberById(memberId);
         String email = authQueryService.findEmailByMemberId(memberId).orElse(null);
         return AdminResDTO.MemberDetail.from(member, email);
+    }
+
+    @Override
+    public AdminResDTO.InquiryPage getInquiries(InquiryCategory category, int page, int pageSize) {
+        Pageable pageable = PageRequest.of(page - 1, pageSize);
+        Page<Inquiry> inquiryPage = inquiryQueryService.getInquiries(category, pageable);
+
+        List<AdminResDTO.InquirySummary> items = inquiryPage.getContent().stream()
+                .map(AdminResDTO.InquirySummary::from)
+                .toList();
+
+        return new AdminResDTO.InquiryPage(items, inquiryPage.getTotalElements(), page, pageSize);
+    }
+
+    @Override
+    public AdminResDTO.InquiryDetail getInquiryDetail(Long inquiryId) {
+        return AdminResDTO.InquiryDetail.from(inquiryQueryService.getInquiry(inquiryId));
     }
 
     private AdminResDTO.ReportedPinItem toReportedPinItem(ReportedPinInfo info, List<ReportReason> reasons) {

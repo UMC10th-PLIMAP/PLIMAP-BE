@@ -2,6 +2,9 @@ package com.example.plimap.domain.admin.service.query.impl;
 
 import com.example.plimap.domain.admin.dto.response.AdminResDTO;
 import com.example.plimap.domain.auth.service.query.AuthQueryService;
+import com.example.plimap.domain.inquiry.entity.Inquiry;
+import com.example.plimap.domain.inquiry.enums.InquiryCategory;
+import com.example.plimap.domain.inquiry.service.query.InquiryQueryService;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
@@ -34,8 +37,9 @@ class AdminQueryServiceImplTest {
     private final MemberQueryService memberQueryService = mock(MemberQueryService.class);
     private final ReportQueryService reportQueryService = mock(ReportQueryService.class);
     private final AuthQueryService authQueryService = mock(AuthQueryService.class);
+    private final InquiryQueryService inquiryQueryService = mock(InquiryQueryService.class);
     private final AdminQueryServiceImpl adminQueryService = new AdminQueryServiceImpl(
-            pinQueryService, memberQueryService, reportQueryService, authQueryService);
+            pinQueryService, memberQueryService, reportQueryService, authQueryService, inquiryQueryService);
 
     @Test
     void 신고_누적_핀_목록에_사유와_자동숨김_여부를_함께_담는다() {
@@ -104,5 +108,35 @@ class AdminQueryServiceImplTest {
         AdminResDTO.MemberDetail result = adminQueryService.getMemberDetail(1L);
 
         assertThat(result.email()).isNull();
+    }
+
+    @Test
+    void 문의_목록을_페이지_정보와_함께_반환한다() {
+        Inquiry inquiry = Inquiry.create(null, InquiryCategory.OTHER, "제목", "내용", "guest@example.com");
+        ReflectionTestUtils.setField(inquiry, "id", 1L);
+        Page<Inquiry> page = new PageImpl<>(List.of(inquiry), PageRequest.of(0, 10), 1);
+        when(inquiryQueryService.getInquiries(eq(InquiryCategory.OTHER), any(Pageable.class))).thenReturn(page);
+
+        AdminResDTO.InquiryPage result = adminQueryService.getInquiries(InquiryCategory.OTHER, 1, 10);
+
+        assertThat(result.total()).isEqualTo(1);
+        assertThat(result.items()).extracting(AdminResDTO.InquirySummary::id).containsExactly(1L);
+        assertThat(result.items().get(0).memberId()).isNull();
+    }
+
+    @Test
+    void 문의_상세를_반환한다() {
+        Member member = Member.builder().nickname("작성자").build();
+        ReflectionTestUtils.setField(member, "id", 5L);
+        Inquiry inquiry = Inquiry.create(member, InquiryCategory.APP_BUG_OR_ERROR, "제목", "내용", "user@example.com");
+        ReflectionTestUtils.setField(inquiry, "id", 1L);
+        when(inquiryQueryService.getInquiry(1L)).thenReturn(inquiry);
+
+        AdminResDTO.InquiryDetail result = adminQueryService.getInquiryDetail(1L);
+
+        assertThat(result.id()).isEqualTo(1L);
+        assertThat(result.memberId()).isEqualTo(5L);
+        assertThat(result.memberNickname()).isEqualTo("작성자");
+        assertThat(result.content()).isEqualTo("내용");
     }
 }

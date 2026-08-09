@@ -7,6 +7,7 @@ import com.example.plimap.domain.admin.exception.AdminSuccessCode;
 import com.example.plimap.domain.admin.service.command.AdminCommandService;
 import com.example.plimap.domain.admin.service.query.AdminQueryService;
 import com.example.plimap.domain.auth.entity.AuthMember;
+import com.example.plimap.domain.inquiry.enums.InquiryCategory;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.pin.enums.PinReportFilter;
 import com.example.plimap.global.apiPayload.ApiResponse;
@@ -100,6 +101,28 @@ public class AdminController implements AdminControllerDocs {
         return ApiResponse.success(
                 AdminSuccessCode.MEMBER_NICKNAME_REGENERATED,
                 adminCommandService.regenerateMemberNickname(memberId)
+        );
+    }
+
+    @Override
+    @GetMapping("/inquiries")
+    public ApiResponse<AdminResDTO.InquiryPage> getInquiries(
+            @RequestParam(required = false) InquiryCategory category,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize
+    ) {
+        return ApiResponse.success(
+                AdminSuccessCode.INQUIRIES_FETCHED,
+                adminQueryService.getInquiries(category, page, pageSize)
+        );
+    }
+
+    @Override
+    @GetMapping("/inquiries/{inquiryId}")
+    public ApiResponse<AdminResDTO.InquiryDetail> getInquiryDetail(@PathVariable Long inquiryId) {
+        return ApiResponse.success(
+                AdminSuccessCode.INQUIRY_DETAIL_FETCHED,
+                adminQueryService.getInquiryDetail(inquiryId)
         );
     }
 }
