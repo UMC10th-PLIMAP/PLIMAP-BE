@@ -398,7 +398,7 @@ class MemberQueryServiceImplTest {
                 .thenReturn(Optional.of(member));
 
         Instant followedAt = Instant.now();
-        MemberFollowRow row = new MemberFollowRow(2L, "팔로워", "이름", "key", followedAt, true, false);
+        MemberFollowRow row = new MemberFollowRow(2L, "팔로워", "이름", "key", followedAt, true, true);
         Pagination<MemberFollowRow> page =
                 Pagination.<MemberFollowRow>builder()
                         .data(List.of(row))
@@ -414,7 +414,7 @@ class MemberQueryServiceImplTest {
 
         // then
         assertThat(result.data()).containsExactly(
-                new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "https://example.com/key", followedAt, true, false));
+                new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "https://example.com/key", followedAt, true, true));
         assertThat(result.hasNext()).isFalse();
     }
 
@@ -441,7 +441,7 @@ class MemberQueryServiceImplTest {
                 .thenReturn(Optional.of(member));
 
         Instant followedAt = Instant.now();
-        MemberFollowRow row = new MemberFollowRow(2L, "팔로잉", "이름", "key", followedAt, true, false);
+        MemberFollowRow row = new MemberFollowRow(2L, "팔로잉", "이름", "key", followedAt, true, true);
         Pagination<MemberFollowRow> page =
                 Pagination.<MemberFollowRow>builder()
                         .data(List.of(row))
@@ -457,7 +457,7 @@ class MemberQueryServiceImplTest {
 
         // then
         assertThat(result.data()).containsExactly(
-                new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "https://example.com/key", followedAt, true, false));
+                new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "https://example.com/key", followedAt, true, true));
         assertThat(result.hasNext()).isFalse();
     }
 

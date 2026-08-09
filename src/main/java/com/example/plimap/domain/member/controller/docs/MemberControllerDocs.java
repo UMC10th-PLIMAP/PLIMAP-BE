@@ -115,10 +115,14 @@ public interface MemberControllerDocs {
 
                     커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
 
-                    각 항목은 목록 대상(memberId)이 아니라 로그인한 나(요청자, 뷰어) 기준의 양방향 팔로우 정보를 담습니다.
+                    각 항목은 목록 대상(memberId)이 아니라 로그인한 나(요청자, 뷰어) 기준의 양방향 팔로우 정보를 담습니다. memberId 본인의 목록을 조회하는 경우가 아니라면(제3자가 다른 회원의 목록을 조회하는 경우) 두 값 모두 의미가 있습니다.
                     - isFollowing: 내가 이 사람을 팔로우하고 있는지
                     - isFollowingViewer: 이 사람이 나를 팔로우하고 있는지
-                    두 값이 모두 true여야 실제 맞팔이며, isFollowing만으로는 맞팔 여부를 판단할 수 없습니다(내가 이 사람을 팔로우 중이라도 상대가 나를 팔로우하지 않을 수 있습니다).
+
+                    클라이언트에서 버튼 상태를 표시할 때는 다음 우선순위로 판단합니다.
+                    - isFollowing=true: "팔로잉" (이미 내가 팔로우 중)
+                    - isFollowing=false, isFollowingViewer=true: "맞팔로우" (상대가 나를 팔로우 중이므로 팔로우하면 맞팔이 됨)
+                    - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
     ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
@@ -137,10 +141,14 @@ public interface MemberControllerDocs {
 
                     커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
 
-                    각 항목은 목록 대상(memberId)이 아니라 로그인한 나(요청자, 뷰어) 기준의 양방향 팔로우 정보를 담습니다.
+                    각 항목은 목록 대상(memberId)이 아니라 로그인한 나(요청자, 뷰어) 기준의 양방향 팔로우 정보를 담습니다. memberId 본인의 목록을 조회하는 경우가 아니라면(제3자가 다른 회원의 목록을 조회하는 경우) 두 값 모두 의미가 있습니다.
                     - isFollowing: 내가 이 사람을 팔로우하고 있는지 (memberId 본인의 팔로잉 목록을 조회하는 경우 항상 true입니다)
                     - isFollowingViewer: 이 사람이 나를 팔로우하고 있는지
-                    두 값이 모두 true여야 실제 맞팔이며, isFollowing만으로는 맞팔 여부를 판단할 수 없습니다.
+
+                    클라이언트에서 버튼 상태를 표시할 때는 다음 우선순위로 판단합니다.
+                    - isFollowing=true: "팔로잉" (이미 내가 팔로우 중)
+                    - isFollowing=false, isFollowingViewer=true: "맞팔로우" (상대가 나를 팔로우 중이므로 팔로우하면 맞팔이 됨)
+                    - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
     ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(
