@@ -377,7 +377,9 @@ function Get-WebOrigin {
     }
 
     $isHttps = $uri.Scheme -eq "https"
-    $isPrivateNetworkOrigin = $AllowPrivateNetworkPattern -and (Test-PrivateNetworkIpv4 -HostName $uri.Host)
+    $isPrivateNetworkOrigin = $AllowPrivateNetworkPattern -and
+        $uri.Scheme -in @("http", "https") -and
+        (Test-PrivateNetworkIpv4 -HostName $uri.Host)
     if ((-not $isHttps -and -not $isPrivateNetworkOrigin) -or
         (-not $isPrivateNetworkOrigin -and -not $uri.IsDefaultPort) -or
         -not [string]::IsNullOrEmpty($uri.UserInfo) -or
