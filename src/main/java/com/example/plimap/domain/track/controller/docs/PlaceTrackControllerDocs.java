@@ -185,7 +185,16 @@ public interface PlaceTrackControllerDocs {
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "403",
-                    description = "장소별 곡 상세 접근 권한 없음"),
+                    description = "장소별 곡 상세 접근 권한 없음",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponseVoid"),
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples
+                                            .PLACE_TRACK_ACCESS_DENIED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
                     description = "장소 노래 없음",
