@@ -10,7 +10,7 @@ import org.testcontainers.utility.DockerImageName;
 public class PostgisContainerConfiguration {
 
     private static final DockerImageName POSTGIS_IMAGE = DockerImageName
-            .parse("postgis/postgis:18-3.6")
+            .parse("postgis/postgis:17-3.5")
             .asCompatibleSubstituteFor("postgres");
 
     @Bean
