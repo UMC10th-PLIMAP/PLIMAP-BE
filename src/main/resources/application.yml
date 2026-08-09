@@ -1,18 +1,108 @@
+# PLIMAP 공통 환경 설정
+# local, dev, prod 등 모든 실행 환경에서 공통으로 사용하는 값만 작성합니다.
+
 spring:
   application:
     name: "PLIMAP"
-
-  datasource:
-    url: jdbc:postgresql://localhost:5432/plimap
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
-
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+  # flyway 설정
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-migration-naming: true
+    clean-disabled: true
   jpa:
-    database: postgresql
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    show-sql: true
+    open-in-view: false
     hibernate:
       ddl-auto: validate
-    properties:
-      hibernate:
-        format_sql: true
+  servlet:
+    multipart:
+      # max-file-size는 파일 하나의 크기만 제한하고, max-request-size는 멀티파트
+      # 요청 전체(경계·헤더 오버헤드 포함) 크기를 제한한다. 둘을 동일하게 두면
+      # 5MB 파일도 오버헤드 때문에 request 제한에 걸려 거부될 수 있어 여유를 둔다.
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${KAKAO_REST_API_KEY}
+            client-secret: ${KAKAO_REST_API_SECRET}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            scope:
+              - profile_nickname
+              - account_email
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            scope:
+              - profile
+              - email
+        provider:
+          kakao:
+            authorization-uri: "https://kauth.kakao.com/oauth/authorize"
+            token-uri: "https://kauth.kakao.com/oauth/token"
+            user-info-uri: "https://kapi.kakao.com/v2/user/me"
+            user-name-attribute: id
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+jwt:
+  secret: ${JWT_SECRET}
+
+cookie:
+  secure: true
+  same-site: Lax
+
+# Swagger 설정
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# CORS 설정
+plimap:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+
+# Kakao Local REST API 설정
+kakao:
+  local:
+    base-url: https://dapi.kakao.com
+    rest-api-key: ${KAKAO_REST_API_KEY}
+    connect-timeout: 2s
+    read-timeout: 5s
+
+# iTunes Search API 설정
+itunes:
+  base-url: https://itunes.apple.com
+  connect-timeout: 2s
+  read-timeout: 5s
+
+# YouTube Data API v3 설정
+youtube:
+  api:
+    base-url: https://www.googleapis.com/youtube/v3
+    key: ${YOUTUBE_API_KEY}
+    connect-timeout: 2s
+    read-timeout: 5s

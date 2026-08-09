@@ -1,0 +1,42 @@
+# Prod 환경 설정
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 8
+      minimum-idle: 0
+      connection-timeout: 5000
+  flyway:
+    user: ${FLYWAY_USERNAME}
+    password: ${FLYWAY_PASSWORD}
+  data:
+    redis:
+      url: ${REDIS_URL}
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            redirect-uri: ${KAKAO_REDIRECT_URI}
+          google:
+            redirect-uri: ${GOOGLE_REDIRECT_URI}
+
+oauth:
+  redirect-uri: ${OAUTH_REDIRECT_URI}
+  allowed-frontend-origins: ${OAUTH_ALLOWED_FRONTEND_ORIGINS}
+
+profile-image:
+  storage:
+    gcs:
+      bucket: ${PROFILE_IMAGE_BUCKET}
+      public-base-url: ${PROFILE_IMAGE_PUBLIC_BASE_URL:https://storage.googleapis.com}
+      cache-control-seconds: 31536000
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}

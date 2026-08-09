@@ -1,0 +1,69 @@
+# Local 환경 설정
+# IntelliJ 실행 설정의 Active profiles에 local을 지정해야 이 파일이 적용됩니다.
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:plimap_local_db}
+    username: ${DB_USERNAME:plimap}
+    password: ${DB_PASSWORD:plimap1234}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  flyway:
+    baseline-on-migrate: true
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            redirect-uri: "http://localhost:8080/oauth/callback/kakao"
+          google:
+            redirect-uri: "http://localhost:8080/oauth/callback/google"
+  # Local JPA/Hibernate 설정
+  jpa:
+    database: postgresql
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+oauth:
+  redirect-uri: "http://localhost:5173/app/oauth/callback"
+  allowed-frontend-origins: ${OAUTH_ALLOWED_FRONTEND_ORIGINS:http://localhost:5173}
+
+cookie:
+  secure: false
+  same-site: Lax
+
+plimap:
+  # 로컬 프론트엔드의 API 접근 허용 Origin
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  # Local 테스트 토큰 발급 설정
+  auth:
+    test-token:
+      issue-key-required: false
+
+profile-image:
+  storage:
+    provider: ${PROFILE_IMAGE_STORAGE_PROVIDER:supabase}
+    bucket: ${PROFILE_IMAGE_BUCKET:profile-images}
+    connect-timeout: 2s
+    read-timeout: 5s
+    cache-control-seconds: 31536000
+    supabase:
+      url: ${SUPABASE_URL}
+      secret-key: ${SUPABASE_SECRET_KEY}
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: TRACE
+
+# Swagger 설정
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

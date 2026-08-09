@@ -1,0 +1,94 @@
+package com.example.plimap.domain.member.dto.response;
+
+import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import lombok.Builder;
+import lombok.Getter;
+
+import java.time.Instant;
+
+public class MemberResDTO {
+
+    @Getter
+    @Builder
+    public static class Login {
+        private String accessToken;
+    }
+
+    @Getter
+    @Builder
+    public static class Onboarding {
+        private String nickname;
+        private String profileImageObjectKey;
+        private Instant onboardingCompletedAt;
+    }
+
+    @Getter
+    @Builder
+    public static class NicknameCheck {
+        private String nickname;
+        private boolean available;
+        private NicknameCheckFailReason reason;
+    }
+
+    public record Profile(
+            Long id,
+            String nickname,
+            String name,
+            String introduction,
+            String profileImageUrl,
+            Instant updatedAt
+    ) {
+    }
+
+    public record MyProfile(
+            Long id,
+            String nickname,
+            String name,
+            String introduction,
+            String profileImageUrl,
+            long followerCount,
+            long followingCount,
+            Instant onboardingCompletedAt,
+            long pinCount
+    ) {
+    }
+
+    public record OtherProfile(
+            Long id,
+            String nickname,
+            String name,
+            String introduction,
+            String profileImageUrl,
+            long followerCount,
+            long followingCount,
+            boolean isFollowing,
+            long pinCount
+    ) {
+    }
+
+    public record FollowerItem(
+            Long id,
+            String nickname,
+            String name,
+            String profileImageUrl,
+            Instant followedAt,
+            boolean isFollowing
+    ) {
+    }
+
+    public record FollowingItem(
+            Long id,
+            String nickname,
+            String name,
+            String profileImageUrl,
+            Instant followedAt,
+            boolean isFollowing
+    ) {
+    }
+
+    public record ProfileImage(
+            String objectKey,
+            String imageUrl
+    ) {
+    }
+}

@@ -1,0 +1,57 @@
+# Dev 환경 설정
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      data-source-properties:
+        prepareThreshold: 0
+  data:
+    redis:
+      url: ${REDIS_URL}
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            redirect-uri: ${KAKAO_REDIRECT_URI}
+          google:
+            redirect-uri: ${GOOGLE_REDIRECT_URI}
+
+oauth:
+  redirect-uri: ${OAUTH_REDIRECT_URI}
+  allowed-frontend-origins: ${OAUTH_ALLOWED_FRONTEND_ORIGINS}
+
+cookie:
+  same-site: None
+
+plimap:
+  # Swagger/OpenAPI 접근 허용 Origin
+  swagger:
+    access:
+      public-origin: ${PUBLIC_BASE_URL}
+  # Dev 테스트 토큰 발급 보안 키
+  auth:
+    test-token:
+      issue-key-required: true
+      issue-key: ${TEST_TOKEN_ISSUE_KEY}
+
+profile-image:
+  storage:
+    provider: ${PROFILE_IMAGE_STORAGE_PROVIDER:supabase}
+    bucket: ${PROFILE_IMAGE_BUCKET:profile-images}
+    connect-timeout: 2s
+    read-timeout: 5s
+    cache-control-seconds: 31536000
+    supabase:
+      url: ${SUPABASE_URL}
+      secret-key: ${SUPABASE_SECRET_KEY}
+
+# Swagger 설정
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

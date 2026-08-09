@@ -1,0 +1,68 @@
+name: PR Template Check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+      - ready_for_review
+
+concurrency:
+  group: pr-template-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  pr-template-check:
+    name: PR Template Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate pull request title and body
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title || '';
+            const body = pr.body || '';
+            const bodyWithoutComments = body.replace(/<!--[\s\S]*?-->/g, '');
+            const errors = [];
+
+            const titlePattern = /^\[[^\[\]\r\n]+\]\s+.+$/;
+            if (!titlePattern.test(title)) {
+              errors.push(
+                'PR 제목은 "[Type] 변경 내용" 형식으로 작성해 주세요. ' +
+                '대괄호 안의 타입 종류는 제한하지 않습니다.'
+              );
+            }
+
+            const requiredSections = [
+              '## 작업 내용',
+              '## 변경된 파일',
+              '## 작업 도메인',
+              '## 관련 이슈',
+              '## 테스트',
+              '## 체크리스트',
+              '## 리뷰 참고 사항',
+            ];
+
+            for (const section of requiredSections) {
+              if (!bodyWithoutComments.includes(section)) {
+                errors.push(`PR 본문에 "${section}" 섹션이 필요합니다.`);
+              }
+            }
+
+            const issuePattern = /\b(Refs|Closes|Fixes|Resolves)\s+#\d+\b/i;
+            if (!issuePattern.test(bodyWithoutComments)) {
+              errors.push(
+                'PR 본문에 관련 이슈를 "Refs #15" 또는 "Closes #15" 형식으로 연결해 주세요.'
+              );
+            }
+
+            if (errors.length > 0) {
+              core.setFailed(errors.join('\n'));
+            }

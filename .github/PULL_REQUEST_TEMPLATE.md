@@ -18,8 +18,12 @@
 - [ ] `member`
 - [ ] `place`
 - [ ] `track`
+- [ ] `pin`
+- [ ] `report`
+- [ ] `notification`
 - [ ] `infra`
 - [ ] `db`
+- [ ] `common`
 
 ## 관련 이슈
 

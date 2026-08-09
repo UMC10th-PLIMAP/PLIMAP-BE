@@ -1,0 +1,191 @@
+name: Deploy Prod
+
+on:
+  workflow_run:
+    workflows:
+      - PLIMAP CI
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare tested commit
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      deploy-sha: ${{ steps.commit.outputs.deploy-sha }}
+
+    steps:
+      - name: Resolve tested commit
+        id: commit
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [[ ! "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid deploy commit: $DEPLOY_SHA" >&2
+            exit 1
+          fi
+          echo "deploy-sha=$DEPLOY_SHA" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Approve and deploy Prod
+    needs:
+      - prepare
+    environment:
+      name: production
+      url: https://plimap.kr
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.prepare.outputs.deploy-sha }}
+          persist-credentials: false
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: plimap
+          workload_identity_provider: projects/902362979890/locations/global/workloadIdentityPools/github-actions/providers/plimap-be-prod
+          service_account: plimap-github-prod-deployer@plimap.iam.gserviceaccount.com
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          version: "576.0.0"
+
+      - name: Configure Artifact Registry authentication
+        run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
+
+      - name: Build and verify approved commit image
+        env:
+          DEPLOY_SHA: ${{ needs.prepare.outputs.deploy-sha }}
+          IMAGE: asia-northeast3-docker.pkg.dev/plimap/plimap-docker/api:${{ needs.prepare.outputs.deploy-sha }}
+        run: |
+          docker build --pull \
+            --label "org.opencontainers.image.revision=${DEPLOY_SHA}" \
+            --tag "$IMAGE" \
+            .
+          docker push "$IMAGE"
+
+          digest="$(gcloud artifacts docker images describe "$IMAGE" --format='value(image_summary.digest)')"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Could not resolve an immutable image digest for $IMAGE" >&2
+            exit 1
+          fi
+
+          resolved_image="${IMAGE%:*}@${digest}"
+          docker pull "$resolved_image" >/dev/null
+          resolved_revision="$(
+            docker image inspect "$resolved_image" \
+              --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}'
+          )"
+          if [[ "$resolved_revision" != "$DEPLOY_SHA" ]]; then
+            echo "Resolved image revision does not match approved commit: expected=$DEPLOY_SHA actual=$resolved_revision" >&2
+            exit 1
+          fi
+
+          echo "DEPLOY_IMAGE=$resolved_image" >> "$GITHUB_ENV"
+
+      - name: Deploy candidate, verify, and promote
+        shell: pwsh
+        env:
+          DEPLOY_SHA: ${{ needs.prepare.outputs.deploy-sha }}
+          PROD_PUBLIC_BASE_URL: ${{ vars.PROD_PUBLIC_BASE_URL }}
+          PROD_FRONTEND_REDIRECT_URI: ${{ vars.PROD_FRONTEND_REDIRECT_URI }}
+          PROD_CORS_ALLOWED_ORIGINS: ${{ vars.PROD_CORS_ALLOWED_ORIGINS }}
+          PROD_OAUTH_ALLOWED_FRONTEND_ORIGINS: ${{ vars.PROD_OAUTH_ALLOWED_FRONTEND_ORIGINS }}
+          PROD_GCS_BUCKET: ${{ vars.PROD_GCS_BUCKET }}
+          PROD_VPC_NETWORK: ${{ vars.PROD_VPC_NETWORK }}
+          PROD_VPC_SUBNET: ${{ vars.PROD_VPC_SUBNET }}
+          PROD_PUBLIC_SMOKE_ENABLED: ${{ vars.PROD_PUBLIC_SMOKE_ENABLED }}
+          DEPLOYMENT_RESULT_PATH: ${{ runner.temp }}/prod-deployment-result.json
+        run: |
+          $publicBaseUrl = if ($env:PROD_PUBLIC_BASE_URL) {
+            $env:PROD_PUBLIC_BASE_URL
+          } else {
+            "https://plimap.kr"
+          }
+          $publicSmokeEnabled = switch ($env:PROD_PUBLIC_SMOKE_ENABLED) {
+            "true" { $true }
+            "false" { $false }
+            "" { $false }
+            default { throw "PROD_PUBLIC_SMOKE_ENABLED must be true or false." }
+          }
+
+          ./scripts/gcp/deploy-prod.ps1 `
+            -Image $env:DEPLOY_IMAGE `
+            -DeployCommit $env:DEPLOY_SHA `
+            -PublicBaseUrl $publicBaseUrl `
+            -FrontendRedirectUri $env:PROD_FRONTEND_REDIRECT_URI `
+            -CorsAllowedOrigins $env:PROD_CORS_ALLOWED_ORIGINS `
+            -OAuthAllowedFrontendOrigins $env:PROD_OAUTH_ALLOWED_FRONTEND_ORIGINS `
+            -ProfileImageBucket $env:PROD_GCS_BUCKET `
+            -VpcNetwork $env:PROD_VPC_NETWORK `
+            -VpcSubnet $env:PROD_VPC_SUBNET `
+            -PublicSmokeEnabled:$publicSmokeEnabled `
+            -ResultPath $env:DEPLOYMENT_RESULT_PATH
+
+      - name: Write deployment summary
+        if: ${{ always() }}
+        shell: pwsh
+        env:
+          DEPLOY_SHA: ${{ needs.prepare.outputs.deploy-sha }}
+          DEPLOYMENT_RESULT_PATH: ${{ runner.temp }}/prod-deployment-result.json
+        run: |
+          $lines = @(
+            "## Prod Deployment",
+            "",
+            "| Item | Result |",
+            "| --- | --- |",
+            "| Commit | ``$env:DEPLOY_SHA`` |",
+            "| Image | ``$env:DEPLOY_IMAGE`` |"
+          )
+
+          if (Test-Path -LiteralPath $env:DEPLOYMENT_RESULT_PATH) {
+            $result = Get-Content -Raw $env:DEPLOYMENT_RESULT_PATH | ConvertFrom-Json
+            $secretVersionSummary = @(
+              $result.secretVersions.PSObject.Properties |
+                ForEach-Object { "$($_.Name)=$($_.Value)" }
+            ) -join "<br>"
+            if ([string]::IsNullOrWhiteSpace($secretVersionSummary)) {
+              $secretVersionSummary = "not-recorded"
+            }
+            $lines += @(
+              "| Status | $($result.status) |",
+              "| Previous revision | ``$($result.previousRevision)`` |",
+              "| Candidate revision | ``$($result.candidateRevision)`` |",
+              "| Secret versions | $secretVersionSummary |",
+              "| Candidate verification | $($result.candidateVerification) |",
+              "| Traffic promotion | $($result.trafficPromotion) |",
+              "| Service verification | $($result.serviceVerification) |",
+              "| Public verification | $($result.publicVerification) |",
+              "| Rollback | $($result.rollback) |",
+              "| Public base URL | $($result.publicBaseUrl) |"
+            )
+            if ($result.error) {
+              $lines += "| Error | $($result.error) |"
+            }
+          } else {
+            $lines += "| Deployment | Not started or result unavailable |"
+          }
+
+          $lines | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8

@@ -1,0 +1,2 @@
+ALTER TABLE place
+    ADD COLUMN category VARCHAR(100);

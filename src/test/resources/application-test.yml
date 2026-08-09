@@ -1,0 +1,51 @@
+# 테스트 전용 설정
+# CI/로컬 테스트 환경에는 카카오·JWT 시크릿이 없으므로
+# 컨텍스트 로딩에 필요한 값만 더미로 채웁니다. 실제 카카오 연동 테스트에는 사용하지 않습니다.
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: test-kakao-client-id
+            client-secret: test-kakao-client-secret
+            redirect-uri: "http://localhost:8080/oauth/callback/kakao"
+          google:
+            client-id: test-google-client-id
+            client-secret: test-google-client-secret
+            redirect-uri: "http://localhost:8080/oauth/callback/google"
+
+jwt:
+  secret: test-only-jwt-secret-key-do-not-use-in-production-0123456789
+
+oauth:
+  redirect-uri: "http://localhost:5173/home"
+  allowed-frontend-origins: http://localhost:5173,https://dev.plimap.kr
+
+cookie:
+  secure: false
+  same-site: Lax
+
+plimap:
+  cors:
+    allowed-origins: http://localhost:5173,https://dev.plimap.kr,https://pr-*.plimap.kr
+
+kakao:
+  local:
+    rest-api-key: test-kakao-rest-api-key
+
+youtube:
+  api:
+    key: test-youtube-api-key
+
+profile-image:
+  storage:
+    provider: supabase
+    bucket: profile-images
+    connect-timeout: 2s
+    read-timeout: 5s
+    cache-control-seconds: 31536000
+    supabase:
+      url: https://test-project.supabase.co
+      secret-key: test-only-supabase-secret-key
