@@ -317,7 +317,7 @@ Public Access Prevention 조직 정책이 강제되어 있다면 공개 URL 방�
 4. 필수 승인자가 Actions의 **Review deployments → Approve and deploy**를 선택합니다.
 5. 승인된 Job이 정확한 commit SHA checkout을 OCI revision label과 함께 image로 빌드·push하고, 원격 digest와 revision label을 검증해 immutable image를 확정합니다.
 6. 입력 리소스와 기존 서비스의 기본 URL 비활성 bootstrap 또는 단일 revision 100% 트래픽 상태, 공개 Invoker IAM을 확인하고 각 Prod Secret의 `ENABLED` 숫자 버전을 고정합니다.
-7. 공개 traffic tag 없이 `--no-traffic`과 deploy health check로 신규 revision을 시작하고 Ready 상태와 실제 image digest를 확인합니다.
+7. 공개 traffic tag 없이 `--no-traffic`과 deploy health check로 신규 revision을 시작하고, 제어 영역의 상태 반영 지연을 고려한 제한된 재시도로 Ready 상태와 실제 image digest를 확인합니다.
 8. 검증된 revision으로 트래픽을 100% 전환하고 실제 서비스 트래픽이 단일 revision 100%로 수렴하는지 확인합니다. 기본 `run.app` URL은 계속 비활성화합니다.
 9. 서비스 ingress와 기본 URL 비활성 상태를 재검증합니다. DNS와 Managed TLS가 활성화된 뒤 `PROD_PUBLIC_SMOKE_ENABLED=true`이면 `plimap.kr`의 프론트, CSRF 응답·cookie, Google OAuth 3xx·`Location`과 문서·Actuator 차단도 검증합니다.
 10. 실패 시 현재 트래픽 상태를 다시 조회하고 직전 revision으로 100% 복구한 뒤 트래픽 수렴과 LB 전용 상태를 재검증합니다.
