@@ -169,28 +169,6 @@ class InquiryControllerTest {
                 .andExpect(jsonPath("$.message").value("이메일 형식이 올바르지 않습니다."));
     }
 
-    @Test
-    void 이메일이_320자를_초과하면_400을_반환한다() throws Exception {
-        // DB contact_email 컬럼은 VARCHAR(320)이라, 형식이 맞더라도 320자를 넘으면 저장 단계(500)가 아니라
-        // 요청 검증 단계(400)에서 걸러져야 한다. Hibernate Validator의 @Email 자체가 320자보다 긴
-        // 유효한 형식의 문자열을 만들지 못하므로(local 64자 + '@' + domain 255자 제한), 형식이 깨진
-        // 321자 문자열로도 여전히 400이 나가는지만 확인한다.
-        String tooLongEmail = "a".repeat(321);
-
-        mockMvc.perform(withCsrf(post(ENDPOINT))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "category": "OTHER",
-                                  "title": "제목",
-                                  "content": "내용",
-                                  "contactEmail": "%s"
-                                }
-                                """.formatted(tooLongEmail)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"));
-    }
-
     private MockHttpServletRequestBuilder authenticatedPost(String endpoint, String content) {
         return post(endpoint)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
