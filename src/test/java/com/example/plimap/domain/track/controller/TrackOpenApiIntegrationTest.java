@@ -339,6 +339,14 @@ class TrackOpenApiIntegrationTest {
                 openApi,
                 PLACE_TRACK_DETAIL_PATH,
                 "get",
+                "403",
+                "ApiResponseVoid",
+                Set.of(TrackErrorCode.PLACE_TRACK_ACCESS_DENIED.getCode())
+        );
+        assertFailureResponse(
+                openApi,
+                PLACE_TRACK_DETAIL_PATH,
+                "get",
                 "404",
                 "ApiResponsePlaceTrackDetail",
                 Set.of(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode())
