@@ -91,7 +91,8 @@ public class MemberConverter {
                 row.name(),
                 profileImageUrl,
                 row.followedAt(),
-                row.isFollowing()
+                row.isFollowing(),
+                row.isFollowingViewer()
         );
     }
 
@@ -102,7 +103,8 @@ public class MemberConverter {
                 row.name(),
                 profileImageUrl,
                 row.followedAt(),
-                row.isFollowing()
+                row.isFollowing(),
+                row.isFollowingViewer()
         );
     }
 

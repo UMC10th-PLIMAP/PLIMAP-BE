@@ -8,6 +8,7 @@ public record MemberFollowRow(
         String name,
         String profileImageObjectKey,
         Instant followedAt,
-        boolean isFollowing
+        boolean isFollowing,
+        boolean isFollowingViewer
 ) {
 }

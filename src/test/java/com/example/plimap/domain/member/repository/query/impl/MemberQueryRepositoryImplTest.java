@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -155,6 +156,30 @@ class MemberQueryRepositoryImplTest {
     }
 
     @Test
+    void 팔로워_목록에서_대상이_뷰어를_팔로우하는_경우에만_isFollowingViewer가_true다() {
+        // given: target의 팔로워인 follower1이 뷰어(outsider)를 팔로우한다(follower2는 팔로우하지 않는다).
+        // outsider는 follower1/follower2 둘 다 팔로우하지 않으므로 isFollowing은 항상 false지만,
+        // "그들이 나를 팔로우하는지"는 isFollowingViewer로 별도 확인해야 한다.
+        memberFollowRepository.save(MemberFollow.create(follower1, outsider));
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        Pagination<MemberFollowRow> response =
+                memberQueryRepository.findFollowersByMemberId(outsider.getId(), target.getId(), null, 10);
+
+        // then
+        assertThat(response.data())
+                .filteredOn(item -> item.nickname().equals("팔로워1"))
+                .extracting(MemberFollowRow::isFollowing, MemberFollowRow::isFollowingViewer)
+                .containsExactly(tuple(false, true));
+        assertThat(response.data())
+                .filteredOn(item -> item.nickname().equals("팔로워2"))
+                .extracting(MemberFollowRow::isFollowing, MemberFollowRow::isFollowingViewer)
+                .containsExactly(tuple(false, false));
+    }
+
+    @Test
     void 팔로워_목록에서_뷰어가_신고한_회원은_제외된다() {
         reportRepository.save(Report.createMemberReport(outsider, follower1, ReportCategory.OBSCENE_OR_HARMFUL, null));
         entityManager.flush();
@@ -243,6 +268,30 @@ class MemberQueryRepositoryImplTest {
                 .filteredOn(item -> item.nickname().equals("팔로잉2"))
                 .extracting(MemberFollowRow::isFollowing)
                 .containsExactly(false);
+    }
+
+    @Test
+    void 팔로잉_목록에서_대상이_뷰어를_팔로우하는_경우에만_isFollowingViewer가_true다() {
+        // given: outsider는 following1만 팔로우하지만(isFollowing 기준), 실제로 뷰어를 팔로우하는 건 following2다.
+        // 버그였던 예전 로직은 isFollowing만으로 맞팔을 판단해 following1을 맞팔로 잘못 취급했다.
+        // isFollowingViewer는 following1=false, following2=true로 정확히 구분해야 한다.
+        memberFollowRepository.save(MemberFollow.create(following2, outsider));
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        Pagination<MemberFollowRow> response =
+                memberQueryRepository.findFollowingByMemberId(outsider.getId(), source.getId(), null, 10);
+
+        // then
+        assertThat(response.data())
+                .filteredOn(item -> item.nickname().equals("팔로잉1"))
+                .extracting(MemberFollowRow::isFollowing, MemberFollowRow::isFollowingViewer)
+                .containsExactly(tuple(true, false));
+        assertThat(response.data())
+                .filteredOn(item -> item.nickname().equals("팔로잉2"))
+                .extracting(MemberFollowRow::isFollowing, MemberFollowRow::isFollowingViewer)
+                .containsExactly(tuple(false, true));
     }
 
     @Test
