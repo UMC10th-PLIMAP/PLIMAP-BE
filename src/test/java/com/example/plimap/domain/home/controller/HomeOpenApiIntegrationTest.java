@@ -54,7 +54,8 @@ class HomeOpenApiIntegrationTest {
                 .contains("행정동 결과가 없으면 지역 필드를 null")
                 .contains("위치 권한 거부")
                 .contains("API 오류가 아닙니다");
-        assertThat(operation.path("security").get(0).has("JWT TOKEN")).isTrue();
+        assertThat(openApi.path("security").get(0).has("JWT TOKEN")).isTrue();
+        assertThat(operation.has("security")).isFalse();
         assertThat(operation.path("responses").has("200")).isTrue();
         assertThat(operation.path("responses").has("400")).isTrue();
         assertThat(operation.path("responses").has("401")).isTrue();

@@ -6,7 +6,6 @@ import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -23,7 +22,6 @@ public interface HomeControllerDocs {
                     + "행정동 결과가 없으면 지역 필드를 null로 반환합니다. 위치 권한 거부는 "
                     + "프론트에서 처리하며 API 오류가 아닙니다."
     )
-    @SecurityRequirement(name = "JWT TOKEN")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
