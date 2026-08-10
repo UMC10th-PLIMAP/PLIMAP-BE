@@ -468,6 +468,86 @@ class MemberControllerTest {
     }
 
     @Test
+    void 회원_검색에_성공하면_200과_MEMBERS_SEARCHED_응답을_반환한다() throws Exception {
+        MemberResDTO.SearchItem item = new MemberResDTO.SearchItem(
+                3L, "검색결과", "이름", "key", false, false, Instant.parse("2026-01-01T00:00:00Z"));
+        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+                .data(List.of(item))
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(10)
+                .build();
+        when(memberQueryService.searchActiveMembers(eq(AUTH_MEMBER_ID), eq("키워드"), isNull(), eq(10))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("keyword", "키워드")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_200_MEMBERS_SEARCHED"))
+                .andExpect(jsonPath("$.result.data[0].nickname").value("검색결과"))
+                .andExpect(jsonPath("$.result.hasNext").value(false));
+    }
+
+    @Test
+    void 회원_검색시_keyword가_없어도_기본값으로_동작한다() throws Exception {
+        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+                .data(List.of())
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(10)
+                .build();
+        when(memberQueryService.searchActiveMembers(eq(AUTH_MEMBER_ID), eq(""), isNull(), eq(10))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        verify(memberQueryService).searchActiveMembers(AUTH_MEMBER_ID, "", null, 10);
+    }
+
+    @Test
+    void 회원_검색시_pageSize가_50을_초과하면_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "51")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 회원_검색시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
+        String cursor = "0/2/0/2026-01-01T00:00:00Z/3";
+        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+                .data(List.of())
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(10)
+                .build();
+        when(memberQueryService.searchActiveMembers(AUTH_MEMBER_ID, "키워드", cursor, 10)).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("keyword", "키워드")
+                        .param("cursor", cursor)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        verify(memberQueryService).searchActiveMembers(AUTH_MEMBER_ID, "키워드", cursor, 10);
+    }
+
+    @Test
+    void 회원_검색시_잘못된_커서면_400을_반환한다() throws Exception {
+        when(memberQueryService.searchActiveMembers(eq(AUTH_MEMBER_ID), eq(""), eq("invalid-cursor"), eq(10)))
+                .thenThrow(new MemberException(MemberErrorCode.INVALID_CURSOR));
+
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("cursor", "invalid-cursor")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_CURSOR"));
+    }
+
+    @Test
     void 프로필_이미지_업로드에_성공하면_200과_PROFILE_IMAGE_UPLOADED_응답을_반환한다() throws Exception {
         MockMultipartFile image = new MockMultipartFile(
                 "image", "profile.webp", "image/webp", "webp-content".getBytes());

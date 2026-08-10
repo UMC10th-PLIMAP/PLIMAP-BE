@@ -88,6 +88,17 @@ public class MemberResDTO {
     ) {
     }
 
+    public record SearchItem(
+            Long id,
+            String nickname,
+            String name,
+            String profileImageUrl,
+            boolean isFollowing,
+            boolean isFollowingViewer,
+            Instant joinedAt
+    ) {
+    }
+
     public record ProfileImage(
             String objectKey,
             String imageUrl

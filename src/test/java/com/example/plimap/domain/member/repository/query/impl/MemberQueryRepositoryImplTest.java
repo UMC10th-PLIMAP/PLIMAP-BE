@@ -7,10 +7,13 @@ import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.exception.MemberErrorCode;
+import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.domain.member.repository.query.MemberSearchRow;
 import com.example.plimap.domain.report.entity.Report;
 import com.example.plimap.domain.report.enums.ReportCategory;
 import com.example.plimap.domain.report.repository.ReportRepository;
@@ -31,6 +34,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 @SpringBootTest
@@ -382,6 +386,184 @@ class MemberQueryRepositoryImplTest {
 
         assertThat(firstPage.getTotalElements()).isEqualTo(9);
         assertThat(firstPage.getContent()).hasSize(3);
+    }
+
+    @Test
+    void 키워드가_비어있으면_전체_활성_회원을_최신순으로_반환한다() {
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(outsider.getId(), "", null, 20);
+
+        assertThat(response.data()).extracting(MemberSearchRow::nickname)
+                .contains("팔로워1", "팔로워2", "출발점", "팔로잉1", "팔로잉2")
+                .doesNotContain("탈퇴한팔로워", "탈퇴한팔로잉", "제3자");
+    }
+
+    @Test
+    void 키워드가_공백뿐이면_전체_활성_회원을_반환한다() {
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(outsider.getId(), "   ", null, 20);
+
+        assertThat(response.data()).extracting(MemberSearchRow::nickname)
+                .contains("팔로워1");
+    }
+
+    @Test
+    void 키워드와_닉네임_이름_모두_불일치하는_회원은_결과에서_제외된다() {
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(outsider.getId(), "존재하지않는검색어zz", null, 20);
+
+        assertThat(response.data()).isEmpty();
+    }
+
+    @Test
+    void 자기_자신은_검색_결과에서_제외된다() {
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(outsider.getId(), "", null, 20);
+
+        assertThat(response.data()).extracting(MemberSearchRow::nickname)
+                .doesNotContain("제3자");
+    }
+
+    @Test
+    void 닉네임이_키워드로_시작하면_포함만_하는_경우보다_먼저_노출된다() {
+        Member viewer = createMember("검색자1");
+        Member prefixMatch = createMember("zzs시작");
+        Member containsMatch = createMember("가zzs포함");
+        memberRepository.saveAll(List.of(viewer, prefixMatch, containsMatch));
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(viewer.getId(), "zzs", null, 20);
+
+        assertThat(response.data()).extracting(MemberSearchRow::nickname)
+                .containsExactly("zzs시작", "가zzs포함");
+    }
+
+    @Test
+    void 닉네임_점수가_같으면_이름_일치도로_2차_정렬한다() {
+        Member viewer = createMember("검색자2");
+        Member namePrefixMatch = Member.builder().nickname("무관1").name("zzn시작").build();
+        Member nameContainsMatch = Member.builder().nickname("무관2").name("가zzn포함").build();
+        memberRepository.saveAll(List.of(viewer, namePrefixMatch, nameContainsMatch));
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(viewer.getId(), "zzn", null, 20);
+
+        assertThat(response.data()).extracting(MemberSearchRow::nickname)
+                .containsExactly("무관1", "무관2");
+    }
+
+    @Test
+    void 이름이_없는_회원은_이름_불일치_회원과_동일한_순위로_취급된다() {
+        Member viewer = createMember("검색자3");
+        Member noNameMatch = Member.builder().nickname("zzm이름없음").name(null).build();
+        Member nameMismatch = Member.builder().nickname("zzm이름불일치").name("전혀다른값").build();
+        memberRepository.saveAll(List.of(viewer, noNameMatch, nameMismatch));
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(viewer.getId(), "zzm", null, 20);
+
+        // 닉네임 점수(둘 다 시작 일치)와 이름 점수(둘 다 0)가 동점이므로,
+        // 이름이 없다고 밀리지 않고 나머지 타이브레이크(가입일/ID)로만 순서가 갈린다.
+        assertThat(response.data()).extracting(MemberSearchRow::nickname)
+                .containsExactlyInAnyOrder("zzm이름없음", "zzm이름불일치");
+    }
+
+    @Test
+    void 내가_팔로우하지_않은_회원이_팔로우_중인_회원보다_먼저_노출된다() {
+        Member viewer = createMember("검색자4");
+        Member notFollowed = createMember("zzf안팔로우");
+        Member followed = createMember("zzf팔로우중");
+        memberRepository.saveAll(List.of(viewer, notFollowed, followed));
+        memberFollowRepository.save(MemberFollow.create(viewer, followed));
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(viewer.getId(), "zzf", null, 20);
+
+        assertThat(response.data()).extracting(MemberSearchRow::nickname)
+                .containsExactly("zzf안팔로우", "zzf팔로우중");
+        assertThat(response.data())
+                .filteredOn(item -> item.nickname().equals("zzf팔로우중"))
+                .extracting(MemberSearchRow::isFollowing)
+                .containsExactly(true);
+    }
+
+    @Test
+    void 정지되거나_탈퇴한_회원은_검색_결과에서_제외된다() {
+        Member suspended = createMember("zzs정지회원");
+        Member withdrawn = createMember("zzs탈퇴회원");
+        memberRepository.saveAll(List.of(suspended, withdrawn));
+        ReflectionTestUtils.setField(suspended, "status", MemberStatus.SUSPENDED);
+        memberRepository.save(suspended);
+        withdrawn.delete();
+        memberRepository.save(withdrawn);
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(outsider.getId(), "zzs", null, 20);
+
+        assertThat(response.data()).extracting(MemberSearchRow::nickname)
+                .doesNotContain("zzs정지회원", "zzs탈퇴회원");
+    }
+
+    @Test
+    void 신고_누적_10회_이상인_회원과_내가_신고한_회원은_검색_결과에서_제외된다() {
+        Member overReported = createMember("zzr신고누적");
+        Member reportedByMe = createMember("zzr내가신고");
+        memberRepository.saveAll(List.of(overReported, reportedByMe));
+        for (int i = 0; i < 10; i++) {
+            memberRepository.increaseReportCount(overReported.getId());
+        }
+        reportRepository.save(Report.createMemberReport(outsider, reportedByMe, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberSearchRow> response =
+                memberQueryRepository.searchActiveMembers(outsider.getId(), "zzr", null, 20);
+
+        assertThat(response.data()).extracting(MemberSearchRow::nickname)
+                .doesNotContain("zzr신고누적", "zzr내가신고");
+    }
+
+    @Test
+    void 검색_결과를_커서_기반_페이지네이션으로_조회한다() {
+        Member viewer = createMember("검색자5");
+        Member notFollowedPrefix = createMember("zzc시작");
+        Member notFollowedContains = createMember("가zzc포함");
+        memberRepository.saveAll(List.of(viewer, notFollowedPrefix, notFollowedContains));
+        entityManager.flush();
+        entityManager.clear();
+
+        Pagination<MemberSearchRow> firstPage =
+                memberQueryRepository.searchActiveMembers(viewer.getId(), "zzc", null, 1);
+
+        assertThat(firstPage.data()).extracting(MemberSearchRow::nickname).containsExactly("zzc시작");
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(firstPage.nextCursor()).isNotNull();
+
+        // 닉네임 점수 경계(시작 일치 -> 포함 일치)를 실제로 가로지르는 페이지 전환을 검증한다.
+        Pagination<MemberSearchRow> secondPage =
+                memberQueryRepository.searchActiveMembers(viewer.getId(), "zzc", firstPage.nextCursor(), 1);
+
+        assertThat(secondPage.data()).extracting(MemberSearchRow::nickname).containsExactly("가zzc포함");
+        assertThat(secondPage.hasNext()).isFalse();
+        assertThat(secondPage.nextCursor()).isNull();
+    }
+
+    @Test
+    void 잘못된_형식의_커서로_검색하면_예외가_발생한다() {
+        assertThatThrownBy(() ->
+                memberQueryRepository.searchActiveMembers(outsider.getId(), "", "invalid-cursor", 10))
+                .isInstanceOfSatisfying(MemberException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_CURSOR));
     }
 
     private Member createMember(String nickname) {
