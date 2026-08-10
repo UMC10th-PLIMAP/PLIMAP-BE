@@ -368,6 +368,58 @@ class MemberQueryServiceImplTest {
     }
 
     @Test
+    void 상대가_나를_팔로우_중이면_isFollowingViewer가_true다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
+                .thenReturn(Optional.of(member));
+        when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
+        when(memberFollowRepository.existsById(new MemberFollowId(2L, 1L))).thenReturn(true);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.isFollowing()).isFalse();
+        assertThat(result.isFollowingViewer()).isTrue();
+    }
+
+    @Test
+    void 상대가_나를_팔로우_중이_아니면_isFollowingViewer가_false다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
+                .thenReturn(Optional.of(member));
+        when(memberFollowRepository.existsById(new MemberFollowId(2L, 1L))).thenReturn(false);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.isFollowingViewer()).isFalse();
+    }
+
+    @Test
+    void 맞팔로우_상태면_isFollowing과_isFollowingViewer가_모두_true다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
+                .thenReturn(Optional.of(member));
+        when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(true);
+        when(memberFollowRepository.existsById(new MemberFollowId(2L, 1L))).thenReturn(true);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.isFollowing()).isTrue();
+        assertThat(result.isFollowingViewer()).isTrue();
+    }
+
+    @Test
     void 존재하지_않거나_탈퇴한_회원의_프로필은_조회할_수_없다() {
         // given
         when(memberQueryRepository.findVisibleActiveMember(2L, 1L))

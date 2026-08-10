@@ -157,9 +157,10 @@ public class MemberQueryServiceImpl implements MemberQueryService {
         long followerCount = memberFollowRepository.countByIdFollowingId(targetMemberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(targetMemberId);
         boolean isFollowing = memberFollowRepository.existsById(new MemberFollowId(viewerId, targetMemberId));
+        boolean isFollowingViewer = memberFollowRepository.existsById(new MemberFollowId(targetMemberId, viewerId));
         long pinCount = pinQueryService.countPinsByMemberId(targetMemberId);
         String profileImageUrl = profileImageStorage.getPublicUrlOrNull(member.getProfileImageObjectKey());
-        return MemberConverter.toOtherProfile(member, profileImageUrl, followerCount, followingCount, isFollowing, pinCount);
+        return MemberConverter.toOtherProfile(member, profileImageUrl, followerCount, followingCount, isFollowing, isFollowingViewer, pinCount);
     }
 
     @Override

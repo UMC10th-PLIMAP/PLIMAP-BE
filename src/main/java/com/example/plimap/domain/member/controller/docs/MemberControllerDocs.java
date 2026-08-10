@@ -63,7 +63,17 @@ public interface MemberControllerDocs {
 
     @Operation(
             summary = "다른 사용자 프로필 조회",
-            description = "경로의 memberId에 해당하는 회원의 프로필을 조회합니다. 팔로워/팔로잉 수, 내가 이 회원을 팔로우 중인지 여부, 이 회원이 작성한 핀 개수(pinCount)를 함께 반환합니다. pinCount는 삭제되지 않고 피드에 공개된 핀만 집계한 값입니다. 본인의 memberId로는 조회할 수 없으며, 내 프로필 조회는 `GET /api/v1/members/me`를 이용해야 합니다."
+            description = """
+                    경로의 memberId에 해당하는 회원의 프로필을 조회합니다. 팔로워/팔로잉 수, 로그인한 나(요청자, 뷰어) 기준의 양방향 팔로우 정보, 이 회원이 작성한 핀 개수(pinCount)를 함께 반환합니다. pinCount는 삭제되지 않고 피드에 공개된 핀만 집계한 값입니다. 본인의 memberId로는 조회할 수 없으며, 내 프로필 조회는 `GET /api/v1/members/me`를 이용해야 합니다.
+
+                    - isFollowing: 내가 이 회원을 팔로우하고 있는지
+                    - isFollowingViewer: 이 회원이 나를 팔로우하고 있는지
+
+                    클라이언트에서 버튼 상태를 표시할 때는 다음 우선순위로 판단합니다.
+                    - isFollowing=true: "팔로잉" (이미 내가 팔로우 중)
+                    - isFollowing=false, isFollowingViewer=true: "맞팔로우" (상대가 나를 팔로우 중이므로 팔로우하면 맞팔이 됨)
+                    - 둘 다 false: "팔로우" (아무 관계 없음)
+                    """
     )
     ApiResponse<MemberResDTO.OtherProfile> getOtherProfile(AuthMember authMember, Long memberId);
 
