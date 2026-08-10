@@ -523,6 +523,8 @@ class ClusterPinListTest {
         assertThat(pinPreviews)
                 .extracting(PinResponse.PinPreview::placeId)
                 .containsExactlyInAnyOrder(place6.getId(), place8.getId());
+        assertThat(pinPreviews.getFirst().hasBookmarkedPlace()).isFalse();
+        assertThat(pinPreviews.getLast().hasBookmarkedPlace()).isFalse();
     }
 
     @Test
@@ -537,13 +539,23 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.PinPreview> result = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+        List<PinResponse.PinPreview> result = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint, member1.getId());
 
         // then
         assertThat(result).hasSize(2);
         assertThat(result)
                 .extracting(PinResponse.PinPreview::placeId)
                 .containsExactlyInAnyOrder(place1.getId(), place2.getId());
+
+        assertThat(result)
+                .filteredOn(pin -> pin.placeId().equals(place1.getId()))
+                .extracting(PinResponse.PinPreview::hasBookmarkedPlace)
+                .containsExactly(true);
+
+        assertThat(result)
+                .filteredOn(pin -> pin.placeId().equals(place2.getId()))
+                .extracting(PinResponse.PinPreview::hasBookmarkedPlace)
+                .containsExactly(false);
     }
 
     @Test
@@ -558,7 +570,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.PinPreview> result = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+        List<PinResponse.PinPreview> result = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint, member1.getId());
 
         // then
         assertThat(result).hasSize(3);
@@ -577,7 +589,7 @@ class ClusterPinListTest {
                 new Coordinate(127.0750, 37.5600)
         );
         // when
-        List<PinResponse.PinPreview> result = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+        List<PinResponse.PinPreview> result = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint, member1.getId());
 
         // then
         assertThat(result).hasSize(3);
@@ -591,7 +603,7 @@ class ClusterPinListTest {
         entityManager.flush();
         entityManager.clear();
 
-        List<PinResponse.PinPreview> result2 = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+        List<PinResponse.PinPreview> result2 = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint, member1.getId());
 
         // then
         assertThat(result2).hasSize(3);

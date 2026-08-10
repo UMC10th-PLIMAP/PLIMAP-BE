@@ -11,6 +11,7 @@ import com.example.plimap.domain.pin.entity.QPinLike;
 import com.example.plimap.domain.pin.enums.ClusterLevel;
 import com.example.plimap.domain.pin.repository.query.ClusterAndPinRepository;
 import com.example.plimap.domain.place.entity.QPlace;
+import com.example.plimap.domain.place.entity.QPlaceBookmark;
 import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
@@ -23,7 +24,9 @@ import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
@@ -196,9 +199,27 @@ public class ClusterAndPinRepositoryImpl implements ClusterAndPinRepository {
     QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
     QTrack track = QTrack.track;
     QPlace place = QPlace.place;
+    QPlaceBookmark placeBookmark = QPlaceBookmark.placeBookmark;
 
     @Override
-    public List<PinResponse.PinPreview> findPinPreviewListByPlaceIds(List<Long> placeIds) {
+    public List<PinResponse.PinPreview> findPinPreviewListByPlaceIds(List<Long> placeIds, Long memberId) {
+        Map<Long, Boolean> bookmarkedMap = new HashMap<>();
+
+        if (memberId != null) {
+            List<Long> bookmarkedPlaceIds = queryFactory
+                    .select(placeBookmark.place.id)
+                    .from(placeBookmark)
+                    .where(
+                            placeBookmark.place.id.in(placeIds),
+                            placeBookmark.id.memberId.eq(memberId)
+                    )
+                    .fetch();
+
+            bookmarkedPlaceIds.forEach(placeId ->
+                    bookmarkedMap.put(placeId, true)
+            );
+        }
+
         List<Long> pinIds = entityManager.createNativeQuery(
                         PIN_COUNT
                                 + ","
@@ -221,17 +242,25 @@ public class ClusterAndPinRepositoryImpl implements ClusterAndPinRepository {
                 .map(pin ->
                         PinConverter.toPinPreview(
                                 pin,
-                                profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey()
-                                )
+                                profileImageStorage.getPublicUrlOrNull(
+                                        pin.getMember().getProfileImageObjectKey()
+                                ),
+                                bookmarkedMap.getOrDefault(pin.getPlace().getId(), false)
                         )
                 )
                 .toList();
     }
 
     @Override
-    public List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint) {
+    public List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint, Long memberId) {
         @SuppressWarnings("unchecked")
-        List<Long> placeIds = entityManager.createNativeQuery(PLACE_ID_IN_RANGE_QUERY)
+        String bookmarkedQuery = memberId == null
+                ? BOOKMARKED_ANONYMOUS_QUERY
+                : BOOKMARKED_QUERY;
+
+        String sql = PLACE_ID_IN_RANGE_QUERY.formatted(bookmarkedQuery);
+
+        List<Long> placeIds = entityManager.createNativeQuery(sql)
                 .setParameter("minLng", minPoint.getX())
                 .setParameter("minLat", minPoint.getY())
                 .setParameter("maxLng", maxPoint.getX())
@@ -242,7 +271,7 @@ public class ClusterAndPinRepositoryImpl implements ClusterAndPinRepository {
             return List.of();
         }
 
-        return findPinPreviewListByPlaceIds(placeIds);
+        return findPinPreviewListByPlaceIds(placeIds, memberId);
     }
 
     @Override
@@ -321,7 +350,7 @@ public class ClusterAndPinRepositoryImpl implements ClusterAndPinRepository {
             }
         }
 
-        List<PinResponse.PinPreview> pinPreviews = findPinPreviewListByPlaceIds(singlePlaceIds);
+        List<PinResponse.PinPreview> pinPreviews = findPinPreviewListByPlaceIds(singlePlaceIds, memberId);
 
         return PinConverter.toClusterAndPin(clusters, pinPreviews, zoomLevel);
     }

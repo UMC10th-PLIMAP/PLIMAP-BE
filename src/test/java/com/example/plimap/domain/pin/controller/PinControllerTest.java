@@ -524,7 +524,8 @@ class PinControllerTest {
                         "좋아하는 노래예요",
                         "https://example.com/album.jpg",
                         "dQw4w9WgXcQ",
-                        30000
+                        30000,
+                        false
                 )
         );
 

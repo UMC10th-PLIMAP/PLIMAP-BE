@@ -129,7 +129,7 @@ public class PinQueryServiceImpl implements PinQueryService {
         Pin pin = pinQueryRepository.getPinPreview(pinId, viewerId)
                 .orElseThrow(() -> new PinException(PinErrorCode.PIN_NOT_FOUND));
 
-        return PinConverter.toPinPreview(pin, profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey()));
+        return PinConverter.toPinPreview(pin, profileImageStorage.getPublicUrlOrNull(pin.getMember().getProfileImageObjectKey()), null);
     }
 
     @Override
@@ -143,7 +143,7 @@ public class PinQueryServiceImpl implements PinQueryService {
         Point maxPoint = geometryFactory.createPoint(new Coordinate(request.northEastLng(), request.northEastLat()));
         if (request.zoomLevel() >= 20) {
             // 개별 Pin 조회
-            List<PinResponse.PinPreview> pinPreviews = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+            List<PinResponse.PinPreview> pinPreviews = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint, memberId);
             return PinConverter.toClusterAndPin(null, pinPreviews, request.zoomLevel());
         }
 

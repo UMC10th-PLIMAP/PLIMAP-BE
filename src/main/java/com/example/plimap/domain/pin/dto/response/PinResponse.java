@@ -102,7 +102,8 @@ public class PinResponse {
             String introduction,
             String albumImageUrl,
             String youtubeVideoId,
-            Integer clipStartMs
+            Integer clipStartMs,
+            Boolean hasBookmarkedPlace
     ) {}
 
     @Builder

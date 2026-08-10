@@ -325,8 +325,8 @@ class PinQueryServiceImplTest {
         PinResponse.ClusterAndPin result = pinQueryService.getClusterPinList(request,   null);
 
         // then
-        verify(clusterAndPinRepository, never()).findPinPreviewListByViewport(any(), any());
-        verify(clusterAndPinRepository).findClusterListByViewport(any(), any(), anyInt(),   isNull(Long.class));
+        verify(clusterAndPinRepository, never()).findPinPreviewListByViewport(any(), any(), isNull(Long.class));
+        verify(clusterAndPinRepository).findClusterListByViewport(any(), any(), anyInt(), isNull(Long.class));
 
         assertThat(result.pins()).isNull();
         assertThat(result.clusters()).hasSize(1);
@@ -351,7 +351,7 @@ class PinQueryServiceImplTest {
         assertThat(result).isSameAs(clusterAndPin);
         verify(clusterAndPinRepository).findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt(), isNull(Long.class));
         verify(clusterAndPinRepository, never())
-                .findPinPreviewListByViewport(any(), any());
+                .findPinPreviewListByViewport(any(), any(), isNull(Long.class));
         verify(clusterAndPinRepository, never())
                 .findClusterListByViewport(any(), any(), anyInt(), isNull(Long.class));
     }
@@ -365,14 +365,14 @@ class PinQueryServiceImplTest {
 
         List<PinResponse.PinPreview> previews = List.of(mock(PinResponse.PinPreview.class));
 
-        given(clusterAndPinRepository.findPinPreviewListByViewport(any(), any()))
+        given(clusterAndPinRepository.findPinPreviewListByViewport(any(), any(), isNull(Long.class)))
                 .willReturn(previews);
 
         // when
         PinResponse.ClusterAndPin result = pinQueryService.getClusterPinList(request, null);
 
         // then
-        verify(clusterAndPinRepository).findPinPreviewListByViewport(any(), any());
+        verify(clusterAndPinRepository).findPinPreviewListByViewport(any(), any(), isNull(Long.class));
         verify(clusterAndPinRepository, never())
                 .findClusterListByViewport(any(), any(), anyInt(), isNull(Long.class));
 
