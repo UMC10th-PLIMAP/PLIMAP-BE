@@ -1,6 +1,7 @@
 package com.example.plimap.domain.member.dto.response;
 
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -88,6 +89,7 @@ public class MemberResDTO {
     ) {
     }
 
+    @Schema(name = "MemberSearchItem")
     public record SearchItem(
             Long id,
             String nickname,
