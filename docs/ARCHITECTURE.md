@@ -53,6 +53,7 @@ com.example.plimap/
 ├── domain/                         # 도메인 레이어
 │   ├── member/                     # 회원·약관
 │   ├── auth/                       # 소셜 로그인·JWT
+│   ├── home/                       # 홈 화면 복합 조회
 │   ├── place/                      # 장소·위치·검색 기록·북마크
 │   ├── track/                      # 음악·장소별 곡·좋아요
 │   ├── notification/               # 알림·SSE
@@ -193,6 +194,14 @@ Member/Pin Command Service
 
 - 문의 등록(카테고리·제목·내용·답변받을 이메일). 로그인 상태면 작성자(`member`)가 자동으로 연결되고, 비로그인·탈퇴 상태면 연결되지 않습니다.
 - 관리자 문의 목록/상세 조회는 `admin` 도메인의 `AdminController`가 `InquiryQueryService`를 조합해 제공합니다.
+
+### Home
+
+홈 화면에 필요한 읽기 모델을 조합합니다.
+
+- 인증 과정에서 조회된 회원 닉네임과 Place 도메인의 행정구역 변환 결과 조합
+- 사용자 위치를 저장하지 않는 홈 컨텍스트 조회
+- 의존 방향: `Home → PlaceLocationMetadataService`
 
 ## Partial CQRS
 
