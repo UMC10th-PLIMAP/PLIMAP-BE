@@ -7,6 +7,7 @@ import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.ReportedPinInfo;
 import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
+import com.example.plimap.domain.pin.repository.query.ClusterAndPinRepository;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -54,6 +55,7 @@ public class PinQueryServiceImpl implements PinQueryService {
     private final PlaceTrackFinder placeTrackFinder;
     private final PlaceAccessTokenRepository placeAccessTokenRepository;
     private final PlaceTrackLikeQueryService placeTrackLikeQueryService;
+    private final ClusterAndPinRepository clusterAndPinRepository;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override
@@ -141,17 +143,17 @@ public class PinQueryServiceImpl implements PinQueryService {
         Point maxPoint = geometryFactory.createPoint(new Coordinate(request.northEastLng(), request.northEastLat()));
         if (request.zoomLevel() >= 20) {
             // 개별 Pin 조회
-            List<PinResponse.PinPreview> pinPreviews = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+            List<PinResponse.PinPreview> pinPreviews = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
             return PinConverter.toClusterAndPin(null, pinPreviews, request.zoomLevel());
         }
 
         if (request.zoomLevel() >= 14) {
             // geohash 클러스터 (+개별핀 조회)
-            return pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, request.zoomLevel(), getPrecision(request.zoomLevel()), memberId);
+            return clusterAndPinRepository.findGeohashClusterListByViewport(minPoint, maxPoint, request.zoomLevel(), getPrecision(request.zoomLevel()), memberId);
         }
 
         // 행정구역 기반 클러스터 조회
-        List<PinResponse.Cluster> clusters = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, request.zoomLevel(), memberId);
+        List<PinResponse.Cluster> clusters = clusterAndPinRepository.findClusterListByViewport(minPoint, maxPoint, request.zoomLevel(), memberId);
         return PinConverter.toClusterAndPin(clusters, null, request.zoomLevel());
     }
 

@@ -16,6 +16,7 @@ import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
+import com.example.plimap.domain.pin.repository.query.ClusterAndPinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
@@ -77,6 +78,9 @@ class PinQueryServiceImplTest {
 
     @Mock
     private PlaceAccessTokenRepository placeAccessTokenRepository;
+
+    @Mock
+    private ClusterAndPinRepository clusterAndPinRepository;
 
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();
@@ -314,15 +318,15 @@ class PinQueryServiceImplTest {
 
         List<PinResponse.Cluster> previews = List.of(mock(PinResponse.Cluster.class));
 
-        given(pinQueryRepository.findClusterListByViewport(any(), any(), anyInt(), any()))
+        given(clusterAndPinRepository.findClusterListByViewport(any(), any(), anyInt(), any()))
                 .willReturn(previews);
 
         // when
         PinResponse.ClusterAndPin result = pinQueryService.getClusterPinList(request,   null);
 
         // then
-        verify(pinQueryRepository, never()).findPinPreviewListByViewport(any(), any());
-        verify(pinQueryRepository).findClusterListByViewport(any(), any(), anyInt(),   isNull(Long.class));
+        verify(clusterAndPinRepository, never()).findPinPreviewListByViewport(any(), any());
+        verify(clusterAndPinRepository).findClusterListByViewport(any(), any(), anyInt(),   isNull(Long.class));
 
         assertThat(result.pins()).isNull();
         assertThat(result.clusters()).hasSize(1);
@@ -337,7 +341,7 @@ class PinQueryServiceImplTest {
 
         PinResponse.ClusterAndPin clusterAndPin = mock(PinResponse.ClusterAndPin.class);
 
-        given(pinQueryRepository.findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt(),  any()))
+        given(clusterAndPinRepository.findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt(),  any()))
                 .willReturn(clusterAndPin);
 
         // when
@@ -345,10 +349,10 @@ class PinQueryServiceImplTest {
 
         // then
         assertThat(result).isSameAs(clusterAndPin);
-        verify(pinQueryRepository).findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt(), isNull(Long.class));
-        verify(pinQueryRepository, never())
+        verify(clusterAndPinRepository).findGeohashClusterListByViewport(any(), any(), anyInt(), anyInt(), isNull(Long.class));
+        verify(clusterAndPinRepository, never())
                 .findPinPreviewListByViewport(any(), any());
-        verify(pinQueryRepository, never())
+        verify(clusterAndPinRepository, never())
                 .findClusterListByViewport(any(), any(), anyInt(), isNull(Long.class));
     }
 
@@ -361,15 +365,15 @@ class PinQueryServiceImplTest {
 
         List<PinResponse.PinPreview> previews = List.of(mock(PinResponse.PinPreview.class));
 
-        given(pinQueryRepository.findPinPreviewListByViewport(any(), any()))
+        given(clusterAndPinRepository.findPinPreviewListByViewport(any(), any()))
                 .willReturn(previews);
 
         // when
         PinResponse.ClusterAndPin result = pinQueryService.getClusterPinList(request, null);
 
         // then
-        verify(pinQueryRepository).findPinPreviewListByViewport(any(), any());
-        verify(pinQueryRepository, never())
+        verify(clusterAndPinRepository).findPinPreviewListByViewport(any(), any());
+        verify(clusterAndPinRepository, never())
                 .findClusterListByViewport(any(), any(), anyInt(), isNull(Long.class));
 
         assertThat(result.pins()).hasSize(1);

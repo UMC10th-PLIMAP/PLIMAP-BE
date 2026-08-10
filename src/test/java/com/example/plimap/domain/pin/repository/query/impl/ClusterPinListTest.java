@@ -6,6 +6,7 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.ClusterLevel;
 import com.example.plimap.domain.pin.repository.PinRepository;
+import com.example.plimap.domain.pin.repository.query.ClusterAndPinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceBookmark;
@@ -61,6 +62,9 @@ class ClusterPinListTest {
 
     @Autowired
     private PlaceBookmarkRepository placeBookmarkRepository;
+
+    @Autowired
+    private ClusterAndPinRepository clusterAndPinRepository;
 
     @Autowired
     EntityManager entityManager;
@@ -287,7 +291,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 6, member1.getId());
+        List<PinResponse.Cluster> result = clusterAndPinRepository.findClusterListByViewport(minPoint, maxPoint, 6, member1.getId());
 
         // then
         assertThat(result).hasSize(3); // 경기, 세종, 서울
@@ -330,7 +334,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 9, member1.getId());
+        List<PinResponse.Cluster> result = clusterAndPinRepository.findClusterListByViewport(minPoint, maxPoint, 9, member1.getId());
 
         // then
         assertThat(result).hasSize(2); // 성남, 수원
@@ -373,7 +377,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 9, member1.getId());
+        List<PinResponse.Cluster> result = clusterAndPinRepository.findClusterListByViewport(minPoint, maxPoint, 9, member1.getId());
 
         // then
         assertThat(result).hasSize(2); // 의당면, 안서면
@@ -422,8 +426,8 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 9, null);
-        PinResponse.ClusterAndPin result2 = pinQueryRepository.findGeohashClusterListByViewport(minPoint2, maxPoint2, 15, 7, null);
+        List<PinResponse.Cluster> result = clusterAndPinRepository.findClusterListByViewport(minPoint, maxPoint, 9, null);
+        PinResponse.ClusterAndPin result2 = clusterAndPinRepository.findGeohashClusterListByViewport(minPoint2, maxPoint2, 15, 7, null);
 
         // then
         assertThat(result.getFirst().hasBookmarkedPlace()).isFalse();
@@ -443,7 +447,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 12, member1.getId());
+        List<PinResponse.Cluster> result = clusterAndPinRepository.findClusterListByViewport(minPoint, maxPoint, 12, member1.getId());
 
         // then
         assertThat(result).hasSize(2); // 백현동, 서현동
@@ -486,7 +490,7 @@ class ClusterPinListTest {
         );
 
         // when
-        PinResponse.ClusterAndPin result = pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 15, 7, member1.getId());
+        PinResponse.ClusterAndPin result = clusterAndPinRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 15, 7, member1.getId());
         List<PinResponse.Cluster> clusters = result.clusters();
         List<PinResponse.PinPreview> pinPreviews = result.pins();
 
@@ -509,7 +513,7 @@ class ClusterPinListTest {
         );
 
         // when
-        PinResponse.ClusterAndPin result = pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 18, 8, member1.getId());
+        PinResponse.ClusterAndPin result = clusterAndPinRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 18, 8, member1.getId());
         List<PinResponse.Cluster> clusters = result.clusters();
         List<PinResponse.PinPreview> pinPreviews = result.pins();
 
@@ -533,7 +537,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.PinPreview> result = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+        List<PinResponse.PinPreview> result = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
 
         // then
         assertThat(result).hasSize(2);
@@ -554,7 +558,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.PinPreview> result = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+        List<PinResponse.PinPreview> result = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
 
         // then
         assertThat(result).hasSize(3);
@@ -573,7 +577,7 @@ class ClusterPinListTest {
                 new Coordinate(127.0750, 37.5600)
         );
         // when
-        List<PinResponse.PinPreview> result = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+        List<PinResponse.PinPreview> result = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
 
         // then
         assertThat(result).hasSize(3);
@@ -587,7 +591,7 @@ class ClusterPinListTest {
         entityManager.flush();
         entityManager.clear();
 
-        List<PinResponse.PinPreview> result2 = pinQueryRepository.findPinPreviewListByViewport(minPoint, maxPoint);
+        List<PinResponse.PinPreview> result2 = clusterAndPinRepository.findPinPreviewListByViewport(minPoint, maxPoint);
 
         // then
         assertThat(result2).hasSize(3);
