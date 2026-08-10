@@ -22,9 +22,9 @@ public class InquiryQueryServiceImpl implements InquiryQueryService {
     @Override
     public Page<Inquiry> getInquiries(InquiryCategory category, Pageable pageable) {
         if (category == null) {
-            return inquiryRepository.findAllByOrderByCreatedAtDesc(pageable);
+            return inquiryRepository.findAllByOrderByCreatedAtDescIdDesc(pageable);
         }
-        return inquiryRepository.findByCategoryOrderByCreatedAtDesc(category, pageable);
+        return inquiryRepository.findByCategoryOrderByCreatedAtDescIdDesc(category, pageable);
     }
 
     @Override

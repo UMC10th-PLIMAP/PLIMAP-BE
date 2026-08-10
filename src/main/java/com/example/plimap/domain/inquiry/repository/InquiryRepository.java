@@ -8,7 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface InquiryRepository extends JpaRepository<Inquiry, Long> {
 
-    Page<Inquiry> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    // createdAt만으로는 동일 시각 문의 사이의 순서가 보장되지 않아 페이지 경계에서 중복·누락이 생길 수 있으므로
+    // id를 보조 정렬 키로 둔다.
+    Page<Inquiry> findAllByOrderByCreatedAtDescIdDesc(Pageable pageable);
 
-    Page<Inquiry> findByCategoryOrderByCreatedAtDesc(InquiryCategory category, Pageable pageable);
+    Page<Inquiry> findByCategoryOrderByCreatedAtDescIdDesc(InquiryCategory category, Pageable pageable);
 }

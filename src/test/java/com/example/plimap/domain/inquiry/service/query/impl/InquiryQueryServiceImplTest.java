@@ -38,14 +38,14 @@ class InquiryQueryServiceImplTest {
         Pageable pageable = PageRequest.of(0, 10);
         Inquiry inquiry = Inquiry.create(null, InquiryCategory.OTHER, "제목", "내용", "guest@example.com");
         Page<Inquiry> page = new PageImpl<>(java.util.List.of(inquiry), pageable, 1);
-        when(inquiryRepository.findAllByOrderByCreatedAtDesc(pageable)).thenReturn(page);
+        when(inquiryRepository.findAllByOrderByCreatedAtDescIdDesc(pageable)).thenReturn(page);
 
         // when
         Page<Inquiry> result = inquiryQueryService.getInquiries(null, pageable);
 
         // then
         assertThat(result.getContent()).containsExactly(inquiry);
-        verify(inquiryRepository, never()).findByCategoryOrderByCreatedAtDesc(any(), any());
+        verify(inquiryRepository, never()).findByCategoryOrderByCreatedAtDescIdDesc(any(), any());
     }
 
     @Test
@@ -54,7 +54,7 @@ class InquiryQueryServiceImplTest {
         Pageable pageable = PageRequest.of(0, 10);
         Inquiry inquiry = Inquiry.create(null, InquiryCategory.APP_BUG_OR_ERROR, "제목", "내용", "guest@example.com");
         Page<Inquiry> page = new PageImpl<>(java.util.List.of(inquiry), pageable, 1);
-        when(inquiryRepository.findByCategoryOrderByCreatedAtDesc(InquiryCategory.APP_BUG_OR_ERROR, pageable))
+        when(inquiryRepository.findByCategoryOrderByCreatedAtDescIdDesc(InquiryCategory.APP_BUG_OR_ERROR, pageable))
                 .thenReturn(page);
 
         // when
@@ -62,7 +62,7 @@ class InquiryQueryServiceImplTest {
 
         // then
         assertThat(result.getContent()).containsExactly(inquiry);
-        verify(inquiryRepository, never()).findAllByOrderByCreatedAtDesc(any());
+        verify(inquiryRepository, never()).findAllByOrderByCreatedAtDescIdDesc(any());
     }
 
     @Test
