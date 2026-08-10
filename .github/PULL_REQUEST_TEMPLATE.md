@@ -16,6 +16,7 @@
 
 - [ ] `auth`
 - [ ] `member`
+- [ ] `home`
 - [ ] `place`
 - [ ] `track`
 - [ ] `pin`

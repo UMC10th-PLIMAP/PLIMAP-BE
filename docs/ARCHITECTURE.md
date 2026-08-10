@@ -53,6 +53,7 @@ com.example.plimap/
 ├── domain/                         # 도메인 레이어
 │   ├── member/                     # 회원·약관
 │   ├── auth/                       # 소셜 로그인·JWT
+│   ├── home/                       # 홈 화면 복합 조회
 │   ├── place/                      # 장소·위치·검색 기록·북마크
 │   ├── track/                      # 음악·장소별 곡·좋아요
 │   ├── notification/               # 알림·SSE
@@ -130,6 +131,10 @@ PLIMAP의 PIN 핵심 도메인을 담당합니다.
 ### 9. Admin
 
 관리자 페이지 관련 API를 담당합니다.
+
+### Home
+
+홈 화면에 필요한 읽기 모델을 조합합니다.
 
 ## Domain Event and Notification
 

@@ -17,4 +17,6 @@ public interface MemberQueryRepository {
     Optional<Member> findVisibleActiveMember(Long targetMemberId, Long viewerId);
 
     Page<Member> searchMembers(String query, MemberStatus status, Pageable pageable);
+
+    Pagination<MemberSearchRow> searchActiveMembers(Long viewerId, String keyword, String cursor, Integer pageSize);
 }

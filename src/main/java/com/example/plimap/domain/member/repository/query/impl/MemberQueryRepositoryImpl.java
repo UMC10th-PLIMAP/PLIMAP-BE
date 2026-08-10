@@ -2,6 +2,7 @@ package com.example.plimap.domain.member.repository.query.impl;
 
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.CursorInfo;
+import com.example.plimap.domain.member.dto.MemberSearchCursorInfo;
 import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.QMember;
@@ -11,11 +12,17 @@ import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.domain.member.repository.query.MemberSearchRow;
 import com.example.plimap.domain.auth.entity.QSocialAccount;
 import com.example.plimap.domain.report.entity.QReport;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.DateTimePath;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.NumberPath;
+import com.querydsl.core.types.dsl.StringPath;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -179,6 +186,66 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
         return new PageImpl<>(content, pageable, total);
     }
 
+    @Override
+    public Pagination<MemberSearchRow> searchActiveMembers(Long viewerId, String keyword, String cursor, Integer pageSize) {
+        QMember target = QMember.member;
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+
+        NumberExpression<Integer> followingGroupScore = followingGroupScoreExpression(viewerId, target.id);
+        NumberExpression<Integer> nicknameScore = matchScoreExpression(target.nickname, keyword);
+        NumberExpression<Integer> nameScore = matchScoreExpression(target.name, keyword);
+        MemberSearchCursorInfo cursorInfo = parseSearchCursor(cursor);
+
+        List<MemberSearchRow> data = queryFactory
+                .select(
+                        Projections.constructor(
+                                MemberSearchRow.class,
+                                target.id,
+                                target.nickname,
+                                target.name,
+                                target.profileImageObjectKey,
+                                target.createdAt,
+                                isFollowedByViewer(viewerId, target.id),
+                                isViewerFollowedByTarget(viewerId, target.id),
+                                nicknameScore,
+                                nameScore
+                        )
+                )
+                .from(target)
+                .where(
+                        target.status.eq(MemberStatus.ACTIVE),
+                        target.deletedAt.isNull(),
+                        target.reportCount.lt(REPORT_HIDE_THRESHOLD),
+                        notReportedByViewer(viewerId, target.id),
+                        target.id.ne(viewerId),
+                        hasKeyword ? nicknameScore.gt(0).or(nameScore.gt(0)) : null,
+                        searchCursorCondition(followingGroupScore, nicknameScore, nameScore, target.createdAt, target.id, cursorInfo)
+                )
+                .orderBy(
+                        followingGroupScore.asc(),
+                        nicknameScore.desc(),
+                        nameScore.desc(),
+                        target.createdAt.desc(),
+                        target.id.desc()
+                )
+                .limit(pageSize + 1)
+                .fetch();
+
+        boolean hasNext = data.size() > pageSize;
+        if (hasNext) {
+            data.remove(pageSize.intValue());
+        }
+
+        if (data.isEmpty()) {
+            return MemberConverter.toPagination(data, null, false, pageSize);
+        }
+
+        MemberSearchRow last = data.get(data.size() - 1);
+        String nextCursor = hasNext ? encodeSearchCursor(last) : null;
+
+        return MemberConverter.toPagination(data, nextCursor, hasNext, pageSize);
+    }
+
     private BooleanExpression searchQueryCondition(QMember target, String query) {
         if (query == null || query.isBlank()) {
             return null;
@@ -250,6 +317,86 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
                         targetFollow.following.id.eq(viewerId)
                 )
                 .exists();
+    }
+
+    // 친구 찾기 검색 1순위 정렬 기준: 뷰어가 아직 팔로우하지 않은 회원(0)을 팔로우 중인 회원(1, 맞팔 포함)보다 앞에 노출한다.
+    private NumberExpression<Integer> followingGroupScoreExpression(Long viewerId, NumberPath<Long> targetId) {
+        return new CaseBuilder()
+                .when(isFollowedByViewer(viewerId, targetId))
+                .then(1)
+                .otherwise(0);
+    }
+
+    // 닉네임/이름 공용 연관성 점수: 검색어로 시작(2) > 검색어를 포함(1) > 불일치(0).
+    // keyword가 비어있으면 매칭을 따지지 않고 전체 노출해야 하므로 실제 CASE 없이 상수 0을 반환한다.
+    // field가 null(이름 없음)인 경우 startsWith/containsIgnoreCase는 SQL상 UNKNOWN→false로 평가되어
+    // 자연스럽게 0점(불일치와 동일)이 되므로 별도 null 분기가 필요 없다.
+    private NumberExpression<Integer> matchScoreExpression(StringPath field, String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return Expressions.asNumber(0);
+        }
+        return new CaseBuilder()
+                .when(field.startsWithIgnoreCase(keyword)).then(2)
+                .when(field.containsIgnoreCase(keyword)).then(1)
+                .otherwise(0);
+    }
+
+    private MemberSearchCursorInfo parseSearchCursor(String cursor) {
+        if (cursor == null) {
+            return new MemberSearchCursorInfo(null, null, null, null, null);
+        }
+        try {
+            String[] parts = cursor.split("/");
+            if (parts.length != 5) {
+                throw new MemberException(MemberErrorCode.INVALID_CURSOR);
+            }
+
+            Integer followingGroupScore = Integer.parseInt(parts[0]);
+            Integer nicknameScore = Integer.parseInt(parts[1]);
+            Integer nameScore = Integer.parseInt(parts[2]);
+            Instant createdAt = Instant.parse(parts[3]);
+            Long id = Long.parseLong(parts[4]);
+
+            return new MemberSearchCursorInfo(followingGroupScore, nicknameScore, nameScore, createdAt, id);
+        } catch (DateTimeParseException | NumberFormatException e) {
+            throw new MemberException(MemberErrorCode.INVALID_CURSOR, e);
+        }
+    }
+
+    // findFollowers/findFollowing의 2단 cursorCondition을 5단(팔로우 그룹 + 닉네임 점수 + 이름 점수 + 가입일 + id)으로
+    // 확장한 keyset 비교. 팔로우 그룹만 오름차순(gt)이고 나머지는 모두 내림차순(lt)이라 부등호 방향이 다르다.
+    private BooleanExpression searchCursorCondition(
+            NumberExpression<Integer> followingGroupScore,
+            NumberExpression<Integer> nicknameScore,
+            NumberExpression<Integer> nameScore,
+            DateTimePath<Instant> createdAt,
+            NumberPath<Long> id,
+            MemberSearchCursorInfo cursorInfo
+    ) {
+        if (cursorInfo.id() == null) {
+            return null;
+        }
+
+        return followingGroupScore.gt(cursorInfo.followingGroupScore())
+                .or(followingGroupScore.eq(cursorInfo.followingGroupScore())
+                        .and(nicknameScore.lt(cursorInfo.nicknameScore())
+                                .or(nicknameScore.eq(cursorInfo.nicknameScore())
+                                        .and(nameScore.lt(cursorInfo.nameScore())
+                                                .or(nameScore.eq(cursorInfo.nameScore())
+                                                        .and(createdAt.lt(cursorInfo.createdAt())
+                                                                .or(createdAt.eq(cursorInfo.createdAt())
+                                                                        .and(id.lt(cursorInfo.id())))
+                                                        )
+                                                )
+                                        )
+                                )
+                        )
+                );
+    }
+
+    private String encodeSearchCursor(MemberSearchRow row) {
+        int followingGroupScore = row.isFollowing() ? 1 : 0;
+        return followingGroupScore + "/" + row.nicknameScore() + "/" + row.nameScore() + "/" + row.createdAt() + "/" + row.id();
     }
 
     private BooleanExpression cursorCondition(
