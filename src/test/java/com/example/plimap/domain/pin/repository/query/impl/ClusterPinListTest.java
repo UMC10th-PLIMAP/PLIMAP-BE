@@ -280,7 +280,7 @@ class ClusterPinListTest {
     }
 
     @Test
-    void 줌레벨이_7이하면_시도_클러스트링을_반환한다() {
+    void 줌레벨이_8이하면_시도_클러스트링을_반환한다() {
         // given
         Point minPoint = geometryFactory.createPoint(
                 new Coordinate(126.90, 36.50)
@@ -323,7 +323,7 @@ class ClusterPinListTest {
     }
 
     @Test
-    void 줌레벨이_8이상_10이하면_시군구_클러스트링을_반환한다() {
+    void 줌레벨이_9이상_10이하면_시군구_클러스트링을_반환한다() {
         // given
         Point minPoint = geometryFactory.createPoint(
                 new Coordinate(127.0615, 37.2865)

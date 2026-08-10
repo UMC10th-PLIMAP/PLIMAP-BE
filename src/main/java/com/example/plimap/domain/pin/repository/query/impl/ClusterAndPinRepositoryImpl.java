@@ -356,7 +356,7 @@ public class ClusterAndPinRepositoryImpl implements ClusterAndPinRepository {
     }
 
     private RegionInfo getRegionInfo(Integer zoomLevel) {
-        if (zoomLevel <= 7) {
+        if (zoomLevel <= 8) {
             return new RegionInfo(
                     """
                     CASE
