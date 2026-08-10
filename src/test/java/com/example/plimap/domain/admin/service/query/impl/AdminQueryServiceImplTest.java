@@ -2,6 +2,7 @@ package com.example.plimap.domain.admin.service.query.impl;
 
 import com.example.plimap.domain.admin.dto.response.AdminResDTO;
 import com.example.plimap.domain.auth.service.query.AuthQueryService;
+import com.example.plimap.domain.inquiry.dto.Pagination;
 import com.example.plimap.domain.inquiry.entity.Inquiry;
 import com.example.plimap.domain.inquiry.enums.InquiryCategory;
 import com.example.plimap.domain.inquiry.service.query.InquiryQueryService;
@@ -111,15 +112,21 @@ class AdminQueryServiceImplTest {
     }
 
     @Test
-    void 문의_목록을_페이지_정보와_함께_반환한다() {
+    void 문의_목록을_커서_페이지_정보와_함께_반환한다() {
         Inquiry inquiry = Inquiry.create(null, InquiryCategory.OTHER, "제목", "내용", "guest@example.com");
         ReflectionTestUtils.setField(inquiry, "id", 1L);
-        Page<Inquiry> page = new PageImpl<>(List.of(inquiry), PageRequest.of(0, 10), 1);
-        when(inquiryQueryService.getInquiries(eq(InquiryCategory.OTHER), any(Pageable.class))).thenReturn(page);
+        Pagination<Inquiry> page = Pagination.<Inquiry>builder()
+                .data(List.of(inquiry))
+                .nextCursor("next-cursor")
+                .hasNext(true)
+                .pageSize(10)
+                .build();
+        when(inquiryQueryService.getInquiries(InquiryCategory.OTHER, "cursor", 10)).thenReturn(page);
 
-        AdminResDTO.InquiryPage result = adminQueryService.getInquiries(InquiryCategory.OTHER, 1, 10);
+        AdminResDTO.InquiryPage result = adminQueryService.getInquiries(InquiryCategory.OTHER, "cursor", 10);
 
-        assertThat(result.total()).isEqualTo(1);
+        assertThat(result.nextCursor()).isEqualTo("next-cursor");
+        assertThat(result.hasNext()).isTrue();
         assertThat(result.items()).extracting(AdminResDTO.InquirySummary::id).containsExactly(1L);
         assertThat(result.items().get(0).memberId()).isNull();
     }

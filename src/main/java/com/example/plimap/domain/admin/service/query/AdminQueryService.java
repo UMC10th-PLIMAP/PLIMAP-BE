@@ -13,7 +13,7 @@ public interface AdminQueryService {
 
     AdminResDTO.MemberDetail getMemberDetail(Long memberId);
 
-    AdminResDTO.InquiryPage getInquiries(InquiryCategory category, int page, int pageSize);
+    AdminResDTO.InquiryPage getInquiries(InquiryCategory category, String cursor, Integer pageSize);
 
     AdminResDTO.InquiryDetail getInquiryDetail(Long inquiryId);
 }

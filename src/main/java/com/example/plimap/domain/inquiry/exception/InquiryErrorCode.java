@@ -13,6 +13,11 @@ public enum InquiryErrorCode implements BaseErrorCode {
             HttpStatus.NOT_FOUND,
             "INQUIRY_404_NOT_FOUND",
             "존재하지 않는 문의입니다."
+    ),
+    INVALID_CURSOR(
+            HttpStatus.BAD_REQUEST,
+            "INQUIRY_400_INVALID_CURSOR",
+            "유효하지 않은 커서입니다."
     );
 
     private final HttpStatus status;

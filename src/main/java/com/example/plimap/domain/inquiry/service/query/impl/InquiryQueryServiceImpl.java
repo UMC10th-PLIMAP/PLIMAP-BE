@@ -1,14 +1,14 @@
 package com.example.plimap.domain.inquiry.service.query.impl;
 
+import com.example.plimap.domain.inquiry.dto.Pagination;
 import com.example.plimap.domain.inquiry.entity.Inquiry;
 import com.example.plimap.domain.inquiry.enums.InquiryCategory;
 import com.example.plimap.domain.inquiry.exception.InquiryErrorCode;
 import com.example.plimap.domain.inquiry.exception.InquiryException;
 import com.example.plimap.domain.inquiry.repository.InquiryRepository;
+import com.example.plimap.domain.inquiry.repository.query.InquiryQueryRepository;
 import com.example.plimap.domain.inquiry.service.query.InquiryQueryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,13 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class InquiryQueryServiceImpl implements InquiryQueryService {
 
     private final InquiryRepository inquiryRepository;
+    private final InquiryQueryRepository inquiryQueryRepository;
 
     @Override
-    public Page<Inquiry> getInquiries(InquiryCategory category, Pageable pageable) {
-        if (category == null) {
-            return inquiryRepository.findAllByOrderByCreatedAtDescIdDesc(pageable);
-        }
-        return inquiryRepository.findByCategoryOrderByCreatedAtDescIdDesc(category, pageable);
+    public Pagination<Inquiry> getInquiries(InquiryCategory category, String cursor, Integer pageSize) {
+        return inquiryQueryRepository.findInquiries(category, cursor, pageSize);
     }
 
     @Override

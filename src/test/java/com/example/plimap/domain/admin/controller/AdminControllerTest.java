@@ -224,8 +224,8 @@ class AdminControllerTest {
         mockAdminAuth();
         AdminResDTO.InquirySummary summary = new AdminResDTO.InquirySummary(
                 1L, InquiryCategory.APP_BUG_OR_ERROR, "제목", 2L, "작성자", "user@example.com", Instant.now());
-        when(adminQueryService.getInquiries(InquiryCategory.APP_BUG_OR_ERROR, 1, 10))
-                .thenReturn(new AdminResDTO.InquiryPage(List.of(summary), 1, 1, 10));
+        when(adminQueryService.getInquiries(InquiryCategory.APP_BUG_OR_ERROR, null, 10))
+                .thenReturn(new AdminResDTO.InquiryPage(List.of(summary), "next-cursor", true, 10));
 
         mockMvc.perform(get("/api/v1/admin/inquiries")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN)
@@ -233,7 +233,9 @@ class AdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("ADMIN_200_INQUIRIES_FETCHED"))
                 .andExpect(jsonPath("$.result.items[0].id").value(1))
-                .andExpect(jsonPath("$.result.items[0].memberNickname").value("작성자"));
+                .andExpect(jsonPath("$.result.items[0].memberNickname").value("작성자"))
+                .andExpect(jsonPath("$.result.nextCursor").value("next-cursor"))
+                .andExpect(jsonPath("$.result.hasNext").value(true));
     }
 
     @Test

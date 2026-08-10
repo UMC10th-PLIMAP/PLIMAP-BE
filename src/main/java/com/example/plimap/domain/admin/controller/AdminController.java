@@ -108,12 +108,12 @@ public class AdminController implements AdminControllerDocs {
     @GetMapping("/inquiries")
     public ApiResponse<AdminResDTO.InquiryPage> getInquiries(
             @RequestParam(required = false) InquiryCategory category,
-            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "10") Integer pageSize
     ) {
         return ApiResponse.success(
                 AdminSuccessCode.INQUIRIES_FETCHED,
-                adminQueryService.getInquiries(category, page, pageSize)
+                adminQueryService.getInquiries(category, cursor, pageSize)
         );
     }
 

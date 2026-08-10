@@ -109,12 +109,15 @@ public interface AdminControllerDocs {
     @Operation(
             summary = "문의 목록 조회",
             description = """
-                    접수된 문의를 최신순으로 조회합니다. category는 선택값이며, 지정하지 않으면 전체 카테고리를 대상으로 합니다.
+                    접수된 문의를 최신순으로 커서 기반 페이지네이션으로 조회합니다.
+                    category는 선택값이며, 지정하지 않으면 전체 카테고리를 대상으로 합니다.
+
+                    첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~100 사이여야 하며 기본값은 10입니다.
                     """
     )
     ApiResponse<AdminResDTO.InquiryPage> getInquiries(
             @RequestParam(required = false) InquiryCategory category,
-            @Min(1) @RequestParam(defaultValue = "1") Integer page,
+            String cursor,
             @Min(1) @Max(100) @RequestParam(defaultValue = "10") Integer pageSize
     );
 

@@ -140,8 +140,8 @@ public class AdminResDTO {
 
     public record InquiryPage(
             List<InquirySummary> items,
-            long total,
-            int page,
+            String nextCursor,
+            boolean hasNext,
             int pageSize
     ) {
     }

@@ -2,26 +2,23 @@ package com.example.plimap.domain.inquiry.service.query.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.plimap.domain.inquiry.dto.Pagination;
 import com.example.plimap.domain.inquiry.entity.Inquiry;
 import com.example.plimap.domain.inquiry.enums.InquiryCategory;
 import com.example.plimap.domain.inquiry.exception.InquiryErrorCode;
 import com.example.plimap.domain.inquiry.exception.InquiryException;
 import com.example.plimap.domain.inquiry.repository.InquiryRepository;
+import com.example.plimap.domain.inquiry.repository.query.InquiryQueryRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class InquiryQueryServiceImplTest {
@@ -32,37 +29,28 @@ class InquiryQueryServiceImplTest {
     @Mock
     private InquiryRepository inquiryRepository;
 
-    @Test
-    void 카테고리가_없으면_전체_문의를_최신순으로_조회한다() {
-        // given
-        Pageable pageable = PageRequest.of(0, 10);
-        Inquiry inquiry = Inquiry.create(null, InquiryCategory.OTHER, "제목", "내용", "guest@example.com");
-        Page<Inquiry> page = new PageImpl<>(java.util.List.of(inquiry), pageable, 1);
-        when(inquiryRepository.findAllByOrderByCreatedAtDescIdDesc(pageable)).thenReturn(page);
-
-        // when
-        Page<Inquiry> result = inquiryQueryService.getInquiries(null, pageable);
-
-        // then
-        assertThat(result.getContent()).containsExactly(inquiry);
-        verify(inquiryRepository, never()).findByCategoryOrderByCreatedAtDescIdDesc(any(), any());
-    }
+    @Mock
+    private InquiryQueryRepository inquiryQueryRepository;
 
     @Test
-    void 카테고리가_있으면_해당_카테고리만_최신순으로_조회한다() {
+    void 문의_목록_조회는_커서_기반_조회를_그대로_위임한다() {
         // given
-        Pageable pageable = PageRequest.of(0, 10);
         Inquiry inquiry = Inquiry.create(null, InquiryCategory.APP_BUG_OR_ERROR, "제목", "내용", "guest@example.com");
-        Page<Inquiry> page = new PageImpl<>(java.util.List.of(inquiry), pageable, 1);
-        when(inquiryRepository.findByCategoryOrderByCreatedAtDescIdDesc(InquiryCategory.APP_BUG_OR_ERROR, pageable))
+        Pagination<Inquiry> page = Pagination.<Inquiry>builder()
+                .data(List.of(inquiry))
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(10)
+                .build();
+        when(inquiryQueryRepository.findInquiries(InquiryCategory.APP_BUG_OR_ERROR, "cursor", 10))
                 .thenReturn(page);
 
         // when
-        Page<Inquiry> result = inquiryQueryService.getInquiries(InquiryCategory.APP_BUG_OR_ERROR, pageable);
+        Pagination<Inquiry> result = inquiryQueryService.getInquiries(InquiryCategory.APP_BUG_OR_ERROR, "cursor", 10);
 
         // then
-        assertThat(result.getContent()).containsExactly(inquiry);
-        verify(inquiryRepository, never()).findAllByOrderByCreatedAtDescIdDesc(any());
+        assertThat(result.data()).containsExactly(inquiry);
+        verify(inquiryQueryRepository).findInquiries(InquiryCategory.APP_BUG_OR_ERROR, "cursor", 10);
     }
 
     @Test

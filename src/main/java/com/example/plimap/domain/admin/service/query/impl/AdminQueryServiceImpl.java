@@ -2,6 +2,7 @@ package com.example.plimap.domain.admin.service.query.impl;
 
 import com.example.plimap.domain.admin.dto.response.AdminResDTO;
 import com.example.plimap.domain.auth.service.query.AuthQueryService;
+import com.example.plimap.domain.inquiry.dto.Pagination;
 import com.example.plimap.domain.inquiry.entity.Inquiry;
 import com.example.plimap.domain.inquiry.enums.InquiryCategory;
 import com.example.plimap.domain.inquiry.service.query.InquiryQueryService;
@@ -77,15 +78,14 @@ public class AdminQueryServiceImpl implements AdminQueryService {
     }
 
     @Override
-    public AdminResDTO.InquiryPage getInquiries(InquiryCategory category, int page, int pageSize) {
-        Pageable pageable = PageRequest.of(page - 1, pageSize);
-        Page<Inquiry> inquiryPage = inquiryQueryService.getInquiries(category, pageable);
+    public AdminResDTO.InquiryPage getInquiries(InquiryCategory category, String cursor, Integer pageSize) {
+        Pagination<Inquiry> inquiryPage = inquiryQueryService.getInquiries(category, cursor, pageSize);
 
-        List<AdminResDTO.InquirySummary> items = inquiryPage.getContent().stream()
+        List<AdminResDTO.InquirySummary> items = inquiryPage.data().stream()
                 .map(AdminResDTO.InquirySummary::from)
                 .toList();
 
-        return new AdminResDTO.InquiryPage(items, inquiryPage.getTotalElements(), page, pageSize);
+        return new AdminResDTO.InquiryPage(items, inquiryPage.nextCursor(), inquiryPage.hasNext(), pageSize);
     }
 
     @Override
