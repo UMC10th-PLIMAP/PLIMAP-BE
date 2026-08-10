@@ -3,6 +3,7 @@ package com.example.plimap.domain.admin.controller;
 import com.example.plimap.domain.admin.dto.response.AdminResDTO;
 import com.example.plimap.domain.admin.service.command.AdminCommandService;
 import com.example.plimap.domain.admin.service.query.AdminQueryService;
+import com.example.plimap.domain.inquiry.enums.InquiryCategory;
 import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
@@ -216,6 +217,40 @@ class AdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBER_NICKNAME_REGENERATED"))
                 .andExpect(jsonPath("$.result.nickname").value("참새"));
+    }
+
+    @Test
+    void 문의_목록_조회에_성공하면_200을_반환한다() throws Exception {
+        mockAdminAuth();
+        AdminResDTO.InquirySummary summary = new AdminResDTO.InquirySummary(
+                1L, InquiryCategory.APP_BUG_OR_ERROR, "제목", 2L, "작성자", "user@example.com", Instant.now());
+        when(adminQueryService.getInquiries(InquiryCategory.APP_BUG_OR_ERROR, null, 10))
+                .thenReturn(new AdminResDTO.InquiryPage(List.of(summary), "next-cursor", true, 10));
+
+        mockMvc.perform(get("/api/v1/admin/inquiries")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN)
+                        .param("category", "APP_BUG_OR_ERROR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_INQUIRIES_FETCHED"))
+                .andExpect(jsonPath("$.result.items[0].id").value(1))
+                .andExpect(jsonPath("$.result.items[0].memberNickname").value("작성자"))
+                .andExpect(jsonPath("$.result.nextCursor").value("next-cursor"))
+                .andExpect(jsonPath("$.result.hasNext").value(true));
+    }
+
+    @Test
+    void 문의_상세_조회에_성공하면_200을_반환한다() throws Exception {
+        mockAdminAuth();
+        AdminResDTO.InquiryDetail detail = new AdminResDTO.InquiryDetail(
+                1L, InquiryCategory.OTHER, "제목", "내용", null, null, "guest@example.com", Instant.now());
+        when(adminQueryService.getInquiryDetail(1L)).thenReturn(detail);
+
+        mockMvc.perform(get("/api/v1/admin/inquiries/1")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_INQUIRY_DETAIL_FETCHED"))
+                .andExpect(jsonPath("$.result.content").value("내용"))
+                .andExpect(jsonPath("$.result.memberId").value(org.hamcrest.Matchers.nullValue()));
     }
 
     private void mockAdminAuth() {
