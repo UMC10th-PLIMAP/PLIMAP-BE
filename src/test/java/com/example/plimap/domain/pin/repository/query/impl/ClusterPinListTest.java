@@ -6,7 +6,7 @@ import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.enums.ClusterLevel;
 import com.example.plimap.domain.pin.repository.PinRepository;
-import com.example.plimap.domain.pin.repository.query.ClusterAndPinRepository;
+import com.example.plimap.domain.pin.repository.query.ClusterAndPinQueryRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceBookmark;
@@ -64,7 +64,7 @@ class ClusterPinListTest {
     private PlaceBookmarkRepository placeBookmarkRepository;
 
     @Autowired
-    private ClusterAndPinRepository clusterAndPinRepository;
+    private ClusterAndPinQueryRepository clusterAndPinRepository;
 
     @Autowired
     EntityManager entityManager;

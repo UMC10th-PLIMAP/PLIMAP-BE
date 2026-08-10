@@ -1,18 +1,15 @@
 package com.example.plimap.domain.pin.repository.query.impl;
 
 import com.example.plimap.domain.member.entity.QMember;
-import com.example.plimap.domain.member.entity.QMemberFollow;
 import com.example.plimap.domain.pin.converter.PinConverter;
 import com.example.plimap.domain.pin.dto.RegionInfo;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.entity.QPin;
-import com.example.plimap.domain.pin.entity.QPinLike;
 import com.example.plimap.domain.pin.enums.ClusterLevel;
-import com.example.plimap.domain.pin.repository.query.ClusterAndPinRepository;
+import com.example.plimap.domain.pin.repository.query.ClusterAndPinQueryRepository;
 import com.example.plimap.domain.place.entity.QPlace;
 import com.example.plimap.domain.place.entity.QPlaceBookmark;
-import com.example.plimap.domain.report.entity.QReport;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
@@ -30,7 +27,7 @@ import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
-public class ClusterAndPinRepositoryImpl implements ClusterAndPinRepository {
+public class ClusterAndPinQueryRepositoryImpl implements ClusterAndPinQueryRepository {
 
     private static final String PLACE_ID_IN_RANGE_QUERY = """
             SELECT DISTINCT pl.id
@@ -254,13 +251,7 @@ public class ClusterAndPinRepositoryImpl implements ClusterAndPinRepository {
     @Override
     public List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint, Long memberId) {
         @SuppressWarnings("unchecked")
-        String bookmarkedQuery = memberId == null
-                ? BOOKMARKED_ANONYMOUS_QUERY
-                : BOOKMARKED_QUERY;
-
-        String sql = PLACE_ID_IN_RANGE_QUERY.formatted(bookmarkedQuery);
-
-        List<Long> placeIds = entityManager.createNativeQuery(sql)
+        List<Long> placeIds = entityManager.createNativeQuery(PLACE_ID_IN_RANGE_QUERY)
                 .setParameter("minLng", minPoint.getX())
                 .setParameter("minLat", minPoint.getY())
                 .setParameter("maxLng", maxPoint.getX())
@@ -350,7 +341,9 @@ public class ClusterAndPinRepositoryImpl implements ClusterAndPinRepository {
             }
         }
 
-        List<PinResponse.PinPreview> pinPreviews = findPinPreviewListByPlaceIds(singlePlaceIds, memberId);
+        List<PinResponse.PinPreview> pinPreviews = singlePlaceIds.isEmpty()
+                ? List.of()
+                : findPinPreviewListByPlaceIds(singlePlaceIds, memberId);
 
         return PinConverter.toClusterAndPin(clusters, pinPreviews, zoomLevel);
     }

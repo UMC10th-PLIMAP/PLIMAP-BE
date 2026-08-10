@@ -16,7 +16,7 @@ import com.example.plimap.domain.pin.exception.PinException;
 import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
-import com.example.plimap.domain.pin.repository.query.ClusterAndPinRepository;
+import com.example.plimap.domain.pin.repository.query.ClusterAndPinQueryRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.validator.PinLocationValidator;
 import com.example.plimap.domain.place.entity.Place;
@@ -80,7 +80,7 @@ class PinQueryServiceImplTest {
     private PlaceAccessTokenRepository placeAccessTokenRepository;
 
     @Mock
-    private ClusterAndPinRepository clusterAndPinRepository;
+    private ClusterAndPinQueryRepository clusterAndPinRepository;
 
     @Spy
     private PinLocationValidator pinLocationValidator = new PinLocationValidator();

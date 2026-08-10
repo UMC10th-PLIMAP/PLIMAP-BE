@@ -7,7 +7,7 @@ import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.dto.ReportedPinInfo;
 import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
-import com.example.plimap.domain.pin.repository.query.ClusterAndPinRepository;
+import com.example.plimap.domain.pin.repository.query.ClusterAndPinQueryRepository;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
@@ -55,7 +55,7 @@ public class PinQueryServiceImpl implements PinQueryService {
     private final PlaceTrackFinder placeTrackFinder;
     private final PlaceAccessTokenRepository placeAccessTokenRepository;
     private final PlaceTrackLikeQueryService placeTrackLikeQueryService;
-    private final ClusterAndPinRepository clusterAndPinRepository;
+    private final ClusterAndPinQueryRepository clusterAndPinRepository;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override

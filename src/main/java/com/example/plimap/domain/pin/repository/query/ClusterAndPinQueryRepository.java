@@ -5,7 +5,7 @@ import org.locationtech.jts.geom.Point;
 
 import java.util.List;
 
-public interface ClusterAndPinRepository {
+public interface ClusterAndPinQueryRepository {
     List<PinResponse.PinPreview> findPinPreviewListByPlaceIds(List<Long> placeIds, Long memberId);
 
     List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint, Long memberId);
