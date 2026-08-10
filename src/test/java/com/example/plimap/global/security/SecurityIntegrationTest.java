@@ -323,6 +323,13 @@ class SecurityIntegrationTest {
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
     }
 
+    @Test
+    void 허용된_Preview_Origin으로_OAuth_로그인을_시작할_수_있다() throws Exception {
+        mockMvc.perform(get("/oauth/authorization/google")
+                        .param("frontendOrigin", PREVIEW_ORIGIN))
+                .andExpect(status().is3xxRedirection());
+    }
+
     private Cookie issueCsrfCookie() throws Exception {
         MvcResult result = mockMvc.perform(get(PROTECTED_PATH)
                         .cookie(new Cookie("accessToken", ACCESS_TOKEN)))

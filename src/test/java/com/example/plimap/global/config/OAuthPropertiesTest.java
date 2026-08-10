@@ -76,4 +76,30 @@ class OAuthPropertiesTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("OAuth 기본 리다이렉트 Origin은 허용된 프론트 Origin에 포함되어야 합니다.");
     }
+
+    @Test
+    void Preview_Origin_패턴으로_로그인_완료_주소를_생성한다() {
+        OAuthProperties properties = new OAuthProperties(
+                "https://dev.plimap.kr/home",
+                List.of("https://dev.plimap.kr", "https://pr-*.plimap.kr")
+        );
+
+        assertThat(properties.allowedFrontendOrigins())
+                .containsExactly("https://dev.plimap.kr", "https://pr-*.plimap.kr");
+        assertThat(properties.redirectUriFor("https://pr-123.plimap.kr"))
+                .isEqualTo("https://pr-123.plimap.kr/home");
+        assertThatThrownBy(() -> properties.requireAllowedFrontendOrigin(
+                "https://pr-123.preview.plimap.kr"
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void OAuth_허용_Origin은_승인된_와일드카드_패턴만_허용한다() {
+        assertThatThrownBy(() -> new OAuthProperties(
+                "https://dev.plimap.kr/home",
+                List.of("https://dev.plimap.kr", "https://*.plimap.kr")
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+
 }

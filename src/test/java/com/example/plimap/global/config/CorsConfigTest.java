@@ -38,6 +38,7 @@ class CorsConfigTest {
         assertThat(cors.checkOrigin("https://192.168.10.20:8080")).isEqualTo("https://192.168.10.20:8080");
         assertThat(cors.checkOrigin("http://192.168.256.10:5173")).isNull();
         assertThat(cors.checkOrigin("http://192.168.1.10.evil:5173")).isNull();
+        assertThat(cors.checkOrigin("https://pr-123.preview.plimap.kr")).isNull();
         assertThat(cors.checkOrigin("https://evil.plimap.kr")).isNull();
         assertThat(cors.getAllowedMethods())
                 .containsExactly("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");

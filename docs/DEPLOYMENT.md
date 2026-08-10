@@ -91,7 +91,7 @@ Dev 백엔드는 배포된 Dev 프론트와 프론트 개발자의 로컬 개발
 
 - Dev 배포 프론트는 동일 host의 상대 경로 `/api`, `/oauth`를 사용합니다.
 - 로컬 프론트는 API Base URL과 OAuth 시작 주소로 `https://dev.plimap.kr`을 사용합니다.
-- credential CORS는 `https://dev.plimap.kr`, `http://localhost:5173`, 그리고 HTTP/HTTPS `192.168.0.0/16` Origin(개발용 포트 포함)을 명시적으로 허용하며, OAuth 프론트 allowlist는 exact-origin 기준을 유지합니다.
+- credential CORS는 `https://dev.plimap.kr`, `http://localhost:5173`, `https://pr-*.plimap.kr`, 그리고 HTTP/HTTPS `192.168.0.0/16` Origin(개발용 포트 포함)을 명시적으로 허용하며, OAuth 프론트 allowlist는 exact-origin과 승인된 preview 패턴을 사용합니다.
 - 프론트의 OAuth 시작 요청은 `frontendOrigin`을 전달하며, 백엔드는 allowlist 검증 후 요청별 로그인 완료 주소로 사용합니다.
 
 ### 로컬 프론트 인증 호출 계약
