@@ -3,6 +3,7 @@ package com.example.plimap.domain.place.dto.response;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceSource;
 import com.example.plimap.domain.place.enums.MapSelectionStatus;
+import com.example.plimap.domain.place.enums.PopularPlaceScopeLevel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
@@ -92,6 +93,18 @@ public final class PlaceResponse {
 
     @Schema(name = "PlacePopularListResponse")
     public record PopularListResult(
+            @Schema(
+                    description = "실제 적용 범위. NEARBY이면 null",
+                    allowableValues = {"REGION3", "REGION2", "REGION1", "GLOBAL"},
+                    nullable = true
+            )
+            PopularPlaceScopeLevel scopeLevel,
+            @Schema(
+                    description = "실제 적용 범위명. NEARBY이면 null",
+                    example = "역삼1동",
+                    nullable = true
+            )
+            String scopeName,
             @Schema(description = "인기 장소 목록")
             List<PopularListItem> items
     ) {

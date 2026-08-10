@@ -57,6 +57,9 @@ class PlaceSearchHistoryQueryServiceTest {
     private PopularPlaceQueryRepository popularPlaceQueryRepository;
 
     @Mock
+    private PlaceLocationMetadataService placeLocationMetadataService;
+
+    @Mock
     private KakaoAddressSearchClient kakaoAddressSearchClient;
 
     @Mock
@@ -76,6 +79,7 @@ class PlaceSearchHistoryQueryServiceTest {
                 placeQueryRepository,
                 placeBookmarkQueryRepository,
                 popularPlaceQueryRepository,
+                placeLocationMetadataService,
                 kakaoAddressSearchClient,
                 kakaoPlaceSearchClient,
                 pinQueryService

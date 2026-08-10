@@ -3,6 +3,7 @@ package com.example.plimap.domain.place.service.query.impl;
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.dto.NearbyBookmarkedPlace;
+import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.PopularPlaceCandidate;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
@@ -10,6 +11,7 @@ import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceBookmarkId;
 import com.example.plimap.domain.place.entity.PlaceSearchHistory;
 import com.example.plimap.domain.place.enums.PopularPlaceScope;
+import com.example.plimap.domain.place.enums.PopularPlaceScopeLevel;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
@@ -18,6 +20,7 @@ import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceBookmarkQueryRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
 import com.example.plimap.domain.place.repository.query.PopularPlaceQueryRepository;
+import com.example.plimap.domain.place.service.query.PlaceLocationMetadataService;
 import com.example.plimap.domain.place.service.query.PlaceQueryService;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.global.external.kakao.KakaoAddressSearchClient;
@@ -47,6 +50,8 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     private static final String ADDRESS_RESULT_TYPE = "ADDRESS";
     private static final String PLACE_RESULT_TYPE = "PLACE";
     private static final int MAX_SEARCH_RESULTS = 15;
+    private static final int POPULAR_PLACE_THRESHOLD = 6;
+    private static final String GLOBAL_SCOPE_NAME = "전국";
     private static final double ACCESS_RANGE_METERS = 500.0;
     private static final double DISTANCE_COMPARISON_EPSILON_METERS = 1e-6;
     private static final double PROVIDER_PLACE_SEARCH_DISTANCE_METERS = 20.0;
@@ -58,6 +63,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     private final PlaceQueryRepository placeQueryRepository;
     private final PlaceBookmarkQueryRepository placeBookmarkQueryRepository;
     private final PopularPlaceQueryRepository popularPlaceQueryRepository;
+    private final PlaceLocationMetadataService placeLocationMetadataService;
     private final KakaoAddressSearchClient kakaoAddressSearchClient;
     private final KakaoPlaceSearchClient kakaoPlaceSearchClient;
     private final PinQueryService pinQueryService;
@@ -68,18 +74,24 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
             double latitude,
             double longitude
     ) {
-        List<PopularPlaceCandidate> candidates = switch (scope) {
-            case NEARBY -> popularPlaceQueryRepository.findNearbyPopularPlaces(
-                    latitude,
-                    longitude
+        PopularPlaceSelection selection = switch (scope) {
+            case NEARBY -> new PopularPlaceSelection(
+                    null,
+                    null,
+                    popularPlaceQueryRepository.findNearbyPopularPlaces(
+                            latitude,
+                            longitude
+                    )
             );
-            case GLOBAL -> popularPlaceQueryRepository.findGlobalPopularPlaces(
-                    latitude,
-                    longitude
-            );
+            case GLOBAL -> findPopularPlacesWithRegionalFallback(latitude, longitude);
         };
+        List<PopularPlaceCandidate> candidates = selection.candidates();
         if (candidates.isEmpty()) {
-            return new PlaceResponse.PopularListResult(List.of());
+            return new PlaceResponse.PopularListResult(
+                    selection.scopeLevel(),
+                    selection.scopeName(),
+                    List.of()
+            );
         }
 
         List<Long> placeIds = candidates.stream()
@@ -100,7 +112,81 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                     );
                 })
                 .toList();
-        return new PlaceResponse.PopularListResult(items);
+        return new PlaceResponse.PopularListResult(
+                selection.scopeLevel(),
+                selection.scopeName(),
+                items
+        );
+    }
+
+    private PopularPlaceSelection findPopularPlacesWithRegionalFallback(
+            double latitude,
+            double longitude
+    ) {
+        PlaceAdministrativeRegion region =
+                placeLocationMetadataService.getAdministrativeRegion(latitude, longitude);
+
+        if (region.code() != null && region.eupMyeonDong() != null) {
+            List<PopularPlaceCandidate> candidates =
+                    popularPlaceQueryRepository.findRegion3PopularPlaces(
+                            region.code(),
+                            latitude,
+                            longitude
+                    );
+            if (candidates.size() >= POPULAR_PLACE_THRESHOLD) {
+                return new PopularPlaceSelection(
+                        PopularPlaceScopeLevel.REGION3,
+                        region.eupMyeonDong(),
+                        candidates
+                );
+            }
+        }
+
+        if (region.sido() != null && region.sigungu() != null) {
+            List<PopularPlaceCandidate> candidates =
+                    popularPlaceQueryRepository.findRegion2PopularPlaces(
+                            region.sido(),
+                            region.sigungu(),
+                            latitude,
+                            longitude
+                    );
+            if (candidates.size() >= POPULAR_PLACE_THRESHOLD) {
+                return new PopularPlaceSelection(
+                        PopularPlaceScopeLevel.REGION2,
+                        region.sigungu(),
+                        candidates
+                );
+            }
+        }
+
+        if (region.sido() != null) {
+            List<PopularPlaceCandidate> candidates =
+                    popularPlaceQueryRepository.findRegion1PopularPlaces(
+                            region.sido(),
+                            latitude,
+                            longitude
+                    );
+            if (candidates.size() >= POPULAR_PLACE_THRESHOLD) {
+                return new PopularPlaceSelection(
+                        PopularPlaceScopeLevel.REGION1,
+                        region.sido(),
+                        candidates
+                );
+            }
+        }
+
+        return new PopularPlaceSelection(
+                PopularPlaceScopeLevel.GLOBAL,
+                GLOBAL_SCOPE_NAME,
+                popularPlaceQueryRepository.findGlobalPopularPlaces(latitude, longitude)
+        );
+    }
+
+    private record PopularPlaceSelection(
+            PopularPlaceScopeLevel scopeLevel,
+            String scopeName,
+            List<PopularPlaceCandidate> candidates
+    ) {
     }
 
     @Override
