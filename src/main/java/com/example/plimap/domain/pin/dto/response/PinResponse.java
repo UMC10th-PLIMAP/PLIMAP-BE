@@ -113,7 +113,8 @@ public class PinResponse {
             Double latitude,
             Double longitude,
             Integer placeCount,
-            Bound bounds
+            Bound bounds,
+            boolean hasBookmarkedPlace
     ) {}
 
     @Builder

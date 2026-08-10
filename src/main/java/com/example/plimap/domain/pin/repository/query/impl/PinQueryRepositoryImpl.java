@@ -29,6 +29,7 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Page;
@@ -134,79 +135,93 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                 )
                 """;
 
-    private static final String REPRESENTATIVE_PIN = """
-            SELECT DISTINCT ON (pt.place_id)
-                            p.id
-                        FROM representative_place_track rpt
-                        JOIN pin p
-                            ON p.place_track_id = rpt.place_track_id
-                        JOIN place_track pt
-                            ON pt.id = p.place_track_id
-                        WHERE
-                            p.deleted_at IS NULL
-                        ORDER BY
-                            pt.place_id,
-                            p.like_count DESC,
-                            p.created_at DESC,
-                            p.id DESC;
-            """;
+        private static final String REPRESENTATIVE_PIN = """
+                SELECT DISTINCT ON (pt.place_id)
+                                p.id
+                            FROM representative_place_track rpt
+                            JOIN pin p
+                                ON p.place_track_id = rpt.place_track_id
+                            JOIN place_track pt
+                                ON pt.id = p.place_track_id
+                            WHERE
+                                p.deleted_at IS NULL
+                            ORDER BY
+                                pt.place_id,
+                                p.like_count DESC,
+                                p.created_at DESC,
+                                p.id DESC;
+                """;
 
 
-    private static final String PIN_COUNT= """
-             WITH pin_count AS (
-                 SELECT
-                     p.place_track_id,
-                     COUNT(*) AS active_pin_count
-                 FROM pin p
-                 WHERE p.deleted_at IS NULL
-                 GROUP BY p.place_track_id
-             )
-    """;
-
-
-    private static final String CLUSTER_QUERY = """
-        SELECT
-            t.cluster_level,
-            t.region_name,
-            AVG(ST_Y(t.location::geometry)) AS latitude,
-            AVG(ST_X(t.location::geometry)) AS longitude,
-            COUNT(*) AS place_count,
-            MIN(ST_Y(t.location::geometry)) AS sw_lat,
-            MIN(ST_X(t.location::geometry)) AS sw_lng,
-            MAX(ST_Y(t.location::geometry)) AS ne_lat,
-            MAX(ST_X(t.location::geometry)) AS ne_lng
-        FROM (
-            SELECT
-                pl.id,
-                pl.location,
-                %s AS cluster_level,
-                %s AS region_name,
-                COUNT(p.id) AS pin_count
-            FROM pin p
-            JOIN place pl ON pl.id = p.place_id
-            WHERE
-                ST_Covers(
-                     ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
-                     pl.location::geometry
+        private static final String PIN_COUNT= """
+                 WITH pin_count AS (
+                     SELECT
+                         p.place_track_id,
+                         COUNT(*) AS active_pin_count
+                     FROM pin p
+                     WHERE p.deleted_at IS NULL
+                     GROUP BY p.place_track_id
                  )
-                AND p.deleted_at IS NULL
-                AND pl.deleted_at IS NULL
+        """;
+
+    private static final String BOOKMARKED_QUERY = """
+        EXISTS (
+            SELECT 1
+            FROM place_bookmark pb
+            WHERE pb.place_id = pl.id
+              AND pb.member_id = :memberId
+        )
+        """;
+
+    private static final String BOOKMARKED_ANONYMOUS_QUERY =
+            "FALSE";
+
+        private static final String CLUSTER_QUERY = """
+            SELECT
+                t.cluster_level,
+                t.region_name,
+                AVG(ST_Y(t.location::geometry)) AS latitude,
+                AVG(ST_X(t.location::geometry)) AS longitude,
+                COUNT(*) AS place_count,
+                MIN(ST_Y(t.location::geometry)) AS sw_lat,
+                MIN(ST_X(t.location::geometry)) AS sw_lng,
+                MAX(ST_Y(t.location::geometry)) AS ne_lat,
+                MAX(ST_X(t.location::geometry)) AS ne_lng,
+                BOOL_OR(t.bookmarked) AS has_bookmarked_place
+            FROM (
+                SELECT
+                    pl.id,
+                    pl.location,
+                    %s AS cluster_level,
+                    %s AS region_name,
+                    COUNT(p.id) AS pin_count,
+                     %s AS bookmarked
+                FROM pin p
+                JOIN place pl ON pl.id = p.place_id
+                WHERE
+                    ST_Covers(
+                         ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
+                         pl.location::geometry
+                     )
+                    AND p.deleted_at IS NULL
+                    AND pl.deleted_at IS NULL
+                GROUP BY
+                    pl.id,
+                    pl.location,
+                    %s
+            ) t
             GROUP BY
-                pl.id,
-                pl.location,
-                %s
-        ) t
-        GROUP BY
-            t.cluster_level,
-            t.region_name
-    """;
+                t.cluster_level,
+                t.region_name
+        """;
 
     private static final String GEOHASH_CLUSTER_QUERY = """
             WITH place_geohash AS (
                 SELECT
                     pl.id,
                     pl.location,
-                    ST_GeoHash(pl.location::geometry, :precision) AS geohash
+                    ST_GeoHash(pl.location::geometry, :precision) AS geohash,
+                    %s AS bookmarked
                 FROM place pl
                 WHERE ST_Covers(
                      ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326),
@@ -230,7 +245,8 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                     MIN(ST_Y(location::geometry)) AS sw_lat,
                     MIN(ST_X(location::geometry)) AS sw_lng,
                     MAX(ST_Y(location::geometry)) AS ne_lat,
-                    MAX(ST_X(location::geometry)) AS ne_lng
+                    MAX(ST_X(location::geometry)) AS ne_lng,
+                    BOOL_OR(bookmarked) AS has_bookmarked_place
                 FROM place_geohash
                 GROUP BY geohash
             )
@@ -677,22 +693,33 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     public List<PinResponse.Cluster> findClusterListByViewport(
             Point minPoint,
             Point maxPoint,
-            Integer zoomLevel
+            Integer zoomLevel,
+            Long memberId
     ) {
         RegionInfo info = getRegionInfo(zoomLevel);
+
+        String bookmarkedQuery = memberId == null
+                ? BOOKMARKED_ANONYMOUS_QUERY
+                : BOOKMARKED_QUERY;
 
         String sql = CLUSTER_QUERY.formatted(
             info.clusterLevelSql(),
             info.regionNameSql(),
+            bookmarkedQuery,
             info.regionNameSql()
         );
 
-        List<Object[]> rows = entityManager.createNativeQuery(sql)
+        Query query = entityManager.createNativeQuery(sql)
                 .setParameter("minLng", minPoint.getX())
                 .setParameter("minLat", minPoint.getY())
                 .setParameter("maxLng", maxPoint.getX())
-                .setParameter("maxLat", maxPoint.getY())
-                .getResultList();
+                .setParameter("maxLat", maxPoint.getY());
+
+        if (memberId != null) {
+            query.setParameter("memberId", memberId);
+        }
+
+        List<Object[]> rows = query.getResultList();
 
         return rows.stream()
                 .map(r -> {
@@ -702,14 +729,26 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     @Override
-    public PinResponse.ClusterAndPin findGeohashClusterListByViewport(Point minPoint, Point maxPoint, Integer zoomLevel, Integer precision) {
-        List<Object[]> rows = entityManager.createNativeQuery(GEOHASH_CLUSTER_QUERY)
+    public PinResponse.ClusterAndPin findGeohashClusterListByViewport(Point minPoint, Point maxPoint, Integer zoomLevel, Integer precision, Long memberId) {
+        String bookmarkedQuery = memberId == null
+                ? BOOKMARKED_ANONYMOUS_QUERY
+                : BOOKMARKED_QUERY;
+
+        String sql = GEOHASH_CLUSTER_QUERY.formatted(bookmarkedQuery);
+
+        Query query = entityManager.createNativeQuery(sql)
                 .setParameter("precision", precision)
                 .setParameter("minLng", minPoint.getX())
                 .setParameter("minLat", minPoint.getY())
                 .setParameter("maxLng", maxPoint.getX())
-                .setParameter("maxLat", maxPoint.getY())
-                .getResultList();
+                .setParameter("maxLat", maxPoint.getY());
+
+        if (memberId != null) {
+            query.setParameter("memberId", memberId);
+        }
+
+        List<Object[]> rows = query.getResultList();
+
 
         List<PinResponse.Cluster> clusters = new ArrayList<>();
         List<Long> singlePlaceIds = new ArrayList<>();
@@ -1068,7 +1107,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                             ((Number) row[6]).doubleValue(),
                             ((Number) row[7]).doubleValue(),
                             ((Number) row[8]).doubleValue()
-                    )
+                    ),
+                    ((boolean) row[9])
+
             );
         }
 
@@ -1084,7 +1125,9 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
                         ((Number) row[6]).doubleValue(),
                         ((Number) row[7]).doubleValue(),
                         ((Number) row[8]).doubleValue()
-                )
+                ),
+                ((boolean) row[9])
+
         );
     }
 }

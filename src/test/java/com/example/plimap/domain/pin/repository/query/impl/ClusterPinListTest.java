@@ -8,7 +8,9 @@ import com.example.plimap.domain.pin.enums.ClusterLevel;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.place.entity.PlaceBookmark;
 import com.example.plimap.domain.place.entity.PlaceSource;
+import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
 import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.PlaceTrack;
@@ -57,6 +59,8 @@ class ClusterPinListTest {
     @Autowired
     private PlaceTrackRepository placeTrackRepository;
 
+    @Autowired
+    private PlaceBookmarkRepository placeBookmarkRepository;
 
     @Autowired
     EntityManager entityManager;
@@ -67,6 +71,7 @@ class ClusterPinListTest {
     Member member1, member2, member3;
     PlaceTrack placeTrack1, placeTrack2, placeTrack3, placeTrack4, placeTrack5, placeTrack6,
             placeTrack7, placeTrack8, placeTrack9, placeTrack10, placeTrack11, placeTrack12;
+    PlaceBookmark bookmark1,  bookmark2, bookmark3;
     GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Autowired
@@ -256,6 +261,11 @@ class ClusterPinListTest {
                 placeTrack6, placeTrack7, placeTrack8, placeTrack9, placeTrack10, placeTrack11, placeTrack12));
         pinRepository.saveAll(List.of(pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8, pin9, pin10, pin11, pin12, pin13, pin14, pin15, pin16));
 
+        bookmark1 = createPlaceBookmark(place1, member1.getId());
+        bookmark2 = createPlaceBookmark(place3, member1.getId());
+        bookmark3 = createPlaceBookmark(place4, member1.getId());
+        placeBookmarkRepository.saveAll(List.of(bookmark1, bookmark2, bookmark3));
+
         placeTrack7.increaseLikeCount();
         placeTrack8.increaseLikeCount();
         placeTrack8.increaseLikeCount();
@@ -277,7 +287,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 6);
+        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 6, member1.getId());
 
         // then
         assertThat(result).hasSize(3); // 경기, 세종, 서울
@@ -286,6 +296,7 @@ class ClusterPinListTest {
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION1);
         assertThat(first.regionName()).isEqualTo("경기도");
         assertThat(first.placeCount()).isEqualTo(3);
+        assertThat(first.hasBookmarkedPlace()).isTrue();
 
         assertThat(first.latitude())
                 .isCloseTo(37.3544, within(1e-6));
@@ -319,7 +330,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 9);
+        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 9, member1.getId());
 
         // then
         assertThat(result).hasSize(2); // 성남, 수원
@@ -328,6 +339,7 @@ class ClusterPinListTest {
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION2);
         assertThat(first.regionName()).isEqualTo("경기도 성남시");
         assertThat(first.placeCount()).isEqualTo(2);
+        assertThat(first.hasBookmarkedPlace()).isTrue();
 
         assertThat(first.latitude())
                 .isCloseTo(37.38835, within(1e-6));
@@ -361,7 +373,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 9);
+        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 9, member1.getId());
 
         // then
         assertThat(result).hasSize(2); // 의당면, 안서면
@@ -379,6 +391,7 @@ class ClusterPinListTest {
                 .orElseThrow();
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION3);
         assertThat(first.placeCount()).isEqualTo(1);
+        assertThat(first.hasBookmarkedPlace()).isTrue();
 
         PinResponse.Cluster last = result.stream()
                 .filter(c -> c.regionName().equals("세종특별자치시 연서면"))
@@ -386,6 +399,36 @@ class ClusterPinListTest {
                 .orElseThrow();
         assertThat(last.clusterLevel()).isEqualTo(ClusterLevel.REGION3);
         assertThat(last.placeCount()).isEqualTo(1);
+        assertThat(last.hasBookmarkedPlace()).isFalse();
+    }
+
+    @Test
+    void 사용자_id가_null이면_hasBookmarkedPlace는_false로_반환한다() {
+        // given
+        Point minPoint = geometryFactory.createPoint(
+                new Coordinate(127.24, 36.54)
+        );
+
+        Point maxPoint = geometryFactory.createPoint(
+                new Coordinate(127.30, 36.61)
+        );
+
+        Point minPoint2 = geometryFactory.createPoint(
+                new Coordinate(127.0315, 37.5395)
+        );
+
+        Point maxPoint2 = geometryFactory.createPoint(
+                new Coordinate(127.0429, 37.5497)
+        );
+
+        // when
+        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 9, null);
+        PinResponse.ClusterAndPin result2 = pinQueryRepository.findGeohashClusterListByViewport(minPoint2, maxPoint2, 15, 7, null);
+
+        // then
+        assertThat(result.getFirst().hasBookmarkedPlace()).isFalse();
+        assertThat(result.getLast().hasBookmarkedPlace()).isFalse();
+        assertThat(result2.clusters().getFirst().hasBookmarkedPlace()).isFalse();
     }
 
     @Test
@@ -400,7 +443,7 @@ class ClusterPinListTest {
         );
 
         // when
-        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 12);
+        List<PinResponse.Cluster> result = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, 12, member1.getId());
 
         // then
         assertThat(result).hasSize(2); // 백현동, 서현동
@@ -409,6 +452,7 @@ class ClusterPinListTest {
         assertThat(first.clusterLevel()).isEqualTo(ClusterLevel.REGION3);
         assertThat(first.regionName()).isEqualTo("경기도 성남시 백현동");
         assertThat(first.placeCount()).isEqualTo(1);
+        assertThat(first.hasBookmarkedPlace()).isTrue();
 
         assertThat(first.latitude())
                 .isCloseTo(37.3947, within(1e-6));
@@ -442,7 +486,7 @@ class ClusterPinListTest {
         );
 
         // when
-        PinResponse.ClusterAndPin result = pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 15, 7);
+        PinResponse.ClusterAndPin result = pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 15, 7, member1.getId());
         List<PinResponse.Cluster> clusters = result.clusters();
         List<PinResponse.PinPreview> pinPreviews = result.pins();
 
@@ -465,7 +509,7 @@ class ClusterPinListTest {
         );
 
         // when
-        PinResponse.ClusterAndPin result = pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 18, 8);
+        PinResponse.ClusterAndPin result = pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, 18, 8, member1.getId());
         List<PinResponse.Cluster> clusters = result.clusters();
         List<PinResponse.PinPreview> pinPreviews = result.pins();
 
@@ -646,6 +690,13 @@ class ClusterPinListTest {
                 .clipStartMs(70000)
                 .introduction("good")
                 .isFeedPublic(feedPublic)
+                .build();
+    }
+
+    private PlaceBookmark createPlaceBookmark(Place place, Long memberId) {
+        return PlaceBookmark.builder()
+                .place(place)
+                .memberId(memberId)
                 .build();
     }
 }

@@ -485,11 +485,12 @@ class PinControllerTest {
                         127.0,
                         37.5,
                         10,
-                        new PinResponse.Bound(0D,0D,0D,0D)
+                        new PinResponse.Bound(0D,0D,0D,0D),
+                        false
                 )
         );
 
-        given(pinQueryService.getClusterPinList(any()))
+        given(pinQueryService.getClusterPinList(any(), isNull()))
                 .willReturn(
                         PinConverter.toClusterAndPin(clusters, null, 7)
                 );
@@ -508,7 +509,7 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.result.clusters").isArray())
                 .andExpect(jsonPath("$.result.pins").doesNotExist());
 
-        verify(pinQueryService).getClusterPinList(any(PinRequest.Viewport.class));
+        verify(pinQueryService).getClusterPinList(any(PinRequest.Viewport.class),  isNull());
     }
 
     @Test
@@ -527,7 +528,7 @@ class PinControllerTest {
                 )
         );
 
-        given(pinQueryService.getClusterPinList(any()))
+        given(pinQueryService.getClusterPinList(any(),  isNull()))
                 .willReturn(
                         PinConverter.toClusterAndPin(null, pins, 14)
                 );
@@ -546,7 +547,7 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.result.clusters").doesNotExist())
                 .andExpect(jsonPath("$.result.pins").isArray());
 
-        verify(pinQueryService).getClusterPinList(any(PinRequest.Viewport.class));
+        verify(pinQueryService).getClusterPinList(any(PinRequest.Viewport.class),  isNull());
     }
 
     @Test

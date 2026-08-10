@@ -136,7 +136,7 @@ public class PinQueryServiceImpl implements PinQueryService {
     }
 
     @Override
-    public PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request) {
+    public PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request, Long memberId) {
         Point minPoint = geometryFactory.createPoint(new Coordinate(request.southWestLng(), request.southWestLat()));
         Point maxPoint = geometryFactory.createPoint(new Coordinate(request.northEastLng(), request.northEastLat()));
         if (request.zoomLevel() >= 20) {
@@ -147,11 +147,11 @@ public class PinQueryServiceImpl implements PinQueryService {
 
         if (request.zoomLevel() >= 14) {
             // geohash 클러스터 (+개별핀 조회)
-            return pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, request.zoomLevel(), getPrecision(request.zoomLevel()));
+            return pinQueryRepository.findGeohashClusterListByViewport(minPoint, maxPoint, request.zoomLevel(), getPrecision(request.zoomLevel()), memberId);
         }
 
         // 행정구역 기반 클러스터 조회
-        List<PinResponse.Cluster> clusters = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, request.zoomLevel());
+        List<PinResponse.Cluster> clusters = pinQueryRepository.findClusterListByViewport(minPoint, maxPoint, request.zoomLevel(), memberId);
         return PinConverter.toClusterAndPin(clusters, null, request.zoomLevel());
     }
 
