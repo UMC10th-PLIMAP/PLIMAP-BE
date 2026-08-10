@@ -102,7 +102,8 @@ public class PinResponse {
             String introduction,
             String albumImageUrl,
             String youtubeVideoId,
-            Integer clipStartMs
+            Integer clipStartMs,
+            Boolean hasBookmarkedPlace
     ) {}
 
     @Builder
@@ -113,7 +114,8 @@ public class PinResponse {
             Double latitude,
             Double longitude,
             Integer placeCount,
-            Bound bounds
+            Bound bounds,
+            boolean hasBookmarkedPlace
     ) {}
 
     @Builder
