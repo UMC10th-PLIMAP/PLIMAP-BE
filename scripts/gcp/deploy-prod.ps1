@@ -248,27 +248,62 @@ function Get-ActiveTrafficAllocations {
     return $allocations
 }
 
-function Assert-RevisionReady {
+function Wait-ForRevisionReady {
     param(
         [Parameter(Mandatory)][string]$RevisionName,
-        [Parameter(Mandatory)][string]$ExpectedImage
+        [Parameter(Mandatory)][string]$ExpectedImage,
+        [ValidateRange(1, 30)][int]$MaxAttempts = 15
     )
 
-    $revisionStateJson = Get-GcloudText -Arguments @(
-        "run", "revisions", "describe", $RevisionName,
-        "--project=$ProjectId",
-        "--region=$Region",
-        "--format=json"
-    )
-    $revisionState = $revisionStateJson | ConvertFrom-Json
-    $status = Get-JsonProperty -Object $revisionState -Name "status"
-    $conditions = @(Get-JsonProperty -Object $status -Name "conditions")
-    $readyConditions = @($conditions | Where-Object {
-        (Get-JsonProperty -Object $_ -Name "type") -eq "Ready"
-    })
-    if ($readyConditions.Count -ne 1 -or
-        (Get-JsonProperty -Object $readyConditions[0] -Name "status") -ne "True") {
-        throw "Cloud Run candidate revision is not Ready: $RevisionName"
+    $delaySeconds = 1
+    $revisionState = $null
+    $readyStatus = "missing"
+    $readyReason = ""
+    $readyMessage = ""
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        $revisionStateJson = Get-GcloudText -Arguments @(
+            "run", "revisions", "describe", $RevisionName,
+            "--project=$ProjectId",
+            "--region=$Region",
+            "--format=json"
+        )
+        $revisionState = $revisionStateJson | ConvertFrom-Json
+        $status = Get-JsonProperty -Object $revisionState -Name "status"
+        $conditions = @(Get-JsonProperty -Object $status -Name "conditions")
+        $readyConditions = @($conditions | Where-Object {
+            (Get-JsonProperty -Object $_ -Name "type") -eq "Ready"
+        })
+        if ($readyConditions.Count -gt 1) {
+            throw "Cloud Run candidate revision returned multiple Ready conditions: $RevisionName"
+        }
+
+        if ($readyConditions.Count -eq 1) {
+            $readyStatus = [string](Get-JsonProperty -Object $readyConditions[0] -Name "status")
+            $readyReason = [string](Get-JsonProperty -Object $readyConditions[0] -Name "reason")
+            $readyMessage = [string](Get-JsonProperty -Object $readyConditions[0] -Name "message")
+            if ($readyStatus -eq "True") {
+                break
+            }
+        } else {
+            $readyStatus = "missing"
+            $readyReason = ""
+            $readyMessage = ""
+        }
+
+        if ($attempt -eq $MaxAttempts) {
+            throw (
+                "Cloud Run candidate revision did not become Ready: $RevisionName " +
+                    "(status=$readyStatus, reason=$readyReason, message=$readyMessage)"
+            )
+        }
+
+        Write-Warning (
+            "Cloud Run candidate revision is not Ready yet " +
+                "($attempt/$MaxAttempts, status=$readyStatus, reason=$readyReason)."
+        )
+        Start-Sleep -Seconds $delaySeconds
+        $delaySeconds = [Math]::Min($delaySeconds * 2, 5)
     }
 
     $spec = Get-JsonProperty -Object $revisionState -Name "spec"
@@ -345,25 +380,48 @@ function Get-HttpsOrigin {
     return $uri.GetLeftPart([UriPartial]::Authority)
 }
 
+function Test-PrivateNetworkIpv4 {
+    param([Parameter(Mandatory)][string]$HostName)
+
+    if ($HostName -notmatch '^192\.168\.(\d{1,3})\.(\d{1,3})$') {
+        return $false
+    }
+
+    return [int]$Matches[1] -le 255 -and [int]$Matches[2] -le 255
+}
+
 function Get-WebOrigin {
     param(
         [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][string]$Value
+        [Parameter(Mandatory)][string]$Value,
+        [switch]$AllowPrivateNetworkPattern
     )
 
+    $origin = $Value.Trim()
+    if ($AllowPrivateNetworkPattern -and $origin -in @(
+            "http://192.168.*:[*]",
+            "https://192.168.*:[*]"
+        )) {
+        return $origin
+    }
+
     try {
-        $uri = [Uri]::new($Value.Trim(), [UriKind]::Absolute)
+        $uri = [Uri]::new($origin, [UriKind]::Absolute)
     } catch {
         throw "$Name contains an invalid Origin: $Value"
     }
 
-    if ($uri.Scheme -ne "https" -or
+    $isHttps = $uri.Scheme -eq "https"
+    $isPrivateNetworkOrigin = $AllowPrivateNetworkPattern -and
+        $uri.Scheme -in @("http", "https") -and
+        (Test-PrivateNetworkIpv4 -HostName $uri.Host)
+    if ((-not $isHttps -and -not $isPrivateNetworkOrigin) -or
+        (-not $isPrivateNetworkOrigin -and -not $uri.IsDefaultPort) -or
         -not [string]::IsNullOrEmpty($uri.UserInfo) -or
-        -not $uri.IsDefaultPort -or
         $uri.AbsolutePath -ne "/" -or
         -not [string]::IsNullOrEmpty($uri.Query) -or
         -not [string]::IsNullOrEmpty($uri.Fragment)) {
-        throw "$Name must contain only HTTPS Origins without paths, query, fragment, credentials, or custom ports: $Value"
+        throw "$Name must contain only HTTPS Origins or explicit 192.168.0.0/16 Origins without paths, query, fragment, credentials, or invalid ports: $Value"
     }
 
     return $uri.GetLeftPart([UriPartial]::Authority)
@@ -373,13 +431,14 @@ function Get-AllowedOrigins {
     param(
         [Parameter(Mandatory)][string]$Name,
         [Parameter(Mandatory)][string]$Value,
-        [Parameter(Mandatory)][string]$RequiredOrigin
+        [Parameter(Mandatory)][string]$RequiredOrigin,
+        [switch]$AllowPrivateNetworkPattern
     )
 
     $origins = @($Value.Split(",") |
         ForEach-Object { $_.Trim() } |
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-        ForEach-Object { Get-WebOrigin -Name $Name -Value $_ } |
+        ForEach-Object { Get-WebOrigin -Name $Name -Value $_ -AllowPrivateNetworkPattern:$AllowPrivateNetworkPattern } |
         Select-Object -Unique)
 
     if ($origins.Count -eq 0) {
@@ -630,7 +689,7 @@ try {
     $corsOrigins = Get-AllowedOrigins `
         -Name "CorsAllowedOrigins" `
         -Value $CorsAllowedOrigins `
-        -RequiredOrigin $publicOrigin
+        -RequiredOrigin $publicOrigin -AllowPrivateNetworkPattern
 
     if ([string]::IsNullOrWhiteSpace($OAuthAllowedFrontendOrigins)) {
         $OAuthAllowedFrontendOrigins = $publicOrigin
@@ -751,7 +810,7 @@ try {
     )
     Invoke-Gcloud -Arguments $deployArguments
 
-    Assert-RevisionReady -RevisionName $result.candidateRevision -ExpectedImage $Image
+    Wait-ForRevisionReady -RevisionName $result.candidateRevision -ExpectedImage $Image
     $result.candidateVerification = "passed"
 
     $trafficPromotionAttempted = $true

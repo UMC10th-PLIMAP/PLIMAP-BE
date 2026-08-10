@@ -72,7 +72,8 @@ public class MemberResDTO {
             String name,
             String profileImageUrl,
             Instant followedAt,
-            boolean isFollowing
+            boolean isFollowing,
+            boolean isFollowingViewer
     ) {
     }
 
@@ -82,7 +83,8 @@ public class MemberResDTO {
             String name,
             String profileImageUrl,
             Instant followedAt,
-            boolean isFollowing
+            boolean isFollowing,
+            boolean isFollowingViewer
     ) {
     }
 
