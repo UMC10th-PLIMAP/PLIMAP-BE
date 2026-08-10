@@ -63,6 +63,7 @@ public class MemberResDTO {
             long followerCount,
             long followingCount,
             boolean isFollowing,
+            boolean isFollowingViewer,
             long pinCount
     ) {
     }

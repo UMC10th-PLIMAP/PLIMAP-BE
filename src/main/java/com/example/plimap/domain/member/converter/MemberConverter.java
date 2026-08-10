@@ -67,7 +67,7 @@ public class MemberConverter {
         );
     }
 
-    public static MemberResDTO.OtherProfile toOtherProfile(Member member, String profileImageUrl, long followerCount, long followingCount, boolean isFollowing, long pinCount) {
+    public static MemberResDTO.OtherProfile toOtherProfile(Member member, String profileImageUrl, long followerCount, long followingCount, boolean isFollowing, boolean isFollowingViewer, long pinCount) {
         return new MemberResDTO.OtherProfile(
                 member.getId(),
                 member.getNickname(),
@@ -77,6 +77,7 @@ public class MemberConverter {
                 followerCount,
                 followingCount,
                 isFollowing,
+                isFollowingViewer,
                 pinCount
         );
     }

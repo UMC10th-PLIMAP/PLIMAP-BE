@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class MemberOpenApiIntegrationTest {
 
     private static final String MEMBER_SEARCH_PATH = "/api/v1/members/search";
+    private static final String OTHER_PROFILE_PATH = "/api/v1/members/{memberId}";
 
     @Autowired
     private MockMvc mockMvc;
@@ -72,6 +73,23 @@ class MemberOpenApiIntegrationTest {
         JsonNode placeSearchItem = findPlaceSearchItemSchema(openApi);
         assertThat(placeSearchItem.path("properties").has("isFollowing")).isFalse();
         assertThat(placeSearchItem.path("properties").has("joinedAt")).isFalse();
+    }
+
+    @Test
+    void 타인_프로필_조회_OpenAPI는_양방향_팔로우_필드를_노출한다() throws Exception {
+        JsonNode openApi = fetchOpenApi();
+
+        JsonNode operation = openApi.path("paths").path(OTHER_PROFILE_PATH).path("get");
+        assertThat(operation.path("responses").has("200")).isTrue();
+
+        JsonNode responseSchema = operation.path("responses").path("200")
+                .path("content").path("*/*").path("schema");
+        JsonNode resultSchema = resolveReferencedSchema(openApi, responseSchema)
+                .path("properties").path("result");
+
+        JsonNode properties = resolveReferencedSchema(openApi, resultSchema).path("properties");
+        assertThat(properties.has("isFollowing")).isTrue();
+        assertThat(properties.has("isFollowingViewer")).isTrue();
     }
 
     private JsonNode fetchOpenApi() throws Exception {
