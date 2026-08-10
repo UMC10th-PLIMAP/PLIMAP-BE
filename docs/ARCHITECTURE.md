@@ -93,70 +93,43 @@ com.example.plimap/
 └── PlimapApplication
 ```
 
-> 위 예시는 `pin` 도메인을 기준으로 상세 구조를 보여줍니다. `member`, `auth`, `place`, `track`, `report`, `admin`, `inquiry` 도메인도 동일한 내부 패키지 구조를 따릅니다. `admin`은 자체 엔티티가 필요한 경우에만 `entity`, `repository` 패키지를 추가합니다. 다른 도메인의 데이터는 해당 도메인의 Service 인터페이스를 통해 접근하며, 다른 도메인의 Repository를 직접 주입하지 않습니다.
-
 ## Domain Structure
 
 ### 1. Member
 
 회원, 프로필, 팔로우와 약관 관련 기능을 담당합니다.
 
-- 회원 프로필 및 프로필 이미지 관리
-- 회원 상태 관리
-- 팔로우·언팔로우 및 팔로워·팔로잉 목록 관리
-- 약관 동의 내역 관리
-
 ### 2. Auth
 
 인증과 토큰 관련 기능을 담당합니다.
-
-- 소셜 로그인
-- JWT 발급
-- JWT 재발급
-- Redis에는 Refresh Token 원문 대신 JWT ID(`jti`)를 TTL과 함께 저장
-- 재발급 시 Lua Script로 기존 `jti` 비교와 새 `jti` 교체를 원자적으로 수행
-- 인증 사용자 식별
 
 ### 3. Place
 
 장소, 위치, 검색 기록과 북마크 관련 기능을 담당합니다.
 
-- 장소 정보 관리
-- 외부 API를 이용한 장소 검색 및 검색 장소 확정
-- 지도 선택 위치의 장소 확정 및 위치 메타데이터 관리
-- 사용자 검색 기록 및 장소 북마크 관리
-
 ### 4. Track
 
 음악과 장소별 곡 관련 기능을 담당합니다.
-
-- 음악 검색 및 트랙 메타데이터 관리
-- 구간 재생 준비
-- 장소별 곡 조회 및 관리
-- 장소별 곡 좋아요 관리
 
 ### 5. Pin
 
 PLIMAP의 PIN 핵심 도메인을 담당합니다.
 
-- PIN 생성, 수정, 삭제
-- PIN 상세·목록·피드 조회
-- PIN 태그 및 좋아요 관리
-- 지도 선택 위치의 PIN 등록 가능 여부 검증
-
 ### 6. Report
 
 회원과 공개 PIN의 신고 접수를 담당합니다.
 
-- 회원 신고 접수
-- 공개 PIN 신고 접수
+### 7. Inquiry
 
-### 7. Notification
+회원의 문의 접수를 담당합니다.
+
+### 8. Notification
 
 회원 활동으로 발생하는 알림의 저장, 조회 및 실시간 전달을 담당합니다.
 
-- 팔로우, PIN 등록, PIN 좋아요 알림 생성
-- SSE 구독 및 heartbeat를 통한 실시간 알림 전달
+### 9. Admin
+
+관리자 페이지 관련 API를 담당합니다.
 
 ## Domain Event and Notification
 
@@ -179,20 +152,6 @@ Member/Pin Command Service
     → Notification 저장
     → SSE 실시간 전송
 ```
-
-### 7. Admin
-
-관리자 전용 기능을 담당합니다. `Member.role`이 `ADMIN`인 계정만 `/api/v1/admin/**` 경로에 접근할 수 있습니다(`SecurityConfig`의 `hasAuthority("ADMIN")`).
-
-- 관리자 로그인 게이트(현재 로그인한 계정의 관리자 권한 확인)
-- 향후 회원 벌점·정지 처리, 신고 누적 게시물 조회 등 관리자 전용 기능 추가 예정
-
-### 8. Inquiry
-
-로그인 여부와 무관한 1:1 문의 접수를 담당합니다. `POST /api/v1/inquiries`는 `SecurityConfig`에서 `permitAll()`로 등록되어 있어 비로그인 사용자도 접근할 수 있고, `MemberStatusInterceptor`의 예외 목록에도 포함되어 정지·탈퇴 회원도 이용할 수 있습니다.
-
-- 문의 등록(카테고리·제목·내용·답변받을 이메일). 로그인 상태면 작성자(`member`)가 자동으로 연결되고, 비로그인·탈퇴 상태면 연결되지 않습니다.
-- 관리자 문의 목록/상세 조회는 `admin` 도메인의 `AdminController`가 `InquiryQueryService`를 조합해 제공합니다.
 
 ## Partial CQRS
 

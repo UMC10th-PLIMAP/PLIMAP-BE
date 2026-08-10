@@ -275,9 +275,11 @@ $corsOrigins = Get-AllowedOrigins `
 if ([string]::IsNullOrWhiteSpace($OAuthAllowedFrontendOrigins)) {
     $OAuthAllowedFrontendOrigins = "$publicOrigin,https://admin.plimap.kr,http://localhost:5173"
 }
+$OAuthAllowedFrontendOrigins = "$OAuthAllowedFrontendOrigins,https://pr-*.plimap.kr"
 $oauthFrontendOrigins = Get-AllowedOrigins `
     -Name "OAuthAllowedFrontendOrigins" `
     -Value $OAuthAllowedFrontendOrigins `
+    -AllowPreviewPattern `
     -RequiredOrigin $publicOrigin
 
 foreach ($entry in $secretMap.GetEnumerator()) {
