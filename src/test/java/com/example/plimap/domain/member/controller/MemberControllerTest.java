@@ -515,6 +515,50 @@ class MemberControllerTest {
     }
 
     @Test
+    void 회원_검색시_pageSize가_int_최댓값이면_400을_반환한다() throws Exception {
+        // CodeRabbit 리뷰 검증용: MemberControllerDocs에만 있는 @Max(50)이 구현 메서드에도
+        // 실제로 적용되는지(Spring이 인터페이스 파라미터 애노테이션을 인식하는지) 확인한다.
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "2147483647")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 회원_검색시_pageSize가_0이면_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "0")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 회원_검색시_pageSize가_음수면_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "-1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 회원_검색시_pageSize가_50이면_허용된다() throws Exception {
+        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+                .data(List.of())
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(50)
+                .build();
+        when(memberQueryService.searchActiveMembers(eq(AUTH_MEMBER_ID), eq(""), isNull(), eq(50))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "50")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        verify(memberQueryService).searchActiveMembers(AUTH_MEMBER_ID, "", null, 50);
+    }
+
+    @Test
     void 회원_검색시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
         String cursor = "0/2/0/2026-01-01T00:00:00Z/3";
         Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
