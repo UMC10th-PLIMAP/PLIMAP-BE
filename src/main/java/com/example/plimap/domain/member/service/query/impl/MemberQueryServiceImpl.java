@@ -14,6 +14,7 @@ import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.domain.member.repository.query.MemberSearchRow;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
@@ -180,6 +181,17 @@ public class MemberQueryServiceImpl implements MemberQueryService {
 
         List<MemberResDTO.FollowingItem> data = rows.data().stream()
                 .map(row -> MemberConverter.toFollowingItem(row, profileImageStorage.getPublicUrlOrNull(row.profileImageObjectKey())))
+                .toList();
+
+        return MemberConverter.toPagination(data, rows.nextCursor(), rows.hasNext(), rows.pageSize());
+    }
+
+    @Override
+    public Pagination<MemberResDTO.SearchItem> searchActiveMembers(Long viewerId, String keyword, String cursor, Integer pageSize) {
+        Pagination<MemberSearchRow> rows = memberQueryRepository.searchActiveMembers(viewerId, keyword, cursor, pageSize);
+
+        List<MemberResDTO.SearchItem> data = rows.data().stream()
+                .map(row -> MemberConverter.toSearchItem(row, profileImageStorage.getPublicUrlOrNull(row.profileImageObjectKey())))
                 .toList();
 
         return MemberConverter.toPagination(data, rows.nextCursor(), rows.hasNext(), rows.pageSize());

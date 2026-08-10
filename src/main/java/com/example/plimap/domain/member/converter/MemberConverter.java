@@ -8,6 +8,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
+import com.example.plimap.domain.member.repository.query.MemberSearchRow;
 
 import java.net.URI;
 import java.util.List;
@@ -91,7 +92,8 @@ public class MemberConverter {
                 row.name(),
                 profileImageUrl,
                 row.followedAt(),
-                row.isFollowing()
+                row.isFollowing(),
+                row.isFollowingViewer()
         );
     }
 
@@ -102,7 +104,20 @@ public class MemberConverter {
                 row.name(),
                 profileImageUrl,
                 row.followedAt(),
-                row.isFollowing()
+                row.isFollowing(),
+                row.isFollowingViewer()
+        );
+    }
+
+    public static MemberResDTO.SearchItem toSearchItem(MemberSearchRow row, String profileImageUrl) {
+        return new MemberResDTO.SearchItem(
+                row.id(),
+                row.nickname(),
+                row.name(),
+                profileImageUrl,
+                row.isFollowing(),
+                row.isFollowingViewer(),
+                row.createdAt()
         );
     }
 

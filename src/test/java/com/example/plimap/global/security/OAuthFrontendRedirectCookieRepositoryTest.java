@@ -18,7 +18,7 @@ class OAuthFrontendRedirectCookieRepositoryTest {
     private final AuthCookieUtil authCookieUtil = new AuthCookieUtil();
     private final OAuthProperties oAuthProperties = new OAuthProperties(
             "https://dev.plimap.kr/home",
-            List.of("https://dev.plimap.kr", "http://localhost:5173")
+            List.of("https://dev.plimap.kr", "http://localhost:5173", "https://pr-*.plimap.kr")
     );
     private final OAuthFrontendRedirectCookieRepository repository =
             new OAuthFrontendRedirectCookieRepository(authCookieUtil, oAuthProperties);
@@ -116,6 +116,25 @@ class OAuthFrontendRedirectCookieRepositoryTest {
                 callbackRequest,
                 new MockHttpServletResponse()
         )).isEqualTo("https://dev.plimap.kr/home");
+    }
+
+    @Test
+    void Preview_Origin을_로그인_완료_URI로_변환한다() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter(
+                OAuthFrontendRedirectCookieRepository.PARAMETER_NAME,
+                "https://pr-123.plimap.kr"
+        );
+        MockHttpServletResponse saveResponse = new MockHttpServletResponse();
+        repository.saveRequestedOrigin(request, saveResponse, "test-state");
+
+        MockHttpServletRequest callbackRequest = requestWithCookie(saveResponse);
+        callbackRequest.addParameter("state", "test-state");
+
+        assertThat(repository.consumeRedirectUri(
+                callbackRequest,
+                new MockHttpServletResponse()
+        )).isEqualTo("https://pr-123.plimap.kr/home");
     }
 
     private MockHttpServletRequest requestWithCookie(MockHttpServletResponse response) {

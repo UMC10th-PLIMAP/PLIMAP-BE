@@ -16,7 +16,7 @@ class OAuthFrontendOriginFilterTest {
     private final AuthCookieUtil authCookieUtil = new AuthCookieUtil();
     private final OAuthProperties oAuthProperties = new OAuthProperties(
             "https://dev.plimap.kr/home",
-            List.of("https://dev.plimap.kr", "http://localhost:5173")
+            List.of("https://dev.plimap.kr", "http://localhost:5173", "https://pr-*.plimap.kr")
     );
     private final OAuthFrontendRedirectCookieRepository repository =
             new OAuthFrontendRedirectCookieRepository(authCookieUtil, oAuthProperties);
@@ -131,6 +131,18 @@ class OAuthFrontendOriginFilterTest {
 
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(filterChain.getRequest()).isNull();
+    }
+
+    @Test
+    void 허용된_Preview_Origin이면_OAuth_인가_요청을_계속_처리한다() throws Exception {
+        MockHttpServletRequest request = authorizationRequest("https://pr-123.plimap.kr");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain filterChain = new MockFilterChain();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(filterChain.getRequest()).isNotNull();
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
     private MockHttpServletRequest authorizationRequest(String frontendOrigin) {

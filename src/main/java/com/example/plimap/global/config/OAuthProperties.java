@@ -3,6 +3,7 @@ package com.example.plimap.global.config;
 import java.net.URI;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -12,6 +13,13 @@ public record OAuthProperties(
         List<String> allowedFrontendOrigins
 ) {
 
+    static final String PREVIEW_ORIGIN_PATTERN = CorsProperties.PREVIEW_ORIGIN_PATTERN;
+    private static final String INVALID_WILDCARD_MESSAGE =
+            "OAuth 허용 Origin에는 " + PREVIEW_ORIGIN_PATTERN + " 패턴 외 와일드카드를 사용할 수 없습니다.";
+    private static final Pattern PREVIEW_ORIGIN = Pattern.compile(
+            "^https://pr-[^.]+\\.plimap\\.kr$"
+    );
+
     public OAuthProperties {
         redirectUri = normalizeRedirectUri(redirectUri);
         String defaultFrontendOrigin = extractOrigin(redirectUri);
@@ -19,7 +27,7 @@ public record OAuthProperties(
         allowedFrontendOrigins = allowedFrontendOrigins == null
                 ? List.of(defaultFrontendOrigin)
                 : allowedFrontendOrigins.stream()
-                        .map(OAuthProperties::normalizeOrigin)
+                        .map(OAuthProperties::normalizeAllowedOrigin)
                         .distinct()
                         .toList();
 
@@ -39,7 +47,8 @@ public record OAuthProperties(
 
     public String requireAllowedFrontendOrigin(String origin) {
         String normalizedOrigin = normalizeOrigin(origin);
-        if (!allowedFrontendOrigins.contains(normalizedOrigin)) {
+        if (allowedFrontendOrigins.stream()
+                .noneMatch(allowedOrigin -> matchesAllowedOrigin(allowedOrigin, normalizedOrigin))) {
             throw new IllegalArgumentException("허용되지 않은 OAuth 프론트 Origin입니다.");
         }
         return normalizedOrigin;
@@ -99,6 +108,23 @@ public record OAuthProperties(
         String formattedHost = host.contains(":") ? "[" + host + "]" : host;
 
         return scheme + "://" + formattedHost + (isDefaultPort ? "" : ":" + port);
+    }
+
+    private static String normalizeAllowedOrigin(String value) {
+        String trimmed = value == null ? null : value.trim();
+        if (PREVIEW_ORIGIN_PATTERN.equals(trimmed)) {
+            return PREVIEW_ORIGIN_PATTERN;
+        }
+        if (trimmed != null && trimmed.contains("*")) {
+            throw new IllegalArgumentException(INVALID_WILDCARD_MESSAGE);
+        }
+        return normalizeOrigin(trimmed);
+    }
+
+    private static boolean matchesAllowedOrigin(String allowedOrigin, String requestedOrigin) {
+        return PREVIEW_ORIGIN_PATTERN.equals(allowedOrigin)
+                ? PREVIEW_ORIGIN.matcher(requestedOrigin).matches()
+                : allowedOrigin.equals(requestedOrigin);
     }
 
     private static String normalizeRedirectUri(String value) {

@@ -22,7 +22,8 @@ public enum MemberSuccessCode implements BaseSuccessCode {
     FOLLOWING_FETCHED(HttpStatus.OK, "MEMBER_200_FOLLOWING_FETCHED", "팔로잉 목록을 조회했습니다."),
     PROFILE_IMAGE_UPLOADED(HttpStatus.OK, "MEMBER_200_PROFILE_IMAGE_UPLOADED", "프로필 이미지가 업로드되었습니다."),
     PROFILE_IMAGE_REMOVED(HttpStatus.OK, "MEMBER_200_PROFILE_IMAGE_REMOVED", "프로필 이미지가 제거되었습니다."),
-    WITHDRAWN(HttpStatus.OK, "MEMBER_200_WITHDRAWN", "회원 탈퇴가 완료되었습니다.");
+    WITHDRAWN(HttpStatus.OK, "MEMBER_200_WITHDRAWN", "회원 탈퇴가 완료되었습니다."),
+    MEMBERS_SEARCHED(HttpStatus.OK, "MEMBER_200_MEMBERS_SEARCHED", "회원 검색 결과를 조회했습니다.");
 
     private final HttpStatus status;
     private final String code;

@@ -1,6 +1,7 @@
 package com.example.plimap.domain.member.dto.response;
 
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -72,7 +73,8 @@ public class MemberResDTO {
             String name,
             String profileImageUrl,
             Instant followedAt,
-            boolean isFollowing
+            boolean isFollowing,
+            boolean isFollowingViewer
     ) {
     }
 
@@ -82,7 +84,20 @@ public class MemberResDTO {
             String name,
             String profileImageUrl,
             Instant followedAt,
-            boolean isFollowing
+            boolean isFollowing,
+            boolean isFollowingViewer
+    ) {
+    }
+
+    @Schema(name = "MemberSearchItem")
+    public record SearchItem(
+            Long id,
+            String nickname,
+            String name,
+            String profileImageUrl,
+            boolean isFollowing,
+            boolean isFollowingViewer,
+            Instant joinedAt
     ) {
     }
 

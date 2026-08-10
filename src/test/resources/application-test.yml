@@ -21,7 +21,7 @@ jwt:
 
 oauth:
   redirect-uri: "http://localhost:5173/home"
-  allowed-frontend-origins: http://localhost:5173,https://dev.plimap.kr
+  allowed-frontend-origins: http://localhost:5173,https://dev.plimap.kr,https://pr-*.plimap.kr
 
 cookie:
   secure: false
@@ -29,7 +29,7 @@ cookie:
 
 plimap:
   cors:
-    allowed-origins: http://localhost:5173,https://dev.plimap.kr,https://pr-*.plimap.kr
+    allowed-origins: http://localhost:5173,https://dev.plimap.kr,https://pr-*.plimap.kr,http://192.168.*:[*],https://192.168.*:[*]
 
 kakao:
   local:

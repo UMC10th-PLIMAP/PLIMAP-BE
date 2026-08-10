@@ -115,7 +115,14 @@ public interface MemberControllerDocs {
 
                     커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
 
-                    각 항목의 isFollowing은 목록 대상(memberId)이 아니라 로그인한 나(요청자)를 기준으로, 내가 그 사람을 팔로우하고 있는지를 나타냅니다. 즉 맞팔 여부를 판단할 때 씁니다.
+                    각 항목은 목록 대상(memberId)이 아니라 로그인한 나(요청자, 뷰어) 기준의 양방향 팔로우 정보를 담습니다. memberId 본인의 목록을 조회하는 경우가 아니라면(제3자가 다른 회원의 목록을 조회하는 경우) 두 값 모두 의미가 있습니다.
+                    - isFollowing: 내가 이 사람을 팔로우하고 있는지
+                    - isFollowingViewer: 이 사람이 나를 팔로우하고 있는지
+
+                    클라이언트에서 버튼 상태를 표시할 때는 다음 우선순위로 판단합니다.
+                    - isFollowing=true: "팔로잉" (이미 내가 팔로우 중)
+                    - isFollowing=false, isFollowingViewer=true: "맞팔로우" (상대가 나를 팔로우 중이므로 팔로우하면 맞팔이 됨)
+                    - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
     ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
@@ -134,12 +141,47 @@ public interface MemberControllerDocs {
 
                     커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
 
-                    각 항목의 isFollowing은 로그인한 나(요청자)를 기준으로, 내가 그 사람을 팔로우하고 있는지를 나타냅니다. memberId 본인의 팔로잉 목록을 조회하는 경우 항상 true입니다.
+                    각 항목은 목록 대상(memberId)이 아니라 로그인한 나(요청자, 뷰어) 기준의 양방향 팔로우 정보를 담습니다. memberId 본인의 목록을 조회하는 경우가 아니라면(제3자가 다른 회원의 목록을 조회하는 경우) 두 값 모두 의미가 있습니다.
+                    - isFollowing: 내가 이 사람을 팔로우하고 있는지 (memberId 본인의 팔로잉 목록을 조회하는 경우 항상 true입니다)
+                    - isFollowingViewer: 이 사람이 나를 팔로우하고 있는지
+
+                    클라이언트에서 버튼 상태를 표시할 때는 다음 우선순위로 판단합니다.
+                    - isFollowing=true: "팔로잉" (이미 내가 팔로우 중)
+                    - isFollowing=false, isFollowingViewer=true: "맞팔로우" (상대가 나를 팔로우 중이므로 팔로우하면 맞팔이 됨)
+                    - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
     ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(
             AuthMember authMember,
             Long memberId,
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+            Integer pageSize,
+            String cursor
+    );
+
+    @Operation(
+            summary = "친구 찾기 검색",
+            description = """
+                    닉네임 또는 이름에 keyword가 포함된 활성 회원을 검색합니다. 검색 결과는 다음 우선순위로 정렬됩니다.
+
+                    1. 팔로우 여부(1순위): 내(요청자)가 아직 팔로우하지 않은 회원이 이미 팔로우 중인 회원(맞팔 포함)보다 항상 위에 노출됩니다.
+                    2. 닉네임 일치도(2순위): 닉네임이 keyword로 시작하면 가장 높은 우선순위, keyword를 포함만 하면 그다음, 둘 다 아니면 가장 낮은 우선순위입니다. 닉네임 일치도는 이름 일치도보다 항상 먼저 비교됩니다(닉네임 점수가 둘 다 0이어도 마찬가지입니다).
+                    3. 이름 일치도(3순위, 닉네임 일치도가 같을 때만 비교): 닉네임과 동일한 기준(시작 > 포함 > 불일치)으로 비교합니다. 이름이 없는 회원은 이름 불일치와 동일하게 취급되어, 이름이 없다는 이유만으로 이름이 있는 회원보다 밀리지 않습니다.
+                    4. 그 외에는 가입일 최신순으로 정렬하며, 가입일까지 같으면 회원 ID 내림차순으로 정렬합니다.
+
+                    keyword를 비우거나 공백만 입력하면 닉네임/이름 일치 여부를 따지지 않고 전체 활성 회원 목록을 위 1·4번 기준으로만 정렬해 반환합니다. keyword를 입력했는데 닉네임과 이름 모두 일치하지 않는 회원은 결과에서 제외됩니다.
+
+                    로그인한 나(요청자) 자신은 검색 결과에서 제외됩니다. 정지/탈퇴 회원, 신고 누적 회원, 내가 신고한 회원도 제외됩니다.
+
+                    커서 기반 페이지네이션을 사용합니다. 첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~50 사이여야 하며 기본값은 10입니다.
+
+                    isFollowing은 내가 이 회원을 팔로우하고 있는지, isFollowingViewer는 이 회원이 나를 팔로우하고 있는지를 나타냅니다.
+                    """
+    )
+    ApiResponse<Pagination<MemberResDTO.SearchItem>> searchMembers(
+            AuthMember authMember,
+            String keyword,
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
             @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
             Integer pageSize,

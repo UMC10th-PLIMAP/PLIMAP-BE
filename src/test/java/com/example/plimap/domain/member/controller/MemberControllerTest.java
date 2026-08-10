@@ -252,7 +252,7 @@ class MemberControllerTest {
     @Test
     void 팔로워_목록_조회에_성공하면_200과_FOLLOWERS_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(
-                3L, "팔로워", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true);
+                3L, "팔로워", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true, false);
         Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
                 .data(List.of(follower))
                 .nextCursor(null)
@@ -268,6 +268,7 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("MEMBER_200_FOLLOWERS_FETCHED"))
                 .andExpect(jsonPath("$.result.data[0].nickname").value("팔로워"))
                 .andExpect(jsonPath("$.result.data[0].isFollowing").value(true))
+                .andExpect(jsonPath("$.result.data[0].isFollowingViewer").value(false))
                 .andExpect(jsonPath("$.result.hasNext").value(false));
     }
 
@@ -360,7 +361,7 @@ class MemberControllerTest {
     @Test
     void 팔로잉_목록_조회에_성공하면_200과_FOLLOWING_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(
-                3L, "팔로잉", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true);
+                3L, "팔로잉", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true, false);
         Pagination<MemberResDTO.FollowingItem> page = Pagination.<MemberResDTO.FollowingItem>builder()
                 .data(List.of(following))
                 .nextCursor(null)
@@ -376,6 +377,7 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("MEMBER_200_FOLLOWING_FETCHED"))
                 .andExpect(jsonPath("$.result.data[0].nickname").value("팔로잉"))
                 .andExpect(jsonPath("$.result.data[0].isFollowing").value(true))
+                .andExpect(jsonPath("$.result.data[0].isFollowingViewer").value(false))
                 .andExpect(jsonPath("$.result.hasNext").value(false));
     }
 
@@ -458,6 +460,130 @@ class MemberControllerTest {
                 .thenThrow(new MemberException(MemberErrorCode.INVALID_CURSOR));
 
         mockMvc.perform(get("/api/v1/members/{memberId}/following", TARGET_MEMBER_ID)
+                        .param("cursor", "invalid-cursor")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_CURSOR"));
+    }
+
+    @Test
+    void 회원_검색에_성공하면_200과_MEMBERS_SEARCHED_응답을_반환한다() throws Exception {
+        MemberResDTO.SearchItem item = new MemberResDTO.SearchItem(
+                3L, "검색결과", "이름", "key", false, false, Instant.parse("2026-01-01T00:00:00Z"));
+        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+                .data(List.of(item))
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(10)
+                .build();
+        when(memberQueryService.searchActiveMembers(eq(AUTH_MEMBER_ID), eq("키워드"), isNull(), eq(10))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("keyword", "키워드")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("MEMBER_200_MEMBERS_SEARCHED"))
+                .andExpect(jsonPath("$.result.data[0].nickname").value("검색결과"))
+                .andExpect(jsonPath("$.result.hasNext").value(false));
+    }
+
+    @Test
+    void 회원_검색시_keyword가_없어도_기본값으로_동작한다() throws Exception {
+        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+                .data(List.of())
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(10)
+                .build();
+        when(memberQueryService.searchActiveMembers(eq(AUTH_MEMBER_ID), eq(""), isNull(), eq(10))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        verify(memberQueryService).searchActiveMembers(AUTH_MEMBER_ID, "", null, 10);
+    }
+
+    @Test
+    void 회원_검색시_pageSize가_50을_초과하면_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "51")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 회원_검색시_pageSize가_int_최댓값이면_400을_반환한다() throws Exception {
+        // CodeRabbit 리뷰 검증용: MemberControllerDocs에만 있는 @Max(50)이 구현 메서드에도
+        // 실제로 적용되는지(Spring이 인터페이스 파라미터 애노테이션을 인식하는지) 확인한다.
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "2147483647")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 회원_검색시_pageSize가_0이면_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "0")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 회원_검색시_pageSize가_음수면_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "-1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 회원_검색시_pageSize가_50이면_허용된다() throws Exception {
+        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+                .data(List.of())
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(50)
+                .build();
+        when(memberQueryService.searchActiveMembers(eq(AUTH_MEMBER_ID), eq(""), isNull(), eq(50))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("pageSize", "50")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        verify(memberQueryService).searchActiveMembers(AUTH_MEMBER_ID, "", null, 50);
+    }
+
+    @Test
+    void 회원_검색시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
+        String cursor = "0/2/0/2026-01-01T00:00:00Z/3";
+        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+                .data(List.of())
+                .nextCursor(null)
+                .hasNext(false)
+                .pageSize(10)
+                .build();
+        when(memberQueryService.searchActiveMembers(AUTH_MEMBER_ID, "키워드", cursor, 10)).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/members/search")
+                        .param("keyword", "키워드")
+                        .param("cursor", cursor)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk());
+
+        verify(memberQueryService).searchActiveMembers(AUTH_MEMBER_ID, "키워드", cursor, 10);
+    }
+
+    @Test
+    void 회원_검색시_잘못된_커서면_400을_반환한다() throws Exception {
+        when(memberQueryService.searchActiveMembers(eq(AUTH_MEMBER_ID), eq(""), eq("invalid-cursor"), eq(10)))
+                .thenThrow(new MemberException(MemberErrorCode.INVALID_CURSOR));
+
+        mockMvc.perform(get("/api/v1/members/search")
                         .param("cursor", "invalid-cursor")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isBadRequest())
