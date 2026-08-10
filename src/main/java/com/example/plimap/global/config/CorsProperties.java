@@ -1,6 +1,7 @@
 package com.example.plimap.global.config;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -8,6 +9,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record CorsProperties(List<String> allowedOrigins) {
 
     static final String PREVIEW_ORIGIN_PATTERN = "https://pr-*.plimap.kr";
+    static final Pattern PREVIEW_ORIGIN = Pattern.compile(
+            "^https://pr-[^.]+\\.plimap\\.kr$",
+            Pattern.CASE_INSENSITIVE
+    );
     static final String PRIVATE_NETWORK_HTTP_ORIGIN_PATTERN = "http://192.168.*:[*]";
     static final String PRIVATE_NETWORK_HTTPS_ORIGIN_PATTERN = "https://192.168.*:[*]";
     static final String INVALID_WILDCARD_MESSAGE =

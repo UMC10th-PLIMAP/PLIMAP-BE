@@ -44,13 +44,20 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        List<String> allowedOrigins = corsProperties.allowedOrigins();
+        Set<String> exactAllowedOrigins = allowedOrigins.stream()
+                .filter(origin -> !origin.contains("*"))
+                .map(origin -> origin.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toUnmodifiableSet());
         CorsConfiguration configuration = new PrivateNetworkAwareCorsConfiguration(
-                corsProperties.allowedOrigins().stream()
+                allowedOrigins.stream()
                         .map(CorsProperties::privateNetworkOriginScheme)
                         .filter(Objects::nonNull)
-                        .collect(Collectors.toUnmodifiableSet())
+                        .collect(Collectors.toUnmodifiableSet()),
+                exactAllowedOrigins,
+                allowedOrigins.contains(CorsProperties.PREVIEW_ORIGIN_PATTERN)
         );
-        configuration.setAllowedOriginPatterns(corsProperties.allowedOrigins());
+        configuration.setAllowedOriginPatterns(allowedOrigins);
         configuration.setAllowedMethods(List.of(ALLOWED_METHODS));
         configuration.setAllowedHeaders(List.of(ALLOWED_HEADERS));
         configuration.setAllowCredentials(true);
@@ -68,9 +75,17 @@ public class CorsConfig implements WebMvcConfigurer {
     private static final class PrivateNetworkAwareCorsConfiguration extends CorsConfiguration {
 
         private final Set<String> allowedPrivateNetworkSchemes;
+        private final Set<String> exactAllowedOrigins;
+        private final boolean previewOriginAllowed;
 
-        private PrivateNetworkAwareCorsConfiguration(Set<String> allowedPrivateNetworkSchemes) {
+        private PrivateNetworkAwareCorsConfiguration(
+                Set<String> allowedPrivateNetworkSchemes,
+                Set<String> exactAllowedOrigins,
+                boolean previewOriginAllowed
+        ) {
             this.allowedPrivateNetworkSchemes = allowedPrivateNetworkSchemes;
+            this.exactAllowedOrigins = exactAllowedOrigins;
+            this.previewOriginAllowed = previewOriginAllowed;
         }
 
         @Override
@@ -83,6 +98,14 @@ public class CorsConfig implements WebMvcConfigurer {
                                 ? requestOrigin
                                 : null;
                     }
+                }
+                if (previewOriginAllowed && normalizedOrigin.startsWith("https://pr-")) {
+                    if (exactAllowedOrigins.contains(normalizedOrigin)) {
+                        return requestOrigin;
+                    }
+                    return CorsProperties.PREVIEW_ORIGIN.matcher(requestOrigin).matches()
+                            ? requestOrigin
+                            : null;
                 }
             }
             return super.checkOrigin(requestOrigin);

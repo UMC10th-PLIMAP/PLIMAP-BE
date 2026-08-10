@@ -12,9 +12,9 @@
 | --- | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | 스크립트 고정값 | `dev` |
 | `PUBLIC_BASE_URL` | `PublicBaseUrl` | `https://dev.plimap.kr` |
-| `CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | `https://dev.plimap.kr,http://localhost:5173,http://192.168.*:[*],https://192.168.*:[*],https://pr-*.plimap.kr` |
+| `CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | `https://dev.plimap.kr,https://admin.plimap.kr,http://localhost:5173,http://192.168.*:[*],https://192.168.*:[*],https://pr-*.plimap.kr` |
 | `OAUTH_REDIRECT_URI` | 기본 `FrontendRedirectUri` 또는 `PublicBaseUrl` + `/app/oauth/callback` | `https://dev.plimap.kr/app/oauth/callback` |
-| `OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | `https://dev.plimap.kr,http://localhost:5173,https://pr-*.plimap.kr` |
+| `OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | `https://dev.plimap.kr,https://admin.plimap.kr,http://localhost:5173,https://pr-*.plimap.kr` |
 | `KAKAO_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/kakao` |
 | `GOOGLE_REDIRECT_URI` | `PublicBaseUrl` + callback 경로 | `https://dev.plimap.kr/oauth/callback/google` |
 | `PROFILE_IMAGE_STORAGE_PROVIDER` | 스크립트 고정값 | `supabase` |
