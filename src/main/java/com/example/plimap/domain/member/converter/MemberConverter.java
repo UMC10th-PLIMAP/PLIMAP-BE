@@ -8,6 +8,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
+import com.example.plimap.domain.member.repository.query.MemberSearchRow;
 
 import java.net.URI;
 import java.util.List;
@@ -66,7 +67,7 @@ public class MemberConverter {
         );
     }
 
-    public static MemberResDTO.OtherProfile toOtherProfile(Member member, String profileImageUrl, long followerCount, long followingCount, boolean isFollowing, long pinCount) {
+    public static MemberResDTO.OtherProfile toOtherProfile(Member member, String profileImageUrl, long followerCount, long followingCount, boolean isFollowing, boolean isFollowingViewer, long pinCount) {
         return new MemberResDTO.OtherProfile(
                 member.getId(),
                 member.getNickname(),
@@ -76,6 +77,7 @@ public class MemberConverter {
                 followerCount,
                 followingCount,
                 isFollowing,
+                isFollowingViewer,
                 pinCount
         );
     }
@@ -91,7 +93,8 @@ public class MemberConverter {
                 row.name(),
                 profileImageUrl,
                 row.followedAt(),
-                row.isFollowing()
+                row.isFollowing(),
+                row.isFollowingViewer()
         );
     }
 
@@ -102,7 +105,20 @@ public class MemberConverter {
                 row.name(),
                 profileImageUrl,
                 row.followedAt(),
-                row.isFollowing()
+                row.isFollowing(),
+                row.isFollowingViewer()
+        );
+    }
+
+    public static MemberResDTO.SearchItem toSearchItem(MemberSearchRow row, String profileImageUrl) {
+        return new MemberResDTO.SearchItem(
+                row.id(),
+                row.nickname(),
+                row.name(),
+                profileImageUrl,
+                row.isFollowing(),
+                row.isFollowingViewer(),
+                row.createdAt()
         );
     }
 

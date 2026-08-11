@@ -16,11 +16,14 @@
 
 - [ ] `auth`
 - [ ] `member`
+- [ ] `home`
 - [ ] `place`
 - [ ] `track`
 - [ ] `pin`
 - [ ] `report`
 - [ ] `notification`
+- [ ] `admin`
+- [ ] `inquiry`
 - [ ] `infra`
 - [ ] `db`
 - [ ] `common`
@@ -28,6 +31,7 @@
 ## 관련 이슈
 
 <!-- PR 병합 시 이슈가 자동으로 닫히도록 키워드와 이슈 번호를 작성해 주세요. 예: Closes #123 -->
+<!-- 단, develop -> main의 [Release] PR은 관련 이슈 연결을 생략할 수 있습니다. -->
 
 - Closes #
 

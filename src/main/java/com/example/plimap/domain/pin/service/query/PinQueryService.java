@@ -39,7 +39,7 @@ public interface PinQueryService {
 
     boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
 
-    PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request);
+    PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request, Long memberId);
 
     Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize);
 
@@ -53,4 +53,5 @@ public interface PinQueryService {
 
     Page<ReportedPinInfo> findReportedPins(PinReportFilter filter, Pageable pageable);
 
+    boolean hasValidFeedToken(String token, Long memberId, Long placeId);
 }

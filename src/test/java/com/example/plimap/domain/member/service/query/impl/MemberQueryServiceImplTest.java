@@ -12,6 +12,7 @@ import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
+import com.example.plimap.domain.member.repository.query.MemberSearchRow;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import org.junit.jupiter.api.Test;
@@ -367,6 +368,58 @@ class MemberQueryServiceImplTest {
     }
 
     @Test
+    void 상대가_나를_팔로우_중이면_isFollowingViewer가_true다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
+                .thenReturn(Optional.of(member));
+        when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
+        when(memberFollowRepository.existsById(new MemberFollowId(2L, 1L))).thenReturn(true);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.isFollowing()).isFalse();
+        assertThat(result.isFollowingViewer()).isTrue();
+    }
+
+    @Test
+    void 상대가_나를_팔로우_중이_아니면_isFollowingViewer가_false다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
+                .thenReturn(Optional.of(member));
+        when(memberFollowRepository.existsById(new MemberFollowId(2L, 1L))).thenReturn(false);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.isFollowingViewer()).isFalse();
+    }
+
+    @Test
+    void 맞팔로우_상태면_isFollowing과_isFollowingViewer가_모두_true다() {
+        // given
+        Member member = Member.builder().nickname("상대방").build();
+        ReflectionTestUtils.setField(member, "id", 2L);
+        when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
+                .thenReturn(Optional.of(member));
+        when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(true);
+        when(memberFollowRepository.existsById(new MemberFollowId(2L, 1L))).thenReturn(true);
+
+        // when
+        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+
+        // then
+        assertThat(result.isFollowing()).isTrue();
+        assertThat(result.isFollowingViewer()).isTrue();
+    }
+
+    @Test
     void 존재하지_않거나_탈퇴한_회원의_프로필은_조회할_수_없다() {
         // given
         when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
@@ -398,7 +451,7 @@ class MemberQueryServiceImplTest {
                 .thenReturn(Optional.of(member));
 
         Instant followedAt = Instant.now();
-        MemberFollowRow row = new MemberFollowRow(2L, "팔로워", "이름", "key", followedAt, true);
+        MemberFollowRow row = new MemberFollowRow(2L, "팔로워", "이름", "key", followedAt, true, true);
         Pagination<MemberFollowRow> page =
                 Pagination.<MemberFollowRow>builder()
                         .data(List.of(row))
@@ -414,7 +467,7 @@ class MemberQueryServiceImplTest {
 
         // then
         assertThat(result.data()).containsExactly(
-                new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "https://example.com/key", followedAt, true));
+                new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "https://example.com/key", followedAt, true, true));
         assertThat(result.hasNext()).isFalse();
     }
 
@@ -441,7 +494,7 @@ class MemberQueryServiceImplTest {
                 .thenReturn(Optional.of(member));
 
         Instant followedAt = Instant.now();
-        MemberFollowRow row = new MemberFollowRow(2L, "팔로잉", "이름", "key", followedAt, true);
+        MemberFollowRow row = new MemberFollowRow(2L, "팔로잉", "이름", "key", followedAt, true, true);
         Pagination<MemberFollowRow> page =
                 Pagination.<MemberFollowRow>builder()
                         .data(List.of(row))
@@ -457,7 +510,7 @@ class MemberQueryServiceImplTest {
 
         // then
         assertThat(result.data()).containsExactly(
-                new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "https://example.com/key", followedAt, true));
+                new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "https://example.com/key", followedAt, true, true));
         assertThat(result.hasNext()).isFalse();
     }
 
@@ -473,5 +526,50 @@ class MemberQueryServiceImplTest {
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
 
         verify(memberQueryRepository, never()).findFollowingByMemberId(any(), any(), any(), any());
+    }
+
+    @Test
+    void 회원을_검색하면_레포지토리_결과를_DTO로_변환한다() {
+        // given
+        Instant createdAt = Instant.now();
+        MemberSearchRow row = new MemberSearchRow(2L, "닉네임", "이름", "key", createdAt, true, false, 2, 0);
+        Pagination<MemberSearchRow> page =
+                Pagination.<MemberSearchRow>builder()
+                        .data(List.of(row))
+                        .nextCursor("next-cursor")
+                        .hasNext(true)
+                        .pageSize(10)
+                        .build();
+        when(memberQueryRepository.searchActiveMembers(99L, "키워드", null, 10)).thenReturn(page);
+        when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
+
+        // when
+        Pagination<MemberResDTO.SearchItem> result = memberQueryService.searchActiveMembers(99L, "키워드", null, 10);
+
+        // then
+        assertThat(result.data()).containsExactly(
+                new MemberResDTO.SearchItem(2L, "닉네임", "이름", "https://example.com/key", true, false, createdAt));
+        assertThat(result.nextCursor()).isEqualTo("next-cursor");
+        assertThat(result.hasNext()).isTrue();
+    }
+
+    @Test
+    void 검색_결과가_없으면_빈_페이지를_반환한다() {
+        // given
+        Pagination<MemberSearchRow> emptyPage =
+                Pagination.<MemberSearchRow>builder()
+                        .data(List.of())
+                        .nextCursor(null)
+                        .hasNext(false)
+                        .pageSize(10)
+                        .build();
+        when(memberQueryRepository.searchActiveMembers(99L, "키워드", null, 10)).thenReturn(emptyPage);
+
+        // when
+        Pagination<MemberResDTO.SearchItem> result = memberQueryService.searchActiveMembers(99L, "키워드", null, 10);
+
+        // then
+        assertThat(result.data()).isEmpty();
+        assertThat(result.hasNext()).isFalse();
     }
 }

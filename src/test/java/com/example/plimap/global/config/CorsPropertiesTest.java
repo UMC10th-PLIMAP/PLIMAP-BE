@@ -16,13 +16,17 @@ class CorsPropertiesTest {
                 "",
                 "  ",
                 "https://dev.plimap.kr",
-                "https://pr-*.plimap.kr"
+                "https://pr-*.plimap.kr",
+                "http://192.168.*:[*]",
+                "https://192.168.*:[*]"
         ));
 
         assertThat(properties.allowedOrigins()).containsExactly(
                 "http://localhost:5173",
                 "https://dev.plimap.kr",
-                "https://pr-*.plimap.kr"
+                "https://pr-*.plimap.kr",
+                "http://192.168.*:[*]",
+                "https://192.168.*:[*]"
         );
     }
 
@@ -37,13 +41,13 @@ class CorsPropertiesTest {
     void 와일드카드_Origin은_허용하지_않는다() {
         assertThatThrownBy(() -> new CorsProperties(List.of("*")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("CORS 허용 Origin에는 https://pr-*.plimap.kr 패턴 외 와일드카드를 사용할 수 없습니다.");
+                .hasMessage(CorsProperties.INVALID_WILDCARD_MESSAGE);
     }
 
     @Test
     void 허용되지_않은_와일드카드_Origin은_거부한다() {
         assertThatThrownBy(() -> new CorsProperties(List.of("https://*.plimap.kr")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("CORS 허용 Origin에는 https://pr-*.plimap.kr 패턴 외 와일드카드를 사용할 수 없습니다.");
+                .hasMessage(CorsProperties.INVALID_WILDCARD_MESSAGE);
     }
 }

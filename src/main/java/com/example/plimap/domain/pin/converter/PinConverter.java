@@ -142,7 +142,8 @@ public class PinConverter {
 
     public static PinResponse.PinPreview toPinPreview(
             Pin pin,
-            String writerProfileImage
+            String writerProfileImage,
+            Boolean hasBookmarkedPlace
     ) {
         return PinResponse.PinPreview.builder()
                 .placeId(pin.getPlace().getId())
@@ -154,6 +155,7 @@ public class PinConverter {
                 .albumImageUrl(pin.getPlaceTrack().getTrack().getAlbumImageUrl())
                 .youtubeVideoId(pin.getPlaceTrack().getTrack().getProviderTrackId())
                 .clipStartMs(pin.getClipStartMs())
+                .hasBookmarkedPlace(hasBookmarkedPlace)
                 .build();
     }
 

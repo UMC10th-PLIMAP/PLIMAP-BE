@@ -15,7 +15,9 @@ public enum AdminSuccessCode implements BaseSuccessCode {
     REPORTED_PINS_FETCHED(HttpStatus.OK, "ADMIN_200_REPORTED_PINS_FETCHED", "신고 누적 게시물 목록을 조회했습니다."),
     MEMBERS_FETCHED(HttpStatus.OK, "ADMIN_200_MEMBERS_FETCHED", "회원 목록을 조회했습니다."),
     MEMBER_DETAIL_FETCHED(HttpStatus.OK, "ADMIN_200_MEMBER_DETAIL_FETCHED", "회원 상세 정보를 조회했습니다."),
-    MEMBER_NICKNAME_REGENERATED(HttpStatus.OK, "ADMIN_200_MEMBER_NICKNAME_REGENERATED", "회원 닉네임을 재생성했습니다.");
+    MEMBER_NICKNAME_REGENERATED(HttpStatus.OK, "ADMIN_200_MEMBER_NICKNAME_REGENERATED", "회원 닉네임을 재생성했습니다."),
+    INQUIRIES_FETCHED(HttpStatus.OK, "ADMIN_200_INQUIRIES_FETCHED", "문의 목록을 조회했습니다."),
+    INQUIRY_DETAIL_FETCHED(HttpStatus.OK, "ADMIN_200_INQUIRY_DETAIL_FETCHED", "문의 상세 정보를 조회했습니다.");
 
     private final HttpStatus status;
     private final String code;

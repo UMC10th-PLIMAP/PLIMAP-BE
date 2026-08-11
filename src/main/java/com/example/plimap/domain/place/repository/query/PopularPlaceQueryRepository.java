@@ -10,6 +10,25 @@ public interface PopularPlaceQueryRepository {
             double longitude
     );
 
+    List<PopularPlaceCandidate> findRegion3PopularPlaces(
+            String administrativeRegionCode,
+            double latitude,
+            double longitude
+    );
+
+    List<PopularPlaceCandidate> findRegion2PopularPlaces(
+            String sido,
+            String sigungu,
+            double latitude,
+            double longitude
+    );
+
+    List<PopularPlaceCandidate> findRegion1PopularPlaces(
+            String sido,
+            double latitude,
+            double longitude
+    );
+
     List<PopularPlaceCandidate> findGlobalPopularPlaces(
             double latitude,
             double longitude

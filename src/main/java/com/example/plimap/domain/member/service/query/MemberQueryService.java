@@ -34,4 +34,6 @@ public interface MemberQueryService {
     Pagination<MemberResDTO.FollowerItem> findFollowers(Long viewerId, Long memberId, String cursor, Integer pageSize);
 
     Pagination<MemberResDTO.FollowingItem> findFollowing(Long viewerId, Long memberId, String cursor, Integer pageSize);
+
+    Pagination<MemberResDTO.SearchItem> searchActiveMembers(Long viewerId, String keyword, String cursor, Integer pageSize);
 }

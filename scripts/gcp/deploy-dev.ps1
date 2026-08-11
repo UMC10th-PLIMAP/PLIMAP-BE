@@ -31,6 +31,11 @@ $secretMap = [ordered]@{
     SUPABASE_SECRET_KEY        = "plimap-dev-supabase-secret-key"
 }
 
+$privateNetworkOriginPatterns = @(
+    "http://192.168.*:[*]",
+    "https://192.168.*:[*]"
+)
+
 function Invoke-Gcloud {
     param([Parameter(Mandatory)][string[]]$Arguments)
 
@@ -62,15 +67,29 @@ function Get-HttpsOrigin {
     return $uri.GetLeftPart([UriPartial]::Authority)
 }
 
+function Test-PrivateNetworkIpv4 {
+    param([Parameter(Mandatory)][string]$HostName)
+
+    if ($HostName -notmatch '^192\.168\.(\d{1,3})\.(\d{1,3})$') {
+        return $false
+    }
+
+    return [int]$Matches[1] -le 255 -and [int]$Matches[2] -le 255
+}
+
 function Get-WebOrigin {
     param(
         [Parameter(Mandatory)][string]$Name,
         [Parameter(Mandatory)][string]$Value,
-        [switch]$AllowPreviewPattern
+        [switch]$AllowPreviewPattern,
+        [switch]$AllowPrivateNetworkPattern
     )
 
     $origin = $Value.Trim()
     if ($AllowPreviewPattern -and $origin -eq "https://pr-*.plimap.kr") {
+        return $origin
+    }
+    if ($AllowPrivateNetworkPattern -and $origin -in $privateNetworkOriginPatterns) {
         return $origin
     }
 
@@ -82,12 +101,13 @@ function Get-WebOrigin {
 
     $isHttps = $uri.Scheme -eq "https"
     $isLocalHttp = $uri.Scheme -eq "http" -and $uri.Host -in @("localhost", "127.0.0.1", "::1")
-    if ((-not $isHttps -and -not $isLocalHttp) -or
+    $isPrivateNetworkHttp = $AllowPrivateNetworkPattern -and $uri.Scheme -eq "http" -and (Test-PrivateNetworkIpv4 -HostName $uri.Host)
+    if ((-not $isHttps -and -not $isLocalHttp -and -not $isPrivateNetworkHttp) -or
         -not [string]::IsNullOrEmpty($uri.UserInfo) -or
         $uri.AbsolutePath -ne "/" -or
         -not [string]::IsNullOrEmpty($uri.Query) -or
         -not [string]::IsNullOrEmpty($uri.Fragment)) {
-        throw "$Name must contain only HTTPS Origins or HTTP localhost Origins without paths, query, fragment, or credentials: $Value"
+        throw "$Name must contain only HTTPS Origins, HTTP localhost Origins, or HTTP 192.168.0.0/16 Origins without paths, query, fragment, or credentials: $Value"
     }
 
     return $uri.GetLeftPart([UriPartial]::Authority)
@@ -98,14 +118,15 @@ function Get-AllowedOrigins {
         [Parameter(Mandatory)][string]$Name,
         [Parameter(Mandatory)][string]$Value,
         [Parameter(Mandatory)][string]$RequiredOrigin,
-        [switch]$AllowPreviewPattern
+        [switch]$AllowPreviewPattern,
+        [switch]$AllowPrivateNetworkPattern
     )
 
     $origins = @($Value.Split(",") |
         ForEach-Object { $_.Trim() } |
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
         ForEach-Object {
-            Get-WebOrigin -Name $Name -Value $_ -AllowPreviewPattern:$AllowPreviewPattern
+            Get-WebOrigin -Name $Name -Value $_ -AllowPreviewPattern:$AllowPreviewPattern -AllowPrivateNetworkPattern:$AllowPrivateNetworkPattern
         } |
         Select-Object -Unique)
 
@@ -243,20 +264,23 @@ $frontendRedirectUrl = Get-HttpsUrl `
     -ExpectedOrigin $publicOrigin
 
 if ([string]::IsNullOrWhiteSpace($CorsAllowedOrigins)) {
-    $CorsAllowedOrigins = "$publicOrigin,https://admin.plimap.kr,http://localhost:5173,https://pr-*.plimap.kr"
+    $CorsAllowedOrigins = "$publicOrigin,https://admin.plimap.kr,http://localhost:5173,http://192.168.*:[*],https://192.168.*:[*]"
 }
+$CorsAllowedOrigins = "$CorsAllowedOrigins,https://pr-*.plimap.kr"
 $corsOrigins = Get-AllowedOrigins `
     -Name "CorsAllowedOrigins" `
     -Value $CorsAllowedOrigins `
     -RequiredOrigin $publicOrigin `
-    -AllowPreviewPattern
+    -AllowPreviewPattern -AllowPrivateNetworkPattern
 
 if ([string]::IsNullOrWhiteSpace($OAuthAllowedFrontendOrigins)) {
     $OAuthAllowedFrontendOrigins = "$publicOrigin,https://admin.plimap.kr,http://localhost:5173"
 }
+$OAuthAllowedFrontendOrigins = "$OAuthAllowedFrontendOrigins,https://pr-*.plimap.kr"
 $oauthFrontendOrigins = Get-AllowedOrigins `
     -Name "OAuthAllowedFrontendOrigins" `
     -Value $OAuthAllowedFrontendOrigins `
+    -AllowPreviewPattern `
     -RequiredOrigin $publicOrigin
 
 foreach ($entry in $secretMap.GetEnumerator()) {

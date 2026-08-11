@@ -145,6 +145,7 @@ public interface PinControllerDocs {
             description = "장소별로 지도에 표시할 대표 핀 1개씩만 반환한다. (Figma 기준 화면: MP-01-01)"
     )
     public ResponseEntity<ApiResponse<PinResponse.ClusterAndPin>> getClusterPinList(
+            @AuthenticationPrincipal AuthMember currentMember,
             @Valid @ModelAttribute PinRequest.Viewport request
     );
 

@@ -21,10 +21,15 @@ public interface PlaceControllerDocs {
 
     @Operation(
             summary = "인기 장소 목록 조회",
-            description = "활성 PIN이 하나 이상 등록된 활성 장소를 NEARBY 또는 GLOBAL 정책으로 "
-                    + "DB에서 정렬해 최대 6개 조회합니다. 거리 정렬은 반올림 전 실제 거리를 "
-                    + "사용하며 응답 거리는 가장 가까운 정수로 반올림합니다. 대표 이미지는 "
-                    + "장소별 대표 PlaceTrack 배치 조회 정책을 사용합니다. (Figma 기준 화면: HM-01)"
+            description = "NEARBY는 반경 제한 없이 활성 PIN이 있는 활성 장소를 실제 거리 ASC, "
+                    + "활성 PIN 수 DESC, placeId ASC 순으로 최대 6개 조회합니다. "
+                    + "GLOBAL은 Kakao 행정동(H) 결과를 기준으로 "
+                    + "REGION3, REGION2, REGION1, GLOBAL 순서로 범위를 확장하며, 각 단계 결과가 "
+                    + "6개 미만이면 이전 결과를 버리고 상위 범위를 다시 조회합니다. H 결과가 "
+                    + "없으면 전국으로 조회합니다. 각 단계는 활성 PIN 수 DESC, 실제 거리 ASC, "
+                    + "placeId ASC 순으로 최대 6개를 조회하며 전국 결과는 6개 미만이어도 "
+                    + "반환합니다. scopeLevel과 scopeName은 실제 적용 범위이며 NEARBY에서는 "
+                    + "null입니다. (Figma 기준 화면: HM-01-01)"
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -35,7 +40,13 @@ public interface PlaceControllerDocs {
                     description = "scope 또는 현재 위치 검증 실패"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패")
+                    description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "502",
+                    description = "Kakao 행정구역 변환 응답 오류"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "504",
+                    description = "Kakao 행정구역 변환 응답 지연")
     })
     ResponseEntity<ApiResponse<PlaceResponse.PopularListResult>> getPopularPlaces(
             @AuthenticationPrincipal AuthMember currentMember,

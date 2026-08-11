@@ -34,14 +34,6 @@ public interface PinQueryRepository{
 
     boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
 
-    List<PinResponse.PinPreview> findPinPreviewListByPlaceIds(List<Long> placeIds);
-
-    List<PinResponse.PinPreview> findPinPreviewListByViewport(Point minPoint, Point maxPoint);
-
-    List<PinResponse.Cluster> findClusterListByViewport(Point minPoint, Point maxPoint, Integer zoomLevel);
-
-    PinResponse.ClusterAndPin findGeohashClusterListByViewport(Point minPoint, Point maxPoint, Integer zoomLevel, Integer precision);
-
     Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize);
 
     Map<Long, AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds);

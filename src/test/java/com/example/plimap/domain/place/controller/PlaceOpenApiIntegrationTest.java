@@ -174,13 +174,25 @@ class PlaceOpenApiIntegrationTest {
         JsonNode openApi = objectMapper.readTree(responseBody);
 
         JsonNode operation = openApi.path("paths").path(PLACE_POPULAR_LIST_PATH).path("get");
+        assertThat(operation.has("requestBody")).isFalse();
+        assertThat(operation.path("tags").get(0).asText()).isEqualTo("Place");
+        assertThat(openApi.path("security").get(0).has("JWT TOKEN")).isTrue();
+        assertThat(operation.has("security")).isFalse();
         assertThat(operation.path("description").asText())
                 .contains("최대 6개")
-                .contains("반올림 전 실제 거리")
-                .contains("HM-01");
+                .contains("반경 제한 없이")
+                .contains("실제 거리 ASC, 활성 PIN 수 DESC, placeId ASC")
+                .contains("REGION3, REGION2, REGION1, GLOBAL")
+                .contains("활성 PIN 수 DESC, 실제 거리 ASC, placeId ASC")
+                .contains("이전 결과를 버리고")
+                .contains("H 결과가 없으면 전국")
+                .contains("전국 결과는 6개 미만이어도 반환")
+                .contains("HM-01-01");
         assertThat(operation.path("responses").has("200")).isTrue();
         assertThat(operation.path("responses").has("400")).isTrue();
         assertThat(operation.path("responses").has("401")).isTrue();
+        assertThat(operation.path("responses").has("502")).isTrue();
+        assertThat(operation.path("responses").has("504")).isTrue();
 
         JsonNode scope = findParameter(operation, "scope");
         JsonNode latitude = findParameter(operation, "latitude");
@@ -197,6 +209,12 @@ class PlaceOpenApiIntegrationTest {
 
         JsonNode resultProperties = openApi.path("components").path("schemas")
                 .path("PlacePopularListResponse").path("properties");
+        assertThat(resultProperties.has("scopeLevel")).isTrue();
+        assertThat(enumValues(resultProperties.path("scopeLevel")))
+                .containsExactlyInAnyOrder("REGION3", "REGION2", "REGION1", "GLOBAL");
+        assertThat(isNullableSchema(resultProperties.path("scopeLevel"))).isTrue();
+        assertThat(resultProperties.has("scopeName")).isTrue();
+        assertThat(isNullableSchema(resultProperties.path("scopeName"))).isTrue();
         assertThat(resultProperties.has("items")).isTrue();
 
         JsonNode itemProperties = openApi.path("components").path("schemas")

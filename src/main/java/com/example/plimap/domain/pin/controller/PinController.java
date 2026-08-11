@@ -180,9 +180,13 @@ public class PinController implements PinControllerDocs {
 
     @GetMapping("/pins/map")
     public ResponseEntity<ApiResponse<PinResponse.ClusterAndPin>> getClusterPinList(
+            @AuthenticationPrincipal AuthMember currentMember,
             @Valid @ModelAttribute PinRequest.Viewport request
     ) {
-        PinResponse.ClusterAndPin response = pinQueryService.getClusterPinList(request);
+        Long memberId = currentMember == null
+                ? null
+                : currentMember.getMember().getId();
+        PinResponse.ClusterAndPin response = pinQueryService.getClusterPinList(request, memberId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(PinSuccessCode.CLUSTER_PIN_SEARCH_SUCCESS, response));

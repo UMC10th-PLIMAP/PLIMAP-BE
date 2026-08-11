@@ -138,6 +138,19 @@ public class MemberController implements MemberControllerDocs {
     }
 
     @Override
+    @GetMapping("/search")
+    public ApiResponse<Pagination<MemberResDTO.SearchItem>> searchMembers(
+            @AuthenticationPrincipal AuthMember authMember,
+            @RequestParam(required = false, defaultValue = "") String keyword,
+            @RequestParam(required = false, defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String cursor
+    ) {
+        Pagination<MemberResDTO.SearchItem> response =
+                memberQueryService.searchActiveMembers(authMember.getMember().getId(), keyword, cursor, pageSize);
+        return ApiResponse.success(MemberSuccessCode.MEMBERS_SEARCHED, response);
+    }
+
+    @Override
     @DeleteMapping("/me")
     public ApiResponse<Void> withdraw(
             @AuthenticationPrincipal AuthMember authMember,

@@ -31,7 +31,7 @@ class PopularPlaceQueryRepositoryIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void NEARBY는_정확히_500m를_포함하고_초과_장소와_비활성_데이터를_제외한다() {
+    void NEARBY는_500m_제한_없이_최근접_활성_PIN_장소를_조회한다() {
         Long boundaryId = insertPlace("경계 장소", 500.0, 0.0, false);
         Long outsideId = insertPlace("경계 밖", 500.01, 0.0, false);
         Long noActivePinId = insertPlace("활성 PIN 없음", 100.0, 0.0, false);
@@ -49,8 +49,9 @@ class PopularPlaceQueryRepositoryIntegrationTest {
 
         assertThat(distanceFrom(boundaryId)).isCloseTo(500.0, within(0.001));
         assertThat(distanceFrom(outsideId)).isGreaterThan(500.0);
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().placeId()).isEqualTo(boundaryId);
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(PopularPlaceCandidate::placeId)
+                .containsExactly(boundaryId, outsideId);
         assertThat(result.getFirst().pinCount()).isEqualTo(1L);
         assertThat(result.getFirst().distanceMeters()).isCloseTo(500.0, within(0.001));
     }
@@ -76,6 +77,9 @@ class PopularPlaceQueryRepositoryIntegrationTest {
                         LONGITUDE
                 );
 
+        assertThat(Math.round(distanceFrom(roundedNearerId)))
+                .isEqualTo(Math.round(distanceFrom(roundedFartherId)));
+        assertThat(distanceFrom(roundedNearerId)).isLessThan(distanceFrom(roundedFartherId));
         assertThat(result).extracting(PopularPlaceCandidate::placeId)
                 .containsExactly(
                         roundedNearerId,
@@ -122,6 +126,46 @@ class PopularPlaceQueryRepositoryIntegrationTest {
     }
 
     @Test
+    void 행정구역_단계별로_조건에_맞는_장소만_새로_조회한다() {
+        Long region3Id = insertPlace(
+                "역삼1동", 100.0, "1168010100", "서울특별시", "강남구", "역삼1동"
+        );
+        Long region2Id = insertPlace(
+                "삼성1동", 200.0, "1168058000", "서울특별시", "강남구", "삼성1동"
+        );
+        Long region1Id = insertPlace(
+                "여의동", 300.0, "1156054000", "서울특별시", "영등포구", "여의동"
+        );
+        Long globalId = insertPlace(
+                "해운대", 400.0, "2635051000", "부산광역시", "해운대구", "우1동"
+        );
+        insertPins(region3Id, 1, true, false);
+        insertPins(region2Id, 1, true, false);
+        insertPins(region1Id, 1, true, false);
+        insertPins(globalId, 1, true, false);
+
+        List<PopularPlaceCandidate> region3 =
+                popularPlaceQueryRepository.findRegion3PopularPlaces(
+                        "1168010100", LATITUDE, LONGITUDE
+                );
+        List<PopularPlaceCandidate> region2 =
+                popularPlaceQueryRepository.findRegion2PopularPlaces(
+                        "서울특별시", "강남구", LATITUDE, LONGITUDE
+                );
+        List<PopularPlaceCandidate> region1 =
+                popularPlaceQueryRepository.findRegion1PopularPlaces(
+                        "서울특별시", LATITUDE, LONGITUDE
+                );
+
+        assertThat(region3).extracting(PopularPlaceCandidate::placeId)
+                .containsExactly(region3Id);
+        assertThat(region2).extracting(PopularPlaceCandidate::placeId)
+                .containsExactly(region3Id, region2Id);
+        assertThat(region1).extracting(PopularPlaceCandidate::placeId)
+                .containsExactly(region3Id, region2Id, region1Id);
+    }
+
+    @Test
     void 각_scope는_DB에서_정렬한_뒤_최대_6개만_반환한다() {
         List<Long> idsByDistance = new ArrayList<>();
         for (int index = 1; index <= 7; index++) {
@@ -140,12 +184,40 @@ class PopularPlaceQueryRepositoryIntegrationTest {
                         LATITUDE,
                         LONGITUDE
                 );
+        List<PopularPlaceCandidate> region3 =
+                popularPlaceQueryRepository.findRegion3PopularPlaces(
+                        "1168010100",
+                        LATITUDE,
+                        LONGITUDE
+                );
+        List<PopularPlaceCandidate> region2 =
+                popularPlaceQueryRepository.findRegion2PopularPlaces(
+                        "서울특별시",
+                        "강남구",
+                        LATITUDE,
+                        LONGITUDE
+                );
+        List<PopularPlaceCandidate> region1 =
+                popularPlaceQueryRepository.findRegion1PopularPlaces(
+                        "서울특별시",
+                        LATITUDE,
+                        LONGITUDE
+                );
 
         assertThat(nearby).hasSize(6);
         assertThat(global).hasSize(6);
+        assertThat(region3).hasSize(6);
+        assertThat(region2).hasSize(6);
+        assertThat(region1).hasSize(6);
         assertThat(nearby).extracting(PopularPlaceCandidate::placeId)
                 .containsExactlyElementsOf(idsByDistance.subList(0, 6));
         assertThat(global).extracting(PopularPlaceCandidate::placeId)
+                .containsExactlyElementsOf(idsByDistance.subList(0, 6));
+        assertThat(region3).extracting(PopularPlaceCandidate::placeId)
+                .containsExactlyElementsOf(idsByDistance.subList(0, 6));
+        assertThat(region2).extracting(PopularPlaceCandidate::placeId)
+                .containsExactlyElementsOf(idsByDistance.subList(0, 6));
+        assertThat(region1).extracting(PopularPlaceCandidate::placeId)
                 .containsExactlyElementsOf(idsByDistance.subList(0, 6));
     }
 
@@ -156,7 +228,17 @@ class PopularPlaceQueryRepositoryIntegrationTest {
             boolean deleted
     ) {
         return jdbcTemplate.queryForObject("""
-                INSERT INTO place (name, address, source, location, deleted_at)
+                INSERT INTO place (
+                    name,
+                    address,
+                    source,
+                    location,
+                    administrative_region_code,
+                    sido,
+                    sigungu,
+                    eup_myeon_dong,
+                    deleted_at
+                )
                 VALUES (
                     ?,
                     '지번 주소',
@@ -166,6 +248,10 @@ class PopularPlaceQueryRepositoryIntegrationTest {
                         ?,
                         radians(?)
                     ),
+                    '1168010100',
+                    '서울특별시',
+                    '강남구',
+                    '역삼1동',
                     CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END
                 )
                 RETURNING id
@@ -176,6 +262,48 @@ class PopularPlaceQueryRepositoryIntegrationTest {
                 distanceMeters,
                 bearingDegrees,
                 deleted);
+    }
+
+    private Long insertPlace(
+            String name,
+            double distanceMeters,
+            String administrativeRegionCode,
+            String sido,
+            String sigungu,
+            String eupMyeonDong
+    ) {
+        return jdbcTemplate.queryForObject("""
+                INSERT INTO place (
+                    name,
+                    address,
+                    source,
+                    location,
+                    administrative_region_code,
+                    sido,
+                    sigungu,
+                    eup_myeon_dong
+                )
+                VALUES (
+                    ?,
+                    '지번 주소',
+                    'MAP_SELECTION',
+                    ST_Project(
+                        ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
+                        ?,
+                        radians(0)
+                    ),
+                    ?, ?, ?, ?
+                )
+                RETURNING id
+                """, Long.class,
+                name,
+                LONGITUDE,
+                LATITUDE,
+                distanceMeters,
+                administrativeRegionCode,
+                sido,
+                sigungu,
+                eupMyeonDong);
     }
 
     private void insertPins(
