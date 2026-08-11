@@ -228,7 +228,7 @@ class PlaceQueryServiceImplTest {
     }
 
     @Test
-    void H_행정동과_전국_결과가_모두_없으면_GLOBAL_빈_목록을_반환한다() {
+    void 행정동_변환_결과와_전국_결과가_모두_없으면_GLOBAL_빈_목록을_반환한다() {
         when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
                 .thenReturn(new PlaceAdministrativeRegion(null, null, null, null));
         when(popularPlaceQueryRepository.findGlobalPopularPlaces(37.5283, 126.9326))

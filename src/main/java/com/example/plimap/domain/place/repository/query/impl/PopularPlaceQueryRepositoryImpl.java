@@ -57,22 +57,11 @@ public class PopularPlaceQueryRepositoryImpl implements PopularPlaceQueryReposit
             ORDER BY pin_count DESC, distance_meters ASC, pl.id ASC
             LIMIT :resultLimit
             """;
-    private static final String NEARBY_QUERY = ACTIVE_PIN_COUNTS + """
-            SELECT
-                pl.id,
-                pl.name,
-                ST_Distance(
-                    pl.location,
-                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
-                ) AS distance_meters,
-                pc.pin_count
-            FROM place pl
-            JOIN active_pin_counts pc
-              ON pc.place_id = pl.id
-            WHERE pl.deleted_at IS NULL
+    private static final String NEARBY_ORDER_AND_LIMIT = """
             ORDER BY distance_meters ASC, pin_count DESC, pl.id ASC
             LIMIT :resultLimit
             """;
+    private static final String NEARBY_QUERY = BASE_QUERY + NEARBY_ORDER_AND_LIMIT;
     private static final String REGION3_QUERY = REGIONAL_BASE_QUERY + """
               AND pl.administrative_region_code = :administrativeRegionCode
             """ + POPULAR_ORDER_AND_LIMIT;
