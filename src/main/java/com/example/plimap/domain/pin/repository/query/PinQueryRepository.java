@@ -34,6 +34,8 @@ public interface PinQueryRepository{
 
     boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
 
+    Optional<Long> findActivePlaceTrackIdByPlaceIdAndMemberId(Long placeId, Long memberId);
+
     Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize);
 
     Map<Long, AlbumImage> findRepresentativePlaceTracksByPlaceIds(List<Long> placeIds);

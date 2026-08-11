@@ -521,6 +521,26 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
     }
 
     @Override
+    public Optional<Long> findActivePlaceTrackIdByPlaceIdAndMemberId(
+            Long placeId,
+            Long memberId
+    ) {
+        return Optional.ofNullable(queryFactory
+                .select(pin.placeTrack.id)
+                .from(pin)
+                .join(pin.member, member)
+                .join(pin.place, place)
+                .where(
+                        place.id.eq(placeId),
+                        member.id.eq(memberId),
+                        pin.deletedAt.isNull(),
+                        member.deletedAt.isNull(),
+                        place.deletedAt.isNull()
+                )
+                .fetchFirst());
+    }
+
+    @Override
     public Pagination<PinResponse.FriendPin> getFriendRecentPinList(Long memberId, String cursor, Integer pageSize) {
         CursorInfo cursorInfo = parseCursor(cursor, null);
 

@@ -32,7 +32,8 @@ public final class PlaceTrackResponse {
             String artworkUrl,
             Integer pinCount,
             Integer likeCount,
-            Boolean isLiked
+            Boolean isLiked,
+            Boolean pinByMe
     ) {
     }
 

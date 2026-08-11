@@ -314,9 +314,9 @@ class PlaceTrackQueryServiceImplTest {
         assertThat(result.tracks().getFirst().pinCount()).isEqualTo(1);
         assertThat(result.tracks().getFirst().likeCount()).isEqualTo(5);
         assertThat(result.tracks().getFirst().isLiked()).isTrue();
+        assertThat(result.tracks().getFirst().pinByMe()).isFalse();
         verifyNoInteractions(
                 memberQueryService,
-                pinQueryService,
                 placeTrackLikeRepository
         );
     }
@@ -366,7 +366,57 @@ class PlaceTrackQueryServiceImplTest {
         assertThat(result.tracks().get(1).likeCount()).isEqualTo(5);
         assertThat(result.tracks().get(0).isLiked()).isTrue();
         assertThat(result.tracks().get(1).isLiked()).isFalse();
-        verifyNoInteractions(memberQueryService, pinQueryService);
+        verifyNoInteractions(memberQueryService);
+    }
+
+    @Test
+    void 내_활성_PIN과_연결된_PlaceTrack만_pinByMe가_true이다() {
+        givenPlaceAndDistance(100.0);
+        givenTracks(
+                List.of(
+                        track(20L, 10, true),
+                        track(10L, 5, false)
+                ),
+                false
+        );
+        when(pinQueryService.findActivePlaceTrackIdByPlaceIdAndMemberId(
+                PLACE_ID,
+                MEMBER_ID
+        )).thenReturn(Optional.of(20L));
+
+        PlaceTrackResponse.PlaceTrackListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.tracks())
+                .extracting(PlaceTrackResponse.PlaceTrackItem::pinByMe)
+                .containsExactly(true, false);
+        verify(pinQueryService).findActivePlaceTrackIdByPlaceIdAndMemberId(
+                PLACE_ID,
+                MEMBER_ID
+        );
+    }
+
+    @Test
+    void 장소에_내_활성_PIN이_없으면_모든_PlaceTrack의_pinByMe가_false이다() {
+        givenPlaceAndDistance(100.0);
+        givenTracks(
+                List.of(
+                        track(20L, 10, true),
+                        track(10L, 5, false)
+                ),
+                false
+        );
+        when(pinQueryService.findActivePlaceTrackIdByPlaceIdAndMemberId(
+                PLACE_ID,
+                MEMBER_ID
+        )).thenReturn(Optional.empty());
+
+        PlaceTrackResponse.PlaceTrackListResult result =
+                placeTrackQueryService.getPlaceTracks(MEMBER_ID, PLACE_ID, request());
+
+        assertThat(result.tracks())
+                .extracting(PlaceTrackResponse.PlaceTrackItem::pinByMe)
+                .containsOnly(false);
     }
 
     @Test

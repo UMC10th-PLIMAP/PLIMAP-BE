@@ -5,10 +5,10 @@ import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.dto.LikedPlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.PlaceTrackQueryResult;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
-import java.util.List;
-
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Slice;
 
 public final class PlaceTrackConverter {
@@ -44,12 +44,14 @@ public final class PlaceTrackConverter {
             double distance,
             boolean withinRadius,
             boolean trackDetailAccessible,
-            Slice<PlaceTrackQueryResult> placeTracks
+            Slice<PlaceTrackQueryResult> placeTracks,
+            Optional<Long> myPlaceTrackId
     ) {
         List<PlaceTrackResponse.PlaceTrackItem> tracks = placeTracks.getContent().stream()
                 .map(placeTrack -> toItem(
                         placeTrack,
-                        trackDetailAccessible
+                        trackDetailAccessible,
+                        myPlaceTrackId
                 ))
                 .toList();
 
@@ -67,7 +69,8 @@ public final class PlaceTrackConverter {
 
     private static PlaceTrackResponse.PlaceTrackItem toItem(
             PlaceTrackQueryResult placeTrack,
-            boolean trackDetailAccessible
+            boolean trackDetailAccessible,
+            Optional<Long> myPlaceTrackId
     ) {
         return new PlaceTrackResponse.PlaceTrackItem(
                 placeTrack.placeTrackId(),
@@ -76,7 +79,10 @@ public final class PlaceTrackConverter {
                 placeTrack.artworkUrl(),
                 placeTrack.pinCount(),
                 trackDetailAccessible ? placeTrack.likeCount() : null,
-                placeTrack.liked()
+                placeTrack.liked(),
+                myPlaceTrackId
+                        .map(placeTrack.placeTrackId()::equals)
+                        .orElse(false)
         );
     }
 
