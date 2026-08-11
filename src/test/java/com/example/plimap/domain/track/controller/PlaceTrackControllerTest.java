@@ -129,7 +129,8 @@ class PlaceTrackControllerTest {
                 .andExpect(jsonPath("$.result.isTrackDetailAccessible").value(true))
                 .andExpect(jsonPath("$.result.tracks[0].placeTrackId").value(10))
                 .andExpect(jsonPath("$.result.tracks[0].pinCount").value(1))
-                .andExpect(jsonPath("$.result.tracks[0].likeCount").value(5));
+                .andExpect(jsonPath("$.result.tracks[0].likeCount").value(5))
+                .andExpect(jsonPath("$.result.tracks[0].pinByMe").value(true));
 
         verify(placeTrackQueryService).getPlaceTracks(
                 1L,
@@ -667,6 +668,7 @@ class PlaceTrackControllerTest {
                         "https://image.example/artwork.jpg",
                         1,
                         5,
+                        true,
                         true
                 )),
                 0,

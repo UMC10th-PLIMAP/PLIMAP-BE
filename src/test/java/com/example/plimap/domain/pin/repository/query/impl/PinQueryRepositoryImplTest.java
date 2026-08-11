@@ -646,6 +646,55 @@ class PinQueryRepositoryImplTest {
         ).isFalse();
     }
 
+    @Test
+    void 장소와_사용자의_활성_PIN에_연결된_PlaceTrack_ID를_반환한다() {
+        Optional<Long> result =
+                pinQueryRepository.findActivePlaceTrackIdByPlaceIdAndMemberId(
+                        place1.getId(),
+                        member1.getId()
+                );
+
+        assertThat(result).contains(placeTrack1.getId());
+    }
+
+    @Test
+    void 장소에_사용자의_PIN이_없으면_빈_Optional을_반환한다() {
+        Optional<Long> result =
+                pinQueryRepository.findActivePlaceTrackIdByPlaceIdAndMemberId(
+                        place3.getId(),
+                        member1.getId()
+                );
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void 삭제된_PIN만_존재하면_빈_Optional을_반환한다() {
+        Pin managedPin = pinRepository.findById(deletedPin.getId()).orElseThrow();
+        managedPin.delete();
+        entityManager.flush();
+        entityManager.clear();
+
+        Optional<Long> result =
+                pinQueryRepository.findActivePlaceTrackIdByPlaceIdAndMemberId(
+                        place1.getId(),
+                        member3.getId()
+                );
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void 다른_사용자의_활성_PIN만_존재하면_빈_Optional을_반환한다() {
+        Optional<Long> result =
+                pinQueryRepository.findActivePlaceTrackIdByPlaceIdAndMemberId(
+                        place2.getId(),
+                        member1.getId()
+                );
+
+        assertThat(result).isEmpty();
+    }
+
 
     // getFriendRecentPinList
     @Test
