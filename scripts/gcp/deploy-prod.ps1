@@ -544,6 +544,33 @@ function Assert-HttpStatus {
 }
 
 
+function Get-HttpHeaderValues {
+    param(
+        [Parameter(Mandatory)]$Response,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    $headersProperty = $Response.PSObject.Properties["Headers"]
+    if ($null -eq $headersProperty -or $null -eq $headersProperty.Value) {
+        return @()
+    }
+
+    $headers = $headersProperty.Value
+    if ($null -ne $headers.PSObject.Methods["TryGetValues"]) {
+        $values = $null
+        if ($headers.TryGetValues($Name, [ref]$values)) {
+            return @($values)
+        }
+        return @()
+    }
+
+    try {
+        return @($headers[$Name])
+    } catch {
+        return @()
+    }
+}
+
 function Assert-PublicProdEndpoints {
     param([Parameter(Mandatory)][string]$BaseUrl)
 
@@ -561,7 +588,7 @@ function Assert-PublicProdEndpoints {
     if ($csrfCode -ne "AUTH_200_CSRF_TOKEN_ISSUED") {
         throw "Prod CSRF endpoint returned an unexpected response code: $csrfCode"
     }
-    $setCookieHeader = @($csrfResponse.Headers["Set-Cookie"]) -join ";"
+    $setCookieHeader = @(Get-HttpHeaderValues -Response $csrfResponse -Name "Set-Cookie") -join ";"
     if ($setCookieHeader -notmatch "(?:^|[,;]\s*)XSRF-TOKEN=") {
         throw "Prod CSRF endpoint did not issue the XSRF-TOKEN cookie."
     }
@@ -570,7 +597,7 @@ function Assert-PublicProdEndpoints {
     $oauthResponse = Assert-HttpStatus `
         -Uri "$BaseUrl/oauth/authorization/google?frontendOrigin=$encodedFrontendOrigin" `
         -ExpectedStatuses @(302, 303, 307, 308)
-    $locationHeader = [string](@($oauthResponse.Headers["Location"])[0])
+    $locationHeader = [string](@(Get-HttpHeaderValues -Response $oauthResponse -Name "Location")[0])
     if ([string]::IsNullOrWhiteSpace($locationHeader)) {
         throw "Prod OAuth endpoint did not return a Location header."
     }
