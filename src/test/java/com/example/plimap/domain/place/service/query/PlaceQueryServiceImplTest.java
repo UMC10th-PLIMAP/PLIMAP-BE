@@ -8,17 +8,20 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.plimap.domain.pin.dto.PlacePinInfo;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.domain.place.dto.NearbyBookmarkedPlace;
+import com.example.plimap.domain.place.dto.PlaceAdministrativeRegion;
 import com.example.plimap.domain.place.dto.PopularPlaceCandidate;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.entity.PlaceBookmarkId;
 import com.example.plimap.domain.place.enums.PopularPlaceScope;
+import com.example.plimap.domain.place.enums.PopularPlaceScopeLevel;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
 import com.example.plimap.domain.place.exception.PlaceException;
 import com.example.plimap.domain.place.repository.PlaceBookmarkRepository;
@@ -38,6 +41,7 @@ import com.example.plimap.global.external.kakao.dto.KakaoPlaceSearchResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -67,6 +71,9 @@ class PlaceQueryServiceImplTest {
     private PopularPlaceQueryRepository popularPlaceQueryRepository;
 
     @Mock
+    private PlaceLocationMetadataService placeLocationMetadataService;
+
+    @Mock
     private KakaoAddressSearchClient kakaoAddressSearchClient;
 
     @Mock
@@ -86,6 +93,7 @@ class PlaceQueryServiceImplTest {
                 placeQueryRepository,
                 placeBookmarkQueryRepository,
                 popularPlaceQueryRepository,
+                placeLocationMetadataService,
                 kakaoAddressSearchClient,
                 kakaoPlaceSearchClient,
                 pinQueryService
@@ -126,6 +134,8 @@ class PlaceQueryServiceImplTest {
                 new PlaceResponse.PopularListItem(2L, "URL 없는 장소", 120, 2L, null),
                 new PlaceResponse.PopularListItem(3L, "대표곡 없는 장소", 200, 1L, null)
         );
+        assertThat(result.scopeLevel()).isNull();
+        assertThat(result.scopeName()).isNull();
         verify(popularPlaceQueryRepository)
                 .findNearbyPopularPlaces(37.5283, 126.9326);
         verify(pinQueryService)
@@ -133,10 +143,16 @@ class PlaceQueryServiceImplTest {
     }
 
     @Test
-    void GLOBAL_인기_장소는_GLOBAL_전용_Repository를_사용한다() {
-        when(popularPlaceQueryRepository.findGlobalPopularPlaces(37.5283, 126.9326))
-                .thenReturn(List.of(new PopularPlaceCandidate(7L, "전체 인기", 10.2, 9L)));
-        when(pinQueryService.findRepresentativePlaceTracksByPlaceIds(List.of(7L)))
+    void GLOBAL은_REGION3에_6개가_있으면_해당_결과에서_중단한다() {
+        List<PopularPlaceCandidate> candidates = popularCandidates(1L);
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenReturn(region());
+        when(popularPlaceQueryRepository.findRegion3PopularPlaces(
+                "1168010100", 37.5283, 126.9326
+        )).thenReturn(candidates);
+        when(pinQueryService.findRepresentativePlaceTracksByPlaceIds(
+                List.of(1L, 2L, 3L, 4L, 5L, 6L)
+        ))
                 .thenReturn(Map.of());
 
         PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
@@ -145,11 +161,177 @@ class PlaceQueryServiceImplTest {
                 126.9326
         );
 
-        assertThat(result.items()).containsExactly(
-                new PlaceResponse.PopularListItem(7L, "전체 인기", 10, 9L, null)
+        assertThat(result.scopeLevel()).isEqualTo(PopularPlaceScopeLevel.REGION3);
+        assertThat(result.scopeName()).isEqualTo("역삼1동");
+        assertThat(result.items()).hasSize(6);
+        verify(popularPlaceQueryRepository).findRegion3PopularPlaces(
+                "1168010100", 37.5283, 126.9326
         );
+    }
+
+    @Test
+    void GLOBAL은_이전_단계가_6개_미만이면_버리고_REGION2를_다시_조회한다() {
+        List<PopularPlaceCandidate> region3Candidates = popularCandidates(1L).subList(0, 5);
+        List<PopularPlaceCandidate> region2Candidates = popularCandidates(11L);
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenReturn(region());
+        when(popularPlaceQueryRepository.findRegion3PopularPlaces(
+                "1168010100", 37.5283, 126.9326
+        )).thenReturn(region3Candidates);
+        when(popularPlaceQueryRepository.findRegion2PopularPlaces(
+                "서울특별시", "강남구", 37.5283, 126.9326
+        )).thenReturn(region2Candidates);
+        when(pinQueryService.findRepresentativePlaceTracksByPlaceIds(
+                List.of(11L, 12L, 13L, 14L, 15L, 16L)
+        )).thenReturn(Map.of());
+
+        PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL,
+                37.5283,
+                126.9326
+        );
+
+        assertThat(result.scopeLevel()).isEqualTo(PopularPlaceScopeLevel.REGION2);
+        assertThat(result.scopeName()).isEqualTo("강남구");
+        assertThat(result.items()).extracting(PlaceResponse.PopularListItem::placeId)
+                .containsExactly(11L, 12L, 13L, 14L, 15L, 16L);
+        verify(pinQueryService).findRepresentativePlaceTracksByPlaceIds(
+                List.of(11L, 12L, 13L, 14L, 15L, 16L)
+        );
+    }
+
+    @Test
+    void GLOBAL은_REGION2도_부족하면_REGION1에서_중단한다() {
+        List<PopularPlaceCandidate> region1Candidates = popularCandidates(21L);
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenReturn(region());
+        when(popularPlaceQueryRepository.findRegion3PopularPlaces(
+                "1168010100", 37.5283, 126.9326
+        )).thenReturn(List.of());
+        when(popularPlaceQueryRepository.findRegion2PopularPlaces(
+                "서울특별시", "강남구", 37.5283, 126.9326
+        )).thenReturn(List.of());
+        when(popularPlaceQueryRepository.findRegion1PopularPlaces(
+                "서울특별시", 37.5283, 126.9326
+        )).thenReturn(region1Candidates);
+        when(pinQueryService.findRepresentativePlaceTracksByPlaceIds(
+                List.of(21L, 22L, 23L, 24L, 25L, 26L)
+        )).thenReturn(Map.of());
+
+        PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL, 37.5283, 126.9326
+        );
+
+        assertThat(result.scopeLevel()).isEqualTo(PopularPlaceScopeLevel.REGION1);
+        assertThat(result.scopeName()).isEqualTo("서울특별시");
+        assertThat(result.items()).hasSize(6);
+    }
+
+    @Test
+    void 행정동_변환_결과와_전국_결과가_모두_없으면_GLOBAL_빈_목록을_반환한다() {
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenReturn(new PlaceAdministrativeRegion(null, null, null, null));
+        when(popularPlaceQueryRepository.findGlobalPopularPlaces(37.5283, 126.9326))
+                .thenReturn(List.of());
+
+        PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL, 37.5283, 126.9326
+        );
+
+        assertThat(result.scopeLevel()).isEqualTo(PopularPlaceScopeLevel.GLOBAL);
+        assertThat(result.scopeName()).isEqualTo("전국");
+        assertThat(result.items()).isEmpty();
         verify(popularPlaceQueryRepository)
                 .findGlobalPopularPlaces(37.5283, 126.9326);
+        verifyNoInteractions(pinQueryService);
+    }
+
+    @Test
+    void 모든_행정구역_단계가_5개이면_누적하지_않고_전국_결과만_반환한다() {
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenReturn(region());
+        when(popularPlaceQueryRepository.findRegion3PopularPlaces(
+                "1168010100", 37.5283, 126.9326
+        )).thenReturn(popularCandidates(1L).subList(0, 5));
+        when(popularPlaceQueryRepository.findRegion2PopularPlaces(
+                "서울특별시", "강남구", 37.5283, 126.9326
+        )).thenReturn(popularCandidates(11L).subList(0, 5));
+        when(popularPlaceQueryRepository.findRegion1PopularPlaces(
+                "서울특별시", 37.5283, 126.9326
+        )).thenReturn(popularCandidates(21L).subList(0, 5));
+        when(popularPlaceQueryRepository.findGlobalPopularPlaces(37.5283, 126.9326))
+                .thenReturn(List.of(new PopularPlaceCandidate(99L, "전국 결과", 10.2, 9L)));
+        when(pinQueryService.findRepresentativePlaceTracksByPlaceIds(List.of(99L)))
+                .thenReturn(Map.of());
+
+        PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL, 37.5283, 126.9326
+        );
+
+        assertThat(result.scopeLevel()).isEqualTo(PopularPlaceScopeLevel.GLOBAL);
+        assertThat(result.scopeName()).isEqualTo("전국");
+        assertThat(result.items()).extracting(PlaceResponse.PopularListItem::placeId)
+                .containsExactly(99L);
+        verify(pinQueryService).findRepresentativePlaceTracksByPlaceIds(List.of(99L));
+    }
+
+    @Test
+    void 누락된_행정구역_단계는_건너뛴다() {
+        List<PopularPlaceCandidate> region1Candidates = popularCandidates(31L);
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenReturn(new PlaceAdministrativeRegion(
+                        null,
+                        "서울특별시",
+                        null,
+                        null
+                ));
+        when(popularPlaceQueryRepository.findRegion1PopularPlaces(
+                "서울특별시", 37.5283, 126.9326
+        )).thenReturn(region1Candidates);
+        when(pinQueryService.findRepresentativePlaceTracksByPlaceIds(
+                List.of(31L, 32L, 33L, 34L, 35L, 36L)
+        )).thenReturn(Map.of());
+
+        PlaceResponse.PopularListResult result = placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL, 37.5283, 126.9326
+        );
+
+        assertThat(result.scopeLevel()).isEqualTo(PopularPlaceScopeLevel.REGION1);
+        assertThat(result.scopeName()).isEqualTo("서울특별시");
+        verify(popularPlaceQueryRepository).findRegion1PopularPlaces(
+                "서울특별시", 37.5283, 126.9326
+        );
+        verifyNoMoreInteractions(popularPlaceQueryRepository);
+    }
+
+    @Test
+    void Kakao_행정구역_502_예외를_그대로_전파한다() {
+        PlaceException exception = new PlaceException(
+                PlaceErrorCode.PLACE_EXTERNAL_API_ERROR
+        );
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenThrow(exception);
+
+        assertThatThrownBy(() -> placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL, 37.5283, 126.9326
+        )).isSameAs(exception);
+
+        verifyNoInteractions(popularPlaceQueryRepository, pinQueryService);
+    }
+
+    @Test
+    void Kakao_행정구역_504_예외를_그대로_전파한다() {
+        PlaceException exception = new PlaceException(
+                PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT
+        );
+        when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
+                .thenThrow(exception);
+
+        assertThatThrownBy(() -> placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL, 37.5283, 126.9326
+        )).isSameAs(exception);
+
+        verifyNoInteractions(popularPlaceQueryRepository, pinQueryService);
     }
 
     @Test
@@ -716,6 +898,26 @@ class PlaceQueryServiceImplTest {
                 "37.5283",
                 distance
         )));
+    }
+
+    private PlaceAdministrativeRegion region() {
+        return new PlaceAdministrativeRegion(
+                "1168010100",
+                "서울특별시",
+                "강남구",
+                "역삼1동"
+        );
+    }
+
+    private List<PopularPlaceCandidate> popularCandidates(long firstPlaceId) {
+        return LongStream.range(firstPlaceId, firstPlaceId + 6)
+                .mapToObj(placeId -> new PopularPlaceCandidate(
+                        placeId,
+                        "장소 " + placeId,
+                        placeId,
+                        1L
+                ))
+                .toList();
     }
 
     private Place place(Long placeId, double latitude, double longitude) {

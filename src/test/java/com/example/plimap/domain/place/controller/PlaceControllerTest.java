@@ -121,7 +121,7 @@ class PlaceControllerTest {
                 PopularPlaceScope.NEARBY,
                 37.5283,
                 126.9326
-        )).thenReturn(new PlaceResponse.PopularListResult(List.of(
+        )).thenReturn(new PlaceResponse.PopularListResult(null, null, List.of(
                 new PlaceResponse.PopularListItem(
                         1L,
                         "뚝섬한강공원",
@@ -141,6 +141,8 @@ class PlaceControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PLACE_POPULAR_LIST_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("인기 장소 목록 조회에 성공했습니다."))
+                .andExpect(jsonPath("$.result.scopeLevel").value(nullValue()))
+                .andExpect(jsonPath("$.result.scopeName").value(nullValue()))
                 .andExpect(jsonPath("$.result.items[0].placeId").value(1))
                 .andExpect(jsonPath("$.result.items[0].placeName").value("뚝섬한강공원"))
                 .andExpect(jsonPath("$.result.items[0].distanceMeters").value(50))
@@ -221,6 +223,36 @@ class PlaceControllerTest {
                         .param("longitude", "126.9326"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("COMMON_401_UNAUTHORIZED"));
+    }
+
+    @Test
+    void 인기_장소_행정구역_변환_오류는_502를_반환한다() throws Exception {
+        when(placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL, 37.5283, 126.9326
+        )).thenThrow(new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR));
+
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("scope", "GLOBAL")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("PLACE_EXTERNAL_API_ERROR"));
+    }
+
+    @Test
+    void 인기_장소_행정구역_변환_timeout은_504를_반환한다() throws Exception {
+        when(placeQueryService.getPopularPlaces(
+                PopularPlaceScope.GLOBAL, 37.5283, 126.9326
+        )).thenThrow(new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT));
+
+        mockMvc.perform(get(POPULAR_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .param("scope", "GLOBAL")
+                        .param("latitude", "37.5283")
+                        .param("longitude", "126.9326"))
+                .andExpect(status().isGatewayTimeout())
+                .andExpect(jsonPath("$.code").value("PLACE_EXTERNAL_API_TIMEOUT"));
     }
 
     @Test
