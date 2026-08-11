@@ -109,6 +109,7 @@ docker compose down
 - `main`: 배포 가능한 안정 버전
 - `develop`: 기능 통합 및 개발 기준 브랜치
 - 작업 브랜치: `develop`에서 생성하고 작업 완료 후 `develop`으로 PR을 요청합니다.
+- 정기 릴리스: `[Release]` 제목으로 `develop`에서 `main`으로 PR을 요청하며 관련 이슈 연결을 생략할 수 있습니다.
 - `main`과 `develop`에는 직접 push하지 않습니다.
 
 </details>
