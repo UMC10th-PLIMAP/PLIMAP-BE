@@ -14,6 +14,7 @@ import com.example.plimap.domain.pin.service.query.PinQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,7 @@ public class NotificationCommandServiceImpl implements NotificationCommandServic
     @Override
     public void createPinCreatedNotifications(Long pinId, Long authorId) {
         Pin pin = pinQueryService.getActivePin(pinId);
+        initializePlaceAndTrack(pin);
         Member author = memberQueryService.getActiveMember(authorId);
         List<Member> followers = memberQueryService.findAllFollowers(authorId);
 
@@ -73,6 +75,7 @@ public class NotificationCommandServiceImpl implements NotificationCommandServic
         Member recipient = memberQueryService.getActiveMember(recipientId);
         Member actor = memberQueryService.getActiveMember(actorId);
         Pin pin = pinQueryService.getActivePin(pinId);
+        initializePlaceAndTrack(pin);
 
         Notification saved = notificationRepository.save(
                 Notification.create(recipient, actor, pin, NotificationType.PIN_LIKED));
@@ -105,9 +108,22 @@ public class NotificationCommandServiceImpl implements NotificationCommandServic
         });
     }
 
+    // pushAfterCommit()의 afterCommit() 콜백은 원 트랜잭션 커밋 후(세션 종료 후) 실행되므로,
+    // toItem()에서 pin.getPlace()/getPlaceTrack().getTrack()을 지연 로딩하면
+    // LazyInitializationException이 발생한다. 세션이 살아있는 지금 미리 초기화해 둔다.
+    private void initializePlaceAndTrack(Pin pin) {
+        Hibernate.initialize(pin.getPlace());
+        Hibernate.initialize(pin.getPlaceTrack());
+        Hibernate.initialize(pin.getPlaceTrack().getTrack());
+    }
+
     private NotificationResDTO.Item toItem(Notification notification) {
+        Long recipientId = notification.getRecipient().getId();
+        Long actorId = notification.getActor().getId();
         String actorProfileImageUrl =
                 profileImageStorage.getPublicUrlOrNull(notification.getActor().getProfileImageObjectKey());
-        return NotificationConverter.toItem(notification, actorProfileImageUrl);
+        boolean isFollowing = memberQueryService.isFollowing(recipientId, actorId);
+        boolean isFollowingViewer = memberQueryService.isFollowing(actorId, recipientId);
+        return NotificationConverter.toItem(notification, actorProfileImageUrl, isFollowing, isFollowingViewer);
     }
 }

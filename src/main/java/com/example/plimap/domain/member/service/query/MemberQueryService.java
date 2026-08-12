@@ -19,6 +19,8 @@ public interface MemberQueryService {
 
     List<Member> findAllFollowers(Long memberId);
 
+    boolean isFollowing(Long followerId, Long followingId);
+
     boolean isNicknameAvailable(String nickname);
 
     String pickAvailablePenaltyNickname();

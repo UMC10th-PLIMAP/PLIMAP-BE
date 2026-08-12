@@ -1,6 +1,8 @@
 package com.example.plimap.domain.notification.repository.query.impl;
 
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.entity.MemberFollow;
+import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.notification.dto.Pagination;
 import com.example.plimap.domain.notification.entity.Notification;
@@ -9,6 +11,7 @@ import com.example.plimap.domain.notification.exception.NotificationErrorCode;
 import com.example.plimap.domain.notification.exception.NotificationException;
 import com.example.plimap.domain.notification.repository.NotificationRepository;
 import com.example.plimap.domain.notification.repository.query.NotificationQueryRepository;
+import com.example.plimap.domain.notification.repository.query.NotificationRow;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.place.entity.Place;
@@ -49,6 +52,9 @@ class NotificationQueryRepositoryImplTest {
 
     @Autowired
     private MemberRepository memberRepository;
+
+    @Autowired
+    private MemberFollowRepository memberFollowRepository;
 
     @Autowired
     private PlaceRepository placeRepository;
@@ -116,18 +122,18 @@ class NotificationQueryRepositoryImplTest {
     @Test
     void 알림_목록을_최신순_커서_페이지네이션으로_조회한다() {
         // when
-        Pagination<Notification> firstPage =
+        Pagination<NotificationRow> firstPage =
                 notificationQueryRepository.findNotifications(recipient.getId(), null, 2);
 
         // then
         assertThat(firstPage.data()).hasSize(2);
         assertThat(firstPage.hasNext()).isTrue();
         assertThat(firstPage.data())
-                .extracting(Notification::getId)
+                .extracting(row -> row.notification().getId())
                 .containsExactly(pinCreatedNotification.getId(), pinLikedNotification.getId());
 
         // when
-        Pagination<Notification> secondPage =
+        Pagination<NotificationRow> secondPage =
                 notificationQueryRepository.findNotifications(recipient.getId(), firstPage.nextCursor(), 2);
 
         // then
@@ -135,25 +141,52 @@ class NotificationQueryRepositoryImplTest {
         assertThat(secondPage.hasNext()).isFalse();
         assertThat(secondPage.nextCursor()).isNull();
         assertThat(secondPage.data())
-                .extracting(Notification::getId)
+                .extracting(row -> row.notification().getId())
                 .containsExactly(followNotification.getId());
     }
 
     @Test
     void 알림에는_알림_유형과_대상_핀_존재_여부가_반영된다() {
         // when
-        Pagination<Notification> page =
+        Pagination<NotificationRow> page =
                 notificationQueryRepository.findNotifications(recipient.getId(), null, 10);
 
         // then
         assertThat(page.data())
-                .filteredOn(n -> n.getType() == NotificationType.FOLLOW)
-                .extracting(n -> n.getPin() != null ? n.getPin().getId() : null)
+                .filteredOn(row -> row.notification().getType() == NotificationType.FOLLOW)
+                .extracting(row -> row.notification().getPin() != null ? row.notification().getPin().getId() : null)
                 .containsExactly((Long) null);
         assertThat(page.data())
-                .filteredOn(n -> n.getType() == NotificationType.PIN_LIKED)
-                .extracting(n -> n.getPin() != null ? n.getPin().getId() : null)
+                .filteredOn(row -> row.notification().getType() == NotificationType.PIN_LIKED)
+                .extracting(row -> row.notification().getPin() != null ? row.notification().getPin().getId() : null)
                 .doesNotContainNull();
+    }
+
+    @Test
+    void 팔로우_상태와_핀의_장소명_앨범이미지가_함께_반환된다() {
+        // given
+        memberFollowRepository.save(MemberFollow.create(recipient, actor));
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        Pagination<NotificationRow> page =
+                notificationQueryRepository.findNotifications(recipient.getId(), null, 10);
+
+        // then
+        assertThat(page.data())
+                .filteredOn(row -> row.notification().getType() == NotificationType.FOLLOW)
+                .allSatisfy(row -> {
+                    assertThat(row.isFollowing()).isTrue();
+                    assertThat(row.isFollowingViewer()).isFalse();
+                });
+        assertThat(page.data())
+                .filteredOn(row -> row.notification().getType() == NotificationType.PIN_LIKED)
+                .allSatisfy(row -> {
+                    Pin pin = row.notification().getPin();
+                    assertThat(pin.getPlace().getName()).isEqualTo("여의도 한강공원");
+                    assertThat(pin.getPlaceTrack().getTrack().getAlbumImageUrl()).isEqualTo("album");
+                });
     }
 
     @Test
@@ -208,22 +241,22 @@ class NotificationQueryRepositoryImplTest {
         Long tieId3 = insertFollowNotification(tieRecipient.getId(), actor.getId(), sameCreatedAt);
 
         // when
-        Pagination<Notification> firstPage =
+        Pagination<NotificationRow> firstPage =
                 notificationQueryRepository.findNotifications(tieRecipient.getId(), null, 1);
-        Pagination<Notification> secondPage =
+        Pagination<NotificationRow> secondPage =
                 notificationQueryRepository.findNotifications(tieRecipient.getId(), firstPage.nextCursor(), 1);
-        Pagination<Notification> thirdPage =
+        Pagination<NotificationRow> thirdPage =
                 notificationQueryRepository.findNotifications(tieRecipient.getId(), secondPage.nextCursor(), 1);
 
         // then
         assertThat(firstPage.data())
-                .extracting(Notification::getId)
+                .extracting(row -> row.notification().getId())
                 .containsExactly(tieId3);
         assertThat(secondPage.data())
-                .extracting(Notification::getId)
+                .extracting(row -> row.notification().getId())
                 .containsExactly(tieId2);
         assertThat(thirdPage.data())
-                .extracting(Notification::getId)
+                .extracting(row -> row.notification().getId())
                 .containsExactly(tieId1);
         assertThat(thirdPage.hasNext()).isFalse();
         assertThat(thirdPage.nextCursor()).isNull();
@@ -232,7 +265,7 @@ class NotificationQueryRepositoryImplTest {
     @Test
     void 다른_회원에게_온_알림은_노출되지_않는다() {
         // when
-        Pagination<Notification> page =
+        Pagination<NotificationRow> page =
                 notificationQueryRepository.findNotifications(actor.getId(), null, 10);
 
         // then

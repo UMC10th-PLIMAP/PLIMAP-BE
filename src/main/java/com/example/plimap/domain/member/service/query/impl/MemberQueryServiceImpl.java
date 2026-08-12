@@ -86,6 +86,11 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     }
 
     @Override
+    public boolean isFollowing(Long followerId, Long followingId) {
+        return memberFollowRepository.existsById(new MemberFollowId(followerId, followingId));
+    }
+
+    @Override
     public boolean isNicknameAvailable(String nickname) {
         return !memberRepository.existsByNicknameIgnoreCaseAndDeletedAtIsNull(nickname);
     }
