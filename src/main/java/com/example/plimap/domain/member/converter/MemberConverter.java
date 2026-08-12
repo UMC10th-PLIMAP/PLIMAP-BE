@@ -63,7 +63,12 @@ public class MemberConverter {
                 followerCount,
                 followingCount,
                 member.getOnboardingCompletedAt(),
-                pinCount
+                pinCount,
+                member.getStatus(),
+                member.getSuspendedUntil(),
+                member.getWithdrawalReason(),
+                member.getLastPenaltyCategory(),
+                member.getLastPenaltyDetail()
         );
     }
 
