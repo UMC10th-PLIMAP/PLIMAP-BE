@@ -6,6 +6,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
@@ -14,6 +15,7 @@ import com.example.plimap.domain.member.repository.query.MemberFollowRow;
 import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.member.repository.query.MemberSearchRow;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.report.enums.ReportCategory;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -229,8 +231,7 @@ class MemberQueryServiceImplTest {
                 .profileImageObjectKey("key")
                 .build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
-                .thenReturn(Optional.of(member));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
         when(memberFollowRepository.countByIdFollowingId(1L)).thenReturn(3L);
         when(memberFollowRepository.countByIdFollowerId(1L)).thenReturn(5L);
         when(pinQueryService.countPinsByMemberId(1L)).thenReturn(9L);
@@ -246,6 +247,54 @@ class MemberQueryServiceImplTest {
         assertThat(result.followingCount()).isEqualTo(5L);
         assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
         assertThat(result.pinCount()).isEqualTo(9L);
+        assertThat(result.status()).isEqualTo(MemberStatus.ACTIVE);
+        assertThat(result.suspendedUntil()).isNull();
+        assertThat(result.withdrawalReason()).isNull();
+        assertThat(result.reasonCategory()).isNull();
+        assertThat(result.reasonDetail()).isNull();
+    }
+
+    @Test
+    void 정지_중인_회원도_본인_프로필에서_제재_정보를_조회할_수_있다() {
+        // given
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
+        Instant suspendedUntil = Instant.parse("2026-08-20T00:00:00Z");
+        ReflectionTestUtils.setField(member, "suspendedUntil", suspendedUntil);
+        ReflectionTestUtils.setField(member, "lastPenaltyCategory", ReportCategory.ABUSE_OR_HATE_SPEECH);
+        ReflectionTestUtils.setField(member, "lastPenaltyDetail", "욕설 반복 신고 누적");
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+
+        // when
+        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+
+        // then
+        assertThat(result.status()).isEqualTo(MemberStatus.SUSPENDED);
+        assertThat(result.suspendedUntil()).isEqualTo(suspendedUntil);
+        assertThat(result.reasonCategory()).isEqualTo(ReportCategory.ABUSE_OR_HATE_SPEECH);
+        assertThat(result.reasonDetail()).isEqualTo("욕설 반복 신고 누적");
+    }
+
+    @Test
+    void 자동_탈퇴된_회원도_본인_프로필에서_탈퇴_사유를_조회할_수_있다() {
+        // given
+        Member member = Member.builder().nickname("예림").build();
+        ReflectionTestUtils.setField(member, "id", 1L);
+        ReflectionTestUtils.setField(member, "status", MemberStatus.WITHDRAWN);
+        ReflectionTestUtils.setField(member, "withdrawalReason", WithdrawalReason.PENALTY);
+        ReflectionTestUtils.setField(member, "lastPenaltyCategory", ReportCategory.OBSCENE_OR_HARMFUL);
+        ReflectionTestUtils.setField(member, "lastPenaltyDetail", "음란물 반복 게시");
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+
+        // when
+        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+
+        // then
+        assertThat(result.status()).isEqualTo(MemberStatus.WITHDRAWN);
+        assertThat(result.withdrawalReason()).isEqualTo(WithdrawalReason.PENALTY);
+        assertThat(result.reasonCategory()).isEqualTo(ReportCategory.OBSCENE_OR_HARMFUL);
+        assertThat(result.reasonDetail()).isEqualTo("음란물 반복 게시");
     }
 
     @Test
@@ -253,8 +302,7 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
-                .thenReturn(Optional.of(member));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
         when(memberFollowRepository.countByIdFollowingId(1L)).thenReturn(0L);
         when(memberFollowRepository.countByIdFollowerId(1L)).thenReturn(0L);
 
@@ -271,8 +319,7 @@ class MemberQueryServiceImplTest {
         // given
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", 1L);
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
-                .thenReturn(Optional.of(member));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
         when(pinQueryService.countPinsByMemberId(1L)).thenReturn(0L);
 
         // when
@@ -285,8 +332,7 @@ class MemberQueryServiceImplTest {
     @Test
     void 존재하지_않는_회원의_프로필은_조회할_수_없다() {
         // given
-        when(memberRepository.findByIdAndStatusAndDeletedAtIsNull(1L, MemberStatus.ACTIVE))
-                .thenReturn(Optional.empty());
+        when(memberRepository.findById(1L)).thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> memberQueryService.getMyProfile(1L))

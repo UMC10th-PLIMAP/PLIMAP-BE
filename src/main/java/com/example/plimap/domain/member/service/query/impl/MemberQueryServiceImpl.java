@@ -144,7 +144,9 @@ public class MemberQueryServiceImpl implements MemberQueryService {
 
     @Override
     public MemberResDTO.MyProfile getMyProfile(Long memberId) {
-        Member member = getActiveMember(memberId);
+        // 정지/탈퇴 회원도 자신의 상태(status/suspendedUntil/제재사유)를 조회할 수 있어야 하므로
+        // 상태를 필터링하는 getActiveMember() 대신 상태 무관 조회를 사용한다.
+        Member member = getMemberById(memberId);
         long followerCount = memberFollowRepository.countByIdFollowingId(memberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(memberId);
         long pinCount = pinQueryService.countPinsByMemberId(memberId);
