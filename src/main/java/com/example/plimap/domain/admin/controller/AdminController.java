@@ -60,6 +60,26 @@ public class AdminController implements AdminControllerDocs {
     }
 
     @Override
+    @PostMapping("/pins/{pinId}/sanctions")
+    public ApiResponse<Void> grantPinSanction(
+            @PathVariable Long pinId,
+            @RequestBody @Valid AdminReqDTO.PinSanctionDecision request
+    ) {
+        adminCommandService.grantPinSanction(pinId, request.reportId(), request.period());
+        return ApiResponse.success(AdminSuccessCode.PIN_SANCTION_GRANTED, null);
+    }
+
+    @Override
+    @PostMapping("/members/{memberId}/sanctions")
+    public ApiResponse<Void> grantMemberSanction(
+            @PathVariable Long memberId,
+            @RequestBody @Valid AdminReqDTO.MemberSanctionDecision request
+    ) {
+        adminCommandService.grantMemberSanction(memberId, request.category(), request.detail(), request.period());
+        return ApiResponse.success(AdminSuccessCode.MEMBER_SANCTION_GRANTED, null);
+    }
+
+    @Override
     @GetMapping("/pins/reports")
     public ApiResponse<AdminResDTO.ReportedPinPage> getReportedPins(
             @RequestParam(defaultValue = "ALL") PinReportFilter filter,

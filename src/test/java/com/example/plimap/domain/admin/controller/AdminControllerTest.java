@@ -10,9 +10,11 @@ import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.pin.enums.PinReportFilter;
+import com.example.plimap.domain.report.enums.ReportCategory;
 import java.time.Instant;
 import java.util.List;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
@@ -126,7 +128,7 @@ class AdminControllerTest {
     }
 
     @Test
-    void 관리자가_PIN_신고에_벌점을_부여하면_200을_반환한다() throws Exception {
+    void 관리자가_PIN_신고를_반려하면_200을_반환한다() throws Exception {
         Member admin = Member.builder().nickname("운영자").role(MemberRole.ADMIN).build();
         ReflectionTestUtils.setField(admin, "id", MEMBER_ID);
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(admin));
@@ -134,11 +136,39 @@ class AdminControllerTest {
         mockMvc.perform(post("/api/v1/admin/pins/10/penalty")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"grantPenalty\": true}"))
+                        .content("{\"grantPenalty\": false}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("ADMIN_200_PIN_PENALTY_REVIEWED"));
 
-        verify(adminCommandService).reviewPinReport(eq(10L), eq(true));
+        verify(adminCommandService).reviewPinReport(eq(10L), eq(false));
+    }
+
+    @Test
+    void 관리자가_PIN_최종_제재를_부여하면_200을_반환한다() throws Exception {
+        mockAdminAuth();
+
+        mockMvc.perform(post("/api/v1/admin/pins/10/sanctions")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reportId\": 100, \"period\": \"THREE_DAYS\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_PIN_SANCTION_GRANTED"));
+
+        verify(adminCommandService).grantPinSanction(eq(10L), eq(100L), eq(SuspensionPeriod.THREE_DAYS));
+    }
+
+    @Test
+    void 관리자가_프로필_최종_제재를_부여하면_200을_반환한다() throws Exception {
+        mockAdminAuth();
+
+        mockMvc.perform(post("/api/v1/admin/members/2/sanctions")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\": \"OTHER\", \"detail\": \"반복 위반\", \"period\": \"PERMANENT\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBER_SANCTION_GRANTED"));
+
+        verify(adminCommandService).grantMemberSanction(eq(2L), eq(ReportCategory.OTHER), eq("반복 위반"), eq(SuspensionPeriod.PERMANENT));
     }
 
     @Test

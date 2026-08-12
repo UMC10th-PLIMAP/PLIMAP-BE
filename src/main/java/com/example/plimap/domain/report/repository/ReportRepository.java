@@ -3,6 +3,7 @@ package com.example.plimap.domain.report.repository;
 import com.example.plimap.domain.report.dto.ReportReason;
 import com.example.plimap.domain.report.entity.Report;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -33,12 +34,20 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
 
     @Query("""
             select new com.example.plimap.domain.report.dto.ReportReason(
-                r.reportedPin.id, r.category, r.detail, r.reporter.nickname, r.createdAt)
+                r.id, r.reportedPin.id, r.category, r.detail, r.reporter.nickname, r.createdAt)
             from Report r
             where r.reportedPin.id in :pinIds and r.reviewed = false
             order by r.createdAt desc
             """)
     List<ReportReason> findReasonsByReportedPinIds(List<Long> pinIds);
+
+    @Query("""
+            select new com.example.plimap.domain.report.dto.ReportReason(
+                r.id, r.reportedPin.id, r.category, r.detail, r.reporter.nickname, r.createdAt)
+            from Report r
+            where r.id = :reportId
+            """)
+    Optional<ReportReason> findReasonById(Long reportId);
 
     @Modifying
     @Query("update Report r set r.reviewed = true where r.reportedPin.id = :pinId and r.reviewed = false")

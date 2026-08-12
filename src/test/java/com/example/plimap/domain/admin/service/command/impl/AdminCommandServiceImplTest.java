@@ -1,16 +1,23 @@
 package com.example.plimap.domain.admin.service.command.impl;
 
 import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.exception.AdminException;
 import com.example.plimap.domain.auth.service.query.AuthQueryService;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.notification.service.command.NotificationCommandService;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.report.dto.ReportReason;
+import com.example.plimap.domain.report.enums.ReportCategory;
+import com.example.plimap.domain.report.exception.ReportException;
 import com.example.plimap.domain.report.service.command.ReportCommandService;
+import com.example.plimap.domain.report.service.query.ReportQueryService;
 import com.example.plimap.domain.track.service.command.PlaceTrackCommandService;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -22,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -34,6 +42,7 @@ class AdminCommandServiceImplTest {
 
     private static final Long PIN_ID = 10L;
     private static final Long MEMBER_ID = 1L;
+    private static final Long REPORT_ID = 100L;
 
     @InjectMocks
     private AdminCommandServiceImpl adminCommandService;
@@ -57,13 +66,16 @@ class AdminCommandServiceImplTest {
     private ReportCommandService reportCommandService;
 
     @Mock
+    private ReportQueryService reportQueryService;
+
+    @Mock
     private PlaceTrackCommandService placeTrackCommandService;
 
     @Mock
     private AuthQueryService authQueryService;
 
     @Test
-    void 핀_신고에_벌점을_부여하지_않으면_신고누적만_초기화한다() {
+    void 핀_신고를_반려하면_신고누적만_초기화한다() {
         adminCommandService.reviewPinReport(PIN_ID, false);
 
         verify(pinCommandService).resetPinReportCount(PIN_ID);
@@ -73,34 +85,76 @@ class AdminCommandServiceImplTest {
     }
 
     @Test
-    void 핀_신고에_벌점을_부여하면_핀을_삭제하고_작성자_벌점을_올린다() {
-        Member owner = Member.builder().nickname("작성자").build();
-        ReflectionTestUtils.setField(owner, "id", MEMBER_ID);
-        Pin pin = Pin.builder().member(owner).build();
-        when(pinQueryService.getActivePin(PIN_ID)).thenReturn(pin);
-        when(memberCommandService.increasePenaltyPoint(MEMBER_ID)).thenReturn(false);
+    void 핀_신고_검토_API에_벌점_부여를_요청하면_거부된다() {
+        assertThatThrownBy(() -> adminCommandService.reviewPinReport(PIN_ID, true))
+                .isInstanceOf(AdminException.class);
 
-        adminCommandService.reviewPinReport(PIN_ID, true);
-
-        verify(pinCommandService).penalizePin(PIN_ID);
-        verify(memberCommandService).increasePenaltyPoint(MEMBER_ID);
-        verify(pinCommandService, never()).hardDeleteLikesByMember(any());
-        verify(pinQueryService, never()).findPinIdsLikedByMember(any());
-        verifyNoInteractions(notificationCommandService, reportCommandService, placeTrackCommandService);
+        verifyNoInteractions(pinCommandService, memberCommandService, reportCommandService);
     }
 
     @Test
-    void 핀_신고_벌점_부여로_4점에_도달하면_자동탈퇴_캐스케이드가_실행된다() {
+    void 프로필_신고를_반려하면_신고누적만_초기화한다() {
+        adminCommandService.reviewProfileReport(MEMBER_ID, false);
+
+        verify(memberCommandService).resetReportCount(MEMBER_ID);
+        verifyNoInteractions(memberQueryService);
+    }
+
+    @Test
+    void 프로필_신고_검토_API에_벌점_부여를_요청하면_거부된다() {
+        assertThatThrownBy(() -> adminCommandService.reviewProfileReport(MEMBER_ID, true))
+                .isInstanceOf(AdminException.class);
+
+        verifyNoInteractions(memberCommandService, memberQueryService);
+    }
+
+    @Test
+    void 핀_최종_제재를_부여하면_핀을_삭제하고_지목한_신고_사유로_작성자_벌점을_올린다() {
+        Member owner = Member.builder().nickname("작성자").build();
+        ReflectionTestUtils.setField(owner, "id", MEMBER_ID);
+        Pin pin = Pin.builder().member(owner).build();
+        ReportReason reason = new ReportReason(
+                REPORT_ID, PIN_ID, ReportCategory.ABUSE_OR_HATE_SPEECH, null, "신고자", Instant.now());
+        when(reportQueryService.getReasonById(REPORT_ID)).thenReturn(reason);
+        when(pinQueryService.getActivePin(PIN_ID)).thenReturn(pin);
+        when(memberCommandService.applySanction(MEMBER_ID, SuspensionPeriod.THREE_DAYS, ReportCategory.ABUSE_OR_HATE_SPEECH, null))
+                .thenReturn(false);
+
+        adminCommandService.grantPinSanction(PIN_ID, REPORT_ID, SuspensionPeriod.THREE_DAYS);
+
+        verify(pinCommandService).penalizePin(PIN_ID);
+        verify(memberCommandService).applySanction(MEMBER_ID, SuspensionPeriod.THREE_DAYS, ReportCategory.ABUSE_OR_HATE_SPEECH, null);
+        verifyNoInteractions(notificationCommandService, placeTrackCommandService);
+    }
+
+    @Test
+    void 핀_최종_제재_시_다른_핀의_신고를_지목하면_거부된다() {
+        ReportReason reasonForOtherPin = new ReportReason(
+                REPORT_ID, 999L, ReportCategory.OTHER, "상세", "신고자", Instant.now());
+        when(reportQueryService.getReasonById(REPORT_ID)).thenReturn(reasonForOtherPin);
+
+        assertThatThrownBy(() -> adminCommandService.grantPinSanction(PIN_ID, REPORT_ID, SuspensionPeriod.ONE_DAY))
+                .isInstanceOf(ReportException.class);
+
+        verifyNoInteractions(pinQueryService, pinCommandService, memberCommandService);
+    }
+
+    @Test
+    void 핀_최종_제재로_4점에_도달하면_자동탈퇴_캐스케이드가_실행된다() {
         Long likedPinId = 99L;
         Member owner = Member.builder().nickname("작성자").build();
         ReflectionTestUtils.setField(owner, "id", MEMBER_ID);
         Pin pin = Pin.builder().member(owner).build();
+        ReportReason reason = new ReportReason(
+                REPORT_ID, PIN_ID, ReportCategory.OBSCENE_OR_HARMFUL, null, "신고자", Instant.now());
+        when(reportQueryService.getReasonById(REPORT_ID)).thenReturn(reason);
         when(pinQueryService.getActivePin(PIN_ID)).thenReturn(pin);
-        when(memberCommandService.increasePenaltyPoint(MEMBER_ID)).thenReturn(true);
+        when(memberCommandService.applySanction(MEMBER_ID, SuspensionPeriod.FIVE_DAYS, ReportCategory.OBSCENE_OR_HARMFUL, null))
+                .thenReturn(true);
         when(pinQueryService.findAllPinIdsByMemberId(MEMBER_ID)).thenReturn(List.of(PIN_ID));
         when(pinQueryService.findPinIdsLikedByMember(MEMBER_ID)).thenReturn(List.of(likedPinId));
 
-        adminCommandService.reviewPinReport(PIN_ID, true);
+        adminCommandService.grantPinSanction(PIN_ID, REPORT_ID, SuspensionPeriod.FIVE_DAYS);
 
         InOrder order = inOrder(notificationCommandService, reportCommandService, pinCommandService, placeTrackCommandService);
         order.verify(notificationCommandService).deleteByMemberId(MEMBER_ID);
@@ -114,35 +168,46 @@ class AdminCommandServiceImplTest {
     }
 
     @Test
-    void 프로필_신고에_벌점을_부여하지_않으면_신고누적만_초기화한다() {
-        adminCommandService.reviewProfileReport(MEMBER_ID, false);
-
-        verify(memberCommandService).resetReportCount(MEMBER_ID);
-        verify(memberCommandService, never()).increasePenaltyPoint(MEMBER_ID);
-        verifyNoInteractions(memberQueryService);
-    }
-
-    @Test
-    void 프로필_신고에_벌점을_부여하면_닉네임을_치환하고_벌점을_올린다() {
+    void 프로필_최종_제재를_부여하면_닉네임을_치환하고_작성한_사유로_벌점을_올린다() {
         when(memberQueryService.pickAvailablePenaltyNickname()).thenReturn("참새");
-        when(memberCommandService.increasePenaltyPoint(MEMBER_ID)).thenReturn(false);
+        when(memberCommandService.applySanction(MEMBER_ID, SuspensionPeriod.ONE_DAY, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null))
+                .thenReturn(false);
 
-        adminCommandService.reviewProfileReport(MEMBER_ID, true);
+        adminCommandService.grantMemberSanction(MEMBER_ID, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null, SuspensionPeriod.ONE_DAY);
 
         verify(memberCommandService).replacePenalizedNickname(MEMBER_ID, "참새");
-        verify(memberCommandService).increasePenaltyPoint(MEMBER_ID);
+        verify(memberCommandService).applySanction(MEMBER_ID, SuspensionPeriod.ONE_DAY, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null);
         verifyNoInteractions(notificationCommandService, reportCommandService, placeTrackCommandService, pinCommandService);
     }
 
     @Test
-    void 프로필_신고_벌점_부여로_4점에_도달하면_자동탈퇴_캐스케이드가_실행된다() {
+    void 프로필_최종_제재_사유가_OTHER인데_상세가_없으면_거부된다() {
+        assertThatThrownBy(() ->
+                adminCommandService.grantMemberSanction(MEMBER_ID, ReportCategory.OTHER, null, SuspensionPeriod.ONE_DAY))
+                .isInstanceOf(ReportException.class);
+
+        verifyNoInteractions(memberQueryService, memberCommandService);
+    }
+
+    @Test
+    void 프로필_최종_제재_사유가_OTHER가_아닌데_상세가_있으면_거부된다() {
+        assertThatThrownBy(() -> adminCommandService.grantMemberSanction(
+                MEMBER_ID, ReportCategory.ABUSE_OR_HATE_SPEECH, "상세", SuspensionPeriod.ONE_DAY))
+                .isInstanceOf(ReportException.class);
+
+        verifyNoInteractions(memberQueryService, memberCommandService);
+    }
+
+    @Test
+    void 프로필_최종_제재를_영구로_선택하면_4점_미만이어도_즉시_탈퇴_캐스케이드가_실행된다() {
         Long likedPinId = 99L;
         when(memberQueryService.pickAvailablePenaltyNickname()).thenReturn("참새");
-        when(memberCommandService.increasePenaltyPoint(MEMBER_ID)).thenReturn(true);
+        when(memberCommandService.applySanction(MEMBER_ID, SuspensionPeriod.PERMANENT, ReportCategory.OTHER, "심각한 위반"))
+                .thenReturn(true);
         when(pinQueryService.findAllPinIdsByMemberId(MEMBER_ID)).thenReturn(List.of());
         when(pinQueryService.findPinIdsLikedByMember(MEMBER_ID)).thenReturn(List.of(likedPinId));
 
-        adminCommandService.reviewProfileReport(MEMBER_ID, true);
+        adminCommandService.grantMemberSanction(MEMBER_ID, ReportCategory.OTHER, "심각한 위반", SuspensionPeriod.PERMANENT);
 
         verify(notificationCommandService).deleteByMemberId(MEMBER_ID);
         verify(pinCommandService).decreaseLikeCount(likedPinId);
@@ -164,7 +229,7 @@ class AdminCommandServiceImplTest {
         AdminResDTO.MemberDetail result = adminCommandService.regenerateMemberNickname(MEMBER_ID);
 
         verify(memberCommandService).regenerateNickname(MEMBER_ID, "참새");
-        verify(memberCommandService, never()).increasePenaltyPoint(any());
+        verify(memberCommandService, never()).applySanction(any(), any(), any(), any());
         assertThat(result.nickname()).isEqualTo("참새");
         assertThat(result.email()).isEqualTo("a@example.com");
         verifyNoInteractions(notificationCommandService, reportCommandService, placeTrackCommandService, pinCommandService);
