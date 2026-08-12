@@ -97,6 +97,7 @@ public class PinResponse {
             Long placeId,
             Double latitude,
             Double longitude,
+            Long writerId,
             String writerNickname,
             String writerProfileImage,
             String introduction,

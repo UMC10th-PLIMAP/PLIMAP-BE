@@ -519,6 +519,7 @@ class PinControllerTest {
                         1L,
                         37.5665,
                         126.9780,
+                        1L,
                         "seoyoon",
                         "https://example.com/profile.png",
                         "좋아하는 노래예요",
