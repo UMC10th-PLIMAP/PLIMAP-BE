@@ -4,7 +4,7 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.dto.Pagination;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.WithdrawalReason;
@@ -15,6 +15,7 @@ import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.report.enums.ReportCategory;
 import java.time.Instant;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
 import com.example.plimap.global.config.SecurityConfig;
@@ -122,7 +123,7 @@ class MemberControllerTest {
 
     @Test
     void 내_프로필_조회에_성공하면_200과_MY_PROFILE_FETCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.MyProfile profile = new MemberResDTO.MyProfile(
+        MemberResponse.MyProfile profile = new MemberResponse.MyProfile(
                 AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L,
                 MemberStatus.ACTIVE, null, null, null, null);
         when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
@@ -131,7 +132,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_MY_PROFILE_FETCHED"))
+                .andExpect(jsonPath("$.code").value("MEMBER_MY_PROFILE_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.nickname").value("예림"))
                 .andExpect(jsonPath("$.result.followerCount").value(3))
                 .andExpect(jsonPath("$.result.followingCount").value(5))
@@ -150,7 +151,7 @@ class MemberControllerTest {
         ReflectionTestUtils.setField(suspendedMember, "suspendedUntil", Instant.parse("2026-08-20T00:00:00Z"));
         when(memberRepository.findById(AUTH_MEMBER_ID)).thenReturn(Optional.of(suspendedMember));
 
-        MemberResDTO.MyProfile profile = new MemberResDTO.MyProfile(
+        MemberResponse.MyProfile profile = new MemberResponse.MyProfile(
                 AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L,
                 MemberStatus.SUSPENDED, Instant.parse("2026-08-20T00:00:00Z"), null,
                 ReportCategory.ABUSE_OR_HATE_SPEECH, "욕설 반복 신고 누적");
@@ -174,7 +175,7 @@ class MemberControllerTest {
         ReflectionTestUtils.setField(withdrawnMember, "status", MemberStatus.WITHDRAWN);
         when(memberRepository.findById(AUTH_MEMBER_ID)).thenReturn(Optional.of(withdrawnMember));
 
-        MemberResDTO.MyProfile profile = new MemberResDTO.MyProfile(
+        MemberResponse.MyProfile profile = new MemberResponse.MyProfile(
                 AUTH_MEMBER_ID, "플리맵사용자", null, null, null, 0L, 0L, Instant.parse("2026-01-01T00:00:00Z"), 0L,
                 MemberStatus.WITHDRAWN, null, WithdrawalReason.PENALTY,
                 ReportCategory.OBSCENE_OR_HARMFUL, "음란물 반복 게시");
@@ -191,7 +192,7 @@ class MemberControllerTest {
 
     @Test
     void 다른_사용자_프로필_조회에_성공하면_200과_OTHER_PROFILE_FETCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.OtherProfile profile = new MemberResDTO.OtherProfile(
+        MemberResponse.OtherProfile profile = new MemberResponse.OtherProfile(
                 TARGET_MEMBER_ID, "상대방", "김상대", "소개", "key", 3L, 5L, true, false, 7L);
         when(memberQueryService.getOtherProfile(AUTH_MEMBER_ID, TARGET_MEMBER_ID)).thenReturn(profile);
 
@@ -199,7 +200,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_OTHER_PROFILE_FETCHED"))
+                .andExpect(jsonPath("$.code").value("MEMBER_OTHER_PROFILE_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.nickname").value("상대방"))
                 .andExpect(jsonPath("$.result.isFollowing").value(true))
                 .andExpect(jsonPath("$.result.isFollowingViewer").value(false))
@@ -215,7 +216,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_404_MEMBER_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
     }
 
     @Test
@@ -227,7 +228,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_400_CANNOT_VIEW_SELF_PROFILE"));
+                .andExpect(jsonPath("$.code").value("MEMBER_CANNOT_VIEW_SELF_PROFILE"));
     }
 
     @Test
@@ -238,7 +239,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_UNFOLLOWED"))
+                .andExpect(jsonPath("$.code").value("MEMBER_UNFOLLOWED_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("언팔로우했습니다."))
                 .andExpect(jsonPath("$.result").doesNotExist());
 
@@ -254,7 +255,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_404_NOT_FOLLOWING"))
+                .andExpect(jsonPath("$.code").value("MEMBER_NOT_FOLLOWING"))
                 .andExpect(jsonPath("$.message").value("팔로우 중이 아닌 사용자입니다."))
                 .andExpect(jsonPath("$.result").doesNotExist());
     }
@@ -267,7 +268,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_WITHDRAWN"))
+                .andExpect(jsonPath("$.code").value("MEMBER_WITHDRAWN_SUCCESS"))
                 .andExpect(jsonPath("$.result").doesNotExist());
 
         verify(memberCommandService).withdraw(AUTH_MEMBER_ID);
@@ -307,9 +308,9 @@ class MemberControllerTest {
 
     @Test
     void 팔로워_목록_조회에_성공하면_200과_FOLLOWERS_FETCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(
+        MemberResponse.FollowerItem follower = new MemberResponse.FollowerItem(
                 3L, "팔로워", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true, false);
-        Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
+        Pagination<MemberResponse.FollowerItem> page = Pagination.<MemberResponse.FollowerItem>builder()
                 .data(List.of(follower))
                 .nextCursor(null)
                 .hasNext(false)
@@ -321,7 +322,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_FOLLOWERS_FETCHED"))
+                .andExpect(jsonPath("$.code").value("MEMBER_FOLLOWERS_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.data[0].nickname").value("팔로워"))
                 .andExpect(jsonPath("$.result.data[0].isFollowing").value(true))
                 .andExpect(jsonPath("$.result.data[0].isFollowingViewer").value(false))
@@ -337,7 +338,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_404_MEMBER_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
     }
 
     @Test
@@ -366,7 +367,7 @@ class MemberControllerTest {
 
     @Test
     void 팔로워_목록_조회시_pageSize가_50이면_허용된다() throws Exception {
-        Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
+        Pagination<MemberResponse.FollowerItem> page = Pagination.<MemberResponse.FollowerItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -385,7 +386,7 @@ class MemberControllerTest {
     @Test
     void 팔로워_목록_조회시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
         String cursor = "2026-01-01T00:00:00Z/3";
-        Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
+        Pagination<MemberResponse.FollowerItem> page = Pagination.<MemberResponse.FollowerItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -404,21 +405,21 @@ class MemberControllerTest {
     @Test
     void 팔로워_목록_조회시_잘못된_커서면_400을_반환한다() throws Exception {
         when(memberQueryService.findFollowers(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), eq("invalid-cursor"), eq(10)))
-                .thenThrow(new MemberException(MemberErrorCode.INVALID_CURSOR));
+                .thenThrow(new MemberException(GeneralErrorCode.INVALID_CURSOR));
 
         mockMvc.perform(get("/api/v1/members/{memberId}/followers", TARGET_MEMBER_ID)
                         .param("cursor", "invalid-cursor")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_CURSOR"));
+                .andExpect(jsonPath("$.code").value("COMMON_400_INVALID_CURSOR"));
     }
 
     @Test
     void 팔로잉_목록_조회에_성공하면_200과_FOLLOWING_FETCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(
+        MemberResponse.FollowingItem following = new MemberResponse.FollowingItem(
                 3L, "팔로잉", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true, false);
-        Pagination<MemberResDTO.FollowingItem> page = Pagination.<MemberResDTO.FollowingItem>builder()
+        Pagination<MemberResponse.FollowingItem> page = Pagination.<MemberResponse.FollowingItem>builder()
                 .data(List.of(following))
                 .nextCursor(null)
                 .hasNext(false)
@@ -430,7 +431,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_FOLLOWING_FETCHED"))
+                .andExpect(jsonPath("$.code").value("MEMBER_FOLLOWING_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.data[0].nickname").value("팔로잉"))
                 .andExpect(jsonPath("$.result.data[0].isFollowing").value(true))
                 .andExpect(jsonPath("$.result.data[0].isFollowingViewer").value(false))
@@ -446,7 +447,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_404_MEMBER_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
     }
 
     @Test
@@ -475,7 +476,7 @@ class MemberControllerTest {
 
     @Test
     void 팔로잉_목록_조회시_pageSize가_50이면_허용된다() throws Exception {
-        Pagination<MemberResDTO.FollowingItem> page = Pagination.<MemberResDTO.FollowingItem>builder()
+        Pagination<MemberResponse.FollowingItem> page = Pagination.<MemberResponse.FollowingItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -494,7 +495,7 @@ class MemberControllerTest {
     @Test
     void 팔로잉_목록_조회시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
         String cursor = "2026-01-01T00:00:00Z/3";
-        Pagination<MemberResDTO.FollowingItem> page = Pagination.<MemberResDTO.FollowingItem>builder()
+        Pagination<MemberResponse.FollowingItem> page = Pagination.<MemberResponse.FollowingItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -513,21 +514,21 @@ class MemberControllerTest {
     @Test
     void 팔로잉_목록_조회시_잘못된_커서면_400을_반환한다() throws Exception {
         when(memberQueryService.findFollowing(eq(AUTH_MEMBER_ID), eq(TARGET_MEMBER_ID), eq("invalid-cursor"), eq(10)))
-                .thenThrow(new MemberException(MemberErrorCode.INVALID_CURSOR));
+                .thenThrow(new MemberException(GeneralErrorCode.INVALID_CURSOR));
 
         mockMvc.perform(get("/api/v1/members/{memberId}/following", TARGET_MEMBER_ID)
                         .param("cursor", "invalid-cursor")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_CURSOR"));
+                .andExpect(jsonPath("$.code").value("COMMON_400_INVALID_CURSOR"));
     }
 
     @Test
     void 회원_검색에_성공하면_200과_MEMBERS_SEARCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.SearchItem item = new MemberResDTO.SearchItem(
+        MemberResponse.SearchItem item = new MemberResponse.SearchItem(
                 3L, "검색결과", "이름", "key", false, false, Instant.parse("2026-01-01T00:00:00Z"));
-        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+        Pagination<MemberResponse.SearchItem> page = Pagination.<MemberResponse.SearchItem>builder()
                 .data(List.of(item))
                 .nextCursor(null)
                 .hasNext(false)
@@ -540,14 +541,14 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_MEMBERS_SEARCHED"))
+                .andExpect(jsonPath("$.code").value("MEMBER_MEMBERS_SEARCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.data[0].nickname").value("검색결과"))
                 .andExpect(jsonPath("$.result.hasNext").value(false));
     }
 
     @Test
     void 회원_검색시_keyword가_없어도_기본값으로_동작한다() throws Exception {
-        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+        Pagination<MemberResponse.SearchItem> page = Pagination.<MemberResponse.SearchItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -598,7 +599,7 @@ class MemberControllerTest {
 
     @Test
     void 회원_검색시_pageSize가_50이면_허용된다() throws Exception {
-        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+        Pagination<MemberResponse.SearchItem> page = Pagination.<MemberResponse.SearchItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -617,7 +618,7 @@ class MemberControllerTest {
     @Test
     void 회원_검색시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
         String cursor = "0/2/0/2026-01-01T00:00:00Z/3";
-        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+        Pagination<MemberResponse.SearchItem> page = Pagination.<MemberResponse.SearchItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -637,21 +638,21 @@ class MemberControllerTest {
     @Test
     void 회원_검색시_잘못된_커서면_400을_반환한다() throws Exception {
         when(memberQueryService.searchActiveMembers(eq(AUTH_MEMBER_ID), eq(""), eq("invalid-cursor"), eq(10)))
-                .thenThrow(new MemberException(MemberErrorCode.INVALID_CURSOR));
+                .thenThrow(new MemberException(GeneralErrorCode.INVALID_CURSOR));
 
         mockMvc.perform(get("/api/v1/members/search")
                         .param("cursor", "invalid-cursor")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_CURSOR"));
+                .andExpect(jsonPath("$.code").value("COMMON_400_INVALID_CURSOR"));
     }
 
     @Test
     void 프로필_이미지_업로드에_성공하면_200과_PROFILE_IMAGE_UPLOADED_응답을_반환한다() throws Exception {
         MockMultipartFile image = new MockMultipartFile(
                 "image", "profile.webp", "image/webp", "webp-content".getBytes());
-        MemberResDTO.ProfileImage result = new MemberResDTO.ProfileImage(
+        MemberResponse.ProfileImage result = new MemberResponse.ProfileImage(
                 "members/1/new.webp",
                 "https://project.supabase.co/storage/v1/object/public/profile-images/members/1/new.webp"
         );
@@ -662,7 +663,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_PROFILE_IMAGE_UPLOADED"))
+                .andExpect(jsonPath("$.code").value("MEMBER_PROFILE_IMAGE_UPLOADED_SUCCESS"))
                 .andExpect(jsonPath("$.result.objectKey").value("members/1/new.webp"))
                 .andExpect(jsonPath("$.result.imageUrl").value(result.imageUrl()));
     }
@@ -700,7 +701,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_400_INVALID_PROFILE_IMAGE"));
+                .andExpect(jsonPath("$.code").value("MEMBER_INVALID_PROFILE_IMAGE"));
     }
 
     @Test
@@ -709,7 +710,7 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_PROFILE_IMAGE_REMOVED"));
+                .andExpect(jsonPath("$.code").value("MEMBER_PROFILE_IMAGE_REMOVED_SUCCESS"));
 
         verify(memberCommandService).removeProfileImage(AUTH_MEMBER_ID);
     }
@@ -723,6 +724,6 @@ class MemberControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("MEMBER_404_PROFILE_IMAGE_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("MEMBER_PROFILE_IMAGE_NOT_FOUND"));
     }
 }

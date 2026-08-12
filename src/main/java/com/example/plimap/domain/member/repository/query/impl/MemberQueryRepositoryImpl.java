@@ -15,6 +15,7 @@ import com.example.plimap.domain.member.repository.query.MemberQueryRepository;
 import com.example.plimap.domain.member.repository.query.MemberSearchRow;
 import com.example.plimap.domain.auth.entity.QSocialAccount;
 import com.example.plimap.domain.report.entity.QReport;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
@@ -280,7 +281,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
         try {
             String[] parts = cursor.split("/");
             if (parts.length != 2) {
-                throw new MemberException(MemberErrorCode.INVALID_CURSOR);
+                throw new MemberException(GeneralErrorCode.INVALID_CURSOR);
             }
 
             Instant createdAt = Instant.parse(parts[0]);
@@ -288,7 +289,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
 
             return new CursorInfo(createdAt, memberId);
         } catch (DateTimeParseException | NumberFormatException e) {
-            throw new MemberException(MemberErrorCode.INVALID_CURSOR, e);
+            throw new MemberException(GeneralErrorCode.INVALID_CURSOR, e);
         }
     }
 
@@ -348,7 +349,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
         try {
             String[] parts = cursor.split("/");
             if (parts.length != 5) {
-                throw new MemberException(MemberErrorCode.INVALID_CURSOR);
+                throw new MemberException(GeneralErrorCode.INVALID_CURSOR);
             }
 
             Integer followingGroupScore = Integer.parseInt(parts[0]);
@@ -359,7 +360,7 @@ public class MemberQueryRepositoryImpl implements MemberQueryRepository {
 
             return new MemberSearchCursorInfo(followingGroupScore, nicknameScore, nameScore, createdAt, id);
         } catch (DateTimeParseException | NumberFormatException e) {
-            throw new MemberException(MemberErrorCode.INVALID_CURSOR, e);
+            throw new MemberException(GeneralErrorCode.INVALID_CURSOR, e);
         }
     }
 

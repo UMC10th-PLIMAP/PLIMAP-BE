@@ -2,7 +2,7 @@ package com.example.plimap.domain.notification.controller.docs;
 
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.notification.dto.Pagination;
-import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
+import com.example.plimap.domain.notification.dto.response.NotificationResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,7 +34,7 @@ public interface NotificationControllerDocs {
             content = @Content(examples = @ExampleObject(value = """
                     {
                       "isSuccess": true,
-                      "code": "NOTIFICATION_200_NOTIFICATIONS_RETRIEVED",
+                      "code": "NOTIFICATION_NOTIFICATIONS_RETRIEVED_SUCCESS",
                       "message": "알림 목록을 조회했습니다.",
                       "result": {
                         "data": [
@@ -60,7 +60,7 @@ public interface NotificationControllerDocs {
                     }
                     """))
     )
-    ResponseEntity<ApiResponse<Pagination<NotificationResDTO.Item>>> getNotifications(
+    ResponseEntity<ApiResponse<Pagination<NotificationResponse.Item>>> getNotifications(
             @AuthenticationPrincipal AuthMember currentMember,
             @RequestParam(required = false, defaultValue = "10")
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")

@@ -4,7 +4,7 @@ import com.example.plimap.domain.auth.controller.docs.AuthTestControllerDocs;
 import com.example.plimap.domain.auth.dto.request.AuthReqDTO;
 import com.example.plimap.domain.auth.service.command.TestTokenCommandService;
 import com.example.plimap.domain.member.converter.MemberConverter;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.exception.MemberSuccessCode;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import com.example.plimap.global.config.SwaggerConfig;
@@ -27,7 +27,7 @@ public class AuthTestController implements AuthTestControllerDocs {
 
     @PostMapping("/token/test")
     @Override
-    public ApiResponse<MemberResDTO.Login> issueTestToken(
+    public ApiResponse<MemberResponse.Login> issueTestToken(
             @RequestHeader(name = SwaggerConfig.TEST_TOKEN_ISSUE_KEY_HEADER, required = false)
             String issueKey,
             @Valid @RequestBody AuthReqDTO.TempToken request

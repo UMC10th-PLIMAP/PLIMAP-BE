@@ -22,6 +22,7 @@ import com.example.plimap.domain.track.dto.AlbumImage;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
@@ -738,7 +739,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             String[] parts = cursor.split("/");
 
             if (parts.length != 2) {
-                throw new PinException(PinErrorCode.INVALID_CURSOR);
+                throw new PinException(GeneralErrorCode.INVALID_CURSOR);
             }
 
             Instant createdAt = null;
@@ -755,7 +756,7 @@ public class PinQueryRepositoryImpl implements PinQueryRepository {
             return new CursorInfo(createdAt, pinId, like);
 
         } catch (DateTimeParseException | NumberFormatException e) {
-            throw new PinException(PinErrorCode.INVALID_CURSOR);
+            throw new PinException(GeneralErrorCode.INVALID_CURSOR);
         }
     }
 

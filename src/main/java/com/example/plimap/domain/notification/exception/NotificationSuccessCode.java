@@ -11,7 +11,7 @@ public enum NotificationSuccessCode implements BaseSuccessCode {
 
     NOTIFICATIONS_RETRIEVED(
             HttpStatus.OK,
-            "NOTIFICATION_200_NOTIFICATIONS_RETRIEVED",
+            "NOTIFICATION_NOTIFICATIONS_RETRIEVED_SUCCESS",
             "알림 목록을 조회했습니다."
     );
 

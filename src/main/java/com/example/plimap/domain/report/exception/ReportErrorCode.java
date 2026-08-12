@@ -61,12 +61,12 @@ public enum ReportErrorCode implements BaseErrorCode {
     ),
     REPORT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
-            "REPORT_404_REPORT_NOT_FOUND",
+            "REPORT_NOT_FOUND",
             "존재하지 않는 신고입니다."
     ),
     REPORT_PIN_MISMATCH(
             HttpStatus.BAD_REQUEST,
-            "REPORT_400_REPORT_PIN_MISMATCH",
+            "REPORT_PIN_MISMATCH",
             "해당 PIN에 대한 신고가 아닙니다."
     );
 

@@ -17,6 +17,7 @@ import com.example.plimap.domain.member.repository.query.MemberSearchRow;
 import com.example.plimap.domain.report.entity.Report;
 import com.example.plimap.domain.report.enums.ReportCategory;
 import com.example.plimap.domain.report.repository.ReportRepository;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -710,7 +711,7 @@ class MemberQueryRepositoryImplTest {
         assertThatThrownBy(() ->
                 memberQueryRepository.searchActiveMembers(outsider.getId(), "", "invalid-cursor", 10))
                 .isInstanceOfSatisfying(MemberException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_CURSOR));
+                        assertThat(exception.getErrorCode()).isEqualTo(GeneralErrorCode.INVALID_CURSOR));
     }
 
     // created_at 컬럼은 @Column(updatable = false)라 ReflectionTestUtils.setField 후 재저장해도

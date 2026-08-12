@@ -3,7 +3,7 @@ package com.example.plimap.domain.notification.service.command.impl;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.notification.converter.NotificationConverter;
-import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
+import com.example.plimap.domain.notification.dto.response.NotificationResponse;
 import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.enums.NotificationType;
 import com.example.plimap.domain.notification.repository.NotificationRepository;
@@ -117,7 +117,7 @@ public class NotificationCommandServiceImpl implements NotificationCommandServic
         Hibernate.initialize(pin.getPlaceTrack().getTrack());
     }
 
-    private NotificationResDTO.Item toItem(Notification notification) {
+    private NotificationResponse.Item toItem(Notification notification) {
         Long recipientId = notification.getRecipient().getId();
         Long actorId = notification.getActor().getId();
         String actorProfileImageUrl =

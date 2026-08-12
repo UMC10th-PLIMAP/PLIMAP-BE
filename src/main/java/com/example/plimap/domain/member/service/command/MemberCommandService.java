@@ -1,7 +1,7 @@
 package com.example.plimap.domain.member.service.command;
 
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.report.enums.ReportCategory;
@@ -11,9 +11,9 @@ public interface MemberCommandService {
 
     Member completeOnboarding(Long memberId, MemberReqDTO.Onboarding request);
 
-    MemberResDTO.Profile updateProfile(Long memberId, MemberReqDTO.UpdateProfile request);
+    MemberResponse.Profile updateProfile(Long memberId, MemberReqDTO.UpdateProfile request);
 
-    MemberResDTO.ProfileImage uploadProfileImage(Long memberId, MultipartFile image);
+    MemberResponse.ProfileImage uploadProfileImage(Long memberId, MultipartFile image);
 
     void removeProfileImage(Long memberId);
 

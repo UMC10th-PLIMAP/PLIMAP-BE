@@ -9,8 +9,8 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum TermsErrorCode implements BaseErrorCode {
 
-    TERMS_NOT_FOUND(HttpStatus.NOT_FOUND, "TERMS_404_TERMS_NOT_FOUND", "해당 유형의 활성 약관을 찾을 수 없습니다."),
-    AGREEMENT_REQUIRED(HttpStatus.BAD_REQUEST, "TERMS_400_AGREEMENT_REQUIRED", "필수 약관에 모두 동의해야 합니다.");
+    TERMS_NOT_FOUND(HttpStatus.NOT_FOUND, "TERMS_NOT_FOUND", "해당 유형의 활성 약관을 찾을 수 없습니다."),
+    AGREEMENT_REQUIRED(HttpStatus.BAD_REQUEST, "TERMS_AGREEMENT_REQUIRED", "필수 약관에 모두 동의해야 합니다.");
 
     private final HttpStatus status;
     private final String code;

@@ -11,7 +11,7 @@ import com.example.plimap.domain.report.enums.ReportCategory;
 import java.time.Instant;
 import java.util.List;
 
-public class AdminResDTO {
+public class AdminResponse {
 
     public record Me(
             Long id,

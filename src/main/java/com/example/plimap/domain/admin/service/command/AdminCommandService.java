@@ -1,6 +1,6 @@
 package com.example.plimap.domain.admin.service.command;
 
-import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.dto.response.AdminResponse;
 import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.report.enums.ReportCategory;
 
@@ -14,5 +14,5 @@ public interface AdminCommandService {
 
     void grantMemberSanction(Long memberId, SuspensionPeriod period, ReportCategory reasonCategory, String reasonDetail);
 
-    AdminResDTO.MemberDetail regenerateMemberNickname(Long memberId);
+    AdminResponse.MemberDetail regenerateMemberNickname(Long memberId);
 }

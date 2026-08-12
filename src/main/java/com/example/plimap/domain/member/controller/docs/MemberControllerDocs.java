@@ -3,7 +3,7 @@ package com.example.plimap.domain.member.controller.docs;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -38,7 +38,7 @@ public interface MemberControllerDocs {
                     @ExampleObject(name = "사용 가능", value = """
                             {
                               "isSuccess": true,
-                              "code": "MEMBER_200_NICKNAME_CHECKED",
+                              "code": "MEMBER_NICKNAME_CHECKED_SUCCESS",
                               "message": "닉네임 사용 가능 여부를 조회했습니다.",
                               "result": { "nickname": "예림", "available": true, "reason": null }
                             }
@@ -46,14 +46,14 @@ public interface MemberControllerDocs {
                     @ExampleObject(name = "이미 사용 중", value = """
                             {
                               "isSuccess": true,
-                              "code": "MEMBER_200_NICKNAME_CHECKED",
+                              "code": "MEMBER_NICKNAME_CHECKED_SUCCESS",
                               "message": "닉네임 사용 가능 여부를 조회했습니다.",
                               "result": { "nickname": "예림", "available": false, "reason": "DUPLICATE" }
                             }
                             """)
             })
     )
-    ApiResponse<MemberResDTO.NicknameCheck> checkNickname(String nickname);
+    ApiResponse<MemberResponse.NicknameCheck> checkNickname(String nickname);
 
     @Operation(
             summary = "내 프로필 조회",
@@ -63,7 +63,7 @@ public interface MemberControllerDocs {
                     정지(SUSPENDED)·탈퇴(WITHDRAWN) 회원도 조회할 수 있으며, 이 경우 status/suspendedUntil/withdrawalReason/reasonCategory/reasonDetail로 제재 상태·해제일·사유를 함께 확인할 수 있습니다. 정상(ACTIVE) 회원은 suspendedUntil/withdrawalReason/reasonCategory/reasonDetail이 모두 null입니다.
                     """
     )
-    ApiResponse<MemberResDTO.MyProfile> getMyProfile(AuthMember authMember);
+    ApiResponse<MemberResponse.MyProfile> getMyProfile(AuthMember authMember);
 
     @Operation(
             summary = "다른 사용자 프로필 조회",
@@ -79,13 +79,13 @@ public interface MemberControllerDocs {
                     - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
-    ApiResponse<MemberResDTO.OtherProfile> getOtherProfile(AuthMember authMember, Long memberId);
+    ApiResponse<MemberResponse.OtherProfile> getOtherProfile(AuthMember authMember, Long memberId);
 
     @Operation(
             summary = "내 프로필 수정",
             description = "닉네임, 이름, 소개를 수정합니다. 요청에 포함하지 않거나 null을 보낸 필드는 변경되지 않습니다. 이름은 빈 문자열(\"\")을 보내면 삭제됩니다. 프로필 이미지는 `POST /api/v1/members/me/profile-image`를 이용해 주세요."
     )
-    ApiResponse<MemberResDTO.Profile> updateProfile(AuthMember authMember, @Valid MemberReqDTO.UpdateProfile request);
+    ApiResponse<MemberResponse.Profile> updateProfile(AuthMember authMember, @Valid MemberReqDTO.UpdateProfile request);
 
     @Operation(
             summary = "프로필 이미지 업로드",
@@ -98,7 +98,7 @@ public interface MemberControllerDocs {
                     - 응답의 imageUrl로 즉시 접근 가능한 공개 URL을 반환합니다.
                     """
     )
-    ApiResponse<MemberResDTO.ProfileImage> uploadProfileImage(AuthMember authMember, MultipartFile image);
+    ApiResponse<MemberResponse.ProfileImage> uploadProfileImage(AuthMember authMember, MultipartFile image);
 
     @Operation(
             summary = "프로필 이미지 제거",
@@ -139,7 +139,7 @@ public interface MemberControllerDocs {
                     - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
-    ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
+    ApiResponse<Pagination<MemberResponse.FollowerItem>> getFollowers(
             AuthMember authMember,
             Long memberId,
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
@@ -165,7 +165,7 @@ public interface MemberControllerDocs {
                     - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
-    ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(
+    ApiResponse<Pagination<MemberResponse.FollowingItem>> getFollowing(
             AuthMember authMember,
             Long memberId,
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
@@ -193,7 +193,7 @@ public interface MemberControllerDocs {
                     isFollowing은 내가 이 회원을 팔로우하고 있는지, isFollowingViewer는 이 회원이 나를 팔로우하고 있는지를 나타냅니다.
                     """
     )
-    ApiResponse<Pagination<MemberResDTO.SearchItem>> searchMembers(
+    ApiResponse<Pagination<MemberResponse.SearchItem>> searchMembers(
             AuthMember authMember,
             String keyword,
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")

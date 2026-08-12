@@ -6,7 +6,7 @@ import com.example.plimap.domain.member.enums.TermsType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
-public class TermsResDTO {
+public class TermsResponse {
 
     public record Item(
             @Schema(example = "SERVICE")

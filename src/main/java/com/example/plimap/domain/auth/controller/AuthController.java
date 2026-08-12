@@ -1,7 +1,7 @@
 package com.example.plimap.domain.auth.controller;
 
 import com.example.plimap.domain.auth.controller.docs.AuthControllerDocs;
-import com.example.plimap.domain.auth.dto.response.AuthResDTO;
+import com.example.plimap.domain.auth.dto.response.AuthResponse;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.auth.exception.AuthErrorCode;
 import com.example.plimap.domain.auth.exception.AuthException;
@@ -9,8 +9,8 @@ import com.example.plimap.domain.auth.exception.AuthSuccessCode;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.request.TermsReqDTO;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
-import com.example.plimap.domain.member.dto.response.TermsResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
+import com.example.plimap.domain.member.dto.response.TermsResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
@@ -57,16 +57,16 @@ public class AuthController implements AuthControllerDocs {
 
     @Override
     @GetMapping("/csrf")
-    public ApiResponse<AuthResDTO.CsrfToken> getCsrfToken(CsrfToken csrfToken) {
+    public ApiResponse<AuthResponse.CsrfToken> getCsrfToken(CsrfToken csrfToken) {
         return ApiResponse.success(
                 AuthSuccessCode.CSRF_TOKEN_ISSUED,
-                new AuthResDTO.CsrfToken(csrfToken.getToken())
+                new AuthResponse.CsrfToken(csrfToken.getToken())
         );
     }
 
     @Override
     @PostMapping("/onboarding")
-    public ApiResponse<MemberResDTO.Onboarding> onboarding(
+    public ApiResponse<MemberResponse.Onboarding> onboarding(
             @AuthenticationPrincipal AuthMember authMember,
             @Valid @RequestBody MemberReqDTO.Onboarding request
     ) {
@@ -76,18 +76,18 @@ public class AuthController implements AuthControllerDocs {
 
     @Override
     @GetMapping("/terms")
-    public ApiResponse<List<TermsResDTO.Result>> getTermsAgreementStatus(@AuthenticationPrincipal AuthMember authMember) {
-        List<TermsResDTO.Result> result = termsQueryService.findTermsAgreementStatus(authMember.getMember().getId());
+    public ApiResponse<List<TermsResponse.Result>> getTermsAgreementStatus(@AuthenticationPrincipal AuthMember authMember) {
+        List<TermsResponse.Result> result = termsQueryService.findTermsAgreementStatus(authMember.getMember().getId());
         return ApiResponse.success(TermsSuccessCode.TERMS_AGREEMENT_STATUS_RETRIEVED, result);
     }
 
     @Override
     @PostMapping("/terms")
-    public ApiResponse<List<TermsResDTO.Result>> agreeToTerms(
+    public ApiResponse<List<TermsResponse.Result>> agreeToTerms(
             @AuthenticationPrincipal AuthMember authMember,
             @Valid @RequestBody TermsReqDTO.Agree request
     ) {
-        List<TermsResDTO.Result> result = termsCommandService.agreeToTerms(authMember.getMember().getId(), request);
+        List<TermsResponse.Result> result = termsCommandService.agreeToTerms(authMember.getMember().getId(), request);
         return ApiResponse.success(TermsSuccessCode.TERMS_AGREED, result);
     }
 

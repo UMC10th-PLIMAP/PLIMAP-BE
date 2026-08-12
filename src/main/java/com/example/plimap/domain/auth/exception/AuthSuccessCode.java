@@ -9,8 +9,8 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum AuthSuccessCode implements BaseSuccessCode {
 
-    TOKEN_REISSUED(HttpStatus.OK, "AUTH_200_TOKEN_REISSUED", "토큰이 재발급되었습니다."),
-    CSRF_TOKEN_ISSUED(HttpStatus.OK, "AUTH_200_CSRF_TOKEN_ISSUED", "CSRF 토큰이 발급되었습니다.");
+    TOKEN_REISSUED(HttpStatus.OK, "AUTH_TOKEN_REISSUED_SUCCESS", "토큰이 재발급되었습니다."),
+    CSRF_TOKEN_ISSUED(HttpStatus.OK, "AUTH_CSRF_TOKEN_ISSUED_SUCCESS", "CSRF 토큰이 발급되었습니다.");
 
     private final HttpStatus status;
     private final String code;
