@@ -12,4 +12,5 @@
 | 🐘 [DATABASE.md](DATABASE.md) | Flyway, PostGIS, QueryDSL 및 테스트 규칙        |
 | 🤝 [CONVENTION.md](CONVENTION.md) | Issue, 브랜치, 커밋, Pull Request 작성 및 협업 규칙 |
 | ☕ [CODE_STYLE.md](CODE_STYLE.md) | Java·Spring Boot  계층별 코드 작성 규칙          |
+| 🚫 [SANCTIONED_LOGIN_CONTRACT.md](SANCTIONED_LOGIN_CONTRACT.md) | 정지·탈퇴 회원 로그인/세션 처리 — 프론트 연동 가이드 |
 
