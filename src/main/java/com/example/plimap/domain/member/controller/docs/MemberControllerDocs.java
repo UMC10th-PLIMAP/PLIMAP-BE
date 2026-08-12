@@ -79,7 +79,7 @@ public interface MemberControllerDocs {
 
     @Operation(
             summary = "내 프로필 수정",
-            description = "닉네임, 이름, 소개를 수정합니다. 요청에 포함하지 않은 필드는 변경되지 않습니다. 프로필 이미지는 `POST /api/v1/members/me/profile-image`를 이용해 주세요."
+            description = "닉네임, 이름, 소개를 수정합니다. 요청에 포함하지 않거나 null을 보낸 필드는 변경되지 않습니다. 이름은 빈 문자열(\"\")을 보내면 삭제됩니다. 프로필 이미지는 `POST /api/v1/members/me/profile-image`를 이용해 주세요."
     )
     ApiResponse<MemberResDTO.Profile> updateProfile(AuthMember authMember, @Valid MemberReqDTO.UpdateProfile request);
 

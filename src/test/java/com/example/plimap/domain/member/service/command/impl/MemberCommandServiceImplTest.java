@@ -235,6 +235,32 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
+    void 이름에_빈_문자열을_보내면_서비스를_거쳐_실제로_이름이_삭제된다() {
+        Member member = Member.builder()
+                .nickname("기존닉네임")
+                .name("이예림")
+                .build();
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.updateProfile(MEMBER_ID, updateProfile(null, "", null));
+
+        assertThat(member.getName()).isNull();
+    }
+
+    @Test
+    void 이름에_null을_보내면_서비스를_거쳐도_기존_이름이_유지된다() {
+        Member member = Member.builder()
+                .nickname("기존닉네임")
+                .name("이예림")
+                .build();
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.updateProfile(MEMBER_ID, updateProfile(null, null, null));
+
+        assertThat(member.getName()).isEqualTo("이예림");
+    }
+
+    @Test
     void 프로필_수정_중_동시_요청으로_유니크_제약이_깨지면_닉네임_중복_예외로_변환한다() {
         Member member = mock(Member.class);
         when(member.getNickname()).thenReturn("기존닉네임");
