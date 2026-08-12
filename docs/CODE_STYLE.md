@@ -423,18 +423,24 @@ domain/pin/exception/
 └── PinException.java
 ```
 
-ErrorCode 이름은 대문자와 언더스코어를 사용합니다.
+응답 `code` 문자열은 대문자와 언더스코어를 사용하며 다음 형식을 따릅니다.
 
-공통 응답 코드는 `COMMON_{HTTP 상태}_{의미}` 형식을 사용하고, 도메인 응답 코드는 도메인 접두사와 의미를 조합합니다.
+| 구분 | 형식 | 예시 |
+|------|------|------|
+| 성공 코드 | `{DOMAIN}_{USE_CASE}_SUCCESS` | `MEMBER_LOGIN_SUCCESS` |
+| 도메인 에러 | `{DOMAIN}_{FAILURE_REASON}` | `PIN_NOT_FOUND` |
+| 공통 에러 | `COMMON_{HTTP_STATUS}_{REASON}` | `COMMON_400_BAD_REQUEST` |
+
+HTTP 상태 코드는 공통 에러에만 포함합니다. 여러 도메인에서 같은 방식으로 처리하는 오류는 공통 에러로 정의합니다.
 
 ```java
-COMMON_400_BAD_REQUEST
+MEMBER_LOGIN_SUCCESS
 PIN_NOT_FOUND
-PIN_ALREADY_DELETED
-INVALID_PIN_OWNER
+PIN_INVALID_PIN_OWNER
+COMMON_400_INVALID_CURSOR
 ```
 
-도메인 예외는 공통 `BusinessException`을 상속하고, 해당 도메인의 ErrorCode를 전달합니다.
+도메인 예외는 공통 `BusinessException`을 상속하고 `BaseErrorCode`를 전달합니다. 도메인 고유 오류는 해당 도메인의 ErrorCode를, 여러 도메인이 공통 처리하는 오류는 `GeneralErrorCode`를 사용합니다.
 
 ```java
 throw new PinException(PinErrorCode.PIN_NOT_FOUND);
@@ -449,7 +455,7 @@ Controller에서 try-catch로 비즈니스 예외를 직접 처리하지 않습�
 외부 API 예외는 내부 예외로 변환해서 던집니다.
 
 ```java
-throw new PlaceException(PlaceErrorCode.EXTERNAL_API_ERROR);
+throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
 ```
 
 ## SQL Rules

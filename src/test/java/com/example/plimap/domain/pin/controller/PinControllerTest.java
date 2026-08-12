@@ -173,7 +173,7 @@ class PinControllerTest {
                         .content(inValidLocationRequest()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("LOCATION_DISTANCE_INVALID"))
+                .andExpect(jsonPath("$.code").value("PIN_LOCATION_DISTANCE_INVALID"))
                 .andExpect(jsonPath("$.message").value("사용자가 장소 반경이 500m 이상에 있어 PIN을 등록할 수 없습니다."));
     }
 
@@ -327,7 +327,7 @@ class PinControllerTest {
                         .andDo(print())
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.isSuccess").value(true))
-            .andExpect(jsonPath("$.code").value("MY_FEED_LIST_SEARCH_SUCCESS"))
+            .andExpect(jsonPath("$.code").value("PIN_MY_FEED_LIST_SEARCH_SUCCESS"))
             .andExpect(jsonPath("$.message").value("내가 작성한 피드 목록이 조회되었습니다."))
             .andExpect(jsonPath("$.result.hasNext").value(false))
             .andExpect(jsonPath("$.result.pageSize").value(10));
@@ -359,7 +359,7 @@ class PinControllerTest {
                 .param("userLongitude", "126.9326"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_FEED_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_MEMBER_FEED_LIST_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("다른 사용자가 작성한 피드 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
@@ -416,7 +416,7 @@ class PinControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MY_PIN_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_MY_PIN_LIST_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("내가 작성한 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
@@ -470,7 +470,7 @@ class PinControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("특정 장소 노래의 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
@@ -504,7 +504,7 @@ class PinControllerTest {
                         .param("zoomLevel", "7"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("CLUSTER_PIN_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_CLUSTER_PIN_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("viewport 기반 클러스터&핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.zoomLevel").value(7))
                 .andExpect(jsonPath("$.result.clusters").isArray())
@@ -544,7 +544,7 @@ class PinControllerTest {
                         .param("zoomLevel", "14"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("CLUSTER_PIN_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_CLUSTER_PIN_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("viewport 기반 클러스터&핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.zoomLevel").value(14))
                 .andExpect(jsonPath("$.result.clusters").doesNotExist())
@@ -572,7 +572,7 @@ class PinControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andDo(print())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("FRIENDS_RECENT_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_FRIENDS_RECENT_LIST_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("내 친구 최근 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.data").isArray())
                 .andExpect(jsonPath("$.result.data.length()").value(0))
@@ -603,7 +603,7 @@ class PinControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("FRIEND_FEED_TOKEN_REQUEST_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_FRIEND_FEED_TOKEN_REQUEST_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("내 친구 피드 접근 권한 요청에 성공했습니다."))
                 .andExpect(jsonPath("$.result.placeAccessToken").value("token"))
                 .andExpect(jsonPath("$.result.placeId").value(1L));
@@ -624,7 +624,7 @@ class PinControllerTest {
                 .andDo(print())
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("FRIEND_PIN_ACCESS_DENIED"))
+                .andExpect(jsonPath("$.code").value("PIN_FRIEND_PIN_ACCESS_DENIED"))
                 .andExpect(jsonPath("$.message").value("친구가 등록한 핀이 아니므로 접근 권한을 발급할 수 없습니다."));
     }
 

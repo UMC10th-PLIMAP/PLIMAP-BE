@@ -34,7 +34,7 @@ public interface NotificationControllerDocs {
             content = @Content(examples = @ExampleObject(value = """
                     {
                       "isSuccess": true,
-                      "code": "NOTIFICATION_200_NOTIFICATIONS_RETRIEVED",
+                      "code": "NOTIFICATION_NOTIFICATIONS_RETRIEVED_SUCCESS",
                       "message": "알림 목록을 조회했습니다.",
                       "result": {
                         "data": [

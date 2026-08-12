@@ -38,7 +38,7 @@ public interface MemberControllerDocs {
                     @ExampleObject(name = "사용 가능", value = """
                             {
                               "isSuccess": true,
-                              "code": "MEMBER_200_NICKNAME_CHECKED",
+                              "code": "MEMBER_NICKNAME_CHECKED_SUCCESS",
                               "message": "닉네임 사용 가능 여부를 조회했습니다.",
                               "result": { "nickname": "예림", "available": true, "reason": null }
                             }
@@ -46,7 +46,7 @@ public interface MemberControllerDocs {
                     @ExampleObject(name = "이미 사용 중", value = """
                             {
                               "isSuccess": true,
-                              "code": "MEMBER_200_NICKNAME_CHECKED",
+                              "code": "MEMBER_NICKNAME_CHECKED_SUCCESS",
                               "message": "닉네임 사용 가능 여부를 조회했습니다.",
                               "result": { "nickname": "예림", "available": false, "reason": "DUPLICATE" }
                             }

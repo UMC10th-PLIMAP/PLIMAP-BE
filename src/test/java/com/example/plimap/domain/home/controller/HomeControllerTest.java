@@ -110,7 +110,7 @@ class HomeControllerTest {
                         .param("longitude", "127.03"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("HOME_200_CONTEXT_FETCHED"))
+                .andExpect(jsonPath("$.code").value("HOME_CONTEXT_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("홈 컨텍스트를 조회했습니다."))
                 .andExpect(jsonPath("$.result.nickname").value("델리만쥬"))
                 .andExpect(jsonPath("$.result.currentRegion.sido").value("서울특별시"))

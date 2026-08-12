@@ -59,7 +59,7 @@ class AuthControllerTest {
         ApiResponse<AuthResDTO.CsrfToken> response = controller.getCsrfToken(csrfToken);
 
         assertThat(response.getIsSuccess()).isTrue();
-        assertThat(response.getCode()).isEqualTo("AUTH_200_CSRF_TOKEN_ISSUED");
+        assertThat(response.getCode()).isEqualTo("AUTH_CSRF_TOKEN_ISSUED_SUCCESS");
         assertThat(response.getResult().token()).isEqualTo("masked-csrf-token");
     }
 
@@ -71,7 +71,7 @@ class AuthControllerTest {
         ApiResponse<Void> apiResponse = controller.logout(request, response);
 
         assertThat(apiResponse.getIsSuccess()).isTrue();
-        assertThat(apiResponse.getCode()).isEqualTo("MEMBER_200_LOGOUT");
+        assertThat(apiResponse.getCode()).isEqualTo("MEMBER_LOGOUT_SUCCESS");
         verify(sessionInvalidationService).invalidate(request, response);
     }
 
@@ -127,7 +127,7 @@ class AuthControllerTest {
         ApiResponse<Void> apiResponse = controller.reissue(request, response);
 
         assertThat(apiResponse.getIsSuccess()).isTrue();
-        assertThat(apiResponse.getCode()).isEqualTo("AUTH_200_TOKEN_REISSUED");
+        assertThat(apiResponse.getCode()).isEqualTo("AUTH_TOKEN_REISSUED_SUCCESS");
         verify(refreshTokenService).rotateIfMatches(
                 1L,
                 "current-refresh-jti",

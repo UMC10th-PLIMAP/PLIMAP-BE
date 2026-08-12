@@ -47,25 +47,25 @@ public enum PinSuccessCode implements BaseSuccessCode {
 
     MY_FEED_LIST_SEARCH_SUCCESS(
             HttpStatus.OK,
-            "MY_FEED_LIST_SEARCH_SUCCESS",
+            "PIN_MY_FEED_LIST_SEARCH_SUCCESS",
             "내가 작성한 피드 목록이 조회되었습니다."
     ),
 
     MEMBER_FEED_LIST_SEARCH_SUCCESS(
             HttpStatus.OK,
-            "MEMBER_FEED_LIST_SEARCH_SUCCESS",
+            "PIN_MEMBER_FEED_LIST_SEARCH_SUCCESS",
             "다른 사용자가 작성한 피드 목록이 조회되었습니다."
     ),
 
     MY_PIN_LIST_SEARCH_SUCCESS(
         HttpStatus.OK,
-        "MY_PIN_LIST_SEARCH_SUCCESS",
+        "PIN_MY_PIN_LIST_SEARCH_SUCCESS",
         "내가 작성한 핀 목록이 조회되었습니다."
     ),
 
     PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS(
             HttpStatus.OK,
-            "PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS",
+            "PIN_PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS",
             "특정 장소 노래의 핀 목록이 조회되었습니다."
     ),
 
@@ -77,19 +77,19 @@ public enum PinSuccessCode implements BaseSuccessCode {
 
     CLUSTER_PIN_SEARCH_SUCCESS(
             HttpStatus.OK,
-            "CLUSTER_PIN_SEARCH_SUCCESS",
+            "PIN_CLUSTER_PIN_SEARCH_SUCCESS",
             "viewport 기반 클러스터&핀 목록이 조회되었습니다."
     ),
 
     FRIENDS_RECENT_LIST_SEARCH_SUCCESS(
             HttpStatus.OK,
-            "FRIENDS_RECENT_LIST_SEARCH_SUCCESS",
+            "PIN_FRIENDS_RECENT_LIST_SEARCH_SUCCESS",
             "내 친구 최근 핀 목록이 조회되었습니다."
     ),
 
     FRIEND_FEED_TOKEN_REQUEST_SUCCESS(
             HttpStatus.OK,
-            "FRIEND_FEED_TOKEN_REQUEST_SUCCESS",
+            "PIN_FRIEND_FEED_TOKEN_REQUEST_SUCCESS",
             "내 친구 피드 접근 권한 요청에 성공했습니다."
     );
 

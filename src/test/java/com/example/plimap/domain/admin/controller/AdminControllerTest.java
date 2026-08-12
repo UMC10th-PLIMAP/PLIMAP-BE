@@ -111,7 +111,7 @@ class AdminControllerTest {
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("ADMIN_200_ME_FETCHED"))
+                .andExpect(jsonPath("$.code").value("ADMIN_ME_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.id").value(MEMBER_ID))
                 .andExpect(jsonPath("$.result.nickname").value("운영자"))
                 .andExpect(jsonPath("$.result.role").value("ADMIN"));
@@ -139,7 +139,7 @@ class AdminControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"grantPenalty\": false}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_PIN_PENALTY_REVIEWED"));
+                .andExpect(jsonPath("$.code").value("ADMIN_PIN_PENALTY_REVIEWED_SUCCESS"));
 
         verify(adminCommandService).reviewPinReport(eq(10L), eq(false));
     }
@@ -153,7 +153,7 @@ class AdminControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reportId\": 100, \"period\": \"THREE_DAYS\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_PIN_SANCTION_GRANTED"));
+                .andExpect(jsonPath("$.code").value("ADMIN_PIN_SANCTION_GRANTED_SUCCESS"));
 
         verify(adminCommandService).grantPinSanction(eq(10L), eq(100L), eq(SuspensionPeriod.THREE_DAYS));
     }
@@ -167,7 +167,7 @@ class AdminControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"category\": \"OTHER\", \"detail\": \"반복 위반\", \"period\": \"PERMANENT\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBER_SANCTION_GRANTED"));
+                .andExpect(jsonPath("$.code").value("ADMIN_MEMBER_SANCTION_GRANTED_SUCCESS"));
 
         verify(adminCommandService).grantMemberSanction(eq(2L), eq(SuspensionPeriod.PERMANENT), eq(ReportCategory.OTHER), eq("반복 위반"));
     }
@@ -213,7 +213,7 @@ class AdminControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"grantPenalty\": false}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_PROFILE_PENALTY_REVIEWED"));
+                .andExpect(jsonPath("$.code").value("ADMIN_PROFILE_PENALTY_REVIEWED_SUCCESS"));
 
         verify(adminCommandService).reviewProfileReport(eq(2L), eq(false));
     }
@@ -229,7 +229,7 @@ class AdminControllerTest {
         mockMvc.perform(get("/api/v1/admin/pins/reports")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_REPORTED_PINS_FETCHED"))
+                .andExpect(jsonPath("$.code").value("ADMIN_REPORTED_PINS_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.total").value(1))
                 .andExpect(jsonPath("$.result.items[0].pinId").value(1))
                 .andExpect(jsonPath("$.result.items[0].autoHidden").value(true));
@@ -248,7 +248,7 @@ class AdminControllerTest {
                         .param("query", "검색어")
                         .param("status", "ACTIVE"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBERS_FETCHED"))
+                .andExpect(jsonPath("$.code").value("ADMIN_MEMBERS_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.items[0].id").value(2));
     }
 
@@ -262,7 +262,7 @@ class AdminControllerTest {
         mockMvc.perform(get("/api/v1/admin/members/2")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBER_DETAIL_FETCHED"))
+                .andExpect(jsonPath("$.code").value("ADMIN_MEMBER_DETAIL_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.email").value("a@example.com"));
     }
 
@@ -276,7 +276,7 @@ class AdminControllerTest {
         mockMvc.perform(post("/api/v1/admin/members/2/nickname/regenerate")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBER_NICKNAME_REGENERATED"))
+                .andExpect(jsonPath("$.code").value("ADMIN_MEMBER_NICKNAME_REGENERATED_SUCCESS"))
                 .andExpect(jsonPath("$.result.nickname").value("참새"));
     }
 
@@ -292,7 +292,7 @@ class AdminControllerTest {
                         .header("Authorization", "Bearer " + ACCESS_TOKEN)
                         .param("category", "APP_BUG_OR_ERROR"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_INQUIRIES_FETCHED"))
+                .andExpect(jsonPath("$.code").value("ADMIN_INQUIRIES_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.items[0].id").value(1))
                 .andExpect(jsonPath("$.result.items[0].memberNickname").value("작성자"))
                 .andExpect(jsonPath("$.result.nextCursor").value("next-cursor"))
@@ -309,7 +309,7 @@ class AdminControllerTest {
         mockMvc.perform(get("/api/v1/admin/inquiries/1")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("ADMIN_200_INQUIRY_DETAIL_FETCHED"))
+                .andExpect(jsonPath("$.code").value("ADMIN_INQUIRY_DETAIL_FETCHED_SUCCESS"))
                 .andExpect(jsonPath("$.result.content").value("내용"))
                 .andExpect(jsonPath("$.result.memberId").value(org.hamcrest.Matchers.nullValue()));
     }

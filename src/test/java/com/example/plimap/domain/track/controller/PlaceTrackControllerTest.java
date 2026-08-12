@@ -118,7 +118,7 @@ class PlaceTrackControllerTest {
                         .queryParam("longitude", "126.9780"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("PLACE_TRACK_LIST_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("TRACK_PLACE_TRACK_LIST_SUCCESS"))
                 .andExpect(jsonPath("$.message")
                         .value("장소별 곡 목록 조회에 성공했습니다."))
                 .andExpect(jsonPath("$.result.placeId").value(1))

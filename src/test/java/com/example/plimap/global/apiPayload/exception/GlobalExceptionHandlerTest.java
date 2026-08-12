@@ -147,11 +147,11 @@ class GlobalExceptionHandlerTest {
             throws Exception {
         mockMvc.perform(get("/exception-test/business"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("MEMBER_404_MEMBER_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
 
         assertThat(output.getAll()).contains(
                 "INFO",
-                "status=404 code=MEMBER_404_MEMBER_NOT_FOUND "
+                "status=404 code=MEMBER_NOT_FOUND "
                         + "method=GET uri=/exception-test/business exception=MemberException"
         );
     }

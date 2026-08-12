@@ -114,7 +114,7 @@ class TrackOpenApiIntegrationTest {
                 exampleValues(playbackFailureSuccessContent).getFirst();
         assertThat(playbackFailureSuccessExample.path("isSuccess").asBoolean()).isTrue();
         assertThat(playbackFailureSuccessExample.path("code").asText())
-                .isEqualTo("TRACK_PLAYBACK_FAILURE_REPORTED");
+                .isEqualTo("TRACK_PLAYBACK_FAILURE_REPORTED_SUCCESS");
         assertThat(playbackFailureSuccessExample.path("message").asText())
                 .isEqualTo("YouTube 재생 실패가 보고되었습니다.");
         assertThat(playbackFailureSuccessExample.path("result").isNull()).isTrue();
@@ -249,9 +249,9 @@ class TrackOpenApiIntegrationTest {
                 "404",
                 "ApiResponsePlaybackPreparationResult",
                 Set.of(
-                        "TRACK_404_METADATA_CACHE_NOT_FOUND",
-                        "TRACK_404_YOUTUBE_MATCH_NOT_FOUND",
-                        "TRACK_404_PLAYBACK_UNAVAILABLE"
+                        "TRACK_METADATA_CACHE_NOT_FOUND",
+                        "TRACK_YOUTUBE_MATCH_NOT_FOUND",
+                        "TRACK_PLAYBACK_UNAVAILABLE"
                 )
         );
 
@@ -277,7 +277,7 @@ class TrackOpenApiIntegrationTest {
                 "post",
                 "500",
                 "ApiResponseVoid",
-                Set.of("TRACK_500_CACHE_ERROR")
+                Set.of("TRACK_CACHE_ERROR")
         );
         assertFailureResponse(
                 openApi,
@@ -286,8 +286,8 @@ class TrackOpenApiIntegrationTest {
                 "500",
                 "ApiResponsePlaybackPreparationResult",
                 Set.of(
-                        "TRACK_500_YOUTUBE_EXTERNAL_API_ERROR",
-                        "TRACK_500_CACHE_ERROR"
+                        "TRACK_YOUTUBE_EXTERNAL_API_ERROR",
+                        "TRACK_CACHE_ERROR"
                 )
         );
 

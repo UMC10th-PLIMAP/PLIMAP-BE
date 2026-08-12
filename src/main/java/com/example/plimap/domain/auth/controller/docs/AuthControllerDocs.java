@@ -51,7 +51,7 @@ public interface AuthControllerDocs {
             content = @Content(examples = @ExampleObject(value = """
                     {
                       "isSuccess": true,
-                      "code": "TERMS_200_AGREEMENT_STATUS_RETRIEVED",
+                      "code": "TERMS_AGREEMENT_STATUS_RETRIEVED_SUCCESS",
                       "message": "약관 동의 여부를 조회했습니다.",
                       "result": [
                         { "type": "SERVICE", "agreed": true, "agreedAt": "2026-07-13T07:19:16.301Z" },
@@ -81,7 +81,7 @@ public interface AuthControllerDocs {
             content = @Content(examples = @ExampleObject(value = """
                     {
                       "isSuccess": true,
-                      "code": "TERMS_200_TERMS_AGREED",
+                      "code": "TERMS_AGREED_SUCCESS",
                       "message": "약관 동의가 완료되었습니다.",
                       "result": [
                         {
