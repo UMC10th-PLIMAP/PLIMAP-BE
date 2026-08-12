@@ -8,6 +8,9 @@ import com.example.plimap.domain.notification.repository.NotificationRepository;
 import com.example.plimap.domain.notification.sse.NotificationEmitterRegistry;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.place.entity.Place;
+import com.example.plimap.domain.track.entity.PlaceTrack;
+import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -69,11 +72,17 @@ class NotificationCommandServiceImplTest {
     void 핀_등록_알림을_팔로워_전원에게_생성하고_각각_푸시한다() {
         // given
         Pin pin = mock(Pin.class);
+        Place place = mock(Place.class);
+        PlaceTrack placeTrack = mock(PlaceTrack.class);
+        Track track = mock(Track.class);
         Member author = mock(Member.class);
         Member follower1 = mock(Member.class);
         Member follower2 = mock(Member.class);
         when(follower1.getId()).thenReturn(10L);
         when(follower2.getId()).thenReturn(20L);
+        when(pin.getPlace()).thenReturn(place);
+        when(pin.getPlaceTrack()).thenReturn(placeTrack);
+        when(placeTrack.getTrack()).thenReturn(track);
         when(pinQueryService.getActivePin(100L)).thenReturn(pin);
         when(memberQueryService.getActiveMember(1L)).thenReturn(author);
         when(memberQueryService.findAllFollowers(1L)).thenReturn(List.of(follower1, follower2));
@@ -100,9 +109,15 @@ class NotificationCommandServiceImplTest {
     void 좋아요_알림을_생성하고_실시간으로_푸시한다() {
         // given
         Pin pin = mock(Pin.class);
+        Place place = mock(Place.class);
+        PlaceTrack placeTrack = mock(PlaceTrack.class);
+        Track track = mock(Track.class);
         Member recipient = mock(Member.class);
         Member actor = mock(Member.class);
         when(recipient.getId()).thenReturn(1L);
+        when(pin.getPlace()).thenReturn(place);
+        when(pin.getPlaceTrack()).thenReturn(placeTrack);
+        when(placeTrack.getTrack()).thenReturn(track);
         when(pinQueryService.getActivePin(100L)).thenReturn(pin);
         when(memberQueryService.getActiveMember(1L)).thenReturn(recipient);
         when(memberQueryService.getActiveMember(2L)).thenReturn(actor);

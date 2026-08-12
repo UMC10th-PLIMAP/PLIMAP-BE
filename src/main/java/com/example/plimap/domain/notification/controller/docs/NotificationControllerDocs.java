@@ -44,7 +44,11 @@ public interface NotificationControllerDocs {
                             "actorId": 2,
                             "actorNickname": "플리맵유저",
                             "actorProfileImageUrl": null,
+                            "isFollowing": false,
+                            "isFollowingViewer": false,
                             "pinId": 10,
+                            "placeName": "여의도 한강공원",
+                            "albumImageUrl": "https://example.com/album.jpg",
                             "read": false,
                             "createdAt": "2026-07-29T10:00:00Z"
                           }

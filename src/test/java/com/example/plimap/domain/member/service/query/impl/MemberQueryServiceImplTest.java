@@ -420,6 +420,30 @@ class MemberQueryServiceImplTest {
     }
 
     @Test
+    void isFollowing은_팔로우_관계가_존재하면_true를_반환한다() {
+        // given
+        when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(true);
+
+        // when
+        boolean result = memberQueryService.isFollowing(1L, 2L);
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void isFollowing은_팔로우_관계가_없으면_false를_반환한다() {
+        // given
+        when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
+
+        // when
+        boolean result = memberQueryService.isFollowing(1L, 2L);
+
+        // then
+        assertThat(result).isFalse();
+    }
+
+    @Test
     void 존재하지_않거나_탈퇴한_회원의_프로필은_조회할_수_없다() {
         // given
         when(memberQueryRepository.findVisibleActiveMember(2L, 1L))
