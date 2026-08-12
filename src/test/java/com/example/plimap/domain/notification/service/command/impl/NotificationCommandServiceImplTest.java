@@ -2,6 +2,7 @@ package com.example.plimap.domain.notification.service.command.impl;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
 import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.enums.NotificationType;
 import com.example.plimap.domain.notification.repository.NotificationRepository;
@@ -80,9 +81,12 @@ class NotificationCommandServiceImplTest {
         Member follower2 = mock(Member.class);
         when(follower1.getId()).thenReturn(10L);
         when(follower2.getId()).thenReturn(20L);
+        when(pin.getId()).thenReturn(100L);
         when(pin.getPlace()).thenReturn(place);
         when(pin.getPlaceTrack()).thenReturn(placeTrack);
         when(placeTrack.getTrack()).thenReturn(track);
+        when(place.getName()).thenReturn("여의도 한강공원");
+        when(track.getAlbumImageUrl()).thenReturn("https://example.com/album.jpg");
         when(pinQueryService.getActivePin(100L)).thenReturn(pin);
         when(memberQueryService.getActiveMember(1L)).thenReturn(author);
         when(memberQueryService.findAllFollowers(1L)).thenReturn(List.of(follower1, follower2));
@@ -101,8 +105,17 @@ class NotificationCommandServiceImplTest {
                     assertThat(notification.getActor()).isSameAs(author);
                     assertThat(notification.getPin()).isSameAs(pin);
                 });
-        verify(notificationEmitterRegistry).sendToMember(eq(10L), eq("notification"), any());
-        verify(notificationEmitterRegistry).sendToMember(eq(20L), eq("notification"), any());
+
+        ArgumentCaptor<NotificationResDTO.Item> itemCaptor = ArgumentCaptor.forClass(NotificationResDTO.Item.class);
+        verify(notificationEmitterRegistry).sendToMember(eq(10L), eq("notification"), itemCaptor.capture());
+        verify(notificationEmitterRegistry).sendToMember(eq(20L), eq("notification"), itemCaptor.capture());
+        assertThat(itemCaptor.getAllValues())
+                .hasSize(2)
+                .allSatisfy(item -> {
+                    assertThat(item.pinId()).isEqualTo(100L);
+                    assertThat(item.placeName()).isEqualTo("여의도 한강공원");
+                    assertThat(item.albumImageUrl()).isEqualTo("https://example.com/album.jpg");
+                });
     }
 
     @Test
@@ -115,9 +128,12 @@ class NotificationCommandServiceImplTest {
         Member recipient = mock(Member.class);
         Member actor = mock(Member.class);
         when(recipient.getId()).thenReturn(1L);
+        when(pin.getId()).thenReturn(100L);
         when(pin.getPlace()).thenReturn(place);
         when(pin.getPlaceTrack()).thenReturn(placeTrack);
         when(placeTrack.getTrack()).thenReturn(track);
+        when(place.getName()).thenReturn("여의도 한강공원");
+        when(track.getAlbumImageUrl()).thenReturn("https://example.com/album.jpg");
         when(pinQueryService.getActivePin(100L)).thenReturn(pin);
         when(memberQueryService.getActiveMember(1L)).thenReturn(recipient);
         when(memberQueryService.getActiveMember(2L)).thenReturn(actor);
@@ -133,7 +149,13 @@ class NotificationCommandServiceImplTest {
         assertThat(captor.getValue().getRecipient()).isSameAs(recipient);
         assertThat(captor.getValue().getActor()).isSameAs(actor);
         assertThat(captor.getValue().getPin()).isSameAs(pin);
-        verify(notificationEmitterRegistry).sendToMember(eq(1L), eq("notification"), any());
+
+        ArgumentCaptor<NotificationResDTO.Item> itemCaptor = ArgumentCaptor.forClass(NotificationResDTO.Item.class);
+        verify(notificationEmitterRegistry).sendToMember(eq(1L), eq("notification"), itemCaptor.capture());
+        NotificationResDTO.Item item = itemCaptor.getValue();
+        assertThat(item.pinId()).isEqualTo(100L);
+        assertThat(item.placeName()).isEqualTo("여의도 한강공원");
+        assertThat(item.albumImageUrl()).isEqualTo("https://example.com/album.jpg");
     }
 
     @Test
