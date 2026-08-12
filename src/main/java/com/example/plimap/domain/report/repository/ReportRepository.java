@@ -45,7 +45,7 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
             select new com.example.plimap.domain.report.dto.ReportReason(
                 r.id, r.reportedPin.id, r.category, r.detail, r.reporter.nickname, r.createdAt)
             from Report r
-            where r.id = :reportId
+            where r.id = :reportId and r.reviewed = false
             """)
     Optional<ReportReason> findReasonById(Long reportId);
 

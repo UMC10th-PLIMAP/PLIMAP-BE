@@ -83,23 +83,12 @@ public class AdminCommandServiceImpl implements AdminCommandService {
     }
 
     @Override
-    public void grantMemberSanction(Long memberId, ReportCategory reasonCategory, String reasonDetail, SuspensionPeriod period) {
-        validateReasonDetail(reasonCategory, reasonDetail);
-
+    public void grantMemberSanction(Long memberId, SuspensionPeriod period, ReportCategory reasonCategory, String reasonDetail) {
         String newNickname = memberQueryService.pickAvailablePenaltyNickname();
         memberCommandService.replacePenalizedNickname(memberId, newNickname);
 
         if (memberCommandService.applySanction(memberId, period, reasonCategory, reasonDetail)) {
             cascadeAutoWithdrawal(memberId);
-        }
-    }
-
-    private void validateReasonDetail(ReportCategory category, String detail) {
-        if (category == ReportCategory.OTHER && (detail == null || detail.isBlank())) {
-            throw new ReportException(ReportErrorCode.REPORT_DETAIL_REQUIRED);
-        }
-        if (category != ReportCategory.OTHER && detail != null) {
-            throw new ReportException(ReportErrorCode.REPORT_DETAIL_NOT_ALLOWED);
         }
     }
 

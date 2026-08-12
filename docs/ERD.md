@@ -198,7 +198,7 @@ CREATE TABLE member
         ),
     CONSTRAINT chk_member_last_penalty_detail
         CHECK (
-            (last_penalty_category = 'OTHER' AND last_penalty_detail IS NOT NULL AND char_length(btrim(last_penalty_detail)) >= 1)
+            (last_penalty_category = 'OTHER' AND last_penalty_detail IS NOT NULL AND last_penalty_detail ~ '[^[:space:]]')
             OR (last_penalty_category IS DISTINCT FROM 'OTHER' AND last_penalty_detail IS NULL)
         )
 );

@@ -144,7 +144,7 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         Long reporterId = withdrawingReporter.getId();
 
         // when
-        adminCommandService.grantMemberSanction(reporterId, ReportCategory.OBSCENE_OR_HARMFUL, null, SuspensionPeriod.ONE_DAY);
+        adminCommandService.grantMemberSanction(reporterId, SuspensionPeriod.ONE_DAY, ReportCategory.OBSCENE_OR_HARMFUL, null);
         entityManager.flush();
         entityManager.clear();
 
@@ -173,7 +173,7 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         Long likerId = withdrawingLiker.getId();
 
         // when
-        adminCommandService.grantMemberSanction(likerId, ReportCategory.OBSCENE_OR_HARMFUL, null, SuspensionPeriod.ONE_DAY);
+        adminCommandService.grantMemberSanction(likerId, SuspensionPeriod.ONE_DAY, ReportCategory.OBSCENE_OR_HARMFUL, null);
         entityManager.flush();
         entityManager.clear();
 

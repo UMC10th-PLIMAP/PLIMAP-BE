@@ -12,7 +12,7 @@ public interface AdminCommandService {
 
     void grantPinSanction(Long pinId, Long reportId, SuspensionPeriod period);
 
-    void grantMemberSanction(Long memberId, ReportCategory reasonCategory, String reasonDetail, SuspensionPeriod period);
+    void grantMemberSanction(Long memberId, SuspensionPeriod period, ReportCategory reasonCategory, String reasonDetail);
 
     AdminResDTO.MemberDetail regenerateMemberNickname(Long memberId);
 }

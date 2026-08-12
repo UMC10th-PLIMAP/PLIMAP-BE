@@ -39,6 +39,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -168,7 +169,37 @@ class AdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("ADMIN_200_MEMBER_SANCTION_GRANTED"));
 
-        verify(adminCommandService).grantMemberSanction(eq(2L), eq(ReportCategory.OTHER), eq("반복 위반"), eq(SuspensionPeriod.PERMANENT));
+        verify(adminCommandService).grantMemberSanction(eq(2L), eq(SuspensionPeriod.PERMANENT), eq(ReportCategory.OTHER), eq("반복 위반"));
+    }
+
+    @Test
+    void 프로필_최종_제재_사유가_OTHER인데_상세가_없으면_400을_반환한다() throws Exception {
+        mockAdminAuth();
+
+        mockMvc.perform(post("/api/v1/admin/members/2/sanctions")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\": \"OTHER\", \"period\": \"ONE_DAY\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("제재 사유 상세 내용이 카테고리 조건에 맞지 않습니다."));
+
+        verifyNoInteractions(adminCommandService);
+    }
+
+    @Test
+    void 프로필_최종_제재_사유가_OTHER가_아닌데_상세가_있으면_400을_반환한다() throws Exception {
+        mockAdminAuth();
+
+        mockMvc.perform(post("/api/v1/admin/members/2/sanctions")
+                        .header("Authorization", "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\": \"ABUSE_OR_HATE_SPEECH\", \"detail\": \"상세\", \"period\": \"ONE_DAY\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("제재 사유 상세 내용이 카테고리 조건에 맞지 않습니다."));
+
+        verifyNoInteractions(adminCommandService);
     }
 
     @Test

@@ -75,7 +75,7 @@ public class AdminController implements AdminControllerDocs {
             @PathVariable Long memberId,
             @RequestBody @Valid AdminReqDTO.MemberSanctionDecision request
     ) {
-        adminCommandService.grantMemberSanction(memberId, request.category(), request.detail(), request.period());
+        adminCommandService.grantMemberSanction(memberId, request.period(), request.category(), request.detail());
         return ApiResponse.success(AdminSuccessCode.MEMBER_SANCTION_GRANTED, null);
     }
 

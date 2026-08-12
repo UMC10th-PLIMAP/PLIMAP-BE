@@ -173,30 +173,15 @@ class AdminCommandServiceImplTest {
         when(memberCommandService.applySanction(MEMBER_ID, SuspensionPeriod.ONE_DAY, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null))
                 .thenReturn(false);
 
-        adminCommandService.grantMemberSanction(MEMBER_ID, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null, SuspensionPeriod.ONE_DAY);
+        adminCommandService.grantMemberSanction(MEMBER_ID, SuspensionPeriod.ONE_DAY, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null);
 
         verify(memberCommandService).replacePenalizedNickname(MEMBER_ID, "참새");
         verify(memberCommandService).applySanction(MEMBER_ID, SuspensionPeriod.ONE_DAY, ReportCategory.COMMERCIAL_OR_PROMOTIONAL, null);
         verifyNoInteractions(notificationCommandService, reportCommandService, placeTrackCommandService, pinCommandService);
     }
 
-    @Test
-    void 프로필_최종_제재_사유가_OTHER인데_상세가_없으면_거부된다() {
-        assertThatThrownBy(() ->
-                adminCommandService.grantMemberSanction(MEMBER_ID, ReportCategory.OTHER, null, SuspensionPeriod.ONE_DAY))
-                .isInstanceOf(ReportException.class);
-
-        verifyNoInteractions(memberQueryService, memberCommandService);
-    }
-
-    @Test
-    void 프로필_최종_제재_사유가_OTHER가_아닌데_상세가_있으면_거부된다() {
-        assertThatThrownBy(() -> adminCommandService.grantMemberSanction(
-                MEMBER_ID, ReportCategory.ABUSE_OR_HATE_SPEECH, "상세", SuspensionPeriod.ONE_DAY))
-                .isInstanceOf(ReportException.class);
-
-        verifyNoInteractions(memberQueryService, memberCommandService);
-    }
+    // 사유(category/detail) 정합성 검증은 AdminReqDTO.MemberSanctionDecision의 @AssertTrue로 이동됨
+    // (ReportRequest.Create.isDetailValid()와 동일 패턴) — AdminControllerTest에서 검증한다.
 
     @Test
     void 프로필_최종_제재를_영구로_선택하면_4점_미만이어도_즉시_탈퇴_캐스케이드가_실행된다() {
@@ -207,7 +192,7 @@ class AdminCommandServiceImplTest {
         when(pinQueryService.findAllPinIdsByMemberId(MEMBER_ID)).thenReturn(List.of());
         when(pinQueryService.findPinIdsLikedByMember(MEMBER_ID)).thenReturn(List.of(likedPinId));
 
-        adminCommandService.grantMemberSanction(MEMBER_ID, ReportCategory.OTHER, "심각한 위반", SuspensionPeriod.PERMANENT);
+        adminCommandService.grantMemberSanction(MEMBER_ID, SuspensionPeriod.PERMANENT, ReportCategory.OTHER, "심각한 위반");
 
         verify(notificationCommandService).deleteByMemberId(MEMBER_ID);
         verify(pinCommandService).decreaseLikeCount(likedPinId);

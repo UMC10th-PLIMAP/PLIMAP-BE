@@ -95,7 +95,8 @@ public interface AdminControllerDocs {
             summary = "신고 누적 게시물 목록 조회",
             description = """
                     신고가 1건 이상 누적된 PIN을 신고 누적 수(reportCount) 내림차순으로 조회합니다.
-                    각 항목에는 신고 사유(카테고리/상세/신고자/신고일) 목록이 함께 포함됩니다.
+                    각 항목에는 신고 사유(신고ID/카테고리/상세/신고자/신고일) 목록이 함께 포함됩니다.
+                    이 중 reportId는 최종 제재 API(POST /pins/{pinId}/sanctions)에서 제재 사유로 지목할 신고를 고를 때 사용합니다.
 
                     - filter=ALL: 신고가 1건 이상인 모든 PIN
                     - filter=AUTO_HIDDEN: 신고 누적 수가 10회 이상이라 피드에서 자동숨김된 PIN
