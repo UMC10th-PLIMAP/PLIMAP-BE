@@ -22,7 +22,7 @@ public enum PinErrorCode implements BaseErrorCode {
     ),
 
     MEMBER_PIN_ALREADY_EXISTS(
-            HttpStatus.BAD_REQUEST,
+            HttpStatus.CONFLICT,
             "PIN_MEMBER_PIN_ALREADY_EXISTS",
             "이미 해당 장소에 등록한 핀이 있습니다."
     ),
@@ -40,13 +40,13 @@ public enum PinErrorCode implements BaseErrorCode {
     ),
 
     ALREADY_LIKED_PIN(
-            HttpStatus.BAD_REQUEST,
+            HttpStatus.CONFLICT,
             "PIN_ALREADY_LIKED_PIN",
             "이미 좋아요한 핀입니다."
     ),
 
     FRIEND_PIN_ACCESS_DENIED(
-            HttpStatus.BAD_REQUEST,
+            HttpStatus.FORBIDDEN,
             "PIN_FRIEND_PIN_ACCESS_DENIED",
             "친구가 등록한 핀이 아니므로 접근 권한을 발급할 수 없습니다."
     ),

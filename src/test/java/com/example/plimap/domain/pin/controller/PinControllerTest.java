@@ -15,6 +15,7 @@ import com.example.plimap.domain.pin.enums.ClusterLevel;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.exception.PinLikeException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
@@ -62,6 +63,7 @@ class PinControllerTest {
     private static final String PIN_CREATE_ENDPOINT = "/api/v1/pins";
     private static final String PIN_AVAILABILITY_ENDPOINT = "/api/v1/pins/availability";
     private static final String PIN_UPDATE_ENDPOINT = "/api/v1/pins/1";
+    private static final String PIN_LIKE_ENDPOINT = "/api/v1/pins/{pinId}/likes";
     private static final String ACCESS_TOKEN = "valid-access-token";
     private static final String MY_FEED_ENDPOINT = "/api/v1/feeds/members/me";
     private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feeds/members/{memberId}";
@@ -145,6 +147,38 @@ class PinControllerTest {
                 .andExpect(jsonPath("$.result.writerProfileImage").value("image_url"))
                 .andExpect(jsonPath("$.result.introduction").value("feeling love attack!"))
                 .andExpect(jsonPath("$.result.clipStartMs").value(70000));
+    }
+
+    @Test
+    void 동일한_장소에_등록한_핀이_있으면_409를_반환한다() throws Exception {
+        when(pinCommandService.createPin(
+                any(Member.class),
+                any(PinRequest.Create.class)
+        )).thenThrow(new PinException(PinErrorCode.MEMBER_PIN_ALREADY_EXISTS));
+
+        mockMvc.perform(post(PIN_CREATE_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validCreateRequest()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("PIN_MEMBER_PIN_ALREADY_EXISTS"))
+                .andExpect(jsonPath("$.message").value("이미 해당 장소에 등록한 핀이 있습니다."))
+                .andExpect(jsonPath("$.result").doesNotExist());
+    }
+
+    @Test
+    void 이미_좋아요한_핀이면_409를_반환한다() throws Exception {
+        when(pinCommandService.createPinLike(any(Member.class), eq(1L)))
+                .thenThrow(new PinLikeException(PinErrorCode.ALREADY_LIKED_PIN));
+
+        mockMvc.perform(put(PIN_LIKE_ENDPOINT, 1L)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("PIN_ALREADY_LIKED_PIN"))
+                .andExpect(jsonPath("$.message").value("이미 좋아요한 핀입니다."))
+                .andExpect(jsonPath("$.result").doesNotExist());
     }
 
     @Test
@@ -610,7 +644,7 @@ class PinControllerTest {
     }
 
     @Test
-    void 친구가_등록한_핀이_아니면_400을_반환한다() throws Exception{
+    void 친구가_등록한_핀이_아니면_403을_반환한다() throws Exception{
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
         when(memberRepository.findById(1L))
@@ -622,7 +656,7 @@ class PinControllerTest {
         mockMvc.perform(post(FRIEND_FEED_AUTHORIZE_ENDPOINT, 1L)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andDo(print())
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code").value("PIN_FRIEND_PIN_ACCESS_DENIED"))
                 .andExpect(jsonPath("$.message").value("친구가 등록한 핀이 아니므로 접근 권한을 발급할 수 없습니다."));

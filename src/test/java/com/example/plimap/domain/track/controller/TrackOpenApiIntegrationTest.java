@@ -221,7 +221,7 @@ class TrackOpenApiIntegrationTest {
                 openApi,
                 TRACK_SEARCH_PATH,
                 "get",
-                "500",
+                "502",
                 "ApiResponseTrackSearchResult",
                 Set.of("TRACK_EXTERNAL_API_ERROR")
         );
@@ -285,10 +285,15 @@ class TrackOpenApiIntegrationTest {
                 "post",
                 "500",
                 "ApiResponsePlaybackPreparationResult",
-                Set.of(
-                        "TRACK_YOUTUBE_EXTERNAL_API_ERROR",
-                        "TRACK_CACHE_ERROR"
-                )
+                Set.of("TRACK_CACHE_ERROR")
+        );
+        assertFailureResponse(
+                openApi,
+                PLAYBACK_PREPARATION_PATH,
+                "post",
+                "502",
+                "ApiResponsePlaybackPreparationResult",
+                Set.of("TRACK_YOUTUBE_EXTERNAL_API_ERROR")
         );
 
         assertFailureResponse(

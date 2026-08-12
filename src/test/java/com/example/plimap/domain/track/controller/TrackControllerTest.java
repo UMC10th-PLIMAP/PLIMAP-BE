@@ -230,7 +230,7 @@ class TrackControllerTest {
                 .thenThrow(new TrackException(TrackErrorCode.TRACK_EXTERNAL_API_ERROR));
 
         mockMvc.perform(authenticatedSearch().queryParam("keyword", "아이유"))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code").value("TRACK_EXTERNAL_API_ERROR"))
                 .andExpect(jsonPath("$.result").isEmpty());
@@ -294,7 +294,7 @@ class TrackControllerTest {
         assertPlaybackError(
                 TrackErrorCode.YOUTUBE_EXTERNAL_API_ERROR,
                 "TRACK_YOUTUBE_EXTERNAL_API_ERROR",
-                500
+                502
         );
     }
 

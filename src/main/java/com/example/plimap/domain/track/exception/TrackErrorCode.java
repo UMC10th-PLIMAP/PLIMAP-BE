@@ -30,7 +30,7 @@ public enum TrackErrorCode implements BaseErrorCode {
             "해당 장소의 곡 상세에 접근할 수 없습니다."
     ),
     TRACK_EXTERNAL_API_ERROR(
-            HttpStatus.INTERNAL_SERVER_ERROR,
+            HttpStatus.BAD_GATEWAY,
             "TRACK_EXTERNAL_API_ERROR",
             "음악 검색 중 오류가 발생했습니다."
     ),
@@ -45,7 +45,7 @@ public enum TrackErrorCode implements BaseErrorCode {
             "선택한 곡과 일치하는 YouTube 영상을 찾을 수 없습니다."
     ),
     YOUTUBE_EXTERNAL_API_ERROR(
-            HttpStatus.INTERNAL_SERVER_ERROR,
+            HttpStatus.BAD_GATEWAY,
             "TRACK_YOUTUBE_EXTERNAL_API_ERROR",
             "YouTube 영상 검색 중 오류가 발생했습니다."
     ),
