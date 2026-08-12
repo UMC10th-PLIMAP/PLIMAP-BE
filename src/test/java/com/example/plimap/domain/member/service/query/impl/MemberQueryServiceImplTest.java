@@ -1,7 +1,7 @@
 package com.example.plimap.domain.member.service.query.impl;
 
 import com.example.plimap.domain.member.dto.Pagination;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.enums.MemberStatus;
@@ -239,7 +239,7 @@ class MemberQueryServiceImplTest {
         when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
-        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+        MemberResponse.MyProfile result = memberQueryService.getMyProfile(1L);
 
         // then
         assertThat(result.id()).isEqualTo(1L);
@@ -270,7 +270,7 @@ class MemberQueryServiceImplTest {
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
 
         // when
-        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+        MemberResponse.MyProfile result = memberQueryService.getMyProfile(1L);
 
         // then
         assertThat(result.status()).isEqualTo(MemberStatus.SUSPENDED);
@@ -295,7 +295,7 @@ class MemberQueryServiceImplTest {
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
 
         // when
-        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+        MemberResponse.MyProfile result = memberQueryService.getMyProfile(1L);
 
         // then
         assertThat(result.status()).isEqualTo(MemberStatus.WITHDRAWN);
@@ -316,7 +316,7 @@ class MemberQueryServiceImplTest {
         when(memberFollowRepository.countByIdFollowerId(1L)).thenReturn(0L);
 
         // when
-        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+        MemberResponse.MyProfile result = memberQueryService.getMyProfile(1L);
 
         // then
         assertThat(result.followerCount()).isZero();
@@ -332,7 +332,7 @@ class MemberQueryServiceImplTest {
         when(pinQueryService.countPinsByMemberId(1L)).thenReturn(0L);
 
         // when
-        MemberResDTO.MyProfile result = memberQueryService.getMyProfile(1L);
+        MemberResponse.MyProfile result = memberQueryService.getMyProfile(1L);
 
         // then
         assertThat(result.pinCount()).isZero();
@@ -363,7 +363,7 @@ class MemberQueryServiceImplTest {
         when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
-        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+        MemberResponse.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
 
         // then
         assertThat(result.id()).isEqualTo(2L);
@@ -384,7 +384,7 @@ class MemberQueryServiceImplTest {
         when(pinQueryService.countPinsByMemberId(2L)).thenReturn(0L);
 
         // when
-        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+        MemberResponse.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
 
         // then
         assertThat(result.pinCount()).isZero();
@@ -400,7 +400,7 @@ class MemberQueryServiceImplTest {
         when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(true);
 
         // when
-        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+        MemberResponse.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
 
         // then
         assertThat(result.isFollowing()).isTrue();
@@ -416,7 +416,7 @@ class MemberQueryServiceImplTest {
         when(memberFollowRepository.existsById(new MemberFollowId(1L, 2L))).thenReturn(false);
 
         // when
-        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+        MemberResponse.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
 
         // then
         assertThat(result.isFollowing()).isFalse();
@@ -433,7 +433,7 @@ class MemberQueryServiceImplTest {
         when(memberFollowRepository.existsById(new MemberFollowId(2L, 1L))).thenReturn(true);
 
         // when
-        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+        MemberResponse.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
 
         // then
         assertThat(result.isFollowing()).isFalse();
@@ -450,7 +450,7 @@ class MemberQueryServiceImplTest {
         when(memberFollowRepository.existsById(new MemberFollowId(2L, 1L))).thenReturn(false);
 
         // when
-        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+        MemberResponse.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
 
         // then
         assertThat(result.isFollowingViewer()).isFalse();
@@ -467,7 +467,7 @@ class MemberQueryServiceImplTest {
         when(memberFollowRepository.existsById(new MemberFollowId(2L, 1L))).thenReturn(true);
 
         // when
-        MemberResDTO.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
+        MemberResponse.OtherProfile result = memberQueryService.getOtherProfile(1L, 2L);
 
         // then
         assertThat(result.isFollowing()).isTrue();
@@ -542,11 +542,11 @@ class MemberQueryServiceImplTest {
         when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
-        Pagination<MemberResDTO.FollowerItem> result = memberQueryService.findFollowers(99L, 1L, null, 10);
+        Pagination<MemberResponse.FollowerItem> result = memberQueryService.findFollowers(99L, 1L, null, 10);
 
         // then
         assertThat(result.data()).containsExactly(
-                new MemberResDTO.FollowerItem(2L, "팔로워", "이름", "https://example.com/key", followedAt, true, true));
+                new MemberResponse.FollowerItem(2L, "팔로워", "이름", "https://example.com/key", followedAt, true, true));
         assertThat(result.hasNext()).isFalse();
     }
 
@@ -585,11 +585,11 @@ class MemberQueryServiceImplTest {
         when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
-        Pagination<MemberResDTO.FollowingItem> result = memberQueryService.findFollowing(99L, 1L, null, 10);
+        Pagination<MemberResponse.FollowingItem> result = memberQueryService.findFollowing(99L, 1L, null, 10);
 
         // then
         assertThat(result.data()).containsExactly(
-                new MemberResDTO.FollowingItem(2L, "팔로잉", "이름", "https://example.com/key", followedAt, true, true));
+                new MemberResponse.FollowingItem(2L, "팔로잉", "이름", "https://example.com/key", followedAt, true, true));
         assertThat(result.hasNext()).isFalse();
     }
 
@@ -623,11 +623,11 @@ class MemberQueryServiceImplTest {
         when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         // when
-        Pagination<MemberResDTO.SearchItem> result = memberQueryService.searchActiveMembers(99L, "키워드", null, 10);
+        Pagination<MemberResponse.SearchItem> result = memberQueryService.searchActiveMembers(99L, "키워드", null, 10);
 
         // then
         assertThat(result.data()).containsExactly(
-                new MemberResDTO.SearchItem(2L, "닉네임", "이름", "https://example.com/key", true, false, createdAt));
+                new MemberResponse.SearchItem(2L, "닉네임", "이름", "https://example.com/key", true, false, createdAt));
         assertThat(result.nextCursor()).isEqualTo("next-cursor");
         assertThat(result.hasNext()).isTrue();
     }
@@ -645,7 +645,7 @@ class MemberQueryServiceImplTest {
         when(memberQueryRepository.searchActiveMembers(99L, "키워드", null, 10)).thenReturn(emptyPage);
 
         // when
-        Pagination<MemberResDTO.SearchItem> result = memberQueryService.searchActiveMembers(99L, "키워드", null, 10);
+        Pagination<MemberResponse.SearchItem> result = memberQueryService.searchActiveMembers(99L, "키워드", null, 10);
 
         // then
         assertThat(result.data()).isEmpty();

@@ -11,7 +11,7 @@ import lombok.Getter;
 
 import java.time.Instant;
 
-public class MemberResDTO {
+public class MemberResponse {
 
     @Getter
     @Builder

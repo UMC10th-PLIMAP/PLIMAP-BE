@@ -25,7 +25,7 @@ public interface HomeControllerDocs {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
-                    description = "HOME_200_CONTEXT_FETCHED - 홈 컨텍스트 조회 성공"),
+                    description = "HOME_CONTEXT_FETCHED_SUCCESS - 홈 컨텍스트 조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "COMMON_400_VALIDATION_FAILED - 현재 위치 검증 실패"),

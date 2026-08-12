@@ -230,7 +230,7 @@ class TrackControllerTest {
                 .thenThrow(new TrackException(TrackErrorCode.TRACK_EXTERNAL_API_ERROR));
 
         mockMvc.perform(authenticatedSearch().queryParam("keyword", "아이유"))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code").value("TRACK_EXTERNAL_API_ERROR"))
                 .andExpect(jsonPath("$.result").isEmpty());
@@ -275,7 +275,7 @@ class TrackControllerTest {
     void metadata_만료는_Track_도메인_오류_응답을_반환한다() throws Exception {
         assertPlaybackError(
                 TrackErrorCode.TRACK_METADATA_CACHE_NOT_FOUND,
-                "TRACK_404_METADATA_CACHE_NOT_FOUND",
+                "TRACK_METADATA_CACHE_NOT_FOUND",
                 404
         );
     }
@@ -284,7 +284,7 @@ class TrackControllerTest {
     void YouTube_매칭_실패는_Track_도메인_오류_응답을_반환한다() throws Exception {
         assertPlaybackError(
                 TrackErrorCode.YOUTUBE_MATCH_NOT_FOUND,
-                "TRACK_404_YOUTUBE_MATCH_NOT_FOUND",
+                "TRACK_YOUTUBE_MATCH_NOT_FOUND",
                 404
         );
     }
@@ -293,8 +293,8 @@ class TrackControllerTest {
     void YouTube_외부_API_오류는_Track_도메인_오류_응답을_반환한다() throws Exception {
         assertPlaybackError(
                 TrackErrorCode.YOUTUBE_EXTERNAL_API_ERROR,
-                "TRACK_500_YOUTUBE_EXTERNAL_API_ERROR",
-                500
+                "TRACK_YOUTUBE_EXTERNAL_API_ERROR",
+                502
         );
     }
 
@@ -323,7 +323,7 @@ class TrackControllerTest {
         mockMvc.perform(authenticatedPlaybackFailure(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("TRACK_PLAYBACK_FAILURE_REPORTED"))
+                .andExpect(jsonPath("$.code").value("TRACK_PLAYBACK_FAILURE_REPORTED_SUCCESS"))
                 .andExpect(jsonPath("$.result").isEmpty());
 
         verify(trackPlaybackFailureService).report(

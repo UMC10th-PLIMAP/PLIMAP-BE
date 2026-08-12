@@ -2,7 +2,7 @@ package com.example.plimap.domain.member.service.command.impl;
 
 import com.example.plimap.domain.auth.service.command.SocialAccountCommandService;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
@@ -228,7 +228,7 @@ class MemberCommandServiceImplTest {
         when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         MemberReqDTO.UpdateProfile request = updateProfile("새닉네임", "새이름", "새소개");
-        MemberResDTO.Profile result = memberCommandService.updateProfile(MEMBER_ID, request);
+        MemberResponse.Profile result = memberCommandService.updateProfile(MEMBER_ID, request);
 
         assertThat(result.id()).isEqualTo(MEMBER_ID);
         assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
@@ -414,7 +414,7 @@ class MemberCommandServiceImplTest {
         when(profileImageStorage.getPublicUrl("members/1/new.webp"))
                 .thenReturn(URI.create("https://project.supabase.co/storage/v1/object/public/profile-images/members/1/new.webp"));
 
-        MemberResDTO.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
+        MemberResponse.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
 
         assertThat(result.objectKey()).isEqualTo("members/1/new.webp");
         verify(member).updateProfileImage("members/1/new.webp");
@@ -496,7 +496,7 @@ class MemberCommandServiceImplTest {
         doThrow(new ProfileImageStorageException("실패", new RuntimeException()))
                 .when(profileImageStorage).delete("members/1/old.webp");
 
-        MemberResDTO.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
+        MemberResponse.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
 
         assertThat(result.objectKey()).isEqualTo("members/1/new.webp");
     }

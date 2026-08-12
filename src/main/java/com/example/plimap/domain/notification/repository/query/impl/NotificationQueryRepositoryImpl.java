@@ -5,7 +5,6 @@ import com.example.plimap.domain.member.entity.QMemberFollow;
 import com.example.plimap.domain.notification.converter.NotificationConverter;
 import com.example.plimap.domain.notification.dto.Pagination;
 import com.example.plimap.domain.notification.entity.QNotification;
-import com.example.plimap.domain.notification.exception.NotificationErrorCode;
 import com.example.plimap.domain.notification.exception.NotificationException;
 import com.example.plimap.domain.notification.repository.query.NotificationQueryRepository;
 import com.example.plimap.domain.notification.repository.query.NotificationRow;
@@ -13,6 +12,7 @@ import com.example.plimap.domain.pin.entity.QPin;
 import com.example.plimap.domain.place.entity.QPlace;
 import com.example.plimap.domain.track.entity.QPlaceTrack;
 import com.example.plimap.domain.track.entity.QTrack;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberPath;
@@ -27,6 +27,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class NotificationQueryRepositoryImpl implements NotificationQueryRepository {
+
+    private static final String INVALID_CURSOR_MESSAGE = "잘못된 커서 값입니다.";
 
     private final JPAQueryFactory queryFactory;
 
@@ -114,19 +116,23 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
         try {
             String[] parts = cursor.split("/", -1);
             if (parts.length != 2) {
-                throw new NotificationException(NotificationErrorCode.INVALID_CURSOR);
+                throw invalidCursorException();
             }
 
             Instant createdAt = Instant.parse(parts[0]);
             long id = Long.parseLong(parts[1]);
             if (id <= 0) {
-                throw new NotificationException(NotificationErrorCode.INVALID_CURSOR);
+                throw invalidCursorException();
             }
 
             return new Cursor(createdAt, id);
         } catch (DateTimeParseException | NumberFormatException e) {
-            throw new NotificationException(NotificationErrorCode.INVALID_CURSOR);
+            throw invalidCursorException();
         }
+    }
+
+    private NotificationException invalidCursorException() {
+        return new NotificationException(GeneralErrorCode.INVALID_CURSOR, INVALID_CURSOR_MESSAGE);
     }
 
     private BooleanExpression cursorCondition(Cursor cursor) {

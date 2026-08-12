@@ -1,6 +1,6 @@
 package com.example.plimap.domain.auth.controller;
 
-import com.example.plimap.domain.auth.dto.response.AuthResDTO;
+import com.example.plimap.domain.auth.dto.response.AuthResponse;
 import com.example.plimap.domain.auth.exception.AuthErrorCode;
 import com.example.plimap.domain.auth.exception.AuthException;
 import com.example.plimap.domain.member.enums.MemberStatus;
@@ -56,10 +56,10 @@ class AuthControllerTest {
         CsrfToken csrfToken = mock(CsrfToken.class);
         when(csrfToken.getToken()).thenReturn("masked-csrf-token");
 
-        ApiResponse<AuthResDTO.CsrfToken> response = controller.getCsrfToken(csrfToken);
+        ApiResponse<AuthResponse.CsrfToken> response = controller.getCsrfToken(csrfToken);
 
         assertThat(response.getIsSuccess()).isTrue();
-        assertThat(response.getCode()).isEqualTo("AUTH_200_CSRF_TOKEN_ISSUED");
+        assertThat(response.getCode()).isEqualTo("AUTH_CSRF_TOKEN_ISSUED_SUCCESS");
         assertThat(response.getResult().token()).isEqualTo("masked-csrf-token");
     }
 
@@ -71,7 +71,7 @@ class AuthControllerTest {
         ApiResponse<Void> apiResponse = controller.logout(request, response);
 
         assertThat(apiResponse.getIsSuccess()).isTrue();
-        assertThat(apiResponse.getCode()).isEqualTo("MEMBER_200_LOGOUT");
+        assertThat(apiResponse.getCode()).isEqualTo("MEMBER_LOGOUT_SUCCESS");
         verify(sessionInvalidationService).invalidate(request, response);
     }
 
@@ -127,7 +127,7 @@ class AuthControllerTest {
         ApiResponse<Void> apiResponse = controller.reissue(request, response);
 
         assertThat(apiResponse.getIsSuccess()).isTrue();
-        assertThat(apiResponse.getCode()).isEqualTo("AUTH_200_TOKEN_REISSUED");
+        assertThat(apiResponse.getCode()).isEqualTo("AUTH_TOKEN_REISSUED_SUCCESS");
         verify(refreshTokenService).rotateIfMatches(
                 1L,
                 "current-refresh-jti",

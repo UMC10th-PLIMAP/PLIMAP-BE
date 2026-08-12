@@ -52,7 +52,7 @@ public interface TrackControllerDocs {
                             )
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "500",
+                    responseCode = "502",
                     description = "iTunes 외부 API 호출 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
@@ -132,23 +132,27 @@ public interface TrackControllerDocs {
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "500",
-                    description = "YouTube 외부 API 또는 캐시 처리 실패",
+                    description = "캐시 처리 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(
                                     ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
-                            examples = {
-                                    @ExampleObject(
-                                            name = "YouTube 외부 API 오류",
-                                            value = TrackSwaggerErrorExamples
-                                                .YOUTUBE_EXTERNAL_API_ERROR
-                                    ),
-                                    @ExampleObject(
-                                            name = "캐시 처리 오류",
-                                            value = TrackSwaggerErrorExamples
-                                                .TRACK_CACHE_ERROR
-                                    )
-                            }
+                            examples = @ExampleObject(
+                                    name = "캐시 처리 오류",
+                                    value = TrackSwaggerErrorExamples.TRACK_CACHE_ERROR
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "502",
+                    description = "YouTube 외부 API 호출 실패",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
+                            examples = @ExampleObject(
+                                    name = "YouTube 외부 API 오류",
+                                    value = TrackSwaggerErrorExamples.YOUTUBE_EXTERNAL_API_ERROR
+                            )
                     ))
     })
     ResponseEntity<ApiResponse<TrackResponse.PlaybackPreparationResult>> preparePlayback(

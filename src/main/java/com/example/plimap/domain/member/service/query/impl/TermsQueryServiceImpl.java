@@ -1,6 +1,6 @@
 package com.example.plimap.domain.member.service.query.impl;
 
-import com.example.plimap.domain.member.dto.response.TermsResDTO;
+import com.example.plimap.domain.member.dto.response.TermsResponse;
 import com.example.plimap.domain.member.entity.MemberTermsAgreement;
 import com.example.plimap.domain.member.entity.Terms;
 import com.example.plimap.domain.member.enums.TermsType;
@@ -37,7 +37,7 @@ public class TermsQueryServiceImpl implements TermsQueryService {
     }
 
     @Override
-    public List<TermsResDTO.Result> findTermsAgreementStatus(Long memberId) {
+    public List<TermsResponse.Result> findTermsAgreementStatus(Long memberId) {
         Map<Long, MemberTermsAgreement> agreementsByTermsId = memberTermsAgreementRepository
                 .findAllByMember_Id(memberId).stream()
                 .collect(Collectors.toMap(agreement -> agreement.getTerms().getId(), Function.identity()));
@@ -45,7 +45,7 @@ public class TermsQueryServiceImpl implements TermsQueryService {
         return getActiveTerms().stream()
                 .map(terms -> {
                     MemberTermsAgreement agreement = agreementsByTermsId.get(terms.getId());
-                    return agreement != null ? TermsResDTO.Result.from(agreement) : TermsResDTO.Result.notAgreed(terms);
+                    return agreement != null ? TermsResponse.Result.from(agreement) : TermsResponse.Result.notAgreed(terms);
                 })
                 .toList();
     }

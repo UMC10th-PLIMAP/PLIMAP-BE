@@ -2,7 +2,7 @@ package com.example.plimap.domain.notification.service.query.impl;
 
 import com.example.plimap.domain.notification.converter.NotificationConverter;
 import com.example.plimap.domain.notification.dto.Pagination;
-import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
+import com.example.plimap.domain.notification.dto.response.NotificationResponse;
 import com.example.plimap.domain.notification.repository.query.NotificationQueryRepository;
 import com.example.plimap.domain.notification.repository.query.NotificationRow;
 import com.example.plimap.domain.notification.service.query.NotificationQueryService;
@@ -21,10 +21,10 @@ public class NotificationQueryServiceImpl implements NotificationQueryService {
     private final ProfileImageStorage profileImageStorage;
 
     @Override
-    public Pagination<NotificationResDTO.Item> findNotifications(Long memberId, String cursor, Integer pageSize) {
+    public Pagination<NotificationResponse.Item> findNotifications(Long memberId, String cursor, Integer pageSize) {
         Pagination<NotificationRow> notifications = notificationQueryRepository.findNotifications(memberId, cursor, pageSize);
 
-        List<NotificationResDTO.Item> data = notifications.data().stream()
+        List<NotificationResponse.Item> data = notifications.data().stream()
                 .map(row -> NotificationConverter.toItem(
                         row.notification(),
                         profileImageStorage.getPublicUrlOrNull(row.notification().getActor().getProfileImageObjectKey()),
