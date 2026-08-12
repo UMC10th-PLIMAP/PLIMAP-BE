@@ -2,6 +2,7 @@ package com.example.plimap.domain.auth.exception;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.report.enums.ReportCategory;
 import java.time.Instant;
 import lombok.Getter;
@@ -15,6 +16,8 @@ public class SanctionedMemberAuthenticationException extends AuthenticationExcep
     private final ReportCategory reasonCategory;
     private final String reasonDetail;
     private final Instant suspendedUntil;
+    private final int penaltyPoint;
+    private final SuspensionPeriod lastPenaltyPeriod;
 
     public SanctionedMemberAuthenticationException(Member member) {
         super("정지 또는 탈퇴 처리된 계정은 로그인할 수 없습니다.");
@@ -22,5 +25,7 @@ public class SanctionedMemberAuthenticationException extends AuthenticationExcep
         this.reasonCategory = member.getLastPenaltyCategory();
         this.reasonDetail = member.getLastPenaltyDetail();
         this.suspendedUntil = member.getSuspendedUntil();
+        this.penaltyPoint = member.getPenaltyPoint();
+        this.lastPenaltyPeriod = member.getLastPenaltyPeriod();
     }
 }

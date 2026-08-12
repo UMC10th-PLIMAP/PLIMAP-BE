@@ -2,6 +2,7 @@ package com.example.plimap.domain.member.dto.response;
 
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.domain.report.enums.ReportCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -58,7 +59,9 @@ public class MemberResDTO {
             Instant suspendedUntil,
             WithdrawalReason withdrawalReason,
             ReportCategory reasonCategory,
-            String reasonDetail
+            String reasonDetail,
+            int penaltyPoint,
+            SuspensionPeriod lastPenaltyPeriod
     ) {
     }
 

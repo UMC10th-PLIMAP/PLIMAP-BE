@@ -154,6 +154,7 @@ CREATE TABLE member
     report_count             INTEGER     NOT NULL DEFAULT 0,
     last_penalty_category    TEXT,
     last_penalty_detail      TEXT,
+    last_penalty_period      TEXT,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at               TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at               TIMESTAMPTZ,
@@ -200,6 +201,15 @@ CREATE TABLE member
         CHECK (
             (last_penalty_category = 'OTHER' AND last_penalty_detail IS NOT NULL AND last_penalty_detail ~ '[^[:space:]]')
             OR (last_penalty_category IS DISTINCT FROM 'OTHER' AND last_penalty_detail IS NULL)
+        ),
+    CONSTRAINT chk_member_last_penalty_period
+        CHECK (
+            last_penalty_period IS NULL OR last_penalty_period IN (
+                'ONE_DAY',
+                'THREE_DAYS',
+                'FIVE_DAYS',
+                'PERMANENT'
+            )
         )
 );
 
@@ -795,3 +805,4 @@ CREATE INDEX idx_inquiry_member_id ON inquiry (member_id);
 | 0.9.2 | 2026-08-01 | `place`의 행정구역·정규화 주소와 `ADDRESS_SEARCH` 제약·인덱스를 반영하고, 누락된 관계와 API Enum을 보완했으며 삭제된 `clip_end_ms` 제약을 제거 |
 | 0.10.0 | 2026-08-07 | 로그인 여부와 무관하게 접수하는 문의를 위한 `inquiry` 테이블과 `InquiryCategory`를 추가. `member_id`는 nullable(비로그인·탈퇴 회원은 null)이며 `ON DELETE SET NULL`로 연결 |
 | 0.11.0 | 2026-08-12 | 관리자가 기간·사유를 직접 선택/작성하는 최종 제재 API를 위해 member에 `last_penalty_category`·`last_penalty_detail` 컬럼과 `report`와 동일한 카테고리·detail 정합성 제약 추가 |
+| 0.11.1 | 2026-08-13 | 프론트가 "누적 N회차 (N일 정지)" 형태로 제재 상태를 표시할 수 있도록 member에 `last_penalty_period` 컬럼과 `SuspensionPeriod` 값 제약 추가 |

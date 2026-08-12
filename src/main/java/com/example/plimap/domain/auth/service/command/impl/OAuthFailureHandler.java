@@ -45,6 +45,10 @@ public class OAuthFailureHandler implements AuthenticationFailureHandler {
             if (sanctioned.getSuspendedUntil() != null) {
                 builder.queryParam("suspendedUntil", sanctioned.getSuspendedUntil());
             }
+            if (sanctioned.getLastPenaltyPeriod() != null) {
+                builder.queryParam("period", sanctioned.getLastPenaltyPeriod());
+            }
+            builder.queryParam("penaltyPoint", sanctioned.getPenaltyPoint());
         }
         // reasonDetail은 한글/공백 등 URL에 그대로 쓸 수 없는 문자를 포함할 수 있어 인코딩이 필요하다.
         String redirectLocation = builder.build().encode(StandardCharsets.UTF_8).toUriString();
