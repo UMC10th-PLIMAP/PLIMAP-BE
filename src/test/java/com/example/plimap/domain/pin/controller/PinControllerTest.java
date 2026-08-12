@@ -63,8 +63,8 @@ class PinControllerTest {
     private static final String PIN_AVAILABILITY_ENDPOINT = "/api/v1/pins/availability";
     private static final String PIN_UPDATE_ENDPOINT = "/api/v1/pins/1";
     private static final String ACCESS_TOKEN = "valid-access-token";
-    private static final String MY_FEED_ENDPOINT = "/api/v1/feed/members/me";
-    private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feed/members/{memberId}";
+    private static final String MY_FEED_ENDPOINT = "/api/v1/feeds/members/me";
+    private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feeds/members/{memberId}";
     private static final String MY_PIN_ENDPOINT = "/api/v1/pins/members/me";
     private static final String PLACE_TRACK_PIN_ENDPOINT = "/api/v1/place-tracks/{placeTrackId}/pins";
     private static final String VIEWPORT_CLUSTER_ENDPOINT = "/api/v1/pins/map";
@@ -354,6 +354,7 @@ class PinControllerTest {
                 .build());
 
         mockMvc.perform(get(MEMBER_FEED_ENDPOINT, 1L)
+                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                 .param("userLatitude", "37.5283")
                 .param("userLongitude", "126.9326"))
                 .andExpect(status().isOk())
