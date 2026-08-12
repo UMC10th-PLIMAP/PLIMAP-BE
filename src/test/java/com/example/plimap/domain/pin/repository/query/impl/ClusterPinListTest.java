@@ -556,6 +556,11 @@ class ClusterPinListTest {
                 .filteredOn(pin -> pin.placeId().equals(place2.getId()))
                 .extracting(PinResponse.PinPreview::hasBookmarkedPlace)
                 .containsExactly(false);
+
+        assertThat(result)
+                .filteredOn(pin -> pin.placeId().equals(place2.getId()))
+                .extracting(PinResponse.PinPreview::writerId)
+                .containsExactly(pin3.getMember().getId());
     }
 
     @Test
