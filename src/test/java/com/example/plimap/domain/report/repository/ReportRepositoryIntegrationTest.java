@@ -223,6 +223,41 @@ class ReportRepositoryIntegrationTest {
     }
 
     @Test
+    void findReasonById는_미반려_신고의_사유를_반환한다() {
+        // given
+        Member reporter = saveMember("신고자");
+        Pin targetPin = savePin(saveMember("핀작성자"));
+        Report report = reportRepository.saveAndFlush(
+                Report.createPinReport(reporter, targetPin, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        entityManager.clear();
+
+        // when
+        var result = reportRepository.findReasonById(report.getId());
+
+        // then
+        assertThat(result).isPresent();
+        assertThat(result.get().pinId()).isEqualTo(targetPin.getId());
+        assertThat(result.get().category()).isEqualTo(ReportCategory.OBSCENE_OR_HARMFUL);
+    }
+
+    @Test
+    void findReasonById는_이미_반려된_신고는_찾지_못한다() {
+        // given: 관리자가 이미 반려(markReviewedByReportedPinId) 처리한 신고
+        Member reporter = saveMember("신고자");
+        Pin targetPin = savePin(saveMember("핀작성자"));
+        Report report = reportRepository.saveAndFlush(
+                Report.createPinReport(reporter, targetPin, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        reportRepository.markReviewedByReportedPinId(targetPin.getId());
+        entityManager.clear();
+
+        // when
+        var result = reportRepository.findReasonById(report.getId());
+
+        // then: 이미 처리된 신고는 최종 제재 사유로 다시 지목할 수 없어야 한다
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void DB에서도_기타가_아닌_신고의_상세_내용을_허용하지_않는다() {
         // given
         Member reporter = saveMember("신고자");

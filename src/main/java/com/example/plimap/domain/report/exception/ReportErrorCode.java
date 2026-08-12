@@ -58,6 +58,16 @@ public enum ReportErrorCode implements BaseErrorCode {
             HttpStatus.BAD_REQUEST,
             "REPORT_PRIVATE_PIN_NOT_ALLOWED",
             "공개 피드가 아닌 PIN은 신고할 수 없습니다."
+    ),
+    REPORT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "REPORT_404_REPORT_NOT_FOUND",
+            "존재하지 않는 신고입니다."
+    ),
+    REPORT_PIN_MISMATCH(
+            HttpStatus.BAD_REQUEST,
+            "REPORT_400_REPORT_PIN_MISMATCH",
+            "해당 PIN에 대한 신고가 아닙니다."
     );
 
     private final HttpStatus status;

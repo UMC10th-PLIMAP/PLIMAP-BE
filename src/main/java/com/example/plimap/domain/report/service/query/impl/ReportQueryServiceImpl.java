@@ -1,6 +1,8 @@
 package com.example.plimap.domain.report.service.query.impl;
 
 import com.example.plimap.domain.report.dto.ReportReason;
+import com.example.plimap.domain.report.exception.ReportErrorCode;
+import com.example.plimap.domain.report.exception.ReportException;
 import com.example.plimap.domain.report.repository.ReportRepository;
 import com.example.plimap.domain.report.service.query.ReportQueryService;
 import java.util.Collections;
@@ -25,5 +27,11 @@ public class ReportQueryServiceImpl implements ReportQueryService {
         }
         return reportRepository.findReasonsByReportedPinIds(pinIds).stream()
                 .collect(Collectors.groupingBy(ReportReason::pinId));
+    }
+
+    @Override
+    public ReportReason getReasonById(Long reportId) {
+        return reportRepository.findReasonById(reportId)
+                .orElseThrow(() -> new ReportException(ReportErrorCode.REPORT_NOT_FOUND));
     }
 }

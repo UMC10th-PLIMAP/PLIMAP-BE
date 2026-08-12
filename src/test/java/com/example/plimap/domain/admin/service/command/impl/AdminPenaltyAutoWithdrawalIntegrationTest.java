@@ -8,6 +8,7 @@ import com.example.plimap.domain.auth.enums.AuthProvider;
 import com.example.plimap.domain.auth.repository.SocialAccountRepository;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.enums.NotificationType;
@@ -84,7 +85,8 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         Member thirdParty = saveMember("제3자");
         Pin pin = savePin(owner);
 
-        entityManager.persist(Report.createPinReport(reporter, pin, ReportCategory.OBSCENE_OR_HARMFUL, null));
+        Report pinReport = Report.createPinReport(reporter, pin, ReportCategory.OBSCENE_OR_HARMFUL, null);
+        entityManager.persist(pinReport);
         entityManager.persist(Notification.create(reporter, owner, pin, NotificationType.PIN_CREATED));
         // 핀과 무관한 팔로우 알림(pin_id 없음)도 탈퇴 시 함께 지워져야 한다.
         Notification followNotification = Notification.create(reporter, owner, null, NotificationType.FOLLOW);
@@ -99,9 +101,10 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         Long reporterId = reporter.getId();
         Long thirdPartyId = thirdParty.getId();
         Long followNotificationId = followNotification.getId();
+        Long pinReportId = pinReport.getId();
 
         // when
-        adminCommandService.reviewPinReport(pinId, true);
+        adminCommandService.grantPinSanction(pinId, pinReportId, SuspensionPeriod.ONE_DAY);
         entityManager.flush();
         entityManager.clear();
 
@@ -141,7 +144,7 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         Long reporterId = withdrawingReporter.getId();
 
         // when
-        adminCommandService.reviewProfileReport(reporterId, true);
+        adminCommandService.grantMemberSanction(reporterId, SuspensionPeriod.ONE_DAY, ReportCategory.OBSCENE_OR_HARMFUL, null);
         entityManager.flush();
         entityManager.clear();
 
@@ -170,7 +173,7 @@ class AdminPenaltyAutoWithdrawalIntegrationTest {
         Long likerId = withdrawingLiker.getId();
 
         // when
-        adminCommandService.reviewProfileReport(likerId, true);
+        adminCommandService.grantMemberSanction(likerId, SuspensionPeriod.ONE_DAY, ReportCategory.OBSCENE_OR_HARMFUL, null);
         entityManager.flush();
         entityManager.clear();
 
