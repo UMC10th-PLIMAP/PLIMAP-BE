@@ -149,6 +149,7 @@ public class PinConverter {
                 .placeId(pin.getPlace().getId())
                 .latitude(pin.getPlace().getLocation().getY())
                 .longitude(pin.getPlace().getLocation().getX())
+                .writerId(pin.getMember().getId())
                 .writerNickname(pin.getMember().getDisplayNickname())
                 .writerProfileImage(writerProfileImage)
                 .introduction(pin.getIntroduction())
