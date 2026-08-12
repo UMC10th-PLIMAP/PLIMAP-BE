@@ -6,11 +6,13 @@ import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.domain.report.enums.ReportCategory;
 import java.time.Instant;
 import com.example.plimap.global.apiPayload.exception.GlobalExceptionHandler;
 import com.example.plimap.global.config.CorsConfig;
@@ -120,7 +122,8 @@ class MemberControllerTest {
     @Test
     void 내_프로필_조회에_성공하면_200과_MY_PROFILE_FETCHED_응답을_반환한다() throws Exception {
         MemberResDTO.MyProfile profile = new MemberResDTO.MyProfile(
-                AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L);
+                AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L,
+                MemberStatus.ACTIVE, null, null, null, null);
         when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
 
         mockMvc.perform(get("/api/v1/members/me")
@@ -131,7 +134,25 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.result.nickname").value("예림"))
                 .andExpect(jsonPath("$.result.followerCount").value(3))
                 .andExpect(jsonPath("$.result.followingCount").value(5))
-                .andExpect(jsonPath("$.result.pinCount").value(7));
+                .andExpect(jsonPath("$.result.pinCount").value(7))
+                .andExpect(jsonPath("$.result.status").value("ACTIVE"));
+    }
+
+    @Test
+    void 정지_중인_회원의_내_프로필_조회는_제재_정보를_함께_반환한다() throws Exception {
+        MemberResDTO.MyProfile profile = new MemberResDTO.MyProfile(
+                AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L,
+                MemberStatus.SUSPENDED, Instant.parse("2026-08-20T00:00:00Z"), null,
+                ReportCategory.ABUSE_OR_HATE_SPEECH, "욕설 반복 신고 누적");
+        when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/members/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.status").value("SUSPENDED"))
+                .andExpect(jsonPath("$.result.suspendedUntil").value("2026-08-20T00:00:00Z"))
+                .andExpect(jsonPath("$.result.reasonCategory").value("ABUSE_OR_HATE_SPEECH"))
+                .andExpect(jsonPath("$.result.reasonDetail").value("욕설 반복 신고 누적"));
     }
 
     @Test
