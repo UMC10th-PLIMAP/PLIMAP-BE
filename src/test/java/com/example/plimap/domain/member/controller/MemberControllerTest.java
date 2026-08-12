@@ -4,7 +4,7 @@ import com.example.plimap.domain.auth.service.command.impl.CustomOAuthService;
 import com.example.plimap.domain.auth.service.command.impl.OAuthFailureHandler;
 import com.example.plimap.domain.auth.service.command.impl.OAuthSuccessHandler;
 import com.example.plimap.domain.member.dto.Pagination;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
@@ -120,7 +120,7 @@ class MemberControllerTest {
 
     @Test
     void 내_프로필_조회에_성공하면_200과_MY_PROFILE_FETCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.MyProfile profile = new MemberResDTO.MyProfile(
+        MemberResponse.MyProfile profile = new MemberResponse.MyProfile(
                 AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L);
         when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
 
@@ -137,7 +137,7 @@ class MemberControllerTest {
 
     @Test
     void 다른_사용자_프로필_조회에_성공하면_200과_OTHER_PROFILE_FETCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.OtherProfile profile = new MemberResDTO.OtherProfile(
+        MemberResponse.OtherProfile profile = new MemberResponse.OtherProfile(
                 TARGET_MEMBER_ID, "상대방", "김상대", "소개", "key", 3L, 5L, true, false, 7L);
         when(memberQueryService.getOtherProfile(AUTH_MEMBER_ID, TARGET_MEMBER_ID)).thenReturn(profile);
 
@@ -253,9 +253,9 @@ class MemberControllerTest {
 
     @Test
     void 팔로워_목록_조회에_성공하면_200과_FOLLOWERS_FETCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.FollowerItem follower = new MemberResDTO.FollowerItem(
+        MemberResponse.FollowerItem follower = new MemberResponse.FollowerItem(
                 3L, "팔로워", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true, false);
-        Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
+        Pagination<MemberResponse.FollowerItem> page = Pagination.<MemberResponse.FollowerItem>builder()
                 .data(List.of(follower))
                 .nextCursor(null)
                 .hasNext(false)
@@ -312,7 +312,7 @@ class MemberControllerTest {
 
     @Test
     void 팔로워_목록_조회시_pageSize가_50이면_허용된다() throws Exception {
-        Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
+        Pagination<MemberResponse.FollowerItem> page = Pagination.<MemberResponse.FollowerItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -331,7 +331,7 @@ class MemberControllerTest {
     @Test
     void 팔로워_목록_조회시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
         String cursor = "2026-01-01T00:00:00Z/3";
-        Pagination<MemberResDTO.FollowerItem> page = Pagination.<MemberResDTO.FollowerItem>builder()
+        Pagination<MemberResponse.FollowerItem> page = Pagination.<MemberResponse.FollowerItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -362,9 +362,9 @@ class MemberControllerTest {
 
     @Test
     void 팔로잉_목록_조회에_성공하면_200과_FOLLOWING_FETCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.FollowingItem following = new MemberResDTO.FollowingItem(
+        MemberResponse.FollowingItem following = new MemberResponse.FollowingItem(
                 3L, "팔로잉", "이름", "key", Instant.parse("2026-01-01T00:00:00Z"), true, false);
-        Pagination<MemberResDTO.FollowingItem> page = Pagination.<MemberResDTO.FollowingItem>builder()
+        Pagination<MemberResponse.FollowingItem> page = Pagination.<MemberResponse.FollowingItem>builder()
                 .data(List.of(following))
                 .nextCursor(null)
                 .hasNext(false)
@@ -421,7 +421,7 @@ class MemberControllerTest {
 
     @Test
     void 팔로잉_목록_조회시_pageSize가_50이면_허용된다() throws Exception {
-        Pagination<MemberResDTO.FollowingItem> page = Pagination.<MemberResDTO.FollowingItem>builder()
+        Pagination<MemberResponse.FollowingItem> page = Pagination.<MemberResponse.FollowingItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -440,7 +440,7 @@ class MemberControllerTest {
     @Test
     void 팔로잉_목록_조회시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
         String cursor = "2026-01-01T00:00:00Z/3";
-        Pagination<MemberResDTO.FollowingItem> page = Pagination.<MemberResDTO.FollowingItem>builder()
+        Pagination<MemberResponse.FollowingItem> page = Pagination.<MemberResponse.FollowingItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -471,9 +471,9 @@ class MemberControllerTest {
 
     @Test
     void 회원_검색에_성공하면_200과_MEMBERS_SEARCHED_응답을_반환한다() throws Exception {
-        MemberResDTO.SearchItem item = new MemberResDTO.SearchItem(
+        MemberResponse.SearchItem item = new MemberResponse.SearchItem(
                 3L, "검색결과", "이름", "key", false, false, Instant.parse("2026-01-01T00:00:00Z"));
-        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+        Pagination<MemberResponse.SearchItem> page = Pagination.<MemberResponse.SearchItem>builder()
                 .data(List.of(item))
                 .nextCursor(null)
                 .hasNext(false)
@@ -493,7 +493,7 @@ class MemberControllerTest {
 
     @Test
     void 회원_검색시_keyword가_없어도_기본값으로_동작한다() throws Exception {
-        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+        Pagination<MemberResponse.SearchItem> page = Pagination.<MemberResponse.SearchItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -544,7 +544,7 @@ class MemberControllerTest {
 
     @Test
     void 회원_검색시_pageSize가_50이면_허용된다() throws Exception {
-        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+        Pagination<MemberResponse.SearchItem> page = Pagination.<MemberResponse.SearchItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -563,7 +563,7 @@ class MemberControllerTest {
     @Test
     void 회원_검색시_cursor를_전달하면_그대로_서비스에_전달된다() throws Exception {
         String cursor = "0/2/0/2026-01-01T00:00:00Z/3";
-        Pagination<MemberResDTO.SearchItem> page = Pagination.<MemberResDTO.SearchItem>builder()
+        Pagination<MemberResponse.SearchItem> page = Pagination.<MemberResponse.SearchItem>builder()
                 .data(List.of())
                 .nextCursor(null)
                 .hasNext(false)
@@ -597,7 +597,7 @@ class MemberControllerTest {
     void 프로필_이미지_업로드에_성공하면_200과_PROFILE_IMAGE_UPLOADED_응답을_반환한다() throws Exception {
         MockMultipartFile image = new MockMultipartFile(
                 "image", "profile.webp", "image/webp", "webp-content".getBytes());
-        MemberResDTO.ProfileImage result = new MemberResDTO.ProfileImage(
+        MemberResponse.ProfileImage result = new MemberResponse.ProfileImage(
                 "members/1/new.webp",
                 "https://project.supabase.co/storage/v1/object/public/profile-images/members/1/new.webp"
         );

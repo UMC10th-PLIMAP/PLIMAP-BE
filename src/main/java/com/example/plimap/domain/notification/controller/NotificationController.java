@@ -3,7 +3,7 @@ package com.example.plimap.domain.notification.controller;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.notification.controller.docs.NotificationControllerDocs;
 import com.example.plimap.domain.notification.dto.Pagination;
-import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
+import com.example.plimap.domain.notification.dto.response.NotificationResponse;
 import com.example.plimap.domain.notification.exception.NotificationSuccessCode;
 import com.example.plimap.domain.notification.service.query.NotificationQueryService;
 import com.example.plimap.domain.notification.sse.NotificationEmitterRegistry;
@@ -37,7 +37,7 @@ public class NotificationController implements NotificationControllerDocs {
 
     @Override
     @GetMapping
-    public ResponseEntity<ApiResponse<Pagination<NotificationResDTO.Item>>> getNotifications(
+    public ResponseEntity<ApiResponse<Pagination<NotificationResponse.Item>>> getNotifications(
             @AuthenticationPrincipal AuthMember currentMember,
             @RequestParam(required = false, defaultValue = "10")
             @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
@@ -45,7 +45,7 @@ public class NotificationController implements NotificationControllerDocs {
             Integer pageSize,
             @RequestParam(required = false) String cursor
     ) {
-        Pagination<NotificationResDTO.Item> response =
+        Pagination<NotificationResponse.Item> response =
                 notificationQueryService.findNotifications(currentMember.getMember().getId(), cursor, pageSize);
         return ResponseEntity
                 .status(NotificationSuccessCode.NOTIFICATIONS_RETRIEVED.getStatus())

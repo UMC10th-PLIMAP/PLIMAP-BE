@@ -2,7 +2,7 @@ package com.example.plimap.domain.admin.controller;
 
 import com.example.plimap.domain.admin.controller.docs.AdminControllerDocs;
 import com.example.plimap.domain.admin.dto.request.AdminReqDTO;
-import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.dto.response.AdminResponse;
 import com.example.plimap.domain.admin.exception.AdminSuccessCode;
 import com.example.plimap.domain.admin.service.command.AdminCommandService;
 import com.example.plimap.domain.admin.service.query.AdminQueryService;
@@ -32,10 +32,10 @@ public class AdminController implements AdminControllerDocs {
 
     @Override
     @GetMapping("/me")
-    public ApiResponse<AdminResDTO.Me> getMe(@AuthenticationPrincipal AuthMember authMember) {
+    public ApiResponse<AdminResponse.Me> getMe(@AuthenticationPrincipal AuthMember authMember) {
         return ApiResponse.success(
                 AdminSuccessCode.ME_FETCHED,
-                AdminResDTO.Me.from(authMember.getMember())
+                AdminResponse.Me.from(authMember.getMember())
         );
     }
 
@@ -81,7 +81,7 @@ public class AdminController implements AdminControllerDocs {
 
     @Override
     @GetMapping("/pins/reports")
-    public ApiResponse<AdminResDTO.ReportedPinPage> getReportedPins(
+    public ApiResponse<AdminResponse.ReportedPinPage> getReportedPins(
             @RequestParam(defaultValue = "ALL") PinReportFilter filter,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize
@@ -94,7 +94,7 @@ public class AdminController implements AdminControllerDocs {
 
     @Override
     @GetMapping("/members")
-    public ApiResponse<AdminResDTO.MemberPage> getMembers(
+    public ApiResponse<AdminResponse.MemberPage> getMembers(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) MemberStatus status,
             @RequestParam(defaultValue = "1") Integer page,
@@ -108,7 +108,7 @@ public class AdminController implements AdminControllerDocs {
 
     @Override
     @GetMapping("/members/{memberId}")
-    public ApiResponse<AdminResDTO.MemberDetail> getMemberDetail(@PathVariable Long memberId) {
+    public ApiResponse<AdminResponse.MemberDetail> getMemberDetail(@PathVariable Long memberId) {
         return ApiResponse.success(
                 AdminSuccessCode.MEMBER_DETAIL_FETCHED,
                 adminQueryService.getMemberDetail(memberId)
@@ -117,7 +117,7 @@ public class AdminController implements AdminControllerDocs {
 
     @Override
     @PostMapping("/members/{memberId}/nickname/regenerate")
-    public ApiResponse<AdminResDTO.MemberDetail> regenerateMemberNickname(@PathVariable Long memberId) {
+    public ApiResponse<AdminResponse.MemberDetail> regenerateMemberNickname(@PathVariable Long memberId) {
         return ApiResponse.success(
                 AdminSuccessCode.MEMBER_NICKNAME_REGENERATED,
                 adminCommandService.regenerateMemberNickname(memberId)
@@ -126,7 +126,7 @@ public class AdminController implements AdminControllerDocs {
 
     @Override
     @GetMapping("/inquiries")
-    public ApiResponse<AdminResDTO.InquiryPage> getInquiries(
+    public ApiResponse<AdminResponse.InquiryPage> getInquiries(
             @RequestParam(required = false) InquiryCategory category,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "10") Integer pageSize
@@ -139,7 +139,7 @@ public class AdminController implements AdminControllerDocs {
 
     @Override
     @GetMapping("/inquiries/{inquiryId}")
-    public ApiResponse<AdminResDTO.InquiryDetail> getInquiryDetail(@PathVariable Long inquiryId) {
+    public ApiResponse<AdminResponse.InquiryDetail> getInquiryDetail(@PathVariable Long inquiryId) {
         return ApiResponse.success(
                 AdminSuccessCode.INQUIRY_DETAIL_FETCHED,
                 adminQueryService.getInquiryDetail(inquiryId)

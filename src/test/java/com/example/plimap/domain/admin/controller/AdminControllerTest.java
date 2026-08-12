@@ -1,6 +1,6 @@
 package com.example.plimap.domain.admin.controller;
 
-import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.dto.response.AdminResponse;
 import com.example.plimap.domain.admin.service.command.AdminCommandService;
 import com.example.plimap.domain.admin.service.query.AdminQueryService;
 import com.example.plimap.domain.inquiry.enums.InquiryCategory;
@@ -221,10 +221,10 @@ class AdminControllerTest {
     @Test
     void 신고_누적_게시물_목록_조회에_성공하면_200을_반환한다() throws Exception {
         mockAdminAuth();
-        AdminResDTO.ReportedPinItem item = new AdminResDTO.ReportedPinItem(
+        AdminResponse.ReportedPinItem item = new AdminResponse.ReportedPinItem(
                 1L, "제목", "장소", 2L, "작성자", MemberStatus.ACTIVE, 12, true, Instant.now(), List.of());
         when(adminQueryService.getReportedPins(PinReportFilter.ALL, 1, 10))
-                .thenReturn(new AdminResDTO.ReportedPinPage(List.of(item), 1, 1, 10));
+                .thenReturn(new AdminResponse.ReportedPinPage(List.of(item), 1, 1, 10));
 
         mockMvc.perform(get("/api/v1/admin/pins/reports")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN))
@@ -238,10 +238,10 @@ class AdminControllerTest {
     @Test
     void 회원_목록_조회에_성공하면_200을_반환한다() throws Exception {
         mockAdminAuth();
-        AdminResDTO.MemberSummary summary = new AdminResDTO.MemberSummary(
+        AdminResponse.MemberSummary summary = new AdminResponse.MemberSummary(
                 2L, "닉네임", "이름", MemberStatus.ACTIVE, null, 0, null, Instant.now());
         when(adminQueryService.getMembers("검색어", MemberStatus.ACTIVE, 1, 10))
-                .thenReturn(new AdminResDTO.MemberPage(List.of(summary), 1, 1, 10));
+                .thenReturn(new AdminResponse.MemberPage(List.of(summary), 1, 1, 10));
 
         mockMvc.perform(get("/api/v1/admin/members")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN)
@@ -255,7 +255,7 @@ class AdminControllerTest {
     @Test
     void 회원_상세_조회에_성공하면_200을_반환한다() throws Exception {
         mockAdminAuth();
-        AdminResDTO.MemberDetail detail = new AdminResDTO.MemberDetail(
+        AdminResponse.MemberDetail detail = new AdminResponse.MemberDetail(
                 2L, "닉네임", "이름", "a@example.com", MemberStatus.ACTIVE, MemberRole.USER, null, 0, null, null, Instant.now());
         when(adminQueryService.getMemberDetail(2L)).thenReturn(detail);
 
@@ -269,7 +269,7 @@ class AdminControllerTest {
     @Test
     void 회원_닉네임_강제_재생성에_성공하면_200을_반환한다() throws Exception {
         mockAdminAuth();
-        AdminResDTO.MemberDetail detail = new AdminResDTO.MemberDetail(
+        AdminResponse.MemberDetail detail = new AdminResponse.MemberDetail(
                 2L, "참새", "이름", null, MemberStatus.ACTIVE, MemberRole.USER, null, 0, null, null, Instant.now());
         when(adminCommandService.regenerateMemberNickname(2L)).thenReturn(detail);
 
@@ -283,10 +283,10 @@ class AdminControllerTest {
     @Test
     void 문의_목록_조회에_성공하면_200을_반환한다() throws Exception {
         mockAdminAuth();
-        AdminResDTO.InquirySummary summary = new AdminResDTO.InquirySummary(
+        AdminResponse.InquirySummary summary = new AdminResponse.InquirySummary(
                 1L, InquiryCategory.APP_BUG_OR_ERROR, "제목", 2L, "작성자", "user@example.com", Instant.now());
         when(adminQueryService.getInquiries(InquiryCategory.APP_BUG_OR_ERROR, null, 10))
-                .thenReturn(new AdminResDTO.InquiryPage(List.of(summary), "next-cursor", true, 10));
+                .thenReturn(new AdminResponse.InquiryPage(List.of(summary), "next-cursor", true, 10));
 
         mockMvc.perform(get("/api/v1/admin/inquiries")
                         .header("Authorization", "Bearer " + ACCESS_TOKEN)
@@ -302,7 +302,7 @@ class AdminControllerTest {
     @Test
     void 문의_상세_조회에_성공하면_200을_반환한다() throws Exception {
         mockAdminAuth();
-        AdminResDTO.InquiryDetail detail = new AdminResDTO.InquiryDetail(
+        AdminResponse.InquiryDetail detail = new AdminResponse.InquiryDetail(
                 1L, InquiryCategory.OTHER, "제목", "내용", null, null, "guest@example.com", Instant.now());
         when(adminQueryService.getInquiryDetail(1L)).thenReturn(detail);
 

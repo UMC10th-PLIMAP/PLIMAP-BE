@@ -1,11 +1,11 @@
 package com.example.plimap.domain.auth.controller.docs;
 
-import com.example.plimap.domain.auth.dto.response.AuthResDTO;
+import com.example.plimap.domain.auth.dto.response.AuthResponse;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.request.TermsReqDTO;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
-import com.example.plimap.domain.member.dto.response.TermsResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
+import com.example.plimap.domain.member.dto.response.TermsResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,7 +24,7 @@ public interface AuthControllerDocs {
             summary = "CSRF 토큰 발급",
             description = "쿠키 인증 상태 변경 요청의 X-XSRF-TOKEN 헤더에 사용할 CSRF 토큰을 반환합니다."
     )
-    ApiResponse<AuthResDTO.CsrfToken> getCsrfToken(
+    ApiResponse<AuthResponse.CsrfToken> getCsrfToken(
             @Parameter(hidden = true) CsrfToken csrfToken
     );
 
@@ -32,7 +32,7 @@ public interface AuthControllerDocs {
             summary = "온보딩 (닉네임/프로필 설정)",
             description = "최초 가입 후 닉네임과 프로필 정보를 등록하여 온보딩을 완료합니다."
     )
-    ApiResponse<MemberResDTO.Onboarding> onboarding(AuthMember authMember, MemberReqDTO.Onboarding request);
+    ApiResponse<MemberResponse.Onboarding> onboarding(AuthMember authMember, MemberReqDTO.Onboarding request);
 
     @Operation(
             summary = "약관 동의 여부 조회",
@@ -62,7 +62,7 @@ public interface AuthControllerDocs {
                     }
                     """))
     )
-    ApiResponse<List<TermsResDTO.Result>> getTermsAgreementStatus(AuthMember authMember);
+    ApiResponse<List<TermsResponse.Result>> getTermsAgreementStatus(AuthMember authMember);
 
     @Operation(
             summary = "약관 동의",
@@ -93,7 +93,7 @@ public interface AuthControllerDocs {
                     }
                     """))
     )
-    ApiResponse<List<TermsResDTO.Result>> agreeToTerms(AuthMember authMember, TermsReqDTO.Agree request);
+    ApiResponse<List<TermsResponse.Result>> agreeToTerms(AuthMember authMember, TermsReqDTO.Agree request);
 
     @Operation(
             summary = "로그아웃",

@@ -1,6 +1,6 @@
 package com.example.plimap.domain.auth.controller;
 
-import com.example.plimap.domain.auth.dto.response.AuthResDTO;
+import com.example.plimap.domain.auth.dto.response.AuthResponse;
 import com.example.plimap.domain.auth.exception.AuthErrorCode;
 import com.example.plimap.domain.auth.exception.AuthException;
 import com.example.plimap.domain.member.enums.MemberStatus;
@@ -56,7 +56,7 @@ class AuthControllerTest {
         CsrfToken csrfToken = mock(CsrfToken.class);
         when(csrfToken.getToken()).thenReturn("masked-csrf-token");
 
-        ApiResponse<AuthResDTO.CsrfToken> response = controller.getCsrfToken(csrfToken);
+        ApiResponse<AuthResponse.CsrfToken> response = controller.getCsrfToken(csrfToken);
 
         assertThat(response.getIsSuccess()).isTrue();
         assertThat(response.getCode()).isEqualTo("AUTH_CSRF_TOKEN_ISSUED_SUCCESS");

@@ -1,7 +1,7 @@
 package com.example.plimap.domain.admin.controller.docs;
 
 import com.example.plimap.domain.admin.dto.request.AdminReqDTO;
-import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.dto.response.AdminResponse;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.inquiry.enums.InquiryCategory;
 import com.example.plimap.domain.member.enums.MemberStatus;
@@ -28,7 +28,7 @@ public interface AdminControllerDocs {
                     이 API가 200으로 응답하면 관리자 페이지 접근을 허용해도 됩니다.
                     """
     )
-    ApiResponse<AdminResDTO.Me> getMe(AuthMember authMember);
+    ApiResponse<AdminResponse.Me> getMe(AuthMember authMember);
 
     @Operation(
             summary = "PIN 신고 반려",
@@ -103,7 +103,7 @@ public interface AdminControllerDocs {
                     - filter=BELOW_THRESHOLD: 신고 누적 수가 10회 미만인 PIN
                     """
     )
-    ApiResponse<AdminResDTO.ReportedPinPage> getReportedPins(
+    ApiResponse<AdminResponse.ReportedPinPage> getReportedPins(
             @RequestParam(defaultValue = "ALL") PinReportFilter filter,
             @Min(1) @RequestParam(defaultValue = "1") Integer page,
             @Min(1) @Max(100) @RequestParam(defaultValue = "10") Integer pageSize
@@ -116,7 +116,7 @@ public interface AdminControllerDocs {
                     query와 status는 모두 선택값이며, 지정하지 않으면 전체 회원을 대상으로 합니다.
                     """
     )
-    ApiResponse<AdminResDTO.MemberPage> getMembers(
+    ApiResponse<AdminResponse.MemberPage> getMembers(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) MemberStatus status,
             @Min(1) @RequestParam(defaultValue = "1") Integer page,
@@ -127,7 +127,7 @@ public interface AdminControllerDocs {
             summary = "회원 상세 조회",
             description = "경로의 memberId에 해당하는 회원의 상세 정보(상태, 역할, 벌점, 정지 해제일, 탈퇴 사유 등)를 조회합니다. 탈퇴/정지 회원도 조회할 수 있습니다."
     )
-    ApiResponse<AdminResDTO.MemberDetail> getMemberDetail(@PathVariable Long memberId);
+    ApiResponse<AdminResponse.MemberDetail> getMemberDetail(@PathVariable Long memberId);
 
     @Operation(
             summary = "회원 닉네임 강제 재생성(벌점 없이)",
@@ -136,7 +136,7 @@ public interface AdminControllerDocs {
                     신고 검토(POST /members/{memberId}/penalty)와 달리 penaltyPoint와 reportCount는 변경되지 않습니다.
                     """
     )
-    ApiResponse<AdminResDTO.MemberDetail> regenerateMemberNickname(@PathVariable Long memberId);
+    ApiResponse<AdminResponse.MemberDetail> regenerateMemberNickname(@PathVariable Long memberId);
 
     @Operation(
             summary = "문의 목록 조회",
@@ -147,7 +147,7 @@ public interface AdminControllerDocs {
                     첫 페이지는 cursor 없이 요청하고, 이후에는 응답의 nextCursor를 그대로 다음 요청의 cursor로 전달합니다. pageSize는 1~100 사이여야 하며 기본값은 10입니다.
                     """
     )
-    ApiResponse<AdminResDTO.InquiryPage> getInquiries(
+    ApiResponse<AdminResponse.InquiryPage> getInquiries(
             @RequestParam(required = false) InquiryCategory category,
             String cursor,
             @Min(1) @Max(100) @RequestParam(defaultValue = "10") Integer pageSize
@@ -157,5 +157,5 @@ public interface AdminControllerDocs {
             summary = "문의 상세 조회",
             description = "경로의 inquiryId에 해당하는 문의의 상세 정보(제목, 내용, 작성자, 연락 이메일 등)를 조회합니다."
     )
-    ApiResponse<AdminResDTO.InquiryDetail> getInquiryDetail(@PathVariable Long inquiryId);
+    ApiResponse<AdminResponse.InquiryDetail> getInquiryDetail(@PathVariable Long inquiryId);
 }

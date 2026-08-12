@@ -1,7 +1,7 @@
 package com.example.plimap.domain.member.service.command.impl;
 
 import com.example.plimap.domain.member.dto.request.TermsReqDTO;
-import com.example.plimap.domain.member.dto.response.TermsResDTO;
+import com.example.plimap.domain.member.dto.response.TermsResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberTermsAgreement;
 import com.example.plimap.domain.member.entity.Terms;
@@ -60,9 +60,9 @@ class TermsCommandServiceImplTest {
                 .thenReturn(Optional.of(existingAgreement));
         when(termsQueryService.getActiveTerms()).thenReturn(List.of(serviceTerms));
 
-        List<TermsResDTO.Result> result = termsCommandService.agreeToTerms(MEMBER_ID, agree(TermsType.SERVICE, true));
+        List<TermsResponse.Result> result = termsCommandService.agreeToTerms(MEMBER_ID, agree(TermsType.SERVICE, true));
 
-        assertThat(result).extracting(TermsResDTO.Result::type, TermsResDTO.Result::agreed)
+        assertThat(result).extracting(TermsResponse.Result::type, TermsResponse.Result::agreed)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(TermsType.SERVICE, true));
         verify(existingAgreement).updateAgreement(true);
         verify(memberTermsAgreementRepository, never()).save(any());
@@ -81,10 +81,10 @@ class TermsCommandServiceImplTest {
         when(memberTermsAgreementRepository.save(any(MemberTermsAgreement.class))).thenReturn(savedAgreement);
         when(termsQueryService.getActiveTerms()).thenReturn(List.of(marketingTerms));
 
-        List<TermsResDTO.Result> result =
+        List<TermsResponse.Result> result =
                 termsCommandService.agreeToTerms(MEMBER_ID, agree(TermsType.MARKETING, false));
 
-        assertThat(result).extracting(TermsResDTO.Result::type, TermsResDTO.Result::agreed)
+        assertThat(result).extracting(TermsResponse.Result::type, TermsResponse.Result::agreed)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(TermsType.MARKETING, false));
 
         ArgumentCaptor<MemberTermsAgreement> captor = ArgumentCaptor.forClass(MemberTermsAgreement.class);
@@ -108,9 +108,9 @@ class TermsCommandServiceImplTest {
         // 구버전(id=1)이 비활성화되지 않은 채 활성 목록에 남아있는 상황을 재현
         when(termsQueryService.getActiveTerms()).thenReturn(List.of(staleServiceTerms, latestServiceTerms));
 
-        List<TermsResDTO.Result> result = termsCommandService.agreeToTerms(MEMBER_ID, agree(TermsType.SERVICE, true));
+        List<TermsResponse.Result> result = termsCommandService.agreeToTerms(MEMBER_ID, agree(TermsType.SERVICE, true));
 
-        assertThat(result).extracting(TermsResDTO.Result::type, TermsResDTO.Result::agreed)
+        assertThat(result).extracting(TermsResponse.Result::type, TermsResponse.Result::agreed)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(TermsType.SERVICE, true));
         verify(memberTermsAgreementRepository, never()).findByMember_IdAndTerms_Id(MEMBER_ID, 1L);
     }

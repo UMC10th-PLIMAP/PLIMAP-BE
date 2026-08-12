@@ -1,6 +1,6 @@
 package com.example.plimap.domain.admin.service.query.impl;
 
-import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.dto.response.AdminResponse;
 import com.example.plimap.domain.auth.service.query.AuthQueryService;
 import com.example.plimap.domain.inquiry.dto.Pagination;
 import com.example.plimap.domain.inquiry.entity.Inquiry;
@@ -42,7 +42,7 @@ public class AdminQueryServiceImpl implements AdminQueryService {
     private final InquiryQueryService inquiryQueryService;
 
     @Override
-    public AdminResDTO.ReportedPinPage getReportedPins(PinReportFilter filter, int page, int pageSize) {
+    public AdminResponse.ReportedPinPage getReportedPins(PinReportFilter filter, int page, int pageSize) {
         Pageable pageable = PageRequest.of(page - 1, pageSize);
         Page<ReportedPinInfo> pinPage = pinQueryService.findReportedPins(filter, pageable);
 
@@ -51,55 +51,55 @@ public class AdminQueryServiceImpl implements AdminQueryService {
                 .toList();
         Map<Long, List<ReportReason>> reasonsByPin = reportQueryService.findReasonsByPinIds(pinIds);
 
-        List<AdminResDTO.ReportedPinItem> items = pinPage.getContent().stream()
+        List<AdminResponse.ReportedPinItem> items = pinPage.getContent().stream()
                 .map(info -> toReportedPinItem(info, reasonsByPin.getOrDefault(info.pinId(), List.of())))
                 .toList();
 
-        return new AdminResDTO.ReportedPinPage(items, pinPage.getTotalElements(), page, pageSize);
+        return new AdminResponse.ReportedPinPage(items, pinPage.getTotalElements(), page, pageSize);
     }
 
     @Override
-    public AdminResDTO.MemberPage getMembers(String query, MemberStatus status, int page, int pageSize) {
+    public AdminResponse.MemberPage getMembers(String query, MemberStatus status, int page, int pageSize) {
         Pageable pageable = PageRequest.of(page - 1, pageSize);
         Page<Member> memberPage = memberQueryService.searchMembers(query, status, pageable);
 
-        List<AdminResDTO.MemberSummary> items = memberPage.getContent().stream()
-                .map(AdminResDTO.MemberSummary::from)
+        List<AdminResponse.MemberSummary> items = memberPage.getContent().stream()
+                .map(AdminResponse.MemberSummary::from)
                 .toList();
 
-        return new AdminResDTO.MemberPage(items, memberPage.getTotalElements(), page, pageSize);
+        return new AdminResponse.MemberPage(items, memberPage.getTotalElements(), page, pageSize);
     }
 
     @Override
-    public AdminResDTO.MemberDetail getMemberDetail(Long memberId) {
+    public AdminResponse.MemberDetail getMemberDetail(Long memberId) {
         Member member = memberQueryService.getMemberById(memberId);
         String email = authQueryService.findEmailByMemberId(memberId).orElse(null);
-        return AdminResDTO.MemberDetail.from(member, email);
+        return AdminResponse.MemberDetail.from(member, email);
     }
 
     @Override
-    public AdminResDTO.InquiryPage getInquiries(InquiryCategory category, String cursor, Integer pageSize) {
+    public AdminResponse.InquiryPage getInquiries(InquiryCategory category, String cursor, Integer pageSize) {
         Pagination<Inquiry> inquiryPage = inquiryQueryService.getInquiries(category, cursor, pageSize);
 
-        List<AdminResDTO.InquirySummary> items = inquiryPage.data().stream()
-                .map(AdminResDTO.InquirySummary::from)
+        List<AdminResponse.InquirySummary> items = inquiryPage.data().stream()
+                .map(AdminResponse.InquirySummary::from)
                 .toList();
 
-        return new AdminResDTO.InquiryPage(items, inquiryPage.nextCursor(), inquiryPage.hasNext(), pageSize);
+        return new AdminResponse.InquiryPage(items, inquiryPage.nextCursor(), inquiryPage.hasNext(), pageSize);
     }
 
     @Override
-    public AdminResDTO.InquiryDetail getInquiryDetail(Long inquiryId) {
-        return AdminResDTO.InquiryDetail.from(inquiryQueryService.getInquiry(inquiryId));
+    public AdminResponse.InquiryDetail getInquiryDetail(Long inquiryId) {
+        return AdminResponse.InquiryDetail.from(inquiryQueryService.getInquiry(inquiryId));
     }
 
-    private AdminResDTO.ReportedPinItem toReportedPinItem(ReportedPinInfo info, List<ReportReason> reasons) {
-        List<AdminResDTO.ReportReasonItem> reasonItems = reasons.stream()
-                .map(reason -> new AdminResDTO.ReportReasonItem(
+    private AdminResponse.ReportedPinItem toReportedPinItem(ReportedPinInfo info, List<ReportReason> reasons) {
+        List<AdminResponse.ReportReasonItem> reasonItems = reasons.stream()
+                .map(reason -> new AdminResponse.ReportReasonItem(
                         reason.reportId(), reason.category(), reason.detail(), reason.reporterNickname(), reason.createdAt()))
                 .toList();
 
-        return new AdminResDTO.ReportedPinItem(
+        return new AdminResponse.ReportedPinItem(
                 info.pinId(),
                 info.pinTitle(),
                 info.pinLocation(),

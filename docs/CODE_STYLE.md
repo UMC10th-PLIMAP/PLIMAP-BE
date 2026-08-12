@@ -116,6 +116,8 @@ controller/
 
 Request와 Response DTO는 분리합니다.
 
+응답 DTO를 묶는 외부 클래스는 `{Domain}Response` 형식을 사용하며 `ResDTO` 접미사는 사용하지 않습니다.
+
 DTO는 기본적으로 `record`를 사용합니다.
 
 ```java
