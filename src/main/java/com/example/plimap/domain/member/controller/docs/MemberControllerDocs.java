@@ -60,7 +60,9 @@ public interface MemberControllerDocs {
             description = """
                     로그인한 회원 자신의 프로필 정보를 조회합니다. 팔로워/팔로잉 수, 내가 작성한 핀 개수(pinCount)를 함께 반환합니다. pinCount는 삭제되지 않고 피드에 공개된 핀만 집계한 값입니다.
 
-                    정지(SUSPENDED)·탈퇴(WITHDRAWN) 회원도 조회할 수 있으며, 이 경우 status/suspendedUntil/withdrawalReason/reasonCategory/reasonDetail로 제재 상태·해제일·사유를 함께 확인할 수 있습니다. 정상(ACTIVE) 회원은 suspendedUntil/withdrawalReason/reasonCategory/reasonDetail이 모두 null입니다.
+                    정지(SUSPENDED)·탈퇴(WITHDRAWN) 회원도 조회할 수 있으며, 이 경우 status/suspendedUntil/withdrawalReason/reasonCategory/reasonDetail로 제재 상태·해제일·사유를 함께 확인할 수 있습니다. 제재 이력이 전혀 없는 ACTIVE 회원은 suspendedUntil/withdrawalReason/reasonCategory/reasonDetail이 모두 null입니다.
+
+                    penaltyPoint는 누적 벌점(절대 리셋되지 않음)이고, lastPenaltyPeriod는 가장 최근 제재 시 적용된 기간(ONE_DAY/THREE_DAYS/FIVE_DAYS/PERMANENT)입니다. 한 번도 제재받은 적 없는 회원은 penaltyPoint가 0, lastPenaltyPeriod가 null입니다. 정지가 해제(liftSuspension)되어 ACTIVE로 복귀한 회원은 suspendedUntil만 null로 초기화될 뿐, penaltyPoint/lastPenaltyPeriod/reasonCategory/reasonDetail은 마지막 제재 이력이 그대로 남아있습니다.
                     """
     )
     ApiResponse<MemberResponse.MyProfile> getMyProfile(AuthMember authMember);

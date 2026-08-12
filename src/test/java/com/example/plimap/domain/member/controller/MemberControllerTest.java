@@ -7,6 +7,7 @@ import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
@@ -41,6 +42,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -125,7 +127,7 @@ class MemberControllerTest {
     void 내_프로필_조회에_성공하면_200과_MY_PROFILE_FETCHED_응답을_반환한다() throws Exception {
         MemberResponse.MyProfile profile = new MemberResponse.MyProfile(
                 AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L,
-                MemberStatus.ACTIVE, null, null, null, null);
+                MemberStatus.ACTIVE, null, null, null, null, 0, null);
         when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
 
         mockMvc.perform(get("/api/v1/members/me")
@@ -137,7 +139,9 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.result.followerCount").value(3))
                 .andExpect(jsonPath("$.result.followingCount").value(5))
                 .andExpect(jsonPath("$.result.pinCount").value(7))
-                .andExpect(jsonPath("$.result.status").value("ACTIVE"));
+                .andExpect(jsonPath("$.result.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.result.penaltyPoint").value(0))
+                .andExpect(jsonPath("$.result.lastPenaltyPeriod").value(nullValue()));
     }
 
     @Test
@@ -154,7 +158,7 @@ class MemberControllerTest {
         MemberResponse.MyProfile profile = new MemberResponse.MyProfile(
                 AUTH_MEMBER_ID, "예림", "이예림", "소개", "key", 3L, 5L, Instant.parse("2026-01-01T00:00:00Z"), 7L,
                 MemberStatus.SUSPENDED, Instant.parse("2026-08-20T00:00:00Z"), null,
-                ReportCategory.ABUSE_OR_HATE_SPEECH, "욕설 반복 신고 누적");
+                ReportCategory.ABUSE_OR_HATE_SPEECH, "욕설 반복 신고 누적", 2, SuspensionPeriod.THREE_DAYS);
         when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
 
         mockMvc.perform(get("/api/v1/members/me")
@@ -163,7 +167,9 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.result.status").value("SUSPENDED"))
                 .andExpect(jsonPath("$.result.suspendedUntil").value("2026-08-20T00:00:00Z"))
                 .andExpect(jsonPath("$.result.reasonCategory").value("ABUSE_OR_HATE_SPEECH"))
-                .andExpect(jsonPath("$.result.reasonDetail").value("욕설 반복 신고 누적"));
+                .andExpect(jsonPath("$.result.reasonDetail").value("욕설 반복 신고 누적"))
+                .andExpect(jsonPath("$.result.penaltyPoint").value(2))
+                .andExpect(jsonPath("$.result.lastPenaltyPeriod").value("THREE_DAYS"));
     }
 
     @Test
@@ -178,7 +184,7 @@ class MemberControllerTest {
         MemberResponse.MyProfile profile = new MemberResponse.MyProfile(
                 AUTH_MEMBER_ID, "플리맵사용자", null, null, null, 0L, 0L, Instant.parse("2026-01-01T00:00:00Z"), 0L,
                 MemberStatus.WITHDRAWN, null, WithdrawalReason.PENALTY,
-                ReportCategory.OBSCENE_OR_HARMFUL, "음란물 반복 게시");
+                ReportCategory.OBSCENE_OR_HARMFUL, "음란물 반복 게시", 4, SuspensionPeriod.PERMANENT);
         when(memberQueryService.getMyProfile(AUTH_MEMBER_ID)).thenReturn(profile);
 
         mockMvc.perform(get("/api/v1/members/me")
@@ -187,7 +193,9 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.result.status").value("WITHDRAWN"))
                 .andExpect(jsonPath("$.result.withdrawalReason").value("PENALTY"))
                 .andExpect(jsonPath("$.result.reasonCategory").value("OBSCENE_OR_HARMFUL"))
-                .andExpect(jsonPath("$.result.reasonDetail").value("음란물 반복 게시"));
+                .andExpect(jsonPath("$.result.reasonDetail").value("음란물 반복 게시"))
+                .andExpect(jsonPath("$.result.penaltyPoint").value(4))
+                .andExpect(jsonPath("$.result.lastPenaltyPeriod").value("PERMANENT"));
     }
 
     @Test

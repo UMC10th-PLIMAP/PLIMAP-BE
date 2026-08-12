@@ -6,6 +6,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
 import com.example.plimap.domain.member.exception.MemberException;
@@ -264,6 +265,8 @@ class MemberQueryServiceImplTest {
         ReflectionTestUtils.setField(member, "suspendedUntil", suspendedUntil);
         ReflectionTestUtils.setField(member, "lastPenaltyCategory", ReportCategory.ABUSE_OR_HATE_SPEECH);
         ReflectionTestUtils.setField(member, "lastPenaltyDetail", "욕설 반복 신고 누적");
+        ReflectionTestUtils.setField(member, "penaltyPoint", 2);
+        ReflectionTestUtils.setField(member, "lastPenaltyPeriod", SuspensionPeriod.THREE_DAYS);
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
 
         // when
@@ -274,6 +277,8 @@ class MemberQueryServiceImplTest {
         assertThat(result.suspendedUntil()).isEqualTo(suspendedUntil);
         assertThat(result.reasonCategory()).isEqualTo(ReportCategory.ABUSE_OR_HATE_SPEECH);
         assertThat(result.reasonDetail()).isEqualTo("욕설 반복 신고 누적");
+        assertThat(result.penaltyPoint()).isEqualTo(2);
+        assertThat(result.lastPenaltyPeriod()).isEqualTo(SuspensionPeriod.THREE_DAYS);
     }
 
     @Test
@@ -285,6 +290,8 @@ class MemberQueryServiceImplTest {
         ReflectionTestUtils.setField(member, "withdrawalReason", WithdrawalReason.PENALTY);
         ReflectionTestUtils.setField(member, "lastPenaltyCategory", ReportCategory.OBSCENE_OR_HARMFUL);
         ReflectionTestUtils.setField(member, "lastPenaltyDetail", "음란물 반복 게시");
+        ReflectionTestUtils.setField(member, "penaltyPoint", 4);
+        ReflectionTestUtils.setField(member, "lastPenaltyPeriod", SuspensionPeriod.PERMANENT);
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
 
         // when
@@ -295,6 +302,8 @@ class MemberQueryServiceImplTest {
         assertThat(result.withdrawalReason()).isEqualTo(WithdrawalReason.PENALTY);
         assertThat(result.reasonCategory()).isEqualTo(ReportCategory.OBSCENE_OR_HARMFUL);
         assertThat(result.reasonDetail()).isEqualTo("음란물 반복 게시");
+        assertThat(result.penaltyPoint()).isEqualTo(4);
+        assertThat(result.lastPenaltyPeriod()).isEqualTo(SuspensionPeriod.PERMANENT);
     }
 
     @Test

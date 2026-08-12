@@ -68,7 +68,9 @@ public class MemberConverter {
                 member.getSuspendedUntil(),
                 member.getWithdrawalReason(),
                 member.getLastPenaltyCategory(),
-                member.getLastPenaltyDetail()
+                member.getLastPenaltyDetail(),
+                member.getPenaltyPoint(),
+                member.getLastPenaltyPeriod()
         );
     }
 

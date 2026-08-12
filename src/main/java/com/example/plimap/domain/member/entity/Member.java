@@ -78,6 +78,10 @@ public class Member extends SoftDeleteEntity {
     @Column(name = "last_penalty_detail")
     private String lastPenaltyDetail;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "last_penalty_period")
+    private SuspensionPeriod lastPenaltyPeriod;
+
     @Builder
     private Member(String nickname, String name, String introduction,
                     String profileImageObjectKey, MemberStatus status,
@@ -152,6 +156,7 @@ public class Member extends SoftDeleteEntity {
         this.penaltyPoint += 1;
         this.lastPenaltyCategory = reasonCategory;
         this.lastPenaltyDetail = reasonDetail;
+        this.lastPenaltyPeriod = period;
 
         if (period.isPermanent() || penaltyPoint >= AUTO_WITHDRAWAL_THRESHOLD) {
             withdrawByPenalty();
