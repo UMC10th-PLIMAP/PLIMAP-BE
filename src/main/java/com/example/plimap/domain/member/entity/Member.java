@@ -113,7 +113,7 @@ public class Member extends SoftDeleteEntity {
             this.nickname = nickname;
         }
         if (name != null) {
-            this.name = name;
+            this.name = name.isEmpty() ? null : name;
         }
         if (introduction != null) {
             this.introduction = introduction;
