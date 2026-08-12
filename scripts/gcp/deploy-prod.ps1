@@ -598,6 +598,23 @@ function Get-HttpHeaderValues {
     }
 }
 
+function Test-HttpHeaderContainsToken {
+    param(
+        [Parameter(Mandatory)]$Response,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$ExpectedToken
+    )
+
+    $tokens = @(Get-HttpHeaderValues -Response $Response -Name $Name |
+        ForEach-Object { ([string]$_).Split(",") } |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+    return $null -ne ($tokens | Where-Object {
+        [string]::Equals($_, $ExpectedToken, [StringComparison]::OrdinalIgnoreCase)
+    } | Select-Object -First 1)
+}
+
 function Assert-PublicProdEndpoints {
     param(
         [Parameter(Mandatory)][string]$BaseUrl,
@@ -639,6 +656,18 @@ function Assert-PublicProdEndpoints {
     $allowedCredentials = @(Get-HttpHeaderValues -Response $corsResponse -Name "Access-Control-Allow-Credentials")
     if ($allowedCredentials.Count -ne 1 -or $allowedCredentials[0] -ne "true") {
         throw "Prod Admin CORS preflight did not allow credentials."
+    }
+    if (-not (Test-HttpHeaderContainsToken `
+        -Response $corsResponse `
+        -Name "Access-Control-Allow-Methods" `
+        -ExpectedToken "GET")) {
+        throw "Prod Admin CORS preflight did not allow GET."
+    }
+    if (-not (Test-HttpHeaderContainsToken `
+        -Response $corsResponse `
+        -Name "Access-Control-Allow-Headers" `
+        -ExpectedToken "content-type")) {
+        throw "Prod Admin CORS preflight did not allow content-type."
     }
 
     foreach ($frontendOrigin in @($BaseUrl, $AdminFrontendOrigin) | Select-Object -Unique) {

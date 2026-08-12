@@ -129,9 +129,9 @@ Kakao와 Google에는 dev 전용 OAuth client를 사용합니다. 각 Provider C
 | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | `prod` |
 | `PUBLIC_BASE_URL` | `https://plimap.kr` 또는 승인된 override |
-| `CORS_ALLOWED_ORIGINS` | 최소 `https://plimap.kr,https://admin.plimap.kr` |
+| `CORS_ALLOWED_ORIGINS` | 최소 `PublicBaseUrl,https://admin.plimap.kr` |
 | `OAUTH_REDIRECT_URI` | 기본 `https://plimap.kr/app/oauth/callback` |
-| `OAUTH_ALLOWED_FRONTEND_ORIGINS` | 최소 `https://plimap.kr,https://admin.plimap.kr` |
+| `OAUTH_ALLOWED_FRONTEND_ORIGINS` | 최소 `PublicBaseUrl,https://admin.plimap.kr` |
 | `KAKAO_REDIRECT_URI` | `PublicBaseUrl` + `/oauth/callback/kakao` |
 | `GOOGLE_REDIRECT_URI` | `PublicBaseUrl` + `/oauth/callback/google` |
 | `PROFILE_IMAGE_BUCKET` | `PROD_GCS_BUCKET` |
