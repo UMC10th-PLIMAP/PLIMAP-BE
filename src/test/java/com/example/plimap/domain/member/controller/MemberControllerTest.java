@@ -41,6 +41,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -138,7 +139,8 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.result.followingCount").value(5))
                 .andExpect(jsonPath("$.result.pinCount").value(7))
                 .andExpect(jsonPath("$.result.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.result.penaltyPoint").value(0));
+                .andExpect(jsonPath("$.result.penaltyPoint").value(0))
+                .andExpect(jsonPath("$.result.lastPenaltyPeriod").value(nullValue()));
     }
 
     @Test
