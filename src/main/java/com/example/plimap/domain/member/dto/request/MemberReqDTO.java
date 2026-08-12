@@ -24,7 +24,7 @@ public class MemberReqDTO {
             String nickname,
 
             @Pattern(regexp = "^$|^[가-힣A-Za-z0-9]{2,7}$")
-            @Schema(description = "이름 (2~7자, 한글/영문/숫자). 값을 보내지 않으면 변경되지 않고, 빈 문자열을 보내면 삭제됩니다.", example = "이예림")
+            @Schema(description = "이름 (2~7자, 한글/영문/숫자). 값을 보내지 않거나 null이면 변경되지 않고, 빈 문자열을 보내면 삭제됩니다.", example = "이예림")
             String name,
 
             @Size(max = 100)
