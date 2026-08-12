@@ -6,7 +6,6 @@ import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
-import com.example.plimap.domain.member.enums.MemberReportFilter;
 import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
@@ -77,11 +76,6 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     @Override
     public Page<Member> searchMembers(String query, MemberStatus status, Pageable pageable) {
         return memberQueryRepository.searchMembers(query, status, pageable);
-    }
-
-    @Override
-    public Page<Member> findReportedMembers(MemberReportFilter filter, Pageable pageable) {
-        return memberQueryRepository.findReportedMembers(filter, pageable);
     }
 
     @Override
