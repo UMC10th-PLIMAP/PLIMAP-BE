@@ -228,6 +228,8 @@ Prod는 개인 서버 Traefik을 사용하지 않습니다. 고정 IPv4 `8.233.2
 
 URL map은 `/api`, `/api/*`, `/oauth`, `/oauth/*`만 `plimap-api-prod`로 보내고 나머지를 `plimap-web-prod`로 보냅니다. 프론트 Nginx는 `/swagger-ui`, `/v3/api-docs`, `/actuator` 예약 경로에 SPA fallback을 적용하지 않고 `404`를 반환합니다.
 
+Prod 사용자 프론트 `https://plimap.kr`과 관리자 프론트 `https://admin.plimap.kr`은 동일한 `plimap-api-prod`를 사용합니다. 배포 스크립트는 두 Origin을 credential CORS와 OAuth 프론트 allowlist에 항상 포함하며, Admin OAuth callback도 `https://plimap.kr/oauth/callback/{provider}`로 유지합니다.
+
 두 Cloud Run 서비스는 `internal-and-cloud-load-balancing` ingress와 기본 `run.app` URL 비활성화를 유지합니다. 인증 없는 Invoker는 LB의 serverless NEG 호출에 필요하지만 LB를 우회한 인터넷 직접 진입은 Cloud Run ingress에서 차단합니다.
 
 ### Cloud SQL
@@ -345,6 +347,7 @@ Public Access Prevention 조직 정책이 강제되어 있다면 공개 URL 방�
 
 - `https://plimap.kr/api/v1/auth/csrf`가 예상한 API 응답과 CSRF cookie를 반환하는지 확인합니다.
 - `https://plimap.kr/oauth/authorization/google?frontendOrigin=https%3A%2F%2Fplimap.kr`가 3xx를 반환하고 `Location`이 Google authorization endpoint와 `https://plimap.kr/oauth/callback/google` callback을 포함하는지 확인합니다.
+- `https://admin.plimap.kr` Origin의 `/api/v1/admin/me` credential CORS preflight가 허용되고, Admin `frontendOrigin`으로 시작한 Google OAuth도 동일한 Prod callback을 사용하는지 확인합니다.
 - `/api/**`, `/oauth/**`가 `plimap-api-prod`로 전달되고 다른 프론트 경로는 `plimap-web-prod`로 전달되는지 확인합니다.
 - `/swagger-ui/**`, `/v3/api-docs/**`, `/actuator/**`가 Cloud Run으로 전달되지 않고 명시적인 `404`를 반환하는지 확인합니다.
 - 로그인 응답의 `Set-Cookie`와 OAuth 응답의 `Location` header가 Load Balancer를 거쳐도 유지되는지 확인합니다.
