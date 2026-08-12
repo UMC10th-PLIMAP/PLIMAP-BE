@@ -95,7 +95,7 @@ public class PinController implements PinControllerDocs {
                 .body(ApiResponse.success(PinSuccessCode.PIN_LIKE_DELETE_SUCCESS, response));
     }
 
-    @GetMapping("/feed/members/me")
+    @GetMapping("/feeds/members/me")
     public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMyFeedList(
             @AuthenticationPrincipal AuthMember currentMember,
             @RequestParam(required = false, defaultValue = "10")
@@ -112,7 +112,7 @@ public class PinController implements PinControllerDocs {
                 .body(ApiResponse.success(PinSuccessCode.MY_FEED_LIST_SEARCH_SUCCESS, response));
     }
 
-    @GetMapping("/feed/members/{memberId}")
+    @GetMapping("/feeds/members/{memberId}")
     public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMemberFeedList(
             @AuthenticationPrincipal AuthMember currentMember,
             @PathVariable Long memberId,
