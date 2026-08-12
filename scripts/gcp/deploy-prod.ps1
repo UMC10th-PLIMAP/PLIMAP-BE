@@ -13,6 +13,7 @@ param(
     [ValidatePattern("^[0-9a-f]{40}$")]
     [string]$DeployCommit,
     [string]$PublicBaseUrl = "https://plimap.kr",
+    [string]$AdminFrontendOrigin = "https://admin.plimap.kr",
     [string]$FrontendRedirectUri = "",
     [string]$CorsAllowedOrigins = "",
     [string]$OAuthAllowedFrontendOrigins = "",
@@ -451,6 +452,28 @@ function Get-AllowedOrigins {
     return $origins -join ","
 }
 
+function Get-ProdAllowedOrigins {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [AllowEmptyString()][string]$Value,
+        [Parameter(Mandatory)][string]$PublicOrigin,
+        [Parameter(Mandatory)][string]$AdminFrontendOrigin,
+        [switch]$AllowPrivateNetworkPattern
+    )
+
+    $combinedOrigins = @(
+        $Value,
+        $PublicOrigin,
+        $AdminFrontendOrigin
+    ) -join ","
+
+    return Get-AllowedOrigins `
+        -Name $Name `
+        -Value $combinedOrigins `
+        -RequiredOrigin $PublicOrigin `
+        -AllowPrivateNetworkPattern:$AllowPrivateNetworkPattern
+}
+
 function Get-HttpsUrl {
     param(
         [Parameter(Mandatory)][string]$Name,
@@ -487,6 +510,8 @@ function Assert-HttpStatus {
         [Parameter(Mandatory)][string]$Uri,
         [Alias("ExpectedStatus")]
         [Parameter(Mandatory)][int[]]$ExpectedStatuses,
+        [ValidateSet("GET", "OPTIONS")][string]$Method = "GET",
+        [hashtable]$Headers = @{},
         [ValidateRange(1, 10)][int]$MaxAttempts = 5,
         [ValidateRange(1, 60)][int]$RequestTimeoutSeconds = 20,
         [ValidateRange(0, 60)][int]$InitialDelaySeconds = 2
@@ -503,6 +528,8 @@ function Assert-HttpStatus {
             $webResponse = Invoke-WebRequest `
                 -UseBasicParsing `
                 -Uri $Uri `
+                -Method $Method `
+                -Headers $Headers `
                 -TimeoutSec $RequestTimeoutSeconds `
                 -MaximumRedirection 0
             $actualStatus = [int]$webResponse.StatusCode
@@ -572,7 +599,10 @@ function Get-HttpHeaderValues {
 }
 
 function Assert-PublicProdEndpoints {
-    param([Parameter(Mandatory)][string]$BaseUrl)
+    param(
+        [Parameter(Mandatory)][string]$BaseUrl,
+        [Parameter(Mandatory)][string]$AdminFrontendOrigin
+    )
 
     Assert-HttpStatus -Uri "$BaseUrl/" -ExpectedStatus 200 | Out-Null
 
@@ -593,53 +623,72 @@ function Assert-PublicProdEndpoints {
         throw "Prod CSRF endpoint did not issue the XSRF-TOKEN cookie."
     }
 
-    $encodedFrontendOrigin = [Uri]::EscapeDataString($BaseUrl)
-    $oauthResponse = Assert-HttpStatus `
-        -Uri "$BaseUrl/oauth/authorization/google?frontendOrigin=$encodedFrontendOrigin" `
-        -ExpectedStatuses @(302, 303, 307, 308)
-    $locationHeader = [string](@(Get-HttpHeaderValues -Response $oauthResponse -Name "Location")[0])
-    if ([string]::IsNullOrWhiteSpace($locationHeader)) {
-        throw "Prod OAuth endpoint did not return a Location header."
+    $corsResponse = Assert-HttpStatus `
+        -Uri "$BaseUrl/api/v1/admin/me" `
+        -Method "OPTIONS" `
+        -Headers @{
+            Origin                           = $AdminFrontendOrigin
+            "Access-Control-Request-Method"  = "GET"
+            "Access-Control-Request-Headers" = "content-type"
+        } `
+        -ExpectedStatus 200
+    $allowedOrigins = @(Get-HttpHeaderValues -Response $corsResponse -Name "Access-Control-Allow-Origin")
+    if ($allowedOrigins.Count -ne 1 -or $allowedOrigins[0] -ne $AdminFrontendOrigin) {
+        throw "Prod Admin CORS preflight did not allow $AdminFrontendOrigin."
     }
-    try {
-        $oauthLocation = [Uri]::new($locationHeader, [UriKind]::Absolute)
-    } catch {
-        throw "Prod OAuth endpoint returned an invalid Location header."
-    }
-    if ($oauthLocation.Scheme -ne "https" -or
-        $oauthLocation.Host -ne "accounts.google.com" -or
-        $oauthLocation.AbsolutePath -ne "/o/oauth2/v2/auth") {
-        throw "Prod OAuth endpoint returned an unexpected authorization Location."
-    }
-
-    $oauthQuery = @{}
-    foreach ($parameter in $oauthLocation.Query.TrimStart("?").Split("&")) {
-        if ([string]::IsNullOrWhiteSpace($parameter)) {
-            continue
-        }
-        $pair = $parameter.Split("=", 2)
-        $key = [System.Net.WebUtility]::UrlDecode($pair[0])
-        $value = if ($pair.Length -eq 2) {
-            [System.Net.WebUtility]::UrlDecode($pair[1])
-        } else {
-            ""
-        }
-        if (-not $oauthQuery.ContainsKey($key)) {
-            $oauthQuery[$key] = @()
-        }
-        $oauthQuery[$key] += $value
+    $allowedCredentials = @(Get-HttpHeaderValues -Response $corsResponse -Name "Access-Control-Allow-Credentials")
+    if ($allowedCredentials.Count -ne 1 -or $allowedCredentials[0] -ne "true") {
+        throw "Prod Admin CORS preflight did not allow credentials."
     }
 
-    $redirectUris = @($oauthQuery["redirect_uri"])
-    if ($redirectUris.Count -ne 1 -or
-        $redirectUris[0] -ne "$BaseUrl/oauth/callback/google" -or
-        @($oauthQuery["client_id"]).Count -ne 1 -or
-        [string]::IsNullOrWhiteSpace([string]@($oauthQuery["client_id"])[0]) -or
-        @($oauthQuery["state"]).Count -ne 1 -or
-        [string]::IsNullOrWhiteSpace([string]@($oauthQuery["state"])[0])) {
-        throw "Prod OAuth authorization Location is missing required query parameters."
-    }
+    foreach ($frontendOrigin in @($BaseUrl, $AdminFrontendOrigin) | Select-Object -Unique) {
+        $encodedFrontendOrigin = [Uri]::EscapeDataString($frontendOrigin)
+        $oauthResponse = Assert-HttpStatus `
+            -Uri "$BaseUrl/oauth/authorization/google?frontendOrigin=$encodedFrontendOrigin" `
+            -ExpectedStatuses @(302, 303, 307, 308)
+        $locationHeader = [string](@(Get-HttpHeaderValues -Response $oauthResponse -Name "Location")[0])
+        if ([string]::IsNullOrWhiteSpace($locationHeader)) {
+            throw "Prod OAuth endpoint did not return a Location header for $frontendOrigin."
+        }
+        try {
+            $oauthLocation = [Uri]::new($locationHeader, [UriKind]::Absolute)
+        } catch {
+            throw "Prod OAuth endpoint returned an invalid Location header for $frontendOrigin."
+        }
+        if ($oauthLocation.Scheme -ne "https" -or
+            $oauthLocation.Host -ne "accounts.google.com" -or
+            $oauthLocation.AbsolutePath -ne "/o/oauth2/v2/auth") {
+            throw "Prod OAuth endpoint returned an unexpected authorization Location for $frontendOrigin."
+        }
 
+        $oauthQuery = @{}
+        foreach ($parameter in $oauthLocation.Query.TrimStart("?").Split("&")) {
+            if ([string]::IsNullOrWhiteSpace($parameter)) {
+                continue
+            }
+            $pair = $parameter.Split("=", 2)
+            $key = [System.Net.WebUtility]::UrlDecode($pair[0])
+            $value = if ($pair.Length -eq 2) {
+                [System.Net.WebUtility]::UrlDecode($pair[1])
+            } else {
+                ""
+            }
+            if (-not $oauthQuery.ContainsKey($key)) {
+                $oauthQuery[$key] = @()
+            }
+            $oauthQuery[$key] += $value
+        }
+
+        $redirectUris = @($oauthQuery["redirect_uri"])
+        if ($redirectUris.Count -ne 1 -or
+            $redirectUris[0] -ne "$BaseUrl/oauth/callback/google" -or
+            @($oauthQuery["client_id"]).Count -ne 1 -or
+            [string]::IsNullOrWhiteSpace([string]@($oauthQuery["client_id"])[0]) -or
+            @($oauthQuery["state"]).Count -ne 1 -or
+            [string]::IsNullOrWhiteSpace([string]@($oauthQuery["state"])[0])) {
+            throw "Prod OAuth authorization Location is missing required query parameters for $frontendOrigin."
+        }
+    }
     foreach ($blockedPath in @(
         "/swagger-ui/index.html",
         "/v3/api-docs",
@@ -702,6 +751,9 @@ try {
     Assert-ApprovedImage
 
     $publicOrigin = Get-HttpsOrigin -Value $PublicBaseUrl
+    $adminOrigin = Get-WebOrigin `
+        -Name "AdminFrontendOrigin" `
+        -Value $AdminFrontendOrigin
     if ([string]::IsNullOrWhiteSpace($FrontendRedirectUri)) {
         $FrontendRedirectUri = "$publicOrigin/app/oauth/callback"
     }
@@ -710,21 +762,18 @@ try {
         -Value $FrontendRedirectUri `
         -ExpectedOrigin $publicOrigin
 
-    if ([string]::IsNullOrWhiteSpace($CorsAllowedOrigins)) {
-        $CorsAllowedOrigins = $publicOrigin
-    }
-    $corsOrigins = Get-AllowedOrigins `
+    $corsOrigins = Get-ProdAllowedOrigins `
         -Name "CorsAllowedOrigins" `
         -Value $CorsAllowedOrigins `
-        -RequiredOrigin $publicOrigin -AllowPrivateNetworkPattern
+        -PublicOrigin $publicOrigin `
+        -AdminFrontendOrigin $adminOrigin `
+        -AllowPrivateNetworkPattern
 
-    if ([string]::IsNullOrWhiteSpace($OAuthAllowedFrontendOrigins)) {
-        $OAuthAllowedFrontendOrigins = $publicOrigin
-    }
-    $oauthFrontendOrigins = Get-AllowedOrigins `
+    $oauthFrontendOrigins = Get-ProdAllowedOrigins `
         -Name "OAuthAllowedFrontendOrigins" `
         -Value $OAuthAllowedFrontendOrigins `
-        -RequiredOrigin $publicOrigin
+        -PublicOrigin $publicOrigin `
+        -AdminFrontendOrigin $adminOrigin
 
     Invoke-Gcloud -Arguments @(
         "iam", "service-accounts", "describe", $runtimeServiceAccount,
@@ -856,7 +905,9 @@ try {
 
     $result.publicBaseUrl = $publicOrigin
     if ($PublicSmokeEnabled) {
-        Assert-PublicProdEndpoints -BaseUrl $publicOrigin
+        Assert-PublicProdEndpoints `
+            -BaseUrl $publicOrigin `
+            -AdminFrontendOrigin $adminOrigin
         $result.publicVerification = "passed"
     } else {
         Write-Warning "Public smoke test is disabled until plimap.kr DNS and managed TLS are active."
@@ -895,7 +946,9 @@ try {
                 Wait-ForSingleRevisionTraffic -ExpectedRevision $result.previousRevision
                 Assert-LoadBalancerOnlyService -ServiceState (Get-ServiceState)
                 if ($result.previousRevision -ne $bootstrapRevisionName -and $PublicSmokeEnabled) {
-                    Assert-PublicProdEndpoints -BaseUrl $publicOrigin
+                    Assert-PublicProdEndpoints `
+                        -BaseUrl $publicOrigin `
+                        -AdminFrontendOrigin $adminOrigin
                 }
                 $result.rollback = "succeeded"
             } catch {
