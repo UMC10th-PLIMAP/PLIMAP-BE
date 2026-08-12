@@ -116,8 +116,8 @@ Kakao와 Google에는 dev 전용 OAuth client를 사용합니다. 각 Provider C
 | --- | --- | --- |
 | `PROD_PUBLIC_BASE_URL` | `PublicBaseUrl` | 미설정 시 `https://plimap.kr` |
 | `PROD_FRONTEND_REDIRECT_URI` | `FrontendRedirectUri` | 미설정 시 `PublicBaseUrl` + `/app/oauth/callback` |
-| `PROD_CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | 미설정 시 `PublicBaseUrl`만 허용 |
-| `PROD_OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | 미설정 시 `PublicBaseUrl`만 허용 |
+| `PROD_CORS_ALLOWED_ORIGINS` | `CorsAllowedOrigins` | 명시한 Origin을 유지하고 `PublicBaseUrl,https://admin.plimap.kr`을 항상 포함 |
+| `PROD_OAUTH_ALLOWED_FRONTEND_ORIGINS` | `OAuthAllowedFrontendOrigins` | 명시한 Origin을 유지하고 `PublicBaseUrl,https://admin.plimap.kr`을 항상 포함 |
 | `PROD_GCS_BUCKET` | `ProfileImageBucket` | 필수, 전역에서 고유한 Prod bucket 이름 |
 | `PROD_VPC_NETWORK` | `VpcNetwork` | 필수, Direct VPC egress 대상 network |
 | `PROD_VPC_SUBNET` | `VpcSubnet` | 필수, `asia-northeast3` Cloud Run 전용 subnet |
@@ -129,13 +129,15 @@ Kakao와 Google에는 dev 전용 OAuth client를 사용합니다. 각 Provider C
 | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | `prod` |
 | `PUBLIC_BASE_URL` | `https://plimap.kr` 또는 승인된 override |
-| `CORS_ALLOWED_ORIGINS` | 기본 `https://plimap.kr` |
+| `CORS_ALLOWED_ORIGINS` | 최소 `PublicBaseUrl,https://admin.plimap.kr` |
 | `OAUTH_REDIRECT_URI` | 기본 `https://plimap.kr/app/oauth/callback` |
-| `OAUTH_ALLOWED_FRONTEND_ORIGINS` | 기본 `https://plimap.kr` |
+| `OAUTH_ALLOWED_FRONTEND_ORIGINS` | 최소 `PublicBaseUrl,https://admin.plimap.kr` |
 | `KAKAO_REDIRECT_URI` | `PublicBaseUrl` + `/oauth/callback/kakao` |
 | `GOOGLE_REDIRECT_URI` | `PublicBaseUrl` + `/oauth/callback/google` |
 | `PROFILE_IMAGE_BUCKET` | `PROD_GCS_BUCKET` |
 | `PROFILE_IMAGE_PUBLIC_BASE_URL` | `https://storage.googleapis.com` |
+
+`https://admin.plimap.kr`은 Prod 데이터를 관리하는 전용 프론트 Origin이므로 두 allowlist에서 제거할 수 없습니다. 배포 스크립트는 GitHub Environment Variable에 저장된 추가 Origin을 보존하면서 Prod 공개 Origin과 Admin Origin을 병합하고 중복을 제거합니다.
 
 ## Prod Secret Manager 매핑
 

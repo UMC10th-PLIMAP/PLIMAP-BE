@@ -7,6 +7,7 @@ import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.domain.member.event.MemberWithdrawnEvent;
 import com.example.plimap.domain.member.exception.MemberErrorCode;
@@ -14,6 +15,7 @@ import com.example.plimap.domain.member.exception.MemberException;
 import com.example.plimap.domain.member.repository.MemberFollowRepository;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
+import com.example.plimap.domain.report.enums.ReportCategory;
 import com.example.plimap.global.external.storage.ProfileImageObjectKeyGenerator;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import com.example.plimap.global.external.storage.ProfileImageStorageException;
@@ -232,6 +234,32 @@ class MemberCommandServiceImplTest {
         assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
         verify(member).updateProfile("새닉네임", "새이름", "새소개");
         verify(memberRepository).flush();
+    }
+
+    @Test
+    void 이름에_빈_문자열을_보내면_서비스를_거쳐_실제로_이름이_삭제된다() {
+        Member member = Member.builder()
+                .nickname("기존닉네임")
+                .name("이예림")
+                .build();
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.updateProfile(MEMBER_ID, updateProfile(null, "", null));
+
+        assertThat(member.getName()).isNull();
+    }
+
+    @Test
+    void 이름에_null을_보내면_서비스를_거쳐도_기존_이름이_유지된다() {
+        Member member = Member.builder()
+                .nickname("기존닉네임")
+                .name("이예림")
+                .build();
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        memberCommandService.updateProfile(MEMBER_ID, updateProfile(null, null, null));
+
+        assertThat(member.getName()).isEqualTo("이예림");
     }
 
     @Test
@@ -664,26 +692,29 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
-    void 벌점_1점을_부여하면_1일_정지된다() {
+    void 관리자가_1일_제재를_선택하면_1일_정지되고_사유가_스냅샷된다() {
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
         when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
 
         Instant before = Instant.now();
-        boolean withdrawn = memberCommandService.increasePenaltyPoint(MEMBER_ID);
+        boolean withdrawn = memberCommandService.applySanction(
+                MEMBER_ID, SuspensionPeriod.ONE_DAY, ReportCategory.ABUSE_OR_HATE_SPEECH, null);
         Instant after = Instant.now();
 
         assertThat(withdrawn).isFalse();
         assertThat(member.getPenaltyPoint()).isEqualTo(1);
         assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
         assertThat(member.getSuspendedUntil()).isBetween(before.plus(1, ChronoUnit.DAYS), after.plus(1, ChronoUnit.DAYS));
+        assertThat(member.getLastPenaltyCategory()).isEqualTo(ReportCategory.ABUSE_OR_HATE_SPEECH);
+        assertThat(member.getLastPenaltyDetail()).isNull();
         verify(memberRepository).save(member);
         verify(memberFollowRepository, never()).deleteByIdFollowerId(any());
         verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
-    void 이미_1점인_회원이_벌점을_한번_더_받으면_2점이_되어_3일_정지된다() {
+    void 이미_1점인_회원이_3일_제재를_받으면_2점이_되어_3일_정지된다() {
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
         ReflectionTestUtils.setField(member, "penaltyPoint", 1);
@@ -691,7 +722,7 @@ class MemberCommandServiceImplTest {
         when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
 
         Instant before = Instant.now();
-        memberCommandService.increasePenaltyPoint(MEMBER_ID);
+        memberCommandService.applySanction(MEMBER_ID, SuspensionPeriod.THREE_DAYS, ReportCategory.OBSCENE_OR_HARMFUL, null);
         Instant after = Instant.now();
 
         assertThat(member.getPenaltyPoint()).isEqualTo(2);
@@ -700,7 +731,7 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
-    void 이미_2점인_회원이_벌점을_한번_더_받으면_3점이_되어_5일_정지된다() {
+    void 이미_2점인_회원이_5일_제재를_받으면_3점이_되어_5일_정지된다() {
         Member member = Member.builder().nickname("예림").build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
         ReflectionTestUtils.setField(member, "penaltyPoint", 2);
@@ -708,7 +739,7 @@ class MemberCommandServiceImplTest {
         when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
 
         Instant before = Instant.now();
-        memberCommandService.increasePenaltyPoint(MEMBER_ID);
+        memberCommandService.applySanction(MEMBER_ID, SuspensionPeriod.FIVE_DAYS, ReportCategory.PERSONAL_INFORMATION_EXPOSURE, null);
         Instant after = Instant.now();
 
         assertThat(member.getPenaltyPoint()).isEqualTo(3);
@@ -717,14 +748,15 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
-    void 벌점_4점째를_받으면_자동_탈퇴로_전환되고_캐스케이드가_실행된다() {
+    void 누적_4점째_제재를_받으면_기간을_불문하고_자동_탈퇴로_전환되고_캐스케이드가_실행된다() {
         Member member = Member.builder().nickname("예림").profileImageObjectKey("old-key").build();
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
         ReflectionTestUtils.setField(member, "penaltyPoint", 3);
         ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
         when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
 
-        boolean withdrawn = memberCommandService.increasePenaltyPoint(MEMBER_ID);
+        boolean withdrawn = memberCommandService.applySanction(
+                MEMBER_ID, SuspensionPeriod.ONE_DAY, ReportCategory.OTHER, "반복 위반");
 
         assertThat(withdrawn).isTrue();
         assertThat(member.getPenaltyPoint()).isEqualTo(4);
@@ -734,6 +766,8 @@ class MemberCommandServiceImplTest {
         assertThat(member.getNickname()).isEqualTo("플리맵사용자" + MEMBER_ID);
         assertThat(member.getWithdrawnNickname()).isEqualTo("예림");
         assertThat(member.isDeleted()).isTrue();
+        assertThat(member.getLastPenaltyCategory()).isEqualTo(ReportCategory.OTHER);
+        assertThat(member.getLastPenaltyDetail()).isEqualTo("반복 위반");
 
         verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
         verify(memberFollowRepository).deleteByIdFollowingId(MEMBER_ID);
@@ -742,10 +776,28 @@ class MemberCommandServiceImplTest {
     }
 
     @Test
-    void 존재하지_않는_회원에게_벌점을_부여하면_예외가_발생한다() {
+    void 관리자가_영구_제재를_선택하면_누적_점수가_4점_미만이어도_즉시_자동_탈퇴로_전환된다() {
+        Member member = Member.builder().nickname("예림").profileImageObjectKey("old-key").build();
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.of(member));
+
+        boolean withdrawn = memberCommandService.applySanction(
+                MEMBER_ID, SuspensionPeriod.PERMANENT, ReportCategory.PERSONAL_INFORMATION_EXPOSURE, null);
+
+        assertThat(withdrawn).isTrue();
+        assertThat(member.getPenaltyPoint()).isEqualTo(1);
+        assertThat(member.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
+        assertThat(member.getWithdrawalReason()).isEqualTo(WithdrawalReason.PENALTY);
+        verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
+        verify(eventPublisher).publishEvent(new MemberWithdrawnEvent(MEMBER_ID, "old-key"));
+    }
+
+    @Test
+    void 존재하지_않는_회원에게_제재를_부여하면_예외가_발생한다() {
         when(memberRepository.findByIdAndDeletedAtIsNullForUpdate(MEMBER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> memberCommandService.increasePenaltyPoint(MEMBER_ID))
+        assertThatThrownBy(() -> memberCommandService.applySanction(
+                MEMBER_ID, SuspensionPeriod.ONE_DAY, ReportCategory.ABUSE_OR_HATE_SPEECH, null))
                 .isInstanceOfSatisfying(MemberException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
     }

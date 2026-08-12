@@ -138,6 +138,11 @@ public class PinQueryServiceImpl implements PinQueryService {
     }
 
     @Override
+    public Optional<Long> findActivePlaceTrackIdByPlaceIdAndMemberId(Long placeId, Long memberId) {
+        return pinQueryRepository.findActivePlaceTrackIdByPlaceIdAndMemberId(placeId, memberId);
+    }
+
+    @Override
     public PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request, Long memberId) {
         Point minPoint = geometryFactory.createPoint(new Coordinate(request.southWestLng(), request.southWestLat()));
         Point maxPoint = geometryFactory.createPoint(new Coordinate(request.northEastLng(), request.northEastLat()));

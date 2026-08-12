@@ -3,7 +3,9 @@ package com.example.plimap.domain.member.entity;
 import com.example.plimap.domain.auth.enums.AuthProvider;
 import com.example.plimap.domain.member.enums.MemberRole;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.enums.WithdrawalReason;
+import com.example.plimap.domain.report.enums.ReportCategory;
 import com.example.plimap.global.entity.SoftDeleteEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -11,9 +13,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 
 @Entity
 @Table(name = "member")
@@ -22,11 +22,7 @@ import java.util.Map;
 public class Member extends SoftDeleteEntity {
 
     private static final String WITHDRAWN_NICKNAME_PREFIX = "플리맵사용자";
-    private static final Map<Integer, Duration> SUSPENSION_DURATIONS = Map.of(
-            1, Duration.ofDays(1),
-            2, Duration.ofDays(3),
-            3, Duration.ofDays(5)
-    );
+    private static final int AUTO_WITHDRAWAL_THRESHOLD = 4;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -75,6 +71,13 @@ public class Member extends SoftDeleteEntity {
     @Column(name = "withdrawn_nickname", length = 10)
     private String withdrawnNickname;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "last_penalty_category")
+    private ReportCategory lastPenaltyCategory;
+
+    @Column(name = "last_penalty_detail")
+    private String lastPenaltyDetail;
+
     @Builder
     private Member(String nickname, String name, String introduction,
                     String profileImageObjectKey, MemberStatus status,
@@ -113,7 +116,7 @@ public class Member extends SoftDeleteEntity {
             this.nickname = nickname;
         }
         if (name != null) {
-            this.name = name;
+            this.name = name.isEmpty() ? null : name;
         }
         if (introduction != null) {
             this.introduction = introduction;
@@ -145,14 +148,16 @@ public class Member extends SoftDeleteEntity {
         return status == MemberStatus.WITHDRAWN ? WITHDRAWN_NICKNAME_PREFIX : nickname;
     }
 
-    public void applyPenalty() {
+    public void applySanction(SuspensionPeriod period, ReportCategory reasonCategory, String reasonDetail) {
         this.penaltyPoint += 1;
-        Duration suspension = SUSPENSION_DURATIONS.get(penaltyPoint);
-        if (suspension != null) {
-            this.status = MemberStatus.SUSPENDED;
-            this.suspendedUntil = Instant.now().plus(suspension);
-        } else {
+        this.lastPenaltyCategory = reasonCategory;
+        this.lastPenaltyDetail = reasonDetail;
+
+        if (period.isPermanent() || penaltyPoint >= AUTO_WITHDRAWAL_THRESHOLD) {
             withdrawByPenalty();
+        } else {
+            this.status = MemberStatus.SUSPENDED;
+            this.suspendedUntil = Instant.now().plus(period.getDuration());
         }
     }
 

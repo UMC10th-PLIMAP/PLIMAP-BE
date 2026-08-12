@@ -20,6 +20,7 @@ import com.example.plimap.domain.track.repository.PlaceTrackRepository;
 import com.example.plimap.domain.track.repository.query.PlaceTrackQueryRepository;
 import com.example.plimap.domain.track.service.query.PlaceTrackQueryService;
 import com.example.plimap.domain.track.service.query.PlaceTrackLikeQueryService;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -137,12 +138,18 @@ public class PlaceTrackQueryServiceImpl implements PlaceTrackQueryService {
                         request.sort(),
                         pageable
                 );
+        Optional<Long> myPlaceTrackId =
+                pinQueryService.findActivePlaceTrackIdByPlaceIdAndMemberId(
+                        placeId,
+                        memberId
+                );
         return PlaceTrackConverter.toListResult(
                 place,
                 distance,
                 withinRadius,
                 trackDetailAccessible,
-                placeTracks
+                placeTracks,
+                myPlaceTrackId
         );
     }
 

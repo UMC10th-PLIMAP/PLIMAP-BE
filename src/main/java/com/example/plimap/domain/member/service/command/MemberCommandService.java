@@ -3,6 +3,8 @@ package com.example.plimap.domain.member.service.command;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResDTO;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
+import com.example.plimap.domain.report.enums.ReportCategory;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface MemberCommandService {
@@ -25,7 +27,7 @@ public interface MemberCommandService {
 
     void withdraw(Long memberId);
 
-    boolean increasePenaltyPoint(Long memberId);
+    boolean applySanction(Long memberId, SuspensionPeriod period, ReportCategory reasonCategory, String reasonDetail);
 
     void liftSuspension(Long memberId);
 

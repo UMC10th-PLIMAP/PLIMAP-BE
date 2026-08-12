@@ -3,8 +3,8 @@ package com.example.plimap.domain.notification.service.query.impl;
 import com.example.plimap.domain.notification.converter.NotificationConverter;
 import com.example.plimap.domain.notification.dto.Pagination;
 import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
-import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.repository.query.NotificationQueryRepository;
+import com.example.plimap.domain.notification.repository.query.NotificationRow;
 import com.example.plimap.domain.notification.service.query.NotificationQueryService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import java.util.List;
@@ -22,12 +22,14 @@ public class NotificationQueryServiceImpl implements NotificationQueryService {
 
     @Override
     public Pagination<NotificationResDTO.Item> findNotifications(Long memberId, String cursor, Integer pageSize) {
-        Pagination<Notification> notifications = notificationQueryRepository.findNotifications(memberId, cursor, pageSize);
+        Pagination<NotificationRow> notifications = notificationQueryRepository.findNotifications(memberId, cursor, pageSize);
 
         List<NotificationResDTO.Item> data = notifications.data().stream()
-                .map(notification -> NotificationConverter.toItem(
-                        notification,
-                        profileImageStorage.getPublicUrlOrNull(notification.getActor().getProfileImageObjectKey())
+                .map(row -> NotificationConverter.toItem(
+                        row.notification(),
+                        profileImageStorage.getPublicUrlOrNull(row.notification().getActor().getProfileImageObjectKey()),
+                        row.isFollowing(),
+                        row.isFollowingViewer()
                 ))
                 .toList();
 

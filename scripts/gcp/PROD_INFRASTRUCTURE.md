@@ -230,8 +230,8 @@ Set these non-secret `production` Environment variables:
 ```text
 PROD_PUBLIC_BASE_URL=https://plimap.kr
 PROD_FRONTEND_REDIRECT_URI=https://plimap.kr/app/oauth/callback
-PROD_CORS_ALLOWED_ORIGINS=https://plimap.kr
-PROD_OAUTH_ALLOWED_FRONTEND_ORIGINS=https://plimap.kr
+PROD_CORS_ALLOWED_ORIGINS=https://plimap.kr,https://admin.plimap.kr
+PROD_OAUTH_ALLOWED_FRONTEND_ORIGINS=https://plimap.kr,https://admin.plimap.kr
 PROD_GCS_BUCKET=plimap-prod-profile-images
 PROD_VPC_NETWORK=plimap-prod-vpc
 PROD_VPC_SUBNET=plimap-prod-run

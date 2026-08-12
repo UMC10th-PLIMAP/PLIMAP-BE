@@ -19,8 +19,20 @@ public class NotificationResDTO {
 
             String actorProfileImageUrl,
 
+            @Schema(description = "FOLLOW 유형에서 내가 actor를 팔로우 중인지")
+            boolean isFollowing,
+
+            @Schema(description = "FOLLOW 유형에서 actor가 나를 팔로우 중인지")
+            boolean isFollowingViewer,
+
             @Schema(description = "PIN_CREATED, PIN_LIKED 유형일 때만 존재")
             Long pinId,
+
+            @Schema(description = "PIN_CREATED, PIN_LIKED 유형일 때만 존재")
+            String placeName,
+
+            @Schema(description = "PIN_CREATED, PIN_LIKED 유형일 때만 존재")
+            String albumImageUrl,
 
             @Schema(example = "false")
             boolean read,

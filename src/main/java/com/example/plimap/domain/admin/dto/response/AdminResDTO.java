@@ -24,6 +24,7 @@ public class AdminResDTO {
     }
 
     public record ReportReasonItem(
+            Long reportId,
             ReportCategory category,
             String detail,
             String reporterNickname,

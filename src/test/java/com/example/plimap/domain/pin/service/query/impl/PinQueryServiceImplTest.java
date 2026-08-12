@@ -400,6 +400,31 @@ class PinQueryServiceImplTest {
     }
 
     @Test
+    void 장소와_사용자_ID로_활성_PIN의_PlaceTrack_ID를_조회한다() {
+        // given
+        Long placeId = 1L;
+        Long memberId = 2L;
+        when(pinQueryRepository.findActivePlaceTrackIdByPlaceIdAndMemberId(
+                placeId,
+                memberId
+        )).thenReturn(Optional.of(3L));
+
+        // when
+        Optional<Long> result =
+                pinQueryService.findActivePlaceTrackIdByPlaceIdAndMemberId(
+                        placeId,
+                        memberId
+                );
+
+        // then
+        assertThat(result).contains(3L);
+        verify(pinQueryRepository).findActivePlaceTrackIdByPlaceIdAndMemberId(
+                placeId,
+                memberId
+        );
+    }
+
+    @Test
     void 장소_아이디_목록으로_대표_pinTrack_이미지를_조회한다() {
         // given
         List<Long> placeIds = new ArrayList<>(List.of(1L,2L));

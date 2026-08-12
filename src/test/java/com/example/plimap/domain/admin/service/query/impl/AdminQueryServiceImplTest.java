@@ -52,7 +52,7 @@ class AdminQueryServiceImplTest {
         Page<ReportedPinInfo> page = new PageImpl<>(List.of(autoHiddenPin, belowThresholdPin), PageRequest.of(0, 10), 2);
         when(pinQueryService.findReportedPins(eq(PinReportFilter.ALL), any(Pageable.class))).thenReturn(page);
 
-        ReportReason reason = new ReportReason(1L, ReportCategory.OTHER, "상세", "신고자", now);
+        ReportReason reason = new ReportReason(100L, 1L, ReportCategory.OTHER, "상세", "신고자", now);
         when(reportQueryService.findReasonsByPinIds(List.of(1L, 2L)))
                 .thenReturn(Map.of(1L, List.of(reason)));
 
@@ -65,6 +65,7 @@ class AdminQueryServiceImplTest {
         assertThat(first.pinId()).isEqualTo(1L);
         assertThat(first.autoHidden()).isTrue();
         assertThat(first.reasons()).hasSize(1);
+        assertThat(first.reasons().get(0).reportId()).isEqualTo(100L);
         assertThat(first.reasons().get(0).reporterNickname()).isEqualTo("신고자");
 
         AdminResDTO.ReportedPinItem second = result.items().get(1);

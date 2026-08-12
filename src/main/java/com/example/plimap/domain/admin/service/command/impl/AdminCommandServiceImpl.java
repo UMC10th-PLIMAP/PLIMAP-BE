@@ -1,16 +1,24 @@
 package com.example.plimap.domain.admin.service.command.impl;
 
 import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.exception.AdminErrorCode;
+import com.example.plimap.domain.admin.exception.AdminException;
 import com.example.plimap.domain.admin.service.command.AdminCommandService;
 import com.example.plimap.domain.auth.service.query.AuthQueryService;
 import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
 import com.example.plimap.domain.notification.service.command.NotificationCommandService;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
+import com.example.plimap.domain.report.dto.ReportReason;
+import com.example.plimap.domain.report.enums.ReportCategory;
+import com.example.plimap.domain.report.exception.ReportErrorCode;
+import com.example.plimap.domain.report.exception.ReportException;
 import com.example.plimap.domain.report.service.command.ReportCommandService;
+import com.example.plimap.domain.report.service.query.ReportQueryService;
 import com.example.plimap.domain.track.service.command.PlaceTrackCommandService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -33,37 +41,53 @@ public class AdminCommandServiceImpl implements AdminCommandService {
     private final MemberCommandService memberCommandService;
     private final NotificationCommandService notificationCommandService;
     private final ReportCommandService reportCommandService;
+    private final ReportQueryService reportQueryService;
     private final PlaceTrackCommandService placeTrackCommandService;
     private final AuthQueryService authQueryService;
 
     @Override
     public void reviewPinReport(Long pinId, boolean grantPenalty) {
-        if (!grantPenalty) {
-            pinCommandService.resetPinReportCount(pinId);
-            reportCommandService.markPinReportsReviewed(pinId);
-            return;
+        if (grantPenalty) {
+            // 벌점 부여는 사유(어떤 신고를 근거로 삼는지)·기간을 admin이 직접 고르는
+            // grantPinSanction()으로 이전됐다. 이 API는 반려 전용으로만 남는다.
+            throw new AdminException(AdminErrorCode.PENALTY_GRANT_NOT_SUPPORTED);
+        }
+        pinCommandService.resetPinReportCount(pinId);
+        reportCommandService.markPinReportsReviewed(pinId);
+    }
+
+    @Override
+    public void reviewProfileReport(Long memberId, boolean grantPenalty) {
+        if (grantPenalty) {
+            // 벌점 부여는 admin이 사유(category/detail)·기간을 직접 작성하는
+            // grantMemberSanction()으로 이전됐다. 이 API는 반려 전용으로만 남는다.
+            throw new AdminException(AdminErrorCode.PENALTY_GRANT_NOT_SUPPORTED);
+        }
+        memberCommandService.resetReportCount(memberId);
+    }
+
+    @Override
+    public void grantPinSanction(Long pinId, Long reportId, SuspensionPeriod period) {
+        ReportReason reason = reportQueryService.getReasonById(reportId);
+        if (!pinId.equals(reason.pinId())) {
+            throw new ReportException(ReportErrorCode.REPORT_PIN_MISMATCH);
         }
 
         Pin pin = pinQueryService.getActivePin(pinId);
         Long ownerId = pin.getMember().getId();
         pinCommandService.penalizePin(pinId);
 
-        if (memberCommandService.increasePenaltyPoint(ownerId)) {
+        if (memberCommandService.applySanction(ownerId, period, reason.category(), reason.detail())) {
             cascadeAutoWithdrawal(ownerId);
         }
     }
 
     @Override
-    public void reviewProfileReport(Long memberId, boolean grantPenalty) {
-        if (!grantPenalty) {
-            memberCommandService.resetReportCount(memberId);
-            return;
-        }
-
+    public void grantMemberSanction(Long memberId, SuspensionPeriod period, ReportCategory reasonCategory, String reasonDetail) {
         String newNickname = memberQueryService.pickAvailablePenaltyNickname();
         memberCommandService.replacePenalizedNickname(memberId, newNickname);
 
-        if (memberCommandService.increasePenaltyPoint(memberId)) {
+        if (memberCommandService.applySanction(memberId, period, reasonCategory, reasonDetail)) {
             cascadeAutoWithdrawal(memberId);
         }
     }
@@ -105,6 +129,6 @@ public class AdminCommandServiceImpl implements AdminCommandService {
         placeTrackCommandService.hardDeleteLikesByMember(memberId);
 
         // 팔로우 하드삭제 + SocialAccount 유지(재가입 영구 차단)는
-        // memberCommandService.increasePenaltyPoint() 안에서 이미 처리됨.
+        // memberCommandService.applySanction() 안에서 이미 처리됨.
     }
 }

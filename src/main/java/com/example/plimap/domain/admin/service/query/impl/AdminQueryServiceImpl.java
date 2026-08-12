@@ -96,7 +96,7 @@ public class AdminQueryServiceImpl implements AdminQueryService {
     private AdminResDTO.ReportedPinItem toReportedPinItem(ReportedPinInfo info, List<ReportReason> reasons) {
         List<AdminResDTO.ReportReasonItem> reasonItems = reasons.stream()
                 .map(reason -> new AdminResDTO.ReportReasonItem(
-                        reason.category(), reason.detail(), reason.reporterNickname(), reason.createdAt()))
+                        reason.reportId(), reason.category(), reason.detail(), reason.reporterNickname(), reason.createdAt()))
                 .toList();
 
         return new AdminResDTO.ReportedPinItem(

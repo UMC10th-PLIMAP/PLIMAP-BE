@@ -1,15 +1,22 @@
 package com.example.plimap.domain.notification.repository.query.impl;
 
 import com.example.plimap.domain.member.entity.QMember;
+import com.example.plimap.domain.member.entity.QMemberFollow;
 import com.example.plimap.domain.notification.converter.NotificationConverter;
 import com.example.plimap.domain.notification.dto.Pagination;
-import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.entity.QNotification;
 import com.example.plimap.domain.notification.exception.NotificationErrorCode;
 import com.example.plimap.domain.notification.exception.NotificationException;
 import com.example.plimap.domain.notification.repository.query.NotificationQueryRepository;
+import com.example.plimap.domain.notification.repository.query.NotificationRow;
 import com.example.plimap.domain.pin.entity.QPin;
+import com.example.plimap.domain.place.entity.QPlace;
+import com.example.plimap.domain.track.entity.QPlaceTrack;
+import com.example.plimap.domain.track.entity.QTrack;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.NumberPath;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -26,15 +33,27 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
     private final QNotification notification = QNotification.notification;
     private final QMember member = QMember.member;
     private final QPin pin = QPin.pin;
+    private final QPlace place = QPlace.place;
+    private final QPlaceTrack placeTrack = QPlaceTrack.placeTrack;
+    private final QTrack track = QTrack.track;
 
     @Override
-    public Pagination<Notification> findNotifications(Long memberId, String cursor, Integer pageSize) {
+    public Pagination<NotificationRow> findNotifications(Long memberId, String cursor, Integer pageSize) {
         Cursor parsedCursor = parseCursor(cursor);
 
-        List<Notification> notifications = queryFactory
-                .selectFrom(notification)
+        List<NotificationRow> notifications = queryFactory
+                .select(Projections.constructor(
+                        NotificationRow.class,
+                        notification,
+                        isFollowedByRecipient(memberId, notification.actor.id),
+                        isRecipientFollowedByActor(memberId, notification.actor.id)
+                ))
+                .from(notification)
                 .join(notification.actor, member).fetchJoin()
                 .leftJoin(notification.pin, pin).fetchJoin()
+                .leftJoin(pin.place, place).fetchJoin()
+                .leftJoin(pin.placeTrack, placeTrack).fetchJoin()
+                .leftJoin(placeTrack.track, track).fetchJoin()
                 .where(
                         notification.recipient.id.eq(memberId),
                         cursorCondition(parsedCursor)
@@ -52,12 +71,39 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
             notifications = notifications.subList(0, pageSize);
         }
 
-        Notification last = notifications.getLast();
+        NotificationRow last = notifications.getLast();
         String nextCursor = hasNext
-                ? last.getCreatedAt() + "/" + last.getId()
+                ? last.notification().getCreatedAt() + "/" + last.notification().getId()
                 : null;
 
         return NotificationConverter.toPagination(notifications, nextCursor, hasNext, pageSize);
+    }
+
+    // 수신자 -> 알림 발신자 방향. FOLLOW 알림에서 "내가 이 사람을 맞팔로우하는지" 버튼 상태에 사용.
+    private BooleanExpression isFollowedByRecipient(Long recipientId, NumberPath<Long> actorId) {
+        QMemberFollow recipientFollow = new QMemberFollow("recipientFollow");
+        return JPAExpressions
+                .selectOne()
+                .from(recipientFollow)
+                .where(
+                        recipientFollow.follower.id.eq(recipientId),
+                        recipientFollow.following.id.eq(actorId)
+                )
+                .exists();
+    }
+
+    // 알림 발신자 -> 수신자 방향(역방향). FOLLOW 알림 발생 시점엔 항상 true였지만, 그 뒤 발신자가
+    // 언팔로우했을 수 있어 조회 시점 값을 다시 계산한다.
+    private BooleanExpression isRecipientFollowedByActor(Long recipientId, NumberPath<Long> actorId) {
+        QMemberFollow actorFollow = new QMemberFollow("actorFollow");
+        return JPAExpressions
+                .selectOne()
+                .from(actorFollow)
+                .where(
+                        actorFollow.follower.id.eq(actorId),
+                        actorFollow.following.id.eq(recipientId)
+                )
+                .exists();
     }
 
     private Cursor parseCursor(String cursor) {

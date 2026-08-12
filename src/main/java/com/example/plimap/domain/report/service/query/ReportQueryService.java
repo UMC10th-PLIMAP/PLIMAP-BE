@@ -7,4 +7,6 @@ import java.util.Map;
 public interface ReportQueryService {
 
     Map<Long, List<ReportReason>> findReasonsByPinIds(List<Long> pinIds);
+
+    ReportReason getReasonById(Long reportId);
 }

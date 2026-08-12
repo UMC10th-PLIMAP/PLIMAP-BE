@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public interface PinQueryService {
 
@@ -38,6 +39,8 @@ public interface PinQueryService {
     PinResponse.PinPreview getPinPreview(Long pinId, Long viewerId);
 
     boolean existsActivePinByPlaceIdAndMemberId(Long placeId, Long memberId);
+
+    Optional<Long> findActivePlaceTrackIdByPlaceIdAndMemberId(Long placeId, Long memberId);
 
     PinResponse.ClusterAndPin getClusterPinList(PinRequest.Viewport request, Long memberId);
 

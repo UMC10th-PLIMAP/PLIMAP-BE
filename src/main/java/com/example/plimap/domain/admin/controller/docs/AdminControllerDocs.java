@@ -31,13 +31,12 @@ public interface AdminControllerDocs {
     ApiResponse<AdminResDTO.Me> getMe(AuthMember authMember);
 
     @Operation(
-            summary = "PIN 신고 검토(벌점 부여/미부여)",
+            summary = "PIN 신고 반려",
             description = """
-                    신고 접수 여부와 무관하게 관리자가 PIN을 직접 검토해 벌점 부여 여부를 결정합니다.
+                    관리자가 PIN 신고를 반려합니다(grantPenalty는 false로 고정, true는 400으로 거부됩니다).
+                    해당 PIN의 신고 누적 카운트(reportCount)만 0으로 초기화합니다.
 
-                    - grantPenalty=true: PIN을 soft delete 처리하고 작성자의 penaltyPoint를 1점 올립니다.
-                      penaltyPoint가 1~3점이면 정지(1/3/5일)로, 4점이면 자동 탈퇴로 전환됩니다.
-                    - grantPenalty=false: 해당 PIN의 신고 누적 카운트(reportCount)만 0으로 초기화합니다.
+                    벌점을 부여하려면 이 API 대신 최종 제재 API(POST /pins/{pinId}/sanctions)를 사용해 주세요.
                     """
     )
     ApiResponse<Void> reviewPinReport(
@@ -46,13 +45,12 @@ public interface AdminControllerDocs {
     );
 
     @Operation(
-            summary = "프로필 신고 검토(벌점 부여/미부여)",
+            summary = "프로필 신고 반려",
             description = """
-                    신고 접수 여부와 무관하게 관리자가 회원 프로필(닉네임)을 직접 검토해 벌점 부여 여부를 결정합니다.
+                    관리자가 프로필 신고를 반려합니다(grantPenalty는 false로 고정, true는 400으로 거부됩니다).
+                    해당 회원의 신고 누적 카운트(reportCount)만 0으로 초기화합니다.
 
-                    - grantPenalty=true: 닉네임을 후보 풀에서 미사용 값으로 강제 치환하고 penaltyPoint를 1점 올립니다.
-                      penaltyPoint가 1~3점이면 정지(1/3/5일)로, 4점이면 자동 탈퇴로 전환됩니다.
-                    - grantPenalty=false: 해당 회원의 신고 누적 카운트(reportCount)만 0으로 초기화합니다.
+                    벌점을 부여하려면 이 API 대신 최종 제재 API(POST /members/{memberId}/sanctions)를 사용해 주세요.
                     """
     )
     ApiResponse<Void> reviewProfileReport(
@@ -61,10 +59,44 @@ public interface AdminControllerDocs {
     );
 
     @Operation(
+            summary = "PIN 신고 최종 제재(기간·사유 확정)",
+            description = """
+                    관리자가 해당 PIN에 걸린 기존 신고 중 하나(reportId)를 지목해 제재 사유로 확정하고,
+                    제재 기간(period)을 선택해 최종 제재를 부여합니다.
+
+                    - PIN을 soft delete 처리하고, 지목한 신고의 category/detail을 작성자의 최종 제재 사유로 스냅샷 저장합니다.
+                    - period=ONE_DAY/THREE_DAYS/FIVE_DAYS: 해당 기간만큼 정지(SUSPENDED)로 전환합니다.
+                    - period=PERMANENT: 누적 벌점(penaltyPoint)과 무관하게 즉시 영구 탈퇴 처리합니다.
+                    - reportId가 이 PIN에 대한 신고가 아니면 400으로 거부됩니다.
+                    """
+    )
+    ApiResponse<Void> grantPinSanction(
+            @PathVariable Long pinId,
+            @RequestBody @Valid AdminReqDTO.PinSanctionDecision request
+    );
+
+    @Operation(
+            summary = "프로필 신고 최종 제재(기간·사유 확정)",
+            description = """
+                    관리자가 제재 사유(category, OTHER인 경우 detail 필수)를 직접 작성하고,
+                    제재 기간(period)을 선택해 최종 제재를 부여합니다. 기존 신고함에서 고르지 않습니다.
+
+                    - 닉네임을 후보 풀에서 미사용 값으로 강제 치환하고, 작성한 사유를 최종 제재 사유로 스냅샷 저장합니다.
+                    - period=ONE_DAY/THREE_DAYS/FIVE_DAYS: 해당 기간만큼 정지(SUSPENDED)로 전환합니다.
+                    - period=PERMANENT: 누적 벌점(penaltyPoint)과 무관하게 즉시 영구 탈퇴 처리합니다.
+                    """
+    )
+    ApiResponse<Void> grantMemberSanction(
+            @PathVariable Long memberId,
+            @RequestBody @Valid AdminReqDTO.MemberSanctionDecision request
+    );
+
+    @Operation(
             summary = "신고 누적 게시물 목록 조회",
             description = """
                     신고가 1건 이상 누적된 PIN을 신고 누적 수(reportCount) 내림차순으로 조회합니다.
-                    각 항목에는 신고 사유(카테고리/상세/신고자/신고일) 목록이 함께 포함됩니다.
+                    각 항목에는 신고 사유(신고ID/카테고리/상세/신고자/신고일) 목록이 함께 포함됩니다.
+                    이 중 reportId는 최종 제재 API(POST /pins/{pinId}/sanctions)에서 제재 사유로 지목할 신고를 고를 때 사용합니다.
 
                     - filter=ALL: 신고가 1건 이상인 모든 PIN
                     - filter=AUTO_HIDDEN: 신고 누적 수가 10회 이상이라 피드에서 자동숨김된 PIN

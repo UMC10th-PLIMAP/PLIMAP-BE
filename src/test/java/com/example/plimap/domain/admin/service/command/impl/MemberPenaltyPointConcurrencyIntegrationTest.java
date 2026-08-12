@@ -5,11 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.plimap.domain.admin.service.command.AdminCommandService;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.pin.entity.Pin;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.place.entity.Place;
 import com.example.plimap.domain.place.repository.PlaceRepository;
+import com.example.plimap.domain.report.entity.Report;
+import com.example.plimap.domain.report.enums.ReportCategory;
+import com.example.plimap.domain.report.repository.ReportRepository;
 import com.example.plimap.domain.track.entity.PlaceTrack;
 import com.example.plimap.domain.track.entity.Track;
 import com.example.plimap.domain.track.repository.PlaceTrackRepository;
@@ -17,7 +21,9 @@ import com.example.plimap.domain.track.repository.TrackRepository;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import com.example.plimap.support.RedisContainerConfiguration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -65,16 +71,24 @@ class MemberPenaltyPointConcurrencyIntegrationTest {
     private PlaceTrackRepository placeTrackRepository;
 
     @Autowired
+    private ReportRepository reportRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     private Long ownerId;
+    private Long reporterId;
     private final List<Long> pinIds = new ArrayList<>();
+    private final List<Long> reportIds = new ArrayList<>();
     private final List<Long> placeTrackIds = new ArrayList<>();
     private final List<Long> trackIds = new ArrayList<>();
     private final List<Long> placeIds = new ArrayList<>();
 
     @AfterEach
     void tearDown() {
+        for (Long reportId : reportIds) {
+            jdbcTemplate.update("DELETE FROM report WHERE id = ?", reportId);
+        }
         for (Long pinId : pinIds) {
             jdbcTemplate.update("DELETE FROM pin WHERE id = ?", pinId);
         }
@@ -90,19 +104,33 @@ class MemberPenaltyPointConcurrencyIntegrationTest {
         if (ownerId != null) {
             jdbcTemplate.update("DELETE FROM member WHERE id = ?", ownerId);
         }
+        if (reporterId != null) {
+            jdbcTemplate.update("DELETE FROM member WHERE id = ?", reporterId);
+        }
         pinIds.clear();
+        reportIds.clear();
         placeTrackIds.clear();
         trackIds.clear();
         placeIds.clear();
         ownerId = null;
+        reporterId = null;
     }
 
     @Test
     void 같은_회원에_대한_동시_벌점_부여_요청은_증가분이_유실되지_않는다() throws Exception {
         Member owner = memberRepository.save(Member.builder().nickname("동시탈퇴대상").build());
         ownerId = owner.getId();
+        Member reporter = memberRepository.save(Member.builder().nickname("동시신고자").build());
+        reporterId = reporter.getId();
+
+        Map<Long, Long> reportIdByPinId = new HashMap<>();
         for (int i = 0; i < PIN_COUNT; i++) {
-            pinIds.add(savePin(owner, i).getId());
+            Pin pin = savePin(owner, i);
+            pinIds.add(pin.getId());
+            Report report = reportRepository.save(
+                    Report.createPinReport(reporter, pin, ReportCategory.OBSCENE_OR_HARMFUL, null));
+            reportIds.add(report.getId());
+            reportIdByPinId.put(pin.getId(), report.getId());
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(PIN_COUNT);
@@ -112,10 +140,11 @@ class MemberPenaltyPointConcurrencyIntegrationTest {
         try {
             List<Future<?>> futures = new ArrayList<>();
             for (Long pinId : pinIds) {
+                Long reportId = reportIdByPinId.get(pinId);
                 futures.add(executor.submit(() -> {
                     ready.countDown();
                     start.await();
-                    adminCommandService.reviewPinReport(pinId, true);
+                    adminCommandService.grantPinSanction(pinId, reportId, SuspensionPeriod.ONE_DAY);
                     return null;
                 }));
             }
