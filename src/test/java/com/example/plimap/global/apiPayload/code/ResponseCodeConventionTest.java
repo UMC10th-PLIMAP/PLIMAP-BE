@@ -13,7 +13,6 @@ import com.example.plimap.domain.member.exception.TermsErrorCode;
 import com.example.plimap.domain.member.exception.TermsSuccessCode;
 import com.example.plimap.domain.notification.exception.NotificationSuccessCode;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
-import com.example.plimap.domain.pin.exception.PinLikeErrorCode;
 import com.example.plimap.domain.pin.exception.PinSuccessCode;
 import com.example.plimap.domain.pin.exception.TagErrorCode;
 import com.example.plimap.domain.place.exception.PlaceErrorCode;
@@ -136,7 +135,6 @@ class ResponseCodeConventionTest {
                 new ErrorCodeGroup("MEMBER", errorCodes(MemberErrorCode.values())),
                 new ErrorCodeGroup("TERMS", errorCodes(TermsErrorCode.values())),
                 new ErrorCodeGroup("PIN", errorCodes(PinErrorCode.values())),
-                new ErrorCodeGroup("PIN", errorCodes(PinLikeErrorCode.values())),
                 new ErrorCodeGroup("TAG", errorCodes(TagErrorCode.values())),
                 new ErrorCodeGroup("PLACE", errorCodes(PlaceErrorCode.values())),
                 new ErrorCodeGroup("REPORT", errorCodes(ReportErrorCode.values())),

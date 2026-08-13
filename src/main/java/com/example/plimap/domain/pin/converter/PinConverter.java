@@ -57,10 +57,12 @@ public class PinConverter {
     }
 
     public static PinResponse.LikeCount toLikeCount(
-            Integer likeCount
+            Integer likeCount,
+            boolean likedByMe
     ) {
         return PinResponse.LikeCount.builder()
                 .likeCount(likeCount)
+                .likedByMe(likedByMe)
                 .build();
     }
 
