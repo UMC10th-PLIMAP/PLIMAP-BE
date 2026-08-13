@@ -632,7 +632,7 @@ function Assert-PublicProdEndpoints {
         throw "Prod CSRF endpoint did not return valid JSON."
     }
     $csrfCode = [string](Get-JsonProperty -Object $csrfBody -Name "code")
-    if ($csrfCode -ne "AUTH_200_CSRF_TOKEN_ISSUED") {
+    if ($csrfCode -ne "AUTH_CSRF_TOKEN_ISSUED_SUCCESS") {
         throw "Prod CSRF endpoint returned an unexpected response code: $csrfCode"
     }
     $setCookieHeader = @(Get-HttpHeaderValues -Response $csrfResponse -Name "Set-Cookie") -join ";"
