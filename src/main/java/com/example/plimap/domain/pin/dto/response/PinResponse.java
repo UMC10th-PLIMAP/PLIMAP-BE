@@ -47,7 +47,8 @@ public class PinResponse {
 
     @Builder
     public record LikeCount(
-            Integer likeCount
+            Integer likeCount,
+            boolean likedByMe
     ) {}
 
     @Builder

@@ -40,9 +40,9 @@ public class PinController implements PinControllerDocs {
                 .body(ApiResponse.success(PinSuccessCode.PIN_CREATE_SUCCESS, response));
     }
 
-    @PostMapping("/pins/availability")
+    @GetMapping("/pins/availability")
     public ResponseEntity<ApiResponse<PinResponse.PinAvailability>> validatePinAvailability(
-            @RequestBody @Valid PinRequest.PinAvailability request
+            @ModelAttribute @Valid PinRequest.PinAvailability request
     ) {
         PinResponse.PinAvailability response = pinQueryService.validatePinAvailability(request);
         return ResponseEntity

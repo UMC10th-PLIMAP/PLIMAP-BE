@@ -708,6 +708,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.getSuspendedUntil()).isBetween(before.plus(1, ChronoUnit.DAYS), after.plus(1, ChronoUnit.DAYS));
         assertThat(member.getLastPenaltyCategory()).isEqualTo(ReportCategory.ABUSE_OR_HATE_SPEECH);
         assertThat(member.getLastPenaltyDetail()).isNull();
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.ONE_DAY);
         verify(memberRepository).save(member);
         verify(memberFollowRepository, never()).deleteByIdFollowerId(any());
         verify(eventPublisher, never()).publishEvent(any());
@@ -728,6 +729,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.getPenaltyPoint()).isEqualTo(2);
         assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
         assertThat(member.getSuspendedUntil()).isBetween(before.plus(3, ChronoUnit.DAYS), after.plus(3, ChronoUnit.DAYS));
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.THREE_DAYS);
     }
 
     @Test
@@ -745,6 +747,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.getPenaltyPoint()).isEqualTo(3);
         assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
         assertThat(member.getSuspendedUntil()).isBetween(before.plus(5, ChronoUnit.DAYS), after.plus(5, ChronoUnit.DAYS));
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.FIVE_DAYS);
     }
 
     @Test
@@ -768,6 +771,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.isDeleted()).isTrue();
         assertThat(member.getLastPenaltyCategory()).isEqualTo(ReportCategory.OTHER);
         assertThat(member.getLastPenaltyDetail()).isEqualTo("반복 위반");
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.ONE_DAY);
 
         verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
         verify(memberFollowRepository).deleteByIdFollowingId(MEMBER_ID);
@@ -788,6 +792,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.getPenaltyPoint()).isEqualTo(1);
         assertThat(member.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
         assertThat(member.getWithdrawalReason()).isEqualTo(WithdrawalReason.PENALTY);
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.PERMANENT);
         verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
         verify(eventPublisher).publishEvent(new MemberWithdrawnEvent(MEMBER_ID, "old-key"));
     }

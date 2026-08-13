@@ -6,7 +6,6 @@ import com.example.plimap.domain.pin.dto.PlaceAccessToken;
 import com.example.plimap.domain.pin.dto.request.PinRequest;
 import com.example.plimap.domain.pin.dto.response.PinResponse;
 import com.example.plimap.domain.pin.entity.Pin;
-import com.example.plimap.domain.pin.entity.PinLike;
 import com.example.plimap.domain.pin.entity.PinTag;
 import com.example.plimap.domain.pin.entity.Tag;
 import com.example.plimap.domain.pin.event.PinCreatedEvent;
@@ -16,7 +15,6 @@ import com.example.plimap.domain.pin.repository.PinLikeRepository;
 import com.example.plimap.domain.pin.repository.PinRepository;
 import com.example.plimap.domain.pin.repository.PinTagRepository;
 import com.example.plimap.domain.pin.repository.PlaceAccessTokenRepository;
-import com.example.plimap.domain.pin.repository.impl.PlaceAccessTokenRepositoryImpl;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.TagQueryService;
@@ -29,7 +27,6 @@ import com.example.plimap.domain.track.service.command.TrackCommandService;
 import com.example.plimap.global.external.storage.ProfileImageStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -142,28 +139,43 @@ public class PinCommandServiceImpl implements PinCommandService {
     @Override
     public PinResponse.LikeCount createPinLike(Member currentMember, Long pinId) {
         Pin pin = getPin(pinId);
-        PinLike pinLike = PinLike.create(pin, currentMember);
+        int inserted = pinLikeRepository.insertIfAbsent(
+                pinId,
+                currentMember.getId()
+        );
 
-        try {
-            pinLikeRepository.save(pinLike);
-        } catch (DataIntegrityViolationException e) {
-            throw new PinLikeException(PinErrorCode.ALREADY_LIKED_PIN);
+        if (inserted == 1) {
+            pinRepository.increaseLikeCount(pinId);
+
+            eventPublisher.publishEvent(
+                    new PinLikedEvent(
+                            pinId,
+                            pin.getMember().getId(),
+                            currentMember.getId()
+                    )
+            );
         }
-        pinRepository.increaseLikeCount(pinId);
 
-        eventPublisher.publishEvent(new PinLikedEvent(pinId, pin.getMember().getId(), currentMember.getId()));
+        Integer likeCount = pinRepository.findLikeCountById(pinId);
 
-        return PinConverter.toLikeCount(pin.getLikeCount() + 1);
+        return PinConverter.toLikeCount(likeCount, true);
     }
 
     @Override
     public PinResponse.LikeCount deletePinLike(Member currentMember, Long pinId) {
-        Pin pin = getPin(pinId);
-        PinLike pinLike = pinLikeRepository.findByPinAndMember(pin, currentMember)
-                        .orElseThrow(() -> new PinLikeException(PinLikeErrorCode.PIN_LIKE_NOT_FOUND));
-        pinLikeRepository.delete(pinLike);
-        pinRepository.decreaseLikeCount(pinId);
-        return PinConverter.toLikeCount(pin.getLikeCount() - 1);
+        getPin(pinId);
+        int deleted = pinLikeRepository.deleteByPinIdAndMemberId(
+                pinId,
+                currentMember.getId()
+        );
+
+        if (deleted == 1) {
+            pinRepository.decreaseLikeCount(pinId);
+        }
+
+        Integer likeCount = pinRepository.findLikeCountById(pinId);
+
+        return PinConverter.toLikeCount(likeCount, false);
     }
 
     @Override

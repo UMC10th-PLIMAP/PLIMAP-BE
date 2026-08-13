@@ -39,10 +39,10 @@ public enum PinErrorCode implements BaseErrorCode {
             "해당 PIN에 수정/삭제 권한이 없습니다."
     ),
 
-    ALREADY_LIKED_PIN(
-            HttpStatus.CONFLICT,
-            "PIN_ALREADY_LIKED_PIN",
-            "이미 좋아요한 핀입니다."
+    PIN_INVALID_CURSOR(
+            HttpStatus.BAD_REQUEST,
+            "PIN_INVALID_CURSOR",
+            "유효하지 않은 커서입니다."
     ),
 
     FRIEND_PIN_ACCESS_DENIED(

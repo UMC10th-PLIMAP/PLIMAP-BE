@@ -37,6 +37,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +64,6 @@ class PinControllerTest {
     private static final String PIN_CREATE_ENDPOINT = "/api/v1/pins";
     private static final String PIN_AVAILABILITY_ENDPOINT = "/api/v1/pins/availability";
     private static final String PIN_UPDATE_ENDPOINT = "/api/v1/pins/1";
-    private static final String PIN_LIKE_ENDPOINT = "/api/v1/pins/{pinId}/likes";
     private static final String ACCESS_TOKEN = "valid-access-token";
     private static final String MY_FEED_ENDPOINT = "/api/v1/feeds/members/me";
     private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feeds/members/{memberId}";
@@ -168,20 +168,6 @@ class PinControllerTest {
     }
 
     @Test
-    void 이미_좋아요한_핀이면_409를_반환한다() throws Exception {
-        when(pinCommandService.createPinLike(any(Member.class), eq(1L)))
-                .thenThrow(new PinLikeException(PinErrorCode.ALREADY_LIKED_PIN));
-
-        mockMvc.perform(put(PIN_LIKE_ENDPOINT, 1L)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("PIN_ALREADY_LIKED_PIN"))
-                .andExpect(jsonPath("$.message").value("이미 좋아요한 핀입니다."))
-                .andExpect(jsonPath("$.result").doesNotExist());
-    }
-
-    @Test
     void 태그_개수가_0개면_400을_반환한다() throws Exception {
         mockMvc.perform(post(PIN_CREATE_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
@@ -223,10 +209,13 @@ class PinControllerTest {
                 .build());
 
         // CREATABLE_NEW_PLACE
-        mockMvc.perform(post(PIN_AVAILABILITY_ENDPOINT)
+        mockMvc.perform(get(PIN_AVAILABILITY_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPinAvailabilityRequest()))
+                        .param("latitude", "37.629000")
+                        .param("longitude", "127.094000")
+                        .param("userLatitude", "37.626144976334544")
+                        .param("userLongitude", "127.09302024107471"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
@@ -249,10 +238,13 @@ class PinControllerTest {
                 .build());
 
         // OUT_OF_RANGE
-        mockMvc.perform(post(PIN_AVAILABILITY_ENDPOINT)
+        mockMvc.perform(get(PIN_AVAILABILITY_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPinAvailabilityRequest()))
+                        .param("latitude", "37.629000")
+                        .param("longitude", "127.094000")
+                        .param("userLatitude", "37.626144976334544")
+                        .param("userLongitude", "127.09302024107471"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
@@ -275,10 +267,13 @@ class PinControllerTest {
                 .build());
 
         // TOO_CLOSE_TO_PIN
-        mockMvc.perform(post(PIN_AVAILABILITY_ENDPOINT)
+        mockMvc.perform(get(PIN_AVAILABILITY_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPinAvailabilityRequest()))
+                        .param("latitude", "37.629000")
+                        .param("longitude", "127.094000")
+                        .param("userLatitude", "37.626144976334544")
+                        .param("userLongitude", "127.09302024107471"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
@@ -711,17 +706,6 @@ class PinControllerTest {
                 """;
     }
 
-    private String validPinAvailabilityRequest() {
-        return """
-                {
-                  "latitude": 37.629000,
-                  "longitude": 127.094000,
-                  "userLatitude": 37.626144976334544,
-                  "userLongitude": 127.09302024107471
-                }
-                """;
-    }
-
     private String validUpdateRequest() {
         return """
                 {
@@ -741,5 +725,4 @@ class PinControllerTest {
                 }
                 """;
     }
-
 }

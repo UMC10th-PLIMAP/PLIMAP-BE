@@ -19,4 +19,20 @@ public interface PinLikeRepository extends JpaRepository<PinLike, PinLikeId> {
     @Modifying
     @Query("delete from PinLike pl where pl.member.id = :memberId")
     void deleteByMemberId(Long memberId);
+
+    @Modifying
+    @Query(value = """
+        INSERT INTO pin_like (pin_id, member_id)
+        VALUES (:pinId, :memberId)
+        ON CONFLICT (pin_id, member_id) DO NOTHING;
+    """, nativeQuery = true)
+    int insertIfAbsent(Long pinId, Long memberId);
+
+    @Modifying
+    @Query(value = """
+    DELETE FROM pin_like
+    WHERE pin_id = :pinId
+      AND member_id = :memberId
+    """, nativeQuery = true)
+    int deleteByPinIdAndMemberId(Long pinId, Long memberId);
 }
