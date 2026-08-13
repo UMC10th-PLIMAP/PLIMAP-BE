@@ -3,6 +3,7 @@ package com.example.plimap.domain.track.controller.docs;
 import com.example.plimap.domain.track.dto.request.TrackRequest;
 import com.example.plimap.domain.track.dto.response.TrackResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.swagger.ErrorApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,9 +34,10 @@ public interface TrackControllerDocs {
                     description = "검색어 또는 검색 결과 개수 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponseTrackSearchResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_400_VALIDATION_FAILED",
+                                    summary = "검색 조건 검증 실패",
                                     value = TrackSwaggerErrorExamples
                                             .SEARCH_VALIDATION_FAILED
                             )
@@ -45,9 +47,10 @@ public interface TrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponseTrackSearchResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
                     )),
@@ -56,9 +59,10 @@ public interface TrackControllerDocs {
                     description = "iTunes 외부 API 호출 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponseTrackSearchResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "TRACK_EXTERNAL_API_ERROR",
+                                    summary = "iTunes 외부 API 오류",
                                     value = TrackSwaggerErrorExamples
                                             .TRACK_EXTERNAL_API_ERROR
                             )
@@ -87,9 +91,10 @@ public interface TrackControllerDocs {
                     description = "iTunes 트랙 ID 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_400_VALIDATION_FAILED",
+                                    summary = "iTunes 트랙 ID 검증 실패",
                                     value = TrackSwaggerErrorExamples
                                             .PLAYBACK_VALIDATION_FAILED
                             )
@@ -99,9 +104,10 @@ public interface TrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
                     )),
@@ -110,21 +116,23 @@ public interface TrackControllerDocs {
                     description = "재생 불가, 메타데이터 만료 또는 YouTube 매칭 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = {
                                     @ExampleObject(
-                                            name = "최근 재생 실패",
+                                            name = "TRACK_PLAYBACK_UNAVAILABLE",
+                                            summary = "최근 재생 실패",
                                             value = TrackSwaggerErrorExamples
                                                 .PLAYBACK_UNAVAILABLE
                                     ),
                                     @ExampleObject(
-                                            name = "메타데이터 만료",
+                                            name = "TRACK_METADATA_CACHE_NOT_FOUND",
+                                            summary = "메타데이터 만료",
                                             value = TrackSwaggerErrorExamples
                                                 .TRACK_METADATA_CACHE_NOT_FOUND
                                     ),
                                     @ExampleObject(
-                                            name = "YouTube 매칭 실패",
+                                            name = "TRACK_YOUTUBE_MATCH_NOT_FOUND",
+                                            summary = "YouTube 매칭 실패",
                                             value = TrackSwaggerErrorExamples
                                                 .YOUTUBE_MATCH_NOT_FOUND
                                     )
@@ -135,10 +143,10 @@ public interface TrackControllerDocs {
                     description = "캐시 처리 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
-                                    name = "캐시 처리 오류",
+                                    name = "TRACK_CACHE_ERROR",
+                                    summary = "캐시 처리 오류",
                                     value = TrackSwaggerErrorExamples.TRACK_CACHE_ERROR
                             )
                     )),
@@ -147,10 +155,10 @@ public interface TrackControllerDocs {
                     description = "YouTube 외부 API 호출 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaybackPreparationResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
-                                    name = "YouTube 외부 API 오류",
+                                    name = "TRACK_YOUTUBE_EXTERNAL_API_ERROR",
+                                    summary = "YouTube 외부 API 오류",
                                     value = TrackSwaggerErrorExamples.YOUTUBE_EXTERNAL_API_ERROR
                             )
                     ))
@@ -180,8 +188,10 @@ public interface TrackControllerDocs {
                     description = "재생 실패 요청 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(ref = "#/components/schemas/ApiResponseVoid"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_400_VALIDATION_FAILED",
+                                    summary = "재생 실패 보고 검증 실패",
                                     value = TrackSwaggerErrorExamples
                                             .PLAYBACK_FAILURE_VALIDATION_FAILED
                             )
@@ -191,8 +201,10 @@ public interface TrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(ref = "#/components/schemas/ApiResponseVoid"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
                     )),
@@ -201,8 +213,10 @@ public interface TrackControllerDocs {
                     description = "캐시 처리 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(ref = "#/components/schemas/ApiResponseVoid"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "TRACK_CACHE_ERROR",
+                                    summary = "캐시 처리 오류",
                                     value = TrackSwaggerErrorExamples.TRACK_CACHE_ERROR
                             )
                     ))

@@ -206,7 +206,7 @@ class TrackOpenApiIntegrationTest {
                 TRACK_SEARCH_PATH,
                 "get",
                 "400",
-                "ApiResponseTrackSearchResult",
+                "ErrorApiResponse",
                 Set.of("COMMON_400_VALIDATION_FAILED")
         );
         assertFailureResponse(
@@ -214,7 +214,7 @@ class TrackOpenApiIntegrationTest {
                 TRACK_SEARCH_PATH,
                 "get",
                 "401",
-                "ApiResponseTrackSearchResult",
+                "ErrorApiResponse",
                 Set.of("COMMON_401_UNAUTHORIZED")
         );
         assertFailureResponse(
@@ -222,7 +222,7 @@ class TrackOpenApiIntegrationTest {
                 TRACK_SEARCH_PATH,
                 "get",
                 "502",
-                "ApiResponseTrackSearchResult",
+                "ErrorApiResponse",
                 Set.of("TRACK_EXTERNAL_API_ERROR")
         );
 
@@ -231,7 +231,7 @@ class TrackOpenApiIntegrationTest {
                 PLAYBACK_PREPARATION_PATH,
                 "post",
                 "400",
-                "ApiResponsePlaybackPreparationResult",
+                "ErrorApiResponse",
                 Set.of("COMMON_400_VALIDATION_FAILED")
         );
         assertFailureResponse(
@@ -239,7 +239,7 @@ class TrackOpenApiIntegrationTest {
                 PLAYBACK_PREPARATION_PATH,
                 "post",
                 "401",
-                "ApiResponsePlaybackPreparationResult",
+                "ErrorApiResponse",
                 Set.of("COMMON_401_UNAUTHORIZED")
         );
         assertFailureResponse(
@@ -247,7 +247,7 @@ class TrackOpenApiIntegrationTest {
                 PLAYBACK_PREPARATION_PATH,
                 "post",
                 "404",
-                "ApiResponsePlaybackPreparationResult",
+                "ErrorApiResponse",
                 Set.of(
                         "TRACK_METADATA_CACHE_NOT_FOUND",
                         "TRACK_YOUTUBE_MATCH_NOT_FOUND",
@@ -260,7 +260,7 @@ class TrackOpenApiIntegrationTest {
                 PLAYBACK_FAILURE_PATH,
                 "post",
                 "400",
-                "ApiResponseVoid",
+                "ErrorApiResponse",
                 Set.of("COMMON_400_VALIDATION_FAILED")
         );
         assertFailureResponse(
@@ -268,7 +268,7 @@ class TrackOpenApiIntegrationTest {
                 PLAYBACK_FAILURE_PATH,
                 "post",
                 "401",
-                "ApiResponseVoid",
+                "ErrorApiResponse",
                 Set.of("COMMON_401_UNAUTHORIZED")
         );
         assertFailureResponse(
@@ -276,7 +276,7 @@ class TrackOpenApiIntegrationTest {
                 PLAYBACK_FAILURE_PATH,
                 "post",
                 "500",
-                "ApiResponseVoid",
+                "ErrorApiResponse",
                 Set.of("TRACK_CACHE_ERROR")
         );
         assertFailureResponse(
@@ -284,7 +284,7 @@ class TrackOpenApiIntegrationTest {
                 PLAYBACK_PREPARATION_PATH,
                 "post",
                 "500",
-                "ApiResponsePlaybackPreparationResult",
+                "ErrorApiResponse",
                 Set.of("TRACK_CACHE_ERROR")
         );
         assertFailureResponse(
@@ -292,7 +292,7 @@ class TrackOpenApiIntegrationTest {
                 PLAYBACK_PREPARATION_PATH,
                 "post",
                 "502",
-                "ApiResponsePlaybackPreparationResult",
+                "ErrorApiResponse",
                 Set.of("TRACK_YOUTUBE_EXTERNAL_API_ERROR")
         );
 
@@ -301,7 +301,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_PATH,
                 "get",
                 "400",
-                "ApiResponsePlaceTrackListResult",
+                "ErrorApiResponse",
                 Set.of("COMMON_400_VALIDATION_FAILED")
         );
         assertFailureResponse(
@@ -309,7 +309,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_PATH,
                 "get",
                 "401",
-                "ApiResponsePlaceTrackListResult",
+                "ErrorApiResponse",
                 Set.of("COMMON_401_UNAUTHORIZED")
         );
         assertFailureResponse(
@@ -317,7 +317,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_PATH,
                 "get",
                 "404",
-                "ApiResponsePlaceTrackListResult",
+                "ErrorApiResponse",
                 Set.of("PLACE_NOT_FOUND")
         );
 
@@ -326,7 +326,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_DETAIL_PATH,
                 "get",
                 "400",
-                "ApiResponsePlaceTrackDetail",
+                "ErrorApiResponse",
                 Set.of(
                         GeneralErrorCode.TYPE_MISMATCH.getCode(),
                         GeneralErrorCode.VALIDATION_FAILED.getCode()
@@ -337,7 +337,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_DETAIL_PATH,
                 "get",
                 "401",
-                "ApiResponsePlaceTrackDetail",
+                "ErrorApiResponse",
                 Set.of(GeneralErrorCode.UNAUTHORIZED.getCode())
         );
         assertFailureResponse(
@@ -345,7 +345,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_DETAIL_PATH,
                 "get",
                 "403",
-                "ApiResponseVoid",
+                "ErrorApiResponse",
                 Set.of(TrackErrorCode.PLACE_TRACK_ACCESS_DENIED.getCode())
         );
         assertFailureResponse(
@@ -353,7 +353,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_DETAIL_PATH,
                 "get",
                 "404",
-                "ApiResponsePlaceTrackDetail",
+                "ErrorApiResponse",
                 Set.of(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode())
         );
         JsonNode placeTrackNotFoundExample = exampleValues(responseContent(
@@ -370,7 +370,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_LIKE_PATH,
                 "put",
                 "400",
-                "ApiResponsePlaceTrackLikeResult",
+                "ErrorApiResponse",
                 Set.of(
                         GeneralErrorCode.TYPE_MISMATCH.getCode(),
                         GeneralErrorCode.VALIDATION_FAILED.getCode()
@@ -381,7 +381,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_LIKE_PATH,
                 "put",
                 "401",
-                "ApiResponsePlaceTrackLikeResult",
+                "ErrorApiResponse",
                 Set.of(GeneralErrorCode.UNAUTHORIZED.getCode())
         );
         assertFailureResponse(
@@ -389,7 +389,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_LIKE_PATH,
                 "put",
                 "404",
-                "ApiResponsePlaceTrackLikeResult",
+                "ErrorApiResponse",
                 Set.of(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode())
         );
         assertFailureResponse(
@@ -397,7 +397,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_LIKE_PATH,
                 "delete",
                 "400",
-                "ApiResponsePlaceTrackLikeResult",
+                "ErrorApiResponse",
                 Set.of(
                         GeneralErrorCode.TYPE_MISMATCH.getCode(),
                         GeneralErrorCode.VALIDATION_FAILED.getCode()
@@ -408,7 +408,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_LIKE_PATH,
                 "delete",
                 "401",
-                "ApiResponsePlaceTrackLikeResult",
+                "ErrorApiResponse",
                 Set.of(GeneralErrorCode.UNAUTHORIZED.getCode())
         );
         assertFailureResponse(
@@ -416,7 +416,7 @@ class TrackOpenApiIntegrationTest {
                 PLACE_TRACK_LIKE_PATH,
                 "delete",
                 "404",
-                "ApiResponsePlaceTrackLikeResult",
+                "ErrorApiResponse",
                 Set.of(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode())
         );
         assertFailureResponse(
@@ -424,7 +424,7 @@ class TrackOpenApiIntegrationTest {
                 LIKED_PLACE_TRACK_LIST_PATH,
                 "get",
                 "400",
-                "ApiResponseLikedPlaceTrackListResult",
+                "ErrorApiResponse",
                 Set.of(GeneralErrorCode.VALIDATION_FAILED.getCode())
         );
         assertFailureResponse(
@@ -432,7 +432,7 @@ class TrackOpenApiIntegrationTest {
                 LIKED_PLACE_TRACK_LIST_PATH,
                 "get",
                 "401",
-                "ApiResponseLikedPlaceTrackListResult",
+                "ErrorApiResponse",
                 Set.of(GeneralErrorCode.UNAUTHORIZED.getCode())
         );
     }
