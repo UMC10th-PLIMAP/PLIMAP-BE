@@ -13,6 +13,11 @@ if ($parseErrors.Count -gt 0) {
     throw "deploy-prod.ps1 contains PowerShell parse errors."
 }
 
+$deployScriptContent = Get-Content -LiteralPath $deployScriptPath -Raw
+if ($deployScriptContent -notmatch '\$csrfCode\s+-ne\s+"AUTH_CSRF_TOKEN_ISSUED_SUCCESS"') {
+    throw "Prod CSRF smoke check must expect AUTH_CSRF_TOKEN_ISSUED_SUCCESS."
+}
+
 foreach ($functionName in @(
     "Get-HttpHeaderValues",
     "Test-HttpHeaderContainsToken"
