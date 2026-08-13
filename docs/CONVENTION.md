@@ -136,7 +136,7 @@ git commit -m "docs: API 사용 방법 추가"
 [Type] 변경 내용
 ```
 
-- PR 타입 예시: Feature, Fix, Documents, Refactor, Test, Chore, CI, Build, Perf...
+- PR 타입 예시: Feature, Fix, Document, Refactor, Test, Chore, CI, Build, Perf...
 
 ### 규칙
 

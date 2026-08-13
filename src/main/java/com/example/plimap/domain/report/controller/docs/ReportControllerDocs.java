@@ -3,6 +3,8 @@ package com.example.plimap.domain.report.controller.docs;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.report.dto.request.ReportRequest;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.swagger.CommonSwaggerErrorExamples;
+import com.example.plimap.global.swagger.ErrorApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -53,31 +55,23 @@ public interface ReportControllerDocs {
                     description = "요청 값 검증 실패 또는 자기 자신 신고",
                     content = @Content(
                             mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = {
-                                    @ExampleObject(name = "신고 카테고리 누락", value = """
-                                            {
-                                              "isSuccess": false,
-                                              "code": "COMMON_400_VALIDATION_FAILED",
-                                              "message": "신고 카테고리를 입력해주세요.",
-                                              "result": null
-                                            }
-                                            """),
-                                    @ExampleObject(name = "상세 내용 조건 불일치", value = """
-                                            {
-                                              "isSuccess": false,
-                                              "code": "COMMON_400_VALIDATION_FAILED",
-                                              "message": "신고 상세 내용이 카테고리 조건에 맞지 않습니다.",
-                                              "result": null
-                                            }
-                                            """),
-                                    @ExampleObject(name = "자기 자신 신고", value = """
-                                            {
-                                              "isSuccess": false,
-                                              "code": "REPORT_SELF_NOT_ALLOWED",
-                                              "message": "자기 자신은 신고할 수 없습니다.",
-                                              "result": null
-                                            }
-                                            """)
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED_CATEGORY",
+                                            summary = "신고 카테고리 누락",
+                                            value = ReportSwaggerErrorExamples.CATEGORY_VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED_DETAIL",
+                                            summary = "상세 내용 조건 불일치",
+                                            value = ReportSwaggerErrorExamples.DETAIL_VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "REPORT_SELF_NOT_ALLOWED",
+                                            summary = "자기 자신 신고",
+                                            value = ReportSwaggerErrorExamples.REPORT_SELF_NOT_ALLOWED
+                                    )
                             }
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -85,42 +79,36 @@ public interface ReportControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "isSuccess": false,
-                                      "code": "COMMON_401_UNAUTHORIZED",
-                                      "message": "인증이 필요합니다.",
-                                      "result": null
-                                    }
-                                    """)
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
                     description = "신고 대상 회원 없음",
                     content = @Content(
                             mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "isSuccess": false,
-                                      "code": "MEMBER_NOT_FOUND",
-                                      "message": "존재하지 않는 사용자입니다.",
-                                      "result": null
-                                    }
-                                    """)
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NOT_FOUND",
+                                    summary = "신고 대상 회원 없음",
+                                    value = ReportSwaggerErrorExamples.MEMBER_NOT_FOUND
+                            )
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "409",
                     description = "이미 신고한 회원",
                     content = @Content(
                             mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "isSuccess": false,
-                                      "code": "REPORT_MEMBER_ALREADY_EXISTS",
-                                      "message": "이미 신고한 회원입니다.",
-                                      "result": null
-                                    }
-                                    """)
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "REPORT_MEMBER_ALREADY_EXISTS",
+                                    summary = "회원 중복 신고",
+                                    value = ReportSwaggerErrorExamples.REPORT_MEMBER_ALREADY_EXISTS
+                            )
                     ))
     })
     ResponseEntity<ApiResponse<Void>> reportMember(
@@ -186,39 +174,28 @@ public interface ReportControllerDocs {
                     description = "요청 값 검증 실패 또는 신고할 수 없는 PIN",
                     content = @Content(
                             mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = {
-                                    @ExampleObject(name = "신고 카테고리 누락", value = """
-                                            {
-                                              "isSuccess": false,
-                                              "code": "COMMON_400_VALIDATION_FAILED",
-                                              "message": "신고 카테고리를 입력해주세요.",
-                                              "result": null
-                                            }
-                                            """),
-                                    @ExampleObject(name = "상세 내용 조건 불일치", value = """
-                                            {
-                                              "isSuccess": false,
-                                              "code": "COMMON_400_VALIDATION_FAILED",
-                                              "message": "신고 상세 내용이 카테고리 조건에 맞지 않습니다.",
-                                              "result": null
-                                            }
-                                            """),
-                                    @ExampleObject(name = "자신이 작성한 PIN", value = """
-                                            {
-                                              "isSuccess": false,
-                                              "code": "REPORT_OWN_PIN_NOT_ALLOWED",
-                                              "message": "자신이 작성한 PIN은 신고할 수 없습니다.",
-                                              "result": null
-                                            }
-                                            """),
-                                    @ExampleObject(name = "비공개 PIN", value = """
-                                            {
-                                              "isSuccess": false,
-                                              "code": "REPORT_PRIVATE_PIN_NOT_ALLOWED",
-                                              "message": "공개 피드가 아닌 PIN은 신고할 수 없습니다.",
-                                              "result": null
-                                            }
-                                            """)
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED_CATEGORY",
+                                            summary = "신고 카테고리 누락",
+                                            value = ReportSwaggerErrorExamples.CATEGORY_VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED_DETAIL",
+                                            summary = "상세 내용 조건 불일치",
+                                            value = ReportSwaggerErrorExamples.DETAIL_VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "REPORT_OWN_PIN_NOT_ALLOWED",
+                                            summary = "자신이 작성한 PIN 신고",
+                                            value = ReportSwaggerErrorExamples.REPORT_OWN_PIN_NOT_ALLOWED
+                                    ),
+                                    @ExampleObject(
+                                            name = "REPORT_PRIVATE_PIN_NOT_ALLOWED",
+                                            summary = "비공개 PIN 신고",
+                                            value = ReportSwaggerErrorExamples.REPORT_PRIVATE_PIN_NOT_ALLOWED
+                                    )
                             }
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -226,42 +203,36 @@ public interface ReportControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "isSuccess": false,
-                                      "code": "COMMON_401_UNAUTHORIZED",
-                                      "message": "인증이 필요합니다.",
-                                      "result": null
-                                    }
-                                    """)
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
                     description = "신고 대상 PIN 없음",
                     content = @Content(
                             mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "isSuccess": false,
-                                      "code": "PIN_NOT_FOUND",
-                                      "message": "핀을 찾을 수 없습니다.",
-                                      "result": null
-                                    }
-                                    """)
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PIN_NOT_FOUND",
+                                    summary = "신고 대상 PIN 없음",
+                                    value = ReportSwaggerErrorExamples.PIN_NOT_FOUND
+                            )
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "409",
                     description = "이미 신고한 PIN",
                     content = @Content(
                             mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "isSuccess": false,
-                                      "code": "REPORT_PIN_ALREADY_EXISTS",
-                                      "message": "이미 신고한 PIN입니다.",
-                                      "result": null
-                                    }
-                                    """)
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "REPORT_PIN_ALREADY_EXISTS",
+                                    summary = "PIN 중복 신고",
+                                    value = ReportSwaggerErrorExamples.REPORT_PIN_ALREADY_EXISTS
+                            )
                     ))
     })
     ResponseEntity<ApiResponse<Void>> reportPin(

@@ -4,8 +4,13 @@ import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.place.dto.request.PlaceRequest;
 import com.example.plimap.domain.place.dto.response.PlaceResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.swagger.CommonSwaggerErrorExamples;
+import com.example.plimap.global.swagger.ErrorApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,16 +42,59 @@ public interface PlaceControllerDocs {
                     description = "인기 장소 목록 조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "scope 또는 현재 위치 검증 실패"),
+                    description = "scope 또는 현재 위치 검증에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED_SCOPE",
+                                            summary = "조회 범위 검증 실패",
+                                            value = PlaceSwaggerErrorExamples.SCOPE_VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED_LOCATION",
+                                            summary = "현재 위치 검증 실패",
+                                            value = PlaceSwaggerErrorExamples.VALIDATION_FAILED
+                                    )
+                            }
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패"),
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "502",
-                    description = "Kakao 행정구역 변환 응답 오류"),
+                    description = "Kakao 행정구역 변환 연동에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_EXTERNAL_API_ERROR",
+                                    summary = "외부 장소 API 연동 실패",
+                                    value = PlaceSwaggerErrorExamples.PLACE_EXTERNAL_API_ERROR
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "504",
-                    description = "Kakao 행정구역 변환 응답 지연")
+                    description = "Kakao 행정구역 변환 응답이 지연된 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_EXTERNAL_API_TIMEOUT",
+                                    summary = "외부 장소 API 응답 지연",
+                                    value = PlaceSwaggerErrorExamples.PLACE_EXTERNAL_API_TIMEOUT
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<PlaceResponse.PopularListResult>> getPopularPlaces(
             @AuthenticationPrincipal AuthMember currentMember,
@@ -89,10 +137,28 @@ public interface PlaceControllerDocs {
                     description = "저장한 장소 목록 조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "현재 위치 누락 또는 범위 검증 실패"),
+                    description = "현재 위치가 누락되었거나 범위 검증에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_400_VALIDATION_FAILED",
+                                    summary = "현재 위치 검증 실패",
+                                    value = PlaceSwaggerErrorExamples.VALIDATION_FAILED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패")
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<PlaceResponse.BookmarkListResult>> getPlaceBookmarks(
             @AuthenticationPrincipal AuthMember currentMember,
@@ -122,13 +188,40 @@ public interface PlaceControllerDocs {
                     description = "장소 상세 조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "현재 위치 누락 또는 범위 검증 실패"),
+                    description = "현재 위치가 누락되었거나 범위 검증에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_400_VALIDATION_FAILED",
+                                    summary = "현재 위치 검증 실패",
+                                    value = PlaceSwaggerErrorExamples.VALIDATION_FAILED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패"),
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
-                    description = "활성 장소를 찾을 수 없음")
+                    description = "존재하지 않거나 삭제된 장소를 조회한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_NOT_FOUND",
+                                    summary = "활성 장소를 찾을 수 없음",
+                                    value = PlaceSwaggerErrorExamples.PLACE_NOT_FOUND
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<PlaceResponse.Detail>> getPlaceDetail(
             @AuthenticationPrincipal AuthMember currentMember,
@@ -158,10 +251,28 @@ public interface PlaceControllerDocs {
                     description = "장소 북마크 등록 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패"),
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
-                    description = "활성 장소를 찾을 수 없음")
+                    description = "존재하지 않거나 삭제된 장소를 북마크하려는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_NOT_FOUND",
+                                    summary = "활성 장소를 찾을 수 없음",
+                                    value = PlaceSwaggerErrorExamples.PLACE_NOT_FOUND
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<PlaceResponse.BookmarkResult>> bookmarkPlace(
             @AuthenticationPrincipal AuthMember currentMember,
@@ -181,10 +292,28 @@ public interface PlaceControllerDocs {
                     description = "장소 북마크 삭제 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패"),
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
-                    description = "활성 장소를 찾을 수 없음")
+                    description = "존재하지 않거나 삭제된 장소의 북마크를 삭제하려는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_NOT_FOUND",
+                                    summary = "활성 장소를 찾을 수 없음",
+                                    value = PlaceSwaggerErrorExamples.PLACE_NOT_FOUND
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<PlaceResponse.BookmarkResult>> deletePlaceBookmark(
             @AuthenticationPrincipal AuthMember currentMember,
@@ -205,16 +334,64 @@ public interface PlaceControllerDocs {
                     description = "장소 검색 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "검색어 또는 현재 위치 검증 실패"),
+                    description = "검색어 또는 현재 위치 검증에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "PLACE_SEARCH_KEYWORD_REQUIRED",
+                                            summary = "검색어 누락",
+                                            value = PlaceSwaggerErrorExamples.PLACE_SEARCH_KEYWORD_REQUIRED
+                                    ),
+                                    @ExampleObject(
+                                            name = "PLACE_CURRENT_LOCATION_REQUIRED",
+                                            summary = "현재 위치 누락",
+                                            value = PlaceSwaggerErrorExamples.PLACE_CURRENT_LOCATION_REQUIRED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED",
+                                            summary = "현재 위치 범위 검증 실패",
+                                            value = PlaceSwaggerErrorExamples.VALIDATION_FAILED
+                                    )
+                            }
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패"),
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "502",
-                    description = "Kakao 주소 또는 장소 검색 연동 실패"),
+                    description = "Kakao 주소 또는 장소 검색 연동에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_EXTERNAL_API_ERROR",
+                                    summary = "외부 장소 API 연동 실패",
+                                    value = PlaceSwaggerErrorExamples.PLACE_EXTERNAL_API_ERROR
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "504",
-                    description = "Kakao 주소 또는 장소 검색 응답 지연")
+                    description = "Kakao 주소 또는 장소 검색 응답이 지연된 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_EXTERNAL_API_TIMEOUT",
+                                    summary = "외부 장소 API 응답 지연",
+                                    value = PlaceSwaggerErrorExamples.PLACE_EXTERNAL_API_TIMEOUT
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<PlaceResponse.SearchResult>> searchPlaces(
             @Parameter(description = "검색어", required = true, example = "한강")
@@ -245,10 +422,35 @@ public interface PlaceControllerDocs {
                     description = "검색 장소 선택 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "필수 장소 정보 검증 실패"),
+                    description = "요청 본문 형식 또는 필수 장소 정보 검증에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "COMMON_400_MALFORMED_JSON",
+                                            summary = "잘못된 JSON 본문",
+                                            value = CommonSwaggerErrorExamples.MALFORMED_JSON
+                                    ),
+                                    @ExampleObject(
+                                            name = "PLACE_SELECTION_INVALID",
+                                            summary = "장소 선택 정보 불일치",
+                                            value = PlaceSwaggerErrorExamples.PLACE_SELECTION_INVALID
+                                    )
+                            }
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패")
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<PlaceResponse.Selection>> selectSearchPlace(
             @AuthenticationPrincipal AuthMember currentMember,
@@ -268,10 +470,28 @@ public interface PlaceControllerDocs {
                     description = "최근 검색 장소 목록 조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "현재 위치 검증 실패"),
+                    description = "현재 위치 검증에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_400_VALIDATION_FAILED",
+                                    summary = "현재 위치 검증 실패",
+                                    value = PlaceSwaggerErrorExamples.VALIDATION_FAILED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패")
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<PlaceResponse.SearchHistoryResult>> getSearchHistories(
             @AuthenticationPrincipal AuthMember currentMember,
@@ -299,10 +519,28 @@ public interface PlaceControllerDocs {
                     description = "최근 검색 장소 삭제 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패"),
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
-                    description = "이력이 없거나 다른 사용자가 소유한 이력")
+                    description = "이력이 없거나 다른 사용자가 소유한 이력인 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_SEARCH_HISTORY_NOT_FOUND",
+                                    summary = "소유한 최근 검색 이력을 찾을 수 없음",
+                                    value = PlaceSwaggerErrorExamples.PLACE_SEARCH_HISTORY_NOT_FOUND
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<Void>> deleteSearchHistory(
             @AuthenticationPrincipal AuthMember currentMember,
@@ -322,16 +560,59 @@ public interface PlaceControllerDocs {
                     description = "지도 선택 장소 확정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "좌표 또는 주소 검증 실패"),
+                    description = "요청 본문 형식 또는 좌표 검증에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED",
+                                            summary = "좌표 검증 실패",
+                                            value = PlaceSwaggerErrorExamples.VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_MALFORMED_JSON",
+                                            summary = "잘못된 JSON 본문",
+                                            value = CommonSwaggerErrorExamples.MALFORMED_JSON
+                                    )
+                            }
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패"),
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "502",
-                    description = "Kakao 장소 검색 서비스 연동 실패"),
+                    description = "Kakao 장소 검색 서비스 연동에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_EXTERNAL_API_ERROR",
+                                    summary = "외부 장소 API 연동 실패",
+                                    value = PlaceSwaggerErrorExamples.PLACE_EXTERNAL_API_ERROR
+                            )
+                    )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "504",
-                    description = "Kakao 장소 검색 서비스 응답 지연")
+                    description = "Kakao 장소 검색 서비스 응답이 지연된 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "PLACE_EXTERNAL_API_TIMEOUT",
+                                    summary = "외부 장소 API 응답 지연",
+                                    value = PlaceSwaggerErrorExamples.PLACE_EXTERNAL_API_TIMEOUT
+                            )
+                    ))
     })
     ResponseEntity<ApiResponse<PlaceResponse.MapSelectionResult>> confirmMapSelection(
             @Valid PlaceRequest.MapSelection request
