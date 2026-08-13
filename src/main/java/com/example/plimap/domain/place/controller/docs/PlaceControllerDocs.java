@@ -552,7 +552,9 @@ public interface PlaceControllerDocs {
             summary = "지도 선택 장소 확정",
             description = "지도에서 선택한 좌표를 판정하여 기존 PLACE_SEARCH Place를 추천하거나, "
                     + "건물명으로 장소 검색을 유도하거나, MAP_SELECTION Place를 확정합니다. "
-                    + "(Figma 기준 화면: PN-02-03)"
+                    + "MAP_SELECTION 장소명은 요청으로 받지 않고 전체 주소에서 국가명과 시/도명을 "
+                    + "제외해 백엔드에서 생성합니다. "
+                    + "(Figma 기준 화면: PN-02-03-b)"
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

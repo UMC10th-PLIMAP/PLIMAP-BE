@@ -337,7 +337,11 @@ public final class PlaceResponse {
     public record MapSelection(
             @Schema(description = "장소 ID", example = "12")
             Long placeId,
-            @Schema(description = "장소명", example = "물빛무대 앞 광장")
+            @Schema(
+                    description = "백엔드가 전체 주소에서 국가명과 시/도명을 제외해 생성한 "
+                            + "MAP_SELECTION 화면 표시용 축약 주소",
+                    example = "영등포구 여의동로 123-4"
+            )
             String placeName,
             @Schema(
                     description = "장소 생성 출처",

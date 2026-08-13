@@ -83,7 +83,9 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                 )
                 .orElse(null);
         if (existingPlace != null) {
-            return PlaceResponse.MapSelectionResult.confirmed(existingPlace);
+            Place normalizedPlace =
+                    placePersistenceService.normalizeReusedMapSelectionName(existingPlace);
+            return PlaceResponse.MapSelectionResult.confirmed(normalizedPlace);
         }
 
         PlaceAdministrativeRegion region =
