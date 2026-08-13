@@ -52,7 +52,7 @@ class AuthControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, localOrigin))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
-                .andExpect(jsonPath("$.code").value("AUTH_200_CSRF_TOKEN_ISSUED"))
+                .andExpect(jsonPath("$.code").value("AUTH_CSRF_TOKEN_ISSUED_SUCCESS"))
                 .andExpect(jsonPath("$.result.token").isNotEmpty())
                 .andReturn();
 
@@ -80,7 +80,7 @@ class AuthControllerIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, localOrigin))
-                .andExpect(jsonPath("$.code").value("TERMS_200_TERMS_AGREED"));
+                .andExpect(jsonPath("$.code").value("TERMS_AGREED_SUCCESS"));
     }
 
     @Test
@@ -102,7 +102,7 @@ class AuthControllerIntegrationTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("TERMS_400_AGREEMENT_REQUIRED"));
+                .andExpect(jsonPath("$.code").value("TERMS_AGREEMENT_REQUIRED"));
     }
 
     @Test
@@ -123,7 +123,7 @@ class AuthControllerIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("TERMS_200_TERMS_AGREED"))
+                .andExpect(jsonPath("$.code").value("TERMS_AGREED_SUCCESS"))
                 .andExpect(jsonPath("$.result[?(@.type == 'SERVICE')].agreed").value(true));
     }
 
@@ -152,7 +152,7 @@ class AuthControllerIntegrationTest {
         // then
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("TERMS_200_AGREEMENT_STATUS_RETRIEVED"))
+                .andExpect(jsonPath("$.code").value("TERMS_AGREEMENT_STATUS_RETRIEVED_SUCCESS"))
                 .andExpect(jsonPath("$.result[?(@.type == 'SERVICE')].agreed").value(true))
                 .andExpect(jsonPath("$.result[?(@.type == 'SERVICE')].agreedAt").exists())
                 .andExpect(jsonPath("$.result[?(@.type == 'MARKETING')].agreed").value(false));
@@ -166,7 +166,7 @@ class AuthControllerIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_200_LOGOUT"))
+                .andExpect(jsonPath("$.code").value("MEMBER_LOGOUT_SUCCESS"))
                 .andReturn();
 
         var accessTokenCookie = result.getResponse().getCookie("accessToken");

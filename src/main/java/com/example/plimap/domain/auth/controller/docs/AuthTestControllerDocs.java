@@ -1,7 +1,7 @@
 package com.example.plimap.domain.auth.controller.docs;
 
 import com.example.plimap.domain.auth.dto.request.AuthReqDTO;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
 import com.example.plimap.global.config.SwaggerConfig;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,7 +19,7 @@ public interface AuthTestControllerDocs {
                     """
     )
     @SecurityRequirement(name = SwaggerConfig.TEST_TOKEN_ISSUE_KEY_SCHEME)
-    ApiResponse<MemberResDTO.Login> issueTestToken(
+    ApiResponse<MemberResponse.Login> issueTestToken(
             @Parameter(hidden = true) String issueKey,
             AuthReqDTO.TempToken request
     );

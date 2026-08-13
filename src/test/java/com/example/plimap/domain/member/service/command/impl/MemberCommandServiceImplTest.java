@@ -2,7 +2,7 @@ package com.example.plimap.domain.member.service.command.impl;
 
 import com.example.plimap.domain.auth.service.command.SocialAccountCommandService;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
@@ -228,7 +228,7 @@ class MemberCommandServiceImplTest {
         when(profileImageStorage.getPublicUrlOrNull("key")).thenReturn("https://example.com/key");
 
         MemberReqDTO.UpdateProfile request = updateProfile("새닉네임", "새이름", "새소개");
-        MemberResDTO.Profile result = memberCommandService.updateProfile(MEMBER_ID, request);
+        MemberResponse.Profile result = memberCommandService.updateProfile(MEMBER_ID, request);
 
         assertThat(result.id()).isEqualTo(MEMBER_ID);
         assertThat(result.profileImageUrl()).isEqualTo("https://example.com/key");
@@ -414,7 +414,7 @@ class MemberCommandServiceImplTest {
         when(profileImageStorage.getPublicUrl("members/1/new.webp"))
                 .thenReturn(URI.create("https://project.supabase.co/storage/v1/object/public/profile-images/members/1/new.webp"));
 
-        MemberResDTO.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
+        MemberResponse.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
 
         assertThat(result.objectKey()).isEqualTo("members/1/new.webp");
         verify(member).updateProfileImage("members/1/new.webp");
@@ -496,7 +496,7 @@ class MemberCommandServiceImplTest {
         doThrow(new ProfileImageStorageException("실패", new RuntimeException()))
                 .when(profileImageStorage).delete("members/1/old.webp");
 
-        MemberResDTO.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
+        MemberResponse.ProfileImage result = memberCommandService.uploadProfileImage(MEMBER_ID, webpFile());
 
         assertThat(result.objectKey()).isEqualTo("members/1/new.webp");
     }
@@ -708,6 +708,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.getSuspendedUntil()).isBetween(before.plus(1, ChronoUnit.DAYS), after.plus(1, ChronoUnit.DAYS));
         assertThat(member.getLastPenaltyCategory()).isEqualTo(ReportCategory.ABUSE_OR_HATE_SPEECH);
         assertThat(member.getLastPenaltyDetail()).isNull();
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.ONE_DAY);
         verify(memberRepository).save(member);
         verify(memberFollowRepository, never()).deleteByIdFollowerId(any());
         verify(eventPublisher, never()).publishEvent(any());
@@ -728,6 +729,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.getPenaltyPoint()).isEqualTo(2);
         assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
         assertThat(member.getSuspendedUntil()).isBetween(before.plus(3, ChronoUnit.DAYS), after.plus(3, ChronoUnit.DAYS));
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.THREE_DAYS);
     }
 
     @Test
@@ -745,6 +747,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.getPenaltyPoint()).isEqualTo(3);
         assertThat(member.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
         assertThat(member.getSuspendedUntil()).isBetween(before.plus(5, ChronoUnit.DAYS), after.plus(5, ChronoUnit.DAYS));
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.FIVE_DAYS);
     }
 
     @Test
@@ -768,6 +771,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.isDeleted()).isTrue();
         assertThat(member.getLastPenaltyCategory()).isEqualTo(ReportCategory.OTHER);
         assertThat(member.getLastPenaltyDetail()).isEqualTo("반복 위반");
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.ONE_DAY);
 
         verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
         verify(memberFollowRepository).deleteByIdFollowingId(MEMBER_ID);
@@ -788,6 +792,7 @@ class MemberCommandServiceImplTest {
         assertThat(member.getPenaltyPoint()).isEqualTo(1);
         assertThat(member.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
         assertThat(member.getWithdrawalReason()).isEqualTo(WithdrawalReason.PENALTY);
+        assertThat(member.getLastPenaltyPeriod()).isEqualTo(SuspensionPeriod.PERMANENT);
         verify(memberFollowRepository).deleteByIdFollowerId(MEMBER_ID);
         verify(eventPublisher).publishEvent(new MemberWithdrawnEvent(MEMBER_ID, "old-key"));
     }

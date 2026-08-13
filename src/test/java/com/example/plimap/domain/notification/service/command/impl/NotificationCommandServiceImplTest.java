@@ -2,7 +2,7 @@ package com.example.plimap.domain.notification.service.command.impl;
 
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.service.query.MemberQueryService;
-import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
+import com.example.plimap.domain.notification.dto.response.NotificationResponse;
 import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.enums.NotificationType;
 import com.example.plimap.domain.notification.repository.NotificationRepository;
@@ -106,7 +106,7 @@ class NotificationCommandServiceImplTest {
                     assertThat(notification.getPin()).isSameAs(pin);
                 });
 
-        ArgumentCaptor<NotificationResDTO.Item> itemCaptor = ArgumentCaptor.forClass(NotificationResDTO.Item.class);
+        ArgumentCaptor<NotificationResponse.Item> itemCaptor = ArgumentCaptor.forClass(NotificationResponse.Item.class);
         verify(notificationEmitterRegistry).sendToMember(eq(10L), eq("notification"), itemCaptor.capture());
         verify(notificationEmitterRegistry).sendToMember(eq(20L), eq("notification"), itemCaptor.capture());
         assertThat(itemCaptor.getAllValues())
@@ -150,9 +150,9 @@ class NotificationCommandServiceImplTest {
         assertThat(captor.getValue().getActor()).isSameAs(actor);
         assertThat(captor.getValue().getPin()).isSameAs(pin);
 
-        ArgumentCaptor<NotificationResDTO.Item> itemCaptor = ArgumentCaptor.forClass(NotificationResDTO.Item.class);
+        ArgumentCaptor<NotificationResponse.Item> itemCaptor = ArgumentCaptor.forClass(NotificationResponse.Item.class);
         verify(notificationEmitterRegistry).sendToMember(eq(1L), eq("notification"), itemCaptor.capture());
-        NotificationResDTO.Item item = itemCaptor.getValue();
+        NotificationResponse.Item item = itemCaptor.getValue();
         assertThat(item.pinId()).isEqualTo(100L);
         assertThat(item.placeName()).isEqualTo("여의도 한강공원");
         assertThat(item.albumImageUrl()).isEqualTo("https://example.com/album.jpg");

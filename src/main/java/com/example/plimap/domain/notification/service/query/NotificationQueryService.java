@@ -1,9 +1,9 @@
 package com.example.plimap.domain.notification.service.query;
 
 import com.example.plimap.domain.notification.dto.Pagination;
-import com.example.plimap.domain.notification.dto.response.NotificationResDTO;
+import com.example.plimap.domain.notification.dto.response.NotificationResponse;
 
 public interface NotificationQueryService {
 
-    Pagination<NotificationResDTO.Item> findNotifications(Long memberId, String cursor, Integer pageSize);
+    Pagination<NotificationResponse.Item> findNotifications(Long memberId, String cursor, Integer pageSize);
 }

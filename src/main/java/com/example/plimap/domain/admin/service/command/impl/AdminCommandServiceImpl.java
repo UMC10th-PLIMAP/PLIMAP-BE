@@ -1,6 +1,6 @@
 package com.example.plimap.domain.admin.service.command.impl;
 
-import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.dto.response.AdminResponse;
 import com.example.plimap.domain.admin.exception.AdminErrorCode;
 import com.example.plimap.domain.admin.exception.AdminException;
 import com.example.plimap.domain.admin.service.command.AdminCommandService;
@@ -93,13 +93,13 @@ public class AdminCommandServiceImpl implements AdminCommandService {
     }
 
     @Override
-    public AdminResDTO.MemberDetail regenerateMemberNickname(Long memberId) {
+    public AdminResponse.MemberDetail regenerateMemberNickname(Long memberId) {
         String newNickname = memberQueryService.pickAvailablePenaltyNickname();
         memberCommandService.regenerateNickname(memberId, newNickname);
 
         Member updated = memberQueryService.getMemberById(memberId);
         String email = authQueryService.findEmailByMemberId(memberId).orElse(null);
-        return AdminResDTO.MemberDetail.from(updated, email);
+        return AdminResponse.MemberDetail.from(updated, email);
     }
 
     private void cascadeAutoWithdrawal(Long memberId) {

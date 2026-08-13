@@ -82,7 +82,7 @@ class AuthTestControllerTest {
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code")
-                        .value("AUTH_401_TEST_TOKEN_ISSUE_UNAUTHORIZED"));
+                        .value("AUTH_TEST_TOKEN_ISSUE_UNAUTHORIZED"));
     }
 
     @Test
@@ -100,6 +100,6 @@ class AuthTestControllerTest {
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code")
-                        .value("AUTH_401_TEST_TOKEN_ISSUE_UNAUTHORIZED"));
+                        .value("AUTH_TEST_TOKEN_ISSUE_UNAUTHORIZED"));
     }
 }

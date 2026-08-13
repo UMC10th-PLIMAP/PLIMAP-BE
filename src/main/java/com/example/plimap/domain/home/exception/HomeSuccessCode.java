@@ -9,9 +9,9 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum HomeSuccessCode implements BaseSuccessCode {
 
-    HOME_200_CONTEXT_FETCHED(
+    CONTEXT_FETCHED(
             HttpStatus.OK,
-            "HOME_200_CONTEXT_FETCHED",
+            "HOME_CONTEXT_FETCHED_SUCCESS",
             "홈 컨텍스트를 조회했습니다."
     );
 

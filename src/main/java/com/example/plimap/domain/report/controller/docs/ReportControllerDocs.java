@@ -102,7 +102,7 @@ public interface ReportControllerDocs {
                             examples = @ExampleObject(value = """
                                     {
                                       "isSuccess": false,
-                                      "code": "MEMBER_404_MEMBER_NOT_FOUND",
+                                      "code": "MEMBER_NOT_FOUND",
                                       "message": "존재하지 않는 사용자입니다.",
                                       "result": null
                                     }
