@@ -465,8 +465,6 @@ class PinCommandServiceImplTest {
         ReflectionTestUtils.setField(member, "id", 1L);
         ReflectionTestUtils.setField(pin, "id", 1L);
 
-        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
-                .thenReturn(Optional.of(pin));
         when(pinLikeRepository.deleteByPinIdAndMemberId(1L, 1L))
                 .thenReturn(1);
 

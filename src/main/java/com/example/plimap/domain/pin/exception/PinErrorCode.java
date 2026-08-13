@@ -39,9 +39,9 @@ public enum PinErrorCode implements BaseErrorCode {
             "해당 PIN에 수정/삭제 권한이 없습니다."
     ),
 
-    INVALID_CURSOR(
+    PIN_INVALID_CURSOR(
             HttpStatus.BAD_REQUEST,
-            "INVALID_CURSOR",
+            "PIN_INVALID_CURSOR",
             "유효하지 않은 커서입니다."
     ),
 

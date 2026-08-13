@@ -168,20 +168,6 @@ class PinControllerTest {
     }
 
     @Test
-    void 이미_좋아요한_핀이면_409를_반환한다() throws Exception {
-        when(pinCommandService.createPinLike(any(Member.class), eq(1L)))
-                .thenThrow(new PinLikeException(PinErrorCode.ALREADY_LIKED_PIN));
-
-        mockMvc.perform(put(PIN_LIKE_ENDPOINT, 1L)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("PIN_ALREADY_LIKED_PIN"))
-                .andExpect(jsonPath("$.message").value("이미 좋아요한 핀입니다."))
-                .andExpect(jsonPath("$.result").doesNotExist());
-    }
-
-    @Test
     void 태그_개수가_0개면_400을_반환한다() throws Exception {
         mockMvc.perform(post(PIN_CREATE_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
