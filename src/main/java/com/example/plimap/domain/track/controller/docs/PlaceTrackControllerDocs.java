@@ -221,7 +221,7 @@ public interface PlaceTrackControllerDocs {
 
     @Operation(
             summary = "장소별 곡 좋아요 등록",
-            description = "현재 사용자가 장소별 곡에 좋아요를 등록합니다."
+            description = "현재 사용자가 장소별 곡에 좋아요를 등록합니다. 이미 등록된 경우에도 성공합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -229,7 +229,7 @@ public interface PlaceTrackControllerDocs {
                     description = "장소별 곡 좋아요 등록 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "장소별 곡 ID 검증 실패 또는 중복 좋아요",
+                    description = "장소별 곡 ID 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(
@@ -244,11 +244,6 @@ public interface PlaceTrackControllerDocs {
                                             name = "양수 검증 실패",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_DETAIL_VALIDATION_FAILED
-                                    ),
-                                    @ExampleObject(
-                                            name = "중복 좋아요",
-                                            value = TrackSwaggerErrorExamples
-                                                .PLACE_TRACK_ALREADY_LIKED
                                     )
                             }
                     )),
@@ -286,7 +281,7 @@ public interface PlaceTrackControllerDocs {
 
     @Operation(
             summary = "장소별 곡 좋아요 삭제",
-            description = "현재 사용자가 등록한 장소별 곡 좋아요를 삭제합니다."
+            description = "현재 사용자가 등록한 장소별 곡 좋아요를 삭제합니다. 좋아요가 없는 경우에도 성공합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -325,23 +320,15 @@ public interface PlaceTrackControllerDocs {
                     )),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
-                    description = "장소별 곡 또는 좋아요 없음",
+                    description = "장소별 곡 없음",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(
                                     ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
-                            examples = {
-                                    @ExampleObject(
-                                            name = "장소별 곡 없음",
-                                            value = TrackSwaggerErrorExamples
-                                                .PLACE_TRACK_NOT_FOUND
-                                    ),
-                                    @ExampleObject(
-                                            name = "좋아요 없음",
-                                            value = TrackSwaggerErrorExamples
-                                                .PLACE_TRACK_LIKE_NOT_FOUND
-                                    )
-                            }
+                            examples = @ExampleObject(
+                                    value = TrackSwaggerErrorExamples
+                                        .PLACE_TRACK_NOT_FOUND
+                            )
                     ))
     })
     ResponseEntity<ApiResponse<PlaceTrackResponse.PlaceTrackLikeResult>>
