@@ -281,7 +281,7 @@ public interface PlaceTrackControllerDocs {
 
     @Operation(
             summary = "장소별 곡 좋아요 삭제",
-            description = "현재 사용자가 등록한 장소별 곡 좋아요를 삭제합니다. 이미 없는 경우에도 성공합니다."
+            description = "현재 사용자가 등록한 장소별 곡 좋아요를 삭제합니다. 좋아요가 없는 경우에도 성공합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
