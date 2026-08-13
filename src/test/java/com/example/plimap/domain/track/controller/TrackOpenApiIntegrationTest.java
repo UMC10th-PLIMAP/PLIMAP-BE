@@ -373,8 +373,7 @@ class TrackOpenApiIntegrationTest {
                 "ApiResponsePlaceTrackLikeResult",
                 Set.of(
                         GeneralErrorCode.TYPE_MISMATCH.getCode(),
-                        GeneralErrorCode.VALIDATION_FAILED.getCode(),
-                        TrackErrorCode.PLACE_TRACK_ALREADY_LIKED.getCode()
+                        GeneralErrorCode.VALIDATION_FAILED.getCode()
                 )
         );
         assertFailureResponse(
@@ -418,10 +417,7 @@ class TrackOpenApiIntegrationTest {
                 "delete",
                 "404",
                 "ApiResponsePlaceTrackLikeResult",
-                Set.of(
-                        TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode(),
-                        TrackErrorCode.PLACE_TRACK_LIKE_NOT_FOUND.getCode()
-                )
+                Set.of(TrackErrorCode.PLACE_TRACK_NOT_FOUND.getCode())
         );
         assertFailureResponse(
                 openApi,

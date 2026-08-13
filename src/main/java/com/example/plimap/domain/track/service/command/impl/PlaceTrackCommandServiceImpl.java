@@ -30,7 +30,7 @@ public class PlaceTrackCommandServiceImpl implements PlaceTrackCommandService {
         PlaceTrackLikeId likeId = new PlaceTrackLikeId(placeTrackId, memberId);
 
         if (placeTrackLikeRepository.existsById(likeId)) {
-            throw new TrackException(TrackErrorCode.PLACE_TRACK_ALREADY_LIKED);
+            return PlaceTrackResponse.PlaceTrackLikeResult.from(placeTrack, true);
         }
 
         placeTrackLikeRepository.save(PlaceTrackLike.create(placeTrack, memberId));
@@ -46,9 +46,11 @@ public class PlaceTrackCommandServiceImpl implements PlaceTrackCommandService {
         PlaceTrack placeTrack = getActivePlaceTrackForUpdate(placeTrackId);
         PlaceTrackLikeId likeId = new PlaceTrackLikeId(placeTrackId, memberId);
         PlaceTrackLike placeTrackLike = placeTrackLikeRepository.findById(likeId)
-                .orElseThrow(() -> new TrackException(
-                        TrackErrorCode.PLACE_TRACK_LIKE_NOT_FOUND
-                ));
+                .orElse(null);
+
+        if (placeTrackLike == null) {
+            return PlaceTrackResponse.PlaceTrackLikeResult.from(placeTrack, false);
+        }
 
         placeTrackLikeRepository.delete(placeTrackLike);
         placeTrack.decreaseLikeCount();

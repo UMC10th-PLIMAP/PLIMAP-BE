@@ -59,21 +59,22 @@ class PlaceTrackCommandServiceImplTest {
     }
 
     @Test
-    void 동일_사용자가_좋아요를_중복_등록하면_예외가_발생한다() {
+    void 이미_좋아요가_있으면_추가_생성_없이_성공한다() {
         PlaceTrack placeTrack = placeTrack(3);
         PlaceTrackLikeId likeId = likeId(MEMBER_ID);
         when(placeTrackRepository.findActiveByIdForUpdate(PLACE_TRACK_ID))
                 .thenReturn(Optional.of(placeTrack));
         when(placeTrackLikeRepository.existsById(likeId)).thenReturn(true);
 
-        assertTrackError(
-                () -> placeTrackCommandService.createPlaceTrackLike(
+        PlaceTrackResponse.PlaceTrackLikeResult result =
+                placeTrackCommandService.createPlaceTrackLike(
                         MEMBER_ID,
                         PLACE_TRACK_ID
-                ),
-                TrackErrorCode.PLACE_TRACK_ALREADY_LIKED
-        );
+                );
 
+        assertThat(result.placeTrackId()).isEqualTo(PLACE_TRACK_ID);
+        assertThat(result.isLiked()).isTrue();
+        assertThat(result.likeCount()).isEqualTo(3);
         assertThat(placeTrack.getLikeCount()).isEqualTo(3);
         verify(placeTrackLikeRepository, never()).save(any());
     }
@@ -136,27 +137,28 @@ class PlaceTrackCommandServiceImplTest {
     }
 
     @Test
-    void 좋아요를_등록하지_않은_사용자가_삭제하면_예외가_발생한다() {
+    void 이미_좋아요가_없으면_삭제_없이_성공한다() {
         PlaceTrack placeTrack = placeTrack(2);
         when(placeTrackRepository.findActiveByIdForUpdate(PLACE_TRACK_ID))
                 .thenReturn(Optional.of(placeTrack));
         when(placeTrackLikeRepository.findById(likeId(MEMBER_ID)))
                 .thenReturn(Optional.empty());
 
-        assertTrackError(
-                () -> placeTrackCommandService.deletePlaceTrackLike(
+        PlaceTrackResponse.PlaceTrackLikeResult result =
+                placeTrackCommandService.deletePlaceTrackLike(
                         MEMBER_ID,
                         PLACE_TRACK_ID
-                ),
-                TrackErrorCode.PLACE_TRACK_LIKE_NOT_FOUND
-        );
+                );
 
+        assertThat(result.placeTrackId()).isEqualTo(PLACE_TRACK_ID);
+        assertThat(result.isLiked()).isFalse();
+        assertThat(result.likeCount()).isEqualTo(2);
         assertThat(placeTrack.getLikeCount()).isEqualTo(2);
         verify(placeTrackLikeRepository, never()).delete(any());
     }
 
     @Test
-    void 다른_사용자의_좋아요만_있으면_삭제할_수_없다() {
+    void 다른_사용자의_좋아요만_있으면_본인_좋아요는_삭제_없이_성공한다() {
         PlaceTrack placeTrack = placeTrack(1);
         Long otherMemberId = 2L;
         when(placeTrackRepository.findActiveByIdForUpdate(PLACE_TRACK_ID))
@@ -166,15 +168,32 @@ class PlaceTrackCommandServiceImplTest {
         when(placeTrackLikeRepository.findById(likeId(otherMemberId)))
                 .thenReturn(Optional.of(mock(PlaceTrackLike.class)));
 
+        PlaceTrackResponse.PlaceTrackLikeResult result =
+                placeTrackCommandService.deletePlaceTrackLike(
+                        MEMBER_ID,
+                        PLACE_TRACK_ID
+                );
+
+        assertThat(result.isLiked()).isFalse();
+        assertThat(result.likeCount()).isEqualTo(1);
+        assertThat(placeTrack.getLikeCount()).isEqualTo(1);
+        verify(placeTrackLikeRepository, never()).delete(any());
+    }
+
+    @Test
+    void 존재하지_않거나_삭제된_PlaceTrack의_좋아요를_삭제하면_예외가_발생한다() {
+        when(placeTrackRepository.findActiveByIdForUpdate(PLACE_TRACK_ID))
+                .thenReturn(Optional.empty());
+
         assertTrackError(
                 () -> placeTrackCommandService.deletePlaceTrackLike(
                         MEMBER_ID,
                         PLACE_TRACK_ID
                 ),
-                TrackErrorCode.PLACE_TRACK_LIKE_NOT_FOUND
+                TrackErrorCode.PLACE_TRACK_NOT_FOUND
         );
 
-        assertThat(placeTrack.getLikeCount()).isEqualTo(1);
+        verify(placeTrackLikeRepository, never()).findById(any());
         verify(placeTrackLikeRepository, never()).delete(any());
     }
 
