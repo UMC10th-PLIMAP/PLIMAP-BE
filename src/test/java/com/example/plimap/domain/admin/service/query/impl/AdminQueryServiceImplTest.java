@@ -1,6 +1,6 @@
 package com.example.plimap.domain.admin.service.query.impl;
 
-import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.dto.response.AdminResponse;
 import com.example.plimap.domain.auth.service.query.AuthQueryService;
 import com.example.plimap.domain.inquiry.dto.Pagination;
 import com.example.plimap.domain.inquiry.entity.Inquiry;
@@ -56,19 +56,19 @@ class AdminQueryServiceImplTest {
         when(reportQueryService.findReasonsByPinIds(List.of(1L, 2L)))
                 .thenReturn(Map.of(1L, List.of(reason)));
 
-        AdminResDTO.ReportedPinPage result = adminQueryService.getReportedPins(PinReportFilter.ALL, 1, 10);
+        AdminResponse.ReportedPinPage result = adminQueryService.getReportedPins(PinReportFilter.ALL, 1, 10);
 
         assertThat(result.total()).isEqualTo(2);
         assertThat(result.items()).hasSize(2);
 
-        AdminResDTO.ReportedPinItem first = result.items().get(0);
+        AdminResponse.ReportedPinItem first = result.items().get(0);
         assertThat(first.pinId()).isEqualTo(1L);
         assertThat(first.autoHidden()).isTrue();
         assertThat(first.reasons()).hasSize(1);
         assertThat(first.reasons().get(0).reportId()).isEqualTo(100L);
         assertThat(first.reasons().get(0).reporterNickname()).isEqualTo("신고자");
 
-        AdminResDTO.ReportedPinItem second = result.items().get(1);
+        AdminResponse.ReportedPinItem second = result.items().get(1);
         assertThat(second.autoHidden()).isFalse();
         assertThat(second.reasons()).isEmpty();
     }
@@ -81,10 +81,10 @@ class AdminQueryServiceImplTest {
         when(memberQueryService.searchMembers(eq("검색어"), eq(MemberStatus.ACTIVE), any(Pageable.class)))
                 .thenReturn(page);
 
-        AdminResDTO.MemberPage result = adminQueryService.getMembers("검색어", MemberStatus.ACTIVE, 1, 10);
+        AdminResponse.MemberPage result = adminQueryService.getMembers("검색어", MemberStatus.ACTIVE, 1, 10);
 
         assertThat(result.total()).isEqualTo(1);
-        assertThat(result.items()).extracting(AdminResDTO.MemberSummary::id).containsExactly(1L);
+        assertThat(result.items()).extracting(AdminResponse.MemberSummary::id).containsExactly(1L);
     }
 
     @Test
@@ -94,7 +94,7 @@ class AdminQueryServiceImplTest {
         when(memberQueryService.getMemberById(1L)).thenReturn(member);
         when(authQueryService.findEmailByMemberId(1L)).thenReturn(Optional.of("a@example.com"));
 
-        AdminResDTO.MemberDetail result = adminQueryService.getMemberDetail(1L);
+        AdminResponse.MemberDetail result = adminQueryService.getMemberDetail(1L);
 
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.email()).isEqualTo("a@example.com");
@@ -107,7 +107,7 @@ class AdminQueryServiceImplTest {
         when(memberQueryService.getMemberById(1L)).thenReturn(member);
         when(authQueryService.findEmailByMemberId(1L)).thenReturn(Optional.empty());
 
-        AdminResDTO.MemberDetail result = adminQueryService.getMemberDetail(1L);
+        AdminResponse.MemberDetail result = adminQueryService.getMemberDetail(1L);
 
         assertThat(result.email()).isNull();
     }
@@ -124,11 +124,11 @@ class AdminQueryServiceImplTest {
                 .build();
         when(inquiryQueryService.getInquiries(InquiryCategory.OTHER, "cursor", 10)).thenReturn(page);
 
-        AdminResDTO.InquiryPage result = adminQueryService.getInquiries(InquiryCategory.OTHER, "cursor", 10);
+        AdminResponse.InquiryPage result = adminQueryService.getInquiries(InquiryCategory.OTHER, "cursor", 10);
 
         assertThat(result.nextCursor()).isEqualTo("next-cursor");
         assertThat(result.hasNext()).isTrue();
-        assertThat(result.items()).extracting(AdminResDTO.InquirySummary::id).containsExactly(1L);
+        assertThat(result.items()).extracting(AdminResponse.InquirySummary::id).containsExactly(1L);
         assertThat(result.items().get(0).memberId()).isNull();
     }
 
@@ -140,7 +140,7 @@ class AdminQueryServiceImplTest {
         ReflectionTestUtils.setField(inquiry, "id", 1L);
         when(inquiryQueryService.getInquiry(1L)).thenReturn(inquiry);
 
-        AdminResDTO.InquiryDetail result = adminQueryService.getInquiryDetail(1L);
+        AdminResponse.InquiryDetail result = adminQueryService.getInquiryDetail(1L);
 
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.memberId()).isEqualTo(5L);

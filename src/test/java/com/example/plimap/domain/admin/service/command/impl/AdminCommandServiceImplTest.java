@@ -1,6 +1,6 @@
 package com.example.plimap.domain.admin.service.command.impl;
 
-import com.example.plimap.domain.admin.dto.response.AdminResDTO;
+import com.example.plimap.domain.admin.dto.response.AdminResponse;
 import com.example.plimap.domain.admin.exception.AdminException;
 import com.example.plimap.domain.auth.service.query.AuthQueryService;
 import com.example.plimap.domain.member.entity.Member;
@@ -211,7 +211,7 @@ class AdminCommandServiceImplTest {
         when(memberQueryService.getMemberById(MEMBER_ID)).thenReturn(updated);
         when(authQueryService.findEmailByMemberId(MEMBER_ID)).thenReturn(Optional.of("a@example.com"));
 
-        AdminResDTO.MemberDetail result = adminCommandService.regenerateMemberNickname(MEMBER_ID);
+        AdminResponse.MemberDetail result = adminCommandService.regenerateMemberNickname(MEMBER_ID);
 
         verify(memberCommandService).regenerateNickname(MEMBER_ID, "참새");
         verify(memberCommandService, never()).applySanction(any(), any(), any(), any());

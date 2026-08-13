@@ -3,7 +3,7 @@ package com.example.plimap.domain.member.service.command.impl;
 import com.example.plimap.domain.auth.service.command.SocialAccountCommandService;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
@@ -80,7 +80,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
 
     @Override
     @Transactional
-    public MemberResDTO.Profile updateProfile(Long memberId, MemberReqDTO.UpdateProfile request) {
+    public MemberResponse.Profile updateProfile(Long memberId, MemberReqDTO.UpdateProfile request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
@@ -112,7 +112,7 @@ public class MemberCommandServiceImpl implements MemberCommandService {
     }
 
     @Override
-    public MemberResDTO.ProfileImage uploadProfileImage(Long memberId, MultipartFile image) {
+    public MemberResponse.ProfileImage uploadProfileImage(Long memberId, MultipartFile image) {
         // 의도적으로 @Transactional을 붙이지 않는다: Supabase 업로드/삭제는 네트워크 I/O라
         // 트랜잭션으로 묶으면 DB 커넥션을 오래 점유하고, 커밋 전에 이전 이미지를 지우면
         // 커밋 실패 시 DB는 이전 objectKey를 가리키는데 실제 객체는 이미 삭제된 상태가 된다.

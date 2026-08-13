@@ -1,6 +1,6 @@
 package com.example.plimap.domain.member.service.query.impl;
 
-import com.example.plimap.domain.member.dto.response.TermsResDTO;
+import com.example.plimap.domain.member.dto.response.TermsResponse;
 import com.example.plimap.domain.member.entity.MemberTermsAgreement;
 import com.example.plimap.domain.member.entity.Terms;
 import com.example.plimap.domain.member.enums.TermsType;
@@ -76,11 +76,11 @@ class TermsQueryServiceImplTest {
         when(memberTermsAgreementRepository.findAllByMember_Id(1L)).thenReturn(List.of(agreement));
 
         // when
-        List<TermsResDTO.Result> result = termsQueryService.findTermsAgreementStatus(1L);
+        List<TermsResponse.Result> result = termsQueryService.findTermsAgreementStatus(1L);
 
         // then
         assertThat(result)
-                .extracting(TermsResDTO.Result::type, TermsResDTO.Result::agreed, TermsResDTO.Result::agreedAt)
+                .extracting(TermsResponse.Result::type, TermsResponse.Result::agreed, TermsResponse.Result::agreedAt)
                 .containsExactly(
                         tuple(TermsType.SERVICE, true, agreedAt),
                         tuple(TermsType.MARKETING, false, null)
@@ -97,11 +97,11 @@ class TermsQueryServiceImplTest {
         when(memberTermsAgreementRepository.findAllByMember_Id(1L)).thenReturn(List.of());
 
         // when
-        List<TermsResDTO.Result> result = termsQueryService.findTermsAgreementStatus(1L);
+        List<TermsResponse.Result> result = termsQueryService.findTermsAgreementStatus(1L);
 
         // then
         assertThat(result)
-                .extracting(TermsResDTO.Result::type, TermsResDTO.Result::agreed, TermsResDTO.Result::agreedAt)
+                .extracting(TermsResponse.Result::type, TermsResponse.Result::agreed, TermsResponse.Result::agreedAt)
                 .containsExactly(tuple(TermsType.SERVICE, false, null));
     }
 }

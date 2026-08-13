@@ -55,4 +55,12 @@ public interface PinRepository extends JpaRepository<Pin, Long> {
         where p.id = :pinId and p.reportCount > 0
     """)
     void decreaseReportCount(Long pinId);
+
+    @Query("""
+        SELECT p.likeCount
+        FROM Pin p
+        WHERE p.id = :pinId
+          AND p.deletedAt IS NULL
+    """)
+    Integer findLikeCountById(Long pinId);
 }

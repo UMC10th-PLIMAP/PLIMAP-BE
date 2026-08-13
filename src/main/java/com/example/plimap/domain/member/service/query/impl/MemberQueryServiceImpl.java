@@ -2,7 +2,7 @@ package com.example.plimap.domain.member.service.query.impl;
 
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.Pagination;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.entity.MemberFollow;
 import com.example.plimap.domain.member.entity.MemberFollowId;
@@ -143,8 +143,10 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     }
 
     @Override
-    public MemberResDTO.MyProfile getMyProfile(Long memberId) {
-        Member member = getActiveMember(memberId);
+    public MemberResponse.MyProfile getMyProfile(Long memberId) {
+        // 정지/탈퇴 회원도 자신의 상태(status/suspendedUntil/제재사유)를 조회할 수 있어야 하므로
+        // 상태를 필터링하는 getActiveMember() 대신 상태 무관 조회를 사용한다.
+        Member member = getMemberById(memberId);
         long followerCount = memberFollowRepository.countByIdFollowingId(memberId);
         long followingCount = memberFollowRepository.countByIdFollowerId(memberId);
         long pinCount = pinQueryService.countPinsByMemberId(memberId);
@@ -153,7 +155,7 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     }
 
     @Override
-    public MemberResDTO.OtherProfile getOtherProfile(Long viewerId, Long targetMemberId) {
+    public MemberResponse.OtherProfile getOtherProfile(Long viewerId, Long targetMemberId) {
         if (viewerId.equals(targetMemberId)) {
             throw new MemberException(MemberErrorCode.CANNOT_VIEW_SELF_PROFILE);
         }
@@ -169,11 +171,11 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     }
 
     @Override
-    public Pagination<MemberResDTO.FollowerItem> findFollowers(Long viewerId, Long memberId, String cursor, Integer pageSize) {
+    public Pagination<MemberResponse.FollowerItem> findFollowers(Long viewerId, Long memberId, String cursor, Integer pageSize) {
         getVisibleActiveMember(memberId, viewerId);
         Pagination<MemberFollowRow> rows = memberQueryRepository.findFollowersByMemberId(viewerId, memberId, cursor, pageSize);
 
-        List<MemberResDTO.FollowerItem> data = rows.data().stream()
+        List<MemberResponse.FollowerItem> data = rows.data().stream()
                 .map(row -> MemberConverter.toFollowerItem(row, profileImageStorage.getPublicUrlOrNull(row.profileImageObjectKey())))
                 .toList();
 
@@ -181,11 +183,11 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     }
 
     @Override
-    public Pagination<MemberResDTO.FollowingItem> findFollowing(Long viewerId, Long memberId, String cursor, Integer pageSize) {
+    public Pagination<MemberResponse.FollowingItem> findFollowing(Long viewerId, Long memberId, String cursor, Integer pageSize) {
         getVisibleActiveMember(memberId, viewerId);
         Pagination<MemberFollowRow> rows = memberQueryRepository.findFollowingByMemberId(viewerId, memberId, cursor, pageSize);
 
-        List<MemberResDTO.FollowingItem> data = rows.data().stream()
+        List<MemberResponse.FollowingItem> data = rows.data().stream()
                 .map(row -> MemberConverter.toFollowingItem(row, profileImageStorage.getPublicUrlOrNull(row.profileImageObjectKey())))
                 .toList();
 
@@ -193,10 +195,10 @@ public class MemberQueryServiceImpl implements MemberQueryService {
     }
 
     @Override
-    public Pagination<MemberResDTO.SearchItem> searchActiveMembers(Long viewerId, String keyword, String cursor, Integer pageSize) {
+    public Pagination<MemberResponse.SearchItem> searchActiveMembers(Long viewerId, String keyword, String cursor, Integer pageSize) {
         Pagination<MemberSearchRow> rows = memberQueryRepository.searchActiveMembers(viewerId, keyword, cursor, pageSize);
 
-        List<MemberResDTO.SearchItem> data = rows.data().stream()
+        List<MemberResponse.SearchItem> data = rows.data().stream()
                 .map(row -> MemberConverter.toSearchItem(row, profileImageStorage.getPublicUrlOrNull(row.profileImageObjectKey())))
                 .toList();
 

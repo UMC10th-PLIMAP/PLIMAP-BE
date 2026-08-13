@@ -5,10 +5,10 @@ import com.example.plimap.domain.inquiry.dto.Pagination;
 import com.example.plimap.domain.inquiry.entity.Inquiry;
 import com.example.plimap.domain.inquiry.entity.QInquiry;
 import com.example.plimap.domain.inquiry.enums.InquiryCategory;
-import com.example.plimap.domain.inquiry.exception.InquiryErrorCode;
 import com.example.plimap.domain.inquiry.exception.InquiryException;
 import com.example.plimap.domain.inquiry.repository.query.InquiryQueryRepository;
 import com.example.plimap.domain.member.entity.QMember;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.Instant;
@@ -79,7 +79,7 @@ public class InquiryQueryRepositoryImpl implements InquiryQueryRepository {
         try {
             String[] parts = cursor.split("/");
             if (parts.length != 2) {
-                throw new InquiryException(InquiryErrorCode.INVALID_CURSOR);
+                throw new InquiryException(GeneralErrorCode.INVALID_CURSOR);
             }
 
             Instant createdAt = Instant.parse(parts[0]);
@@ -87,7 +87,7 @@ public class InquiryQueryRepositoryImpl implements InquiryQueryRepository {
 
             return new CursorInfo(createdAt, id);
         } catch (DateTimeParseException | NumberFormatException e) {
-            throw new InquiryException(InquiryErrorCode.INVALID_CURSOR, e);
+            throw new InquiryException(GeneralErrorCode.INVALID_CURSOR, e);
         }
     }
 

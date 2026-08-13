@@ -1,13 +1,17 @@
 package com.example.plimap.domain.member.dto.response;
 
+import com.example.plimap.domain.member.enums.MemberStatus;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
+import com.example.plimap.domain.member.enums.WithdrawalReason;
+import com.example.plimap.domain.report.enums.ReportCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.time.Instant;
 
-public class MemberResDTO {
+public class MemberResponse {
 
     @Getter
     @Builder
@@ -50,7 +54,14 @@ public class MemberResDTO {
             long followerCount,
             long followingCount,
             Instant onboardingCompletedAt,
-            long pinCount
+            long pinCount,
+            MemberStatus status,
+            Instant suspendedUntil,
+            WithdrawalReason withdrawalReason,
+            ReportCategory reasonCategory,
+            String reasonDetail,
+            int penaltyPoint,
+            SuspensionPeriod lastPenaltyPeriod
     ) {
     }
 

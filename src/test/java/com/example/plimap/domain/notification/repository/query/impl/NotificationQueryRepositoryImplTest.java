@@ -7,7 +7,7 @@ import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.domain.notification.dto.Pagination;
 import com.example.plimap.domain.notification.entity.Notification;
 import com.example.plimap.domain.notification.enums.NotificationType;
-import com.example.plimap.domain.notification.exception.NotificationErrorCode;
+import com.example.plimap.global.apiPayload.code.GeneralErrorCode;
 import com.example.plimap.domain.notification.exception.NotificationException;
 import com.example.plimap.domain.notification.repository.NotificationRepository;
 import com.example.plimap.domain.notification.repository.query.NotificationQueryRepository;
@@ -200,7 +200,7 @@ class NotificationQueryRepositoryImplTest {
 
         // then
         assertThat(thrown).isInstanceOfSatisfying(NotificationException.class, exception ->
-                assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
+                assertThat(exception.getErrorCode()).isEqualTo(GeneralErrorCode.INVALID_CURSOR));
     }
 
     @Test
@@ -214,7 +214,7 @@ class NotificationQueryRepositoryImplTest {
 
         // then
         assertThat(thrown).isInstanceOfSatisfying(NotificationException.class, exception ->
-                assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
+                assertThat(exception.getErrorCode()).isEqualTo(GeneralErrorCode.INVALID_CURSOR));
     }
 
     @Test
@@ -228,7 +228,7 @@ class NotificationQueryRepositoryImplTest {
 
         // then
         assertThat(thrown).isInstanceOfSatisfying(NotificationException.class, exception ->
-                assertThat(exception.getErrorCode()).isEqualTo(NotificationErrorCode.INVALID_CURSOR));
+                assertThat(exception.getErrorCode()).isEqualTo(GeneralErrorCode.INVALID_CURSOR));
     }
 
     @Test

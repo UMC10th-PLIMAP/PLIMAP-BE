@@ -15,6 +15,7 @@ import com.example.plimap.domain.pin.enums.ClusterLevel;
 import com.example.plimap.domain.pin.enums.PinSortType;
 import com.example.plimap.domain.pin.exception.PinErrorCode;
 import com.example.plimap.domain.pin.exception.PinException;
+import com.example.plimap.domain.pin.exception.PinLikeException;
 import com.example.plimap.domain.pin.repository.query.PinQueryRepository;
 import com.example.plimap.domain.pin.service.command.PinCommandService;
 import com.example.plimap.domain.pin.service.query.PinQueryService;
@@ -36,6 +37,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,8 +65,8 @@ class PinControllerTest {
     private static final String PIN_AVAILABILITY_ENDPOINT = "/api/v1/pins/availability";
     private static final String PIN_UPDATE_ENDPOINT = "/api/v1/pins/1";
     private static final String ACCESS_TOKEN = "valid-access-token";
-    private static final String MY_FEED_ENDPOINT = "/api/v1/feed/members/me";
-    private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feed/members/{memberId}";
+    private static final String MY_FEED_ENDPOINT = "/api/v1/feeds/members/me";
+    private static final String MEMBER_FEED_ENDPOINT = "/api/v1/feeds/members/{memberId}";
     private static final String MY_PIN_ENDPOINT = "/api/v1/pins/members/me";
     private static final String PLACE_TRACK_PIN_ENDPOINT = "/api/v1/place-tracks/{placeTrackId}/pins";
     private static final String VIEWPORT_CLUSTER_ENDPOINT = "/api/v1/pins/map";
@@ -148,6 +150,24 @@ class PinControllerTest {
     }
 
     @Test
+    void 동일한_장소에_등록한_핀이_있으면_409를_반환한다() throws Exception {
+        when(pinCommandService.createPin(
+                any(Member.class),
+                any(PinRequest.Create.class)
+        )).thenThrow(new PinException(PinErrorCode.MEMBER_PIN_ALREADY_EXISTS));
+
+        mockMvc.perform(post(PIN_CREATE_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validCreateRequest()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("PIN_MEMBER_PIN_ALREADY_EXISTS"))
+                .andExpect(jsonPath("$.message").value("이미 해당 장소에 등록한 핀이 있습니다."))
+                .andExpect(jsonPath("$.result").doesNotExist());
+    }
+
+    @Test
     void 태그_개수가_0개면_400을_반환한다() throws Exception {
         mockMvc.perform(post(PIN_CREATE_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
@@ -156,7 +176,20 @@ class PinControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.message").value("tags는 1개 이상 5개 이하만 입력할 수 있습니다."));
+                .andExpect(jsonPath("$.message").value("tags는 1개 이상 4개 이하만 입력할 수 있습니다."));
+        verifyNoInteractions(pinCommandService);
+    }
+
+    @Test
+    void 태그_개수가_5개_이상이면_400을_반환한다() throws Exception {
+        mockMvc.perform(post(PIN_CREATE_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidTagCreateRequest2()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("tags는 1개 이상 4개 이하만 입력할 수 있습니다."));
         verifyNoInteractions(pinCommandService);
     }
 
@@ -173,7 +206,7 @@ class PinControllerTest {
                         .content(inValidLocationRequest()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("LOCATION_DISTANCE_INVALID"))
+                .andExpect(jsonPath("$.code").value("PIN_LOCATION_DISTANCE_INVALID"))
                 .andExpect(jsonPath("$.message").value("사용자가 장소 반경이 500m 이상에 있어 PIN을 등록할 수 없습니다."));
     }
 
@@ -189,10 +222,13 @@ class PinControllerTest {
                 .build());
 
         // CREATABLE_NEW_PLACE
-        mockMvc.perform(post(PIN_AVAILABILITY_ENDPOINT)
+        mockMvc.perform(get(PIN_AVAILABILITY_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPinAvailabilityRequest()))
+                        .param("latitude", "37.629000")
+                        .param("longitude", "127.094000")
+                        .param("userLatitude", "37.626144976334544")
+                        .param("userLongitude", "127.09302024107471"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
@@ -215,10 +251,13 @@ class PinControllerTest {
                 .build());
 
         // OUT_OF_RANGE
-        mockMvc.perform(post(PIN_AVAILABILITY_ENDPOINT)
+        mockMvc.perform(get(PIN_AVAILABILITY_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPinAvailabilityRequest()))
+                        .param("latitude", "37.629000")
+                        .param("longitude", "127.094000")
+                        .param("userLatitude", "37.626144976334544")
+                        .param("userLongitude", "127.09302024107471"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
@@ -241,10 +280,13 @@ class PinControllerTest {
                 .build());
 
         // TOO_CLOSE_TO_PIN
-        mockMvc.perform(post(PIN_AVAILABILITY_ENDPOINT)
+        mockMvc.perform(get(PIN_AVAILABILITY_ENDPOINT)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPinAvailabilityRequest()))
+                        .param("latitude", "37.629000")
+                        .param("longitude", "127.094000")
+                        .param("userLatitude", "37.626144976334544")
+                        .param("userLongitude", "127.09302024107471"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("PIN_AVAILABILITY_CHECK_SUCCESS"))
@@ -327,7 +369,7 @@ class PinControllerTest {
                         .andDo(print())
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.isSuccess").value(true))
-            .andExpect(jsonPath("$.code").value("MY_FEED_LIST_SEARCH_SUCCESS"))
+            .andExpect(jsonPath("$.code").value("PIN_MY_FEED_LIST_SEARCH_SUCCESS"))
             .andExpect(jsonPath("$.message").value("내가 작성한 피드 목록이 조회되었습니다."))
             .andExpect(jsonPath("$.result.hasNext").value(false))
             .andExpect(jsonPath("$.result.pageSize").value(10));
@@ -354,11 +396,12 @@ class PinControllerTest {
                 .build());
 
         mockMvc.perform(get(MEMBER_FEED_ENDPOINT, 1L)
+                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
                 .param("userLatitude", "37.5283")
                 .param("userLongitude", "126.9326"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MEMBER_FEED_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_MEMBER_FEED_LIST_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("다른 사용자가 작성한 피드 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
@@ -415,7 +458,7 @@ class PinControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("MY_PIN_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_MY_PIN_LIST_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("내가 작성한 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
@@ -469,7 +512,7 @@ class PinControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_PLACE_TRACK_PIN_LIST_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("특정 장소 노래의 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.hasNext").value(false))
                 .andExpect(jsonPath("$.result.pageSize").value(10));
@@ -503,7 +546,7 @@ class PinControllerTest {
                         .param("zoomLevel", "7"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("CLUSTER_PIN_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_CLUSTER_PIN_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("viewport 기반 클러스터&핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.zoomLevel").value(7))
                 .andExpect(jsonPath("$.result.clusters").isArray())
@@ -543,7 +586,7 @@ class PinControllerTest {
                         .param("zoomLevel", "14"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("CLUSTER_PIN_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_CLUSTER_PIN_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("viewport 기반 클러스터&핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.zoomLevel").value(14))
                 .andExpect(jsonPath("$.result.clusters").doesNotExist())
@@ -571,7 +614,7 @@ class PinControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andDo(print())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("FRIENDS_RECENT_LIST_SEARCH_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_FRIENDS_RECENT_LIST_SEARCH_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("내 친구 최근 핀 목록이 조회되었습니다."))
                 .andExpect(jsonPath("$.result.data").isArray())
                 .andExpect(jsonPath("$.result.data.length()").value(0))
@@ -602,14 +645,14 @@ class PinControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.code").value("FRIEND_FEED_TOKEN_REQUEST_SUCCESS"))
+                .andExpect(jsonPath("$.code").value("PIN_FRIEND_FEED_TOKEN_REQUEST_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("내 친구 피드 접근 권한 요청에 성공했습니다."))
                 .andExpect(jsonPath("$.result.placeAccessToken").value("token"))
                 .andExpect(jsonPath("$.result.placeId").value(1L));
     }
 
     @Test
-    void 친구가_등록한_핀이_아니면_400을_반환한다() throws Exception{
+    void 친구가_등록한_핀이_아니면_403을_반환한다() throws Exception{
         Member member = Member.builder().build();
         ReflectionTestUtils.setField(member, "id", 1L);
         when(memberRepository.findById(1L))
@@ -621,9 +664,9 @@ class PinControllerTest {
         mockMvc.perform(post(FRIEND_FEED_AUTHORIZE_ENDPOINT, 1L)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andDo(print())
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.code").value("FRIEND_PIN_ACCESS_DENIED"))
+                .andExpect(jsonPath("$.code").value("PIN_FRIEND_PIN_ACCESS_DENIED"))
                 .andExpect(jsonPath("$.message").value("친구가 등록한 핀이 아니므로 접근 권한을 발급할 수 없습니다."));
     }
 
@@ -659,6 +702,21 @@ class PinControllerTest {
                 """;
     }
 
+    private String invalidTagCreateRequest2() {
+        return """
+                {
+                   "userLatitude": 37.5297,
+                   "userLongitude": 126.9333,
+                   "placeId": 1,
+                   "itunesTrackId": 1764485170,
+                   "clipStartMs": 70000,
+                   "introduction": "feeling love attack!",
+                   "tags": ["몽환", "청량", "신남", "위로", "잔잔"],
+                   "feedOpen": true
+                 }
+                """;
+    }
+
     private String inValidLocationRequest() {
         return """
                 {
@@ -673,17 +731,6 @@ class PinControllerTest {
                    ],
                    "feedOpen": true
                  }
-                """;
-    }
-
-    private String validPinAvailabilityRequest() {
-        return """
-                {
-                  "latitude": 37.629000,
-                  "longitude": 127.094000,
-                  "userLatitude": 37.626144976334544,
-                  "userLongitude": 127.09302024107471
-                }
                 """;
     }
 
@@ -706,5 +753,4 @@ class PinControllerTest {
                 }
                 """;
     }
-
 }

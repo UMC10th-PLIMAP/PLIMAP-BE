@@ -36,7 +36,7 @@ public class HomeController implements HomeControllerDocs {
                 longitude
         );
         return ResponseEntity
-                .status(HomeSuccessCode.HOME_200_CONTEXT_FETCHED.getStatus())
-                .body(ApiResponse.success(HomeSuccessCode.HOME_200_CONTEXT_FETCHED, result));
+                .status(HomeSuccessCode.CONTEXT_FETCHED.getStatus())
+                .body(ApiResponse.success(HomeSuccessCode.CONTEXT_FETCHED, result));
     }
 }

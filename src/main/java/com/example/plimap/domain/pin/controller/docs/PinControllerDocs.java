@@ -31,7 +31,7 @@ public interface PinControllerDocs {
             description = "해당 위치에 핀을 등록할 수 있는지 검증합니다. (Figma 기준 화면: PN-02-02)"
     )
     public ResponseEntity<ApiResponse<PinResponse.PinAvailability>> validatePinAvailability(
-            @RequestBody @Valid PinRequest.PinAvailability request
+            @ModelAttribute @Valid PinRequest.PinAvailability request
     ) ;
 
     @Operation(
@@ -87,7 +87,7 @@ public interface PinControllerDocs {
 
     @Operation(
             summary = "타인 피드 목록 조회",
-            description = "타인 피드 목록을 조회합니다. 인증 없이도 호출 가능하지만, 인증된 상태로 호출하면 내가 신고한 PIN은 목록에서 제외됩니다. (Figma 기준 화면: FD-02-01)"
+            description = "타인 피드 목록을 조회합니다. 내가 신고한 PIN은 목록에서 제외됩니다. (Figma 기준 화면: FD-02-01)"
     )
     public ResponseEntity<ApiResponse<Pagination<PinResponse.Feed>>> getMemberFeedList(
             @AuthenticationPrincipal AuthMember currentMember,
