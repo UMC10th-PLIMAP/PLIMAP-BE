@@ -3,6 +3,7 @@ package com.example.plimap.domain.inquiry.controller.docs;
 import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.inquiry.dto.request.InquiryRequest;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.swagger.ErrorApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -56,23 +57,18 @@ public interface InquiryControllerDocs {
                     description = "요청 값 검증 실패",
                     content = @Content(
                             mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = {
-                                    @ExampleObject(name = "카테고리 누락", value = """
-                                            {
-                                              "isSuccess": false,
-                                              "code": "COMMON_400_VALIDATION_FAILED",
-                                              "message": "문의 카테고리를 입력해주세요.",
-                                              "result": null
-                                            }
-                                            """),
-                                    @ExampleObject(name = "이메일 형식 오류", value = """
-                                            {
-                                              "isSuccess": false,
-                                              "code": "COMMON_400_VALIDATION_FAILED",
-                                              "message": "이메일 형식이 올바르지 않습니다.",
-                                              "result": null
-                                            }
-                                            """)
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED_CATEGORY",
+                                            summary = "문의 카테고리 누락",
+                                            value = InquirySwaggerErrorExamples.CATEGORY_VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED_EMAIL",
+                                            summary = "이메일 형식 오류",
+                                            value = InquirySwaggerErrorExamples.EMAIL_VALIDATION_FAILED
+                                    )
                             }
                     ))
     })

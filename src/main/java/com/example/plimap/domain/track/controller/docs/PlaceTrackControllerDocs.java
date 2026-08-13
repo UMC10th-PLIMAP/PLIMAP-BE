@@ -5,6 +5,7 @@ import com.example.plimap.domain.track.dto.request.PlaceTrackRequest;
 import com.example.plimap.domain.track.dto.response.PlaceTrackResponse;
 import com.example.plimap.domain.track.enums.PlaceTrackSort;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.swagger.ErrorApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -40,9 +41,10 @@ public interface PlaceTrackControllerDocs {
                     description = "페이지 조건 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponseLikedPlaceTrackListResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_400_VALIDATION_FAILED",
+                                    summary = "페이지 조건 검증 실패",
                                     value = TrackSwaggerErrorExamples
                                         .PLACE_TRACK_VALIDATION_FAILED
                             )
@@ -52,9 +54,10 @@ public interface PlaceTrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponseLikedPlaceTrackListResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
                     ))
@@ -84,9 +87,10 @@ public interface PlaceTrackControllerDocs {
                     description = "조회 조건 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackListResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_400_VALIDATION_FAILED",
+                                    summary = "페이지 조건 검증 실패",
                                     value = TrackSwaggerErrorExamples
                                             .PLACE_TRACK_VALIDATION_FAILED
                             )
@@ -96,9 +100,10 @@ public interface PlaceTrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackListResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
                     )),
@@ -107,9 +112,10 @@ public interface PlaceTrackControllerDocs {
                     description = "장소 없음",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackListResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "PLACE_NOT_FOUND",
+                                    summary = "장소 없음",
                                     value = TrackSwaggerErrorExamples.PLACE_NOT_FOUND
                             )
                     ))
@@ -157,16 +163,17 @@ public interface PlaceTrackControllerDocs {
                     description = "장소 노래 ID 타입 또는 양수 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackDetail"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = {
                                     @ExampleObject(
-                                            name = "타입 불일치",
+                                            name = "COMMON_400_TYPE_MISMATCH",
+                                            summary = "타입 불일치",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_DETAIL_TYPE_MISMATCH
                                     ),
                                     @ExampleObject(
-                                            name = "양수 검증 실패",
+                                            name = "COMMON_400_VALIDATION_FAILED",
+                                            summary = "양수 검증 실패",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_DETAIL_VALIDATION_FAILED
                                     )
@@ -177,9 +184,10 @@ public interface PlaceTrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackDetail"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
                     )),
@@ -188,9 +196,10 @@ public interface PlaceTrackControllerDocs {
                     description = "장소별 곡 상세 접근 권한 없음",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponseVoid"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "TRACK_PLACE_TRACK_ACCESS_DENIED",
+                                    summary = "장소별 곡 접근 권한 없음",
                                     value = TrackSwaggerErrorExamples
                                             .PLACE_TRACK_ACCESS_DENIED
                             )
@@ -200,9 +209,10 @@ public interface PlaceTrackControllerDocs {
                     description = "장소 노래 없음",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackDetail"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "TRACK_PLACE_TRACK_NOT_FOUND",
+                                    summary = "장소별 곡 없음",
                                     value = TrackSwaggerErrorExamples
                                             .PLACE_TRACK_NOT_FOUND
                             )
@@ -232,21 +242,23 @@ public interface PlaceTrackControllerDocs {
                     description = "장소별 곡 ID 검증 실패 또는 중복 좋아요",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = {
                                     @ExampleObject(
-                                            name = "타입 불일치",
+                                            name = "COMMON_400_TYPE_MISMATCH",
+                                            summary = "타입 불일치",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_DETAIL_TYPE_MISMATCH
                                     ),
                                     @ExampleObject(
-                                            name = "양수 검증 실패",
+                                            name = "COMMON_400_VALIDATION_FAILED",
+                                            summary = "양수 검증 실패",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_DETAIL_VALIDATION_FAILED
                                     ),
                                     @ExampleObject(
-                                            name = "중복 좋아요",
+                                            name = "TRACK_PLACE_TRACK_ALREADY_LIKED",
+                                            summary = "중복 좋아요",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_ALREADY_LIKED
                                     )
@@ -257,9 +269,10 @@ public interface PlaceTrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
                     )),
@@ -268,9 +281,10 @@ public interface PlaceTrackControllerDocs {
                     description = "장소별 곡 없음",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "TRACK_PLACE_TRACK_NOT_FOUND",
+                                    summary = "장소별 곡 없음",
                                     value = TrackSwaggerErrorExamples
                                         .PLACE_TRACK_NOT_FOUND
                             )
@@ -297,16 +311,17 @@ public interface PlaceTrackControllerDocs {
                     description = "장소별 곡 ID 검증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = {
                                     @ExampleObject(
-                                            name = "타입 불일치",
+                                            name = "COMMON_400_TYPE_MISMATCH",
+                                            summary = "타입 불일치",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_DETAIL_TYPE_MISMATCH
                                     ),
                                     @ExampleObject(
-                                            name = "양수 검증 실패",
+                                            name = "COMMON_400_VALIDATION_FAILED",
+                                            summary = "양수 검증 실패",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_DETAIL_VALIDATION_FAILED
                                     )
@@ -317,9 +332,10 @@ public interface PlaceTrackControllerDocs {
                     description = "인증 실패",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
                                     value = TrackSwaggerErrorExamples.UNAUTHORIZED
                             )
                     )),
@@ -328,16 +344,17 @@ public interface PlaceTrackControllerDocs {
                     description = "장소별 곡 또는 좋아요 없음",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(
-                                    ref = "#/components/schemas/ApiResponsePlaceTrackLikeResult"),
+                            schema = @Schema(implementation = ErrorApiResponse.class),
                             examples = {
                                     @ExampleObject(
-                                            name = "장소별 곡 없음",
+                                            name = "TRACK_PLACE_TRACK_NOT_FOUND",
+                                            summary = "장소별 곡 없음",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_NOT_FOUND
                                     ),
                                     @ExampleObject(
-                                            name = "좋아요 없음",
+                                            name = "TRACK_PLACE_TRACK_LIKE_NOT_FOUND",
+                                            summary = "좋아요 없음",
                                             value = TrackSwaggerErrorExamples
                                                 .PLACE_TRACK_LIKE_NOT_FOUND
                                     )

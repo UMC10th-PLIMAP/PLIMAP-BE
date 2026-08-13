@@ -4,9 +4,13 @@ import com.example.plimap.domain.auth.entity.AuthMember;
 import com.example.plimap.domain.notification.dto.Pagination;
 import com.example.plimap.domain.notification.dto.response.NotificationResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.swagger.CommonSwaggerErrorExamples;
+import com.example.plimap.global.swagger.ErrorApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -29,9 +33,10 @@ public interface NotificationControllerDocs {
                     - PIN_LIKED: 다른 회원이 내 PIN에 좋아요를 눌렀을 때
                     """
     )
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            content = @Content(examples = @ExampleObject(value = """
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    content = @Content(examples = @ExampleObject(value = """
                     {
                       "isSuccess": true,
                       "code": "NOTIFICATION_NOTIFICATIONS_RETRIEVED_SUCCESS",
@@ -58,8 +63,39 @@ public interface NotificationControllerDocs {
                         "pageSize": 10
                       }
                     }
-                    """))
-    )
+                    """))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "페이지 크기 검증에 실패했거나 커서가 올바르지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED",
+                                            summary = "페이지 크기 검증 실패",
+                                            value = NotificationSwaggerErrorExamples.PAGE_SIZE_VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_INVALID_CURSOR",
+                                            summary = "잘못된 커서",
+                                            value = NotificationSwaggerErrorExamples.INVALID_CURSOR
+                                    )
+                            }
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    ))
+    })
     ResponseEntity<ApiResponse<Pagination<NotificationResponse.Item>>> getNotifications(
             @AuthenticationPrincipal AuthMember currentMember,
             @RequestParam(required = false, defaultValue = "10")
@@ -82,5 +118,20 @@ public interface NotificationControllerDocs {
                     - 브라우저의 `EventSource`는 커스텀 헤더를 지원하지 않으므로, 로그인 시 발급되는 `accessToken` 쿠키로 인증합니다.
                     """
     )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "401",
+            description = "SSE 연결 전에 인증 정보가 없거나 유효하지 않은 경우",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorApiResponse.class),
+                    examples = @ExampleObject(
+                            name = "COMMON_401_UNAUTHORIZED",
+                            summary = "인증 필요",
+                            value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                    )
+            ))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "SSE 연결 성공")
     SseEmitter subscribe(@AuthenticationPrincipal AuthMember currentMember);
 }
