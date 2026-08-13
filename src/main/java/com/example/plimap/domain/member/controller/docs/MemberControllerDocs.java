@@ -5,9 +5,13 @@ import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
 import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.global.apiPayload.ApiResponse;
+import com.example.plimap.global.swagger.CommonSwaggerErrorExamples;
+import com.example.plimap.global.swagger.ErrorApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,9 +36,10 @@ public interface MemberControllerDocs {
                     - DUPLICATE: 이미 사용 중인 닉네임이에요.
                     """
     )
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            content = @Content(examples = {
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    content = @Content(examples = {
                     @ExampleObject(name = "사용 가능", value = """
                             {
                               "isSuccess": true,
@@ -51,8 +56,32 @@ public interface MemberControllerDocs {
                               "result": { "nickname": "예림", "available": false, "reason": "DUPLICATE" }
                             }
                             """)
-            })
-    )
+                    })),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "필수 닉네임 파라미터가 누락된 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_400_MISSING_PARAMETER",
+                                    summary = "닉네임 파라미터 누락",
+                                    value = CommonSwaggerErrorExamples.MISSING_PARAMETER
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    ))
+    })
     ApiResponse<MemberResponse.NicknameCheck> checkNickname(String nickname);
 
     @Operation(
@@ -65,6 +94,33 @@ public interface MemberControllerDocs {
                     penaltyPoint는 누적 벌점(절대 리셋되지 않음)이고, lastPenaltyPeriod는 가장 최근 제재 시 적용된 기간(ONE_DAY/THREE_DAYS/FIVE_DAYS/PERMANENT)입니다. 한 번도 제재받은 적 없는 회원은 penaltyPoint가 0, lastPenaltyPeriod가 null입니다. 정지가 해제(liftSuspension)되어 ACTIVE로 복귀한 회원은 suspendedUntil만 null로 초기화될 뿐, penaltyPoint/lastPenaltyPeriod/reasonCategory/reasonDetail은 마지막 제재 이력이 그대로 남아있습니다.
                     """
     )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "로그인한 회원을 찾을 수 없는 경우",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorApiResponse.class),
+                    examples = @ExampleObject(
+                            name = "MEMBER_NOT_FOUND",
+                            summary = "회원 없음",
+                            value = MemberSwaggerErrorExamples.MEMBER_NOT_FOUND
+                    )
+            ))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "401",
+            description = "인증 정보가 없거나 유효하지 않은 경우",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorApiResponse.class),
+                    examples = @ExampleObject(
+                            name = "COMMON_401_UNAUTHORIZED",
+                            summary = "인증 필요",
+                            value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                    )
+            ))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "요청 성공")
     ApiResponse<MemberResponse.MyProfile> getMyProfile(AuthMember authMember);
 
     @Operation(
@@ -81,12 +137,118 @@ public interface MemberControllerDocs {
                     - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "본인 ID로 다른 사용자 프로필 조회를 요청한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_CANNOT_VIEW_SELF_PROFILE",
+                                    summary = "본인 프로필 조회 API 오사용",
+                                    value = MemberSwaggerErrorExamples.CANNOT_VIEW_SELF_PROFILE
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "조회할 수 있는 활성 회원을 찾을 수 없는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NOT_FOUND",
+                                    summary = "회원 없음",
+                                    value = MemberSwaggerErrorExamples.MEMBER_NOT_FOUND
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "요청 성공")
+    })
     ApiResponse<MemberResponse.OtherProfile> getOtherProfile(AuthMember authMember, Long memberId);
 
     @Operation(
             summary = "내 프로필 수정",
             description = "닉네임, 이름, 소개를 수정합니다. 요청에 포함하지 않거나 null을 보낸 필드는 변경되지 않습니다. 이름은 빈 문자열(\"\")을 보내면 삭제됩니다. 프로필 이미지는 `POST /api/v1/members/me/profile-image`를 이용해 주세요."
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "요청 본문 검증에 실패했거나 사용할 수 없는 닉네임인 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED",
+                                            summary = "요청 값 검증 실패",
+                                            value = CommonSwaggerErrorExamples.VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_MALFORMED_JSON",
+                                            summary = "잘못된 JSON 본문",
+                                            value = CommonSwaggerErrorExamples.MALFORMED_JSON
+                                    ),
+                                    @ExampleObject(
+                                            name = "MEMBER_NICKNAME_FORBIDDEN_WORD",
+                                            summary = "사용 불가 닉네임",
+                                            value = MemberSwaggerErrorExamples.NICKNAME_FORBIDDEN_WORD
+                                    )
+                            }
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "로그인한 회원을 찾을 수 없는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NOT_FOUND",
+                                    summary = "회원 없음",
+                                    value = MemberSwaggerErrorExamples.MEMBER_NOT_FOUND
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "409",
+                    description = "변경할 닉네임이 이미 사용 중인 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NICKNAME_DUPLICATE",
+                                    summary = "닉네임 중복",
+                                    value = MemberSwaggerErrorExamples.NICKNAME_DUPLICATE
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "요청 성공")
+    })
     ApiResponse<MemberResponse.Profile> updateProfile(AuthMember authMember, @Valid MemberReqDTO.UpdateProfile request);
 
     @Operation(
@@ -100,6 +262,78 @@ public interface MemberControllerDocs {
                     - 응답의 imageUrl로 즉시 접근 가능한 공개 URL을 반환합니다.
                     """
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "이미지 파트가 없거나 WebP 이미지가 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "COMMON_400_MISSING_PARAMETER",
+                                            summary = "이미지 파트 누락",
+                                            value = CommonSwaggerErrorExamples.MISSING_PARAMETER
+                                    ),
+                                    @ExampleObject(
+                                            name = "MEMBER_INVALID_PROFILE_IMAGE",
+                                            summary = "유효하지 않은 프로필 이미지",
+                                            value = MemberSwaggerErrorExamples.INVALID_PROFILE_IMAGE
+                                    )
+                            }
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "로그인한 회원을 찾을 수 없는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NOT_FOUND",
+                                    summary = "회원 없음",
+                                    value = MemberSwaggerErrorExamples.MEMBER_NOT_FOUND
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "413",
+                    description = "이미지 파일이 허용된 크기를 초과한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_413_CONTENT_TOO_LARGE",
+                                    summary = "파일 크기 초과",
+                                    value = CommonSwaggerErrorExamples.CONTENT_TOO_LARGE
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "502",
+                    description = "프로필 이미지 스토리지 업로드에 실패한 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_PROFILE_IMAGE_UPLOAD_FAILED",
+                                    summary = "이미지 스토리지 업로드 실패",
+                                    value = MemberSwaggerErrorExamples.PROFILE_IMAGE_UPLOAD_FAILED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "요청 성공")
+    })
     ApiResponse<MemberResponse.ProfileImage> uploadProfileImage(AuthMember authMember, MultipartFile image);
 
     @Operation(
@@ -110,18 +344,146 @@ public interface MemberControllerDocs {
                     - 이미 프로필 이미지가 없는 상태에서 호출하면 404로 실패합니다.
                     """
     )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "회원 또는 삭제할 프로필 이미지를 찾을 수 없는 경우",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorApiResponse.class),
+                    examples = {
+                            @ExampleObject(
+                                    name = "MEMBER_NOT_FOUND",
+                                    summary = "회원 없음",
+                                    value = MemberSwaggerErrorExamples.MEMBER_NOT_FOUND
+                            ),
+                            @ExampleObject(
+                                    name = "MEMBER_PROFILE_IMAGE_NOT_FOUND",
+                                    summary = "삭제할 프로필 이미지 없음",
+                                    value = MemberSwaggerErrorExamples.PROFILE_IMAGE_NOT_FOUND
+                            )
+                    }
+            ))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "401",
+            description = "인증 정보가 없거나 유효하지 않은 경우",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorApiResponse.class),
+                    examples = @ExampleObject(
+                            name = "COMMON_401_UNAUTHORIZED",
+                            summary = "인증 필요",
+                            value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                    )
+            ))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "요청 성공")
     ApiResponse<Void> removeProfileImage(AuthMember authMember);
 
     @Operation(
             summary = "팔로우",
             description = "경로의 memberId에 해당하는 회원을 팔로우합니다. 자기 자신은 팔로우할 수 없고, 이미 팔로우 중이면 실패합니다."
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "자기 자신을 팔로우하려는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_CANNOT_FOLLOW_SELF",
+                                    summary = "자기 자신 팔로우",
+                                    value = MemberSwaggerErrorExamples.CANNOT_FOLLOW_SELF
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "팔로우 대상 회원을 찾을 수 없는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NOT_FOUND",
+                                    summary = "회원 없음",
+                                    value = MemberSwaggerErrorExamples.MEMBER_NOT_FOUND
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "409",
+                    description = "이미 팔로우 중인 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_ALREADY_FOLLOWING",
+                                    summary = "이미 팔로우 중",
+                                    value = MemberSwaggerErrorExamples.ALREADY_FOLLOWING
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "요청 성공")
+    })
     ApiResponse<Void> follow(AuthMember authMember, Long memberId);
 
     @Operation(
             summary = "언팔로우",
             description = "경로의 memberId에 해당하는 회원을 언팔로우합니다. 자기 자신은 언팔로우할 수 없고, 팔로우 중이 아니면 실패합니다."
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "자기 자신을 언팔로우하려는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_CANNOT_UNFOLLOW_SELF",
+                                    summary = "자기 자신 언팔로우",
+                                    value = MemberSwaggerErrorExamples.CANNOT_UNFOLLOW_SELF
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "팔로우 관계를 찾을 수 없는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NOT_FOLLOWING",
+                                    summary = "팔로우 관계 없음",
+                                    value = MemberSwaggerErrorExamples.NOT_FOLLOWING
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "요청 성공")
+    })
     ApiResponse<Void> unfollow(AuthMember authMember, Long memberId);
 
     @Operation(
@@ -141,6 +503,54 @@ public interface MemberControllerDocs {
                     - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "페이지 크기 검증에 실패했거나 커서가 올바르지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED",
+                                            summary = "페이지 크기 검증 실패",
+                                            value = CommonSwaggerErrorExamples.VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_INVALID_CURSOR",
+                                            summary = "잘못된 커서",
+                                            value = CommonSwaggerErrorExamples.INVALID_CURSOR
+                                    )
+                            }
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "목록 대상 회원을 찾을 수 없는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NOT_FOUND",
+                                    summary = "회원 없음",
+                                    value = MemberSwaggerErrorExamples.MEMBER_NOT_FOUND
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "요청 성공")
+    })
     ApiResponse<Pagination<MemberResponse.FollowerItem>> getFollowers(
             AuthMember authMember,
             Long memberId,
@@ -167,6 +577,54 @@ public interface MemberControllerDocs {
                     - 둘 다 false: "팔로우" (아무 관계 없음)
                     """
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "페이지 크기 검증에 실패했거나 커서가 올바르지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "COMMON_400_VALIDATION_FAILED",
+                                            summary = "페이지 크기 검증 실패",
+                                            value = CommonSwaggerErrorExamples.VALIDATION_FAILED
+                                    ),
+                                    @ExampleObject(
+                                            name = "COMMON_400_INVALID_CURSOR",
+                                            summary = "잘못된 커서",
+                                            value = CommonSwaggerErrorExamples.INVALID_CURSOR
+                                    )
+                            }
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "목록 대상 회원을 찾을 수 없는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NOT_FOUND",
+                                    summary = "회원 없음",
+                                    value = MemberSwaggerErrorExamples.MEMBER_NOT_FOUND
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "요청 성공")
+    })
     ApiResponse<Pagination<MemberResponse.FollowingItem>> getFollowing(
             AuthMember authMember,
             Long memberId,
@@ -195,6 +653,40 @@ public interface MemberControllerDocs {
                     isFollowing은 내가 이 회원을 팔로우하고 있는지, isFollowingViewer는 이 회원이 나를 팔로우하고 있는지를 나타냅니다.
                     """
     )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "페이지 크기 검증에 실패했거나 커서가 올바르지 않은 경우",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorApiResponse.class),
+                    examples = {
+                            @ExampleObject(
+                                    name = "COMMON_400_VALIDATION_FAILED",
+                                    summary = "페이지 크기 검증 실패",
+                                    value = CommonSwaggerErrorExamples.VALIDATION_FAILED
+                            ),
+                            @ExampleObject(
+                                    name = "COMMON_400_INVALID_CURSOR",
+                                    summary = "잘못된 커서",
+                                    value = CommonSwaggerErrorExamples.INVALID_CURSOR
+                            )
+                    }
+            ))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "401",
+            description = "인증 정보가 없거나 유효하지 않은 경우",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorApiResponse.class),
+                    examples = @ExampleObject(
+                            name = "COMMON_401_UNAUTHORIZED",
+                            summary = "인증 필요",
+                            value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                    )
+            ))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "요청 성공")
     ApiResponse<Pagination<MemberResponse.SearchItem>> searchMembers(
             AuthMember authMember,
             String keyword,
@@ -216,5 +708,46 @@ public interface MemberControllerDocs {
                     - 처리 후 현재 세션의 액세스/리프레시 토큰을 무효화하고 로그아웃 쿠키를 반환합니다.
                     """
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "탈퇴할 활성 회원을 찾을 수 없는 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NOT_FOUND",
+                                    summary = "회원 없음",
+                                    value = MemberSwaggerErrorExamples.MEMBER_NOT_FOUND
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "409",
+                    description = "탈퇴 회원 마스킹 닉네임이 중복된 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "MEMBER_NICKNAME_DUPLICATE",
+                                    summary = "마스킹 닉네임 중복",
+                                    value = MemberSwaggerErrorExamples.NICKNAME_DUPLICATE
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않은 경우",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorApiResponse.class),
+                            examples = @ExampleObject(
+                                    name = "COMMON_401_UNAUTHORIZED",
+                                    summary = "인증 필요",
+                                    value = CommonSwaggerErrorExamples.UNAUTHORIZED
+                            )
+                    )),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "요청 성공")
+    })
     ApiResponse<Void> withdraw(AuthMember authMember, HttpServletRequest request, HttpServletResponse response);
 }
