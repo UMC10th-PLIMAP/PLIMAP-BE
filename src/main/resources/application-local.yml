@@ -1,5 +1,6 @@
 # Local 환경 설정
 # IntelliJ 실행 설정의 Active profiles에 local을 지정해야 이 파일이 적용됩니다.
+# SECURITY: 이 파일은 Git에 추적됩니다. 공유·운영 자격 증명을 직접 작성하지 말고 환경변수로 주입합니다.
 
 spring:
   datasource:

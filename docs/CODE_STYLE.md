@@ -77,15 +77,17 @@ public class PinController implements PinControllerDocs {
 ApiResponse<T>
 ```
 
-응답 본문은 `isSuccess`, `code`, `message`, `result` 필드로 구성하며, 반환 데이터가 없을 때도 `result`는 `null`로 명시합니다. 실제 HTTP 상태는 코드의 `HttpStatus`를 사용해 `ResponseEntity`에 설정합니다.
+응답 본문은 `isSuccess`, `code`, `message`, `result` 필드로 구성하며, 반환 데이터가 없을 때도 `result`는 `null`로 명시합니다. 성공 코드와 에러 코드는 각각 자신의 `HttpStatus`를 보유합니다.
+
+`200 OK` 성공 응답은 Controller가 `ApiResponse<T>`를 직접 반환할 수 있습니다. `201 Created`처럼 `200 OK`가 아닌 성공 상태가 필요한 API는 성공 코드의 상태를 `ResponseEntity`에 설정합니다. 에러 응답의 실제 상태는 `GlobalExceptionHandler`가 에러 코드의 상태로 설정합니다.
 
 데이터가 없는 성공 응답은 `ApiResponse<Void>`를 사용합니다.
 
 ```java
-pinCommandService.deletePin(pinId);
+PinResponse.Summary response = pinCommandService.createPin(member, request);
 return ResponseEntity
-        .status(PinSuccessCode.PIN_DELETED.getStatus())
-        .body(ApiResponse.success(PinSuccessCode.PIN_DELETED, null));
+        .status(PinSuccessCode.PIN_CREATE_SUCCESS.getStatus())
+        .body(ApiResponse.success(PinSuccessCode.PIN_CREATE_SUCCESS, response));
 ```
 
 HTTP 상태 코드는 의미에 맞게 사용합니다.
