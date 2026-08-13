@@ -176,7 +176,20 @@ class PinControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.message").value("tags는 1개 이상 5개 이하만 입력할 수 있습니다."));
+                .andExpect(jsonPath("$.message").value("tags는 1개 이상 4개 이하만 입력할 수 있습니다."));
+        verifyNoInteractions(pinCommandService);
+    }
+
+    @Test
+    void 태그_개수가_5개_이상이면_400을_반환한다() throws Exception {
+        mockMvc.perform(post(PIN_CREATE_ENDPOINT)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidTagCreateRequest2()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400_VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("tags는 1개 이상 4개 이하만 입력할 수 있습니다."));
         verifyNoInteractions(pinCommandService);
     }
 
@@ -684,6 +697,21 @@ class PinControllerTest {
                    "clipStartMs": 70000,
                    "introduction": "feeling love attack!",
                    "tags": [],
+                   "feedOpen": true
+                 }
+                """;
+    }
+
+    private String invalidTagCreateRequest2() {
+        return """
+                {
+                   "userLatitude": 37.5297,
+                   "userLongitude": 126.9333,
+                   "placeId": 1,
+                   "itunesTrackId": 1764485170,
+                   "clipStartMs": 70000,
+                   "introduction": "feeling love attack!",
+                   "tags": ["몽환", "청량", "신남", "위로", "잔잔"],
                    "feedOpen": true
                  }
                 """;
