@@ -406,15 +406,20 @@ class PinCommandServiceImplTest {
     // createPinLike 테스트
     @Test
     void 핀_좋아요_등록시_좋아요_개수가_증가한다() {
+        // given
         ReflectionTestUtils.setField(member, "id", 1L);
         ReflectionTestUtils.setField(pin, "id", 1L);
 
         when(pinRepository.findByIdAndDeletedAtIsNull(1L))
                 .thenReturn(Optional.of(pin));
+        when(pinLikeRepository.insertIfAbsent(1L, 1L))
+                .thenReturn(1);
 
+        // when
         pinCommandService.createPinLike(member, pin.getId());
 
-        verify(pinLikeRepository).save(any(PinLike.class));
+        // then
+        verify(pinLikeRepository).insertIfAbsent(member.getId(), pin.getId());
         verify(pinRepository).increaseLikeCount(1L);
 
         ArgumentCaptor<PinLikedEvent> eventCaptor = ArgumentCaptor.forClass(PinLikedEvent.class);
@@ -425,51 +430,53 @@ class PinCommandServiceImplTest {
     }
 
     @Test
-    void 한사람이_같은_핀_좋아요를_여러번_요청할시_예외가_발생한다() {
+    void 한사람이_같은_핀_좋아요를_여러번_요청해도_예외가_발생하지_않는다() {
+        // given
         ReflectionTestUtils.setField(member, "id", 1L);
         ReflectionTestUtils.setField(pin, "id", 1L);
+        ReflectionTestUtils.setField(pin, "likeCount", 10);
 
         when(pinRepository.findByIdAndDeletedAtIsNull(1L))
                 .thenReturn(Optional.of(pin));
-        doThrow(new DataIntegrityViolationException("duplicate"))
-                .when(pinLikeRepository)
-                .save(any(PinLike.class));
 
-        assertThatThrownBy(() -> pinCommandService.createPinLike(member, 1L))
-                .isInstanceOf(PinLikeException.class)
-                .hasMessage("이미 좋아요한 핀입니다.");
+        when(pinLikeRepository.insertIfAbsent(1L, 1L))
+                .thenReturn(0);
+
+        when(pinRepository.findLikeCountById(1L))
+                .thenReturn(10);
+
+        // when
+        PinResponse.LikeCount response =
+                pinCommandService.createPinLike(member, 1L);
+
+        // then
+        assertThat(response.likedByMe()).isTrue();
+        assertThat(response.likeCount()).isEqualTo(10);
+
+        verify(pinLikeRepository).insertIfAbsent(1L, 1L);
+        verify(pinRepository, never()).increaseLikeCount(1L);
+        verify(eventPublisher, never()).publishEvent(any(PinLikedEvent.class));
     }
 
     // deletePinLike 테스트
     @Test
     void 핀_좋아요_삭제시_좋아요_개수가_감소한다() {
+        // given
         ReflectionTestUtils.setField(member, "id", 1L);
         ReflectionTestUtils.setField(pin, "id", 1L);
 
         when(pinRepository.findByIdAndDeletedAtIsNull(1L))
                 .thenReturn(Optional.of(pin));
-        when(pinLikeRepository.findByPinAndMember(pin, member))
-                .thenReturn(Optional.of(pinLike));
+        when(pinLikeRepository.deleteByPinIdAndMemberId(1L, 1L))
+                .thenReturn(1);
 
+
+        // when
         pinCommandService.deletePinLike(member, pin.getId());
 
-        verify(pinLikeRepository).delete(any(PinLike.class));
+        // then
+        verify(pinLikeRepository).deleteByPinIdAndMemberId(member.getId(), pin.getId());
         verify(pinRepository).decreaseLikeCount(1L);
-    }
-
-    @Test
-    void 좋아요하지_않은_핀을_삭제하면_예외가_발생한다() {
-        ReflectionTestUtils.setField(member, "id", 1L);
-        ReflectionTestUtils.setField(pin, "id", 1L);
-
-        when(pinRepository.findByIdAndDeletedAtIsNull(1L))
-                .thenReturn(Optional.of(pin));
-        when(pinLikeRepository.findByPinAndMember(pin, member))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> pinCommandService.deletePinLike(member, 1L))
-                .isInstanceOf(PinLikeException.class)
-                .hasMessage("핀 좋아요을 찾을 수 없습니다.");
     }
 
     @Test
