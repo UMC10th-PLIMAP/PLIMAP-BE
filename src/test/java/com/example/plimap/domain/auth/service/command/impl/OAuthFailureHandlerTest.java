@@ -1,10 +1,15 @@
 package com.example.plimap.domain.auth.service.command.impl;
 
-import com.example.plimap.domain.auth.exception.WithdrawnMemberAuthenticationException;
+import com.example.plimap.domain.auth.exception.SanctionedMemberAuthenticationException;
+import com.example.plimap.domain.member.entity.Member;
+import com.example.plimap.domain.member.enums.MemberStatus;
+import com.example.plimap.domain.member.enums.SuspensionPeriod;
+import com.example.plimap.domain.report.enums.ReportCategory;
 import com.example.plimap.global.config.OAuthProperties;
 import com.example.plimap.global.security.AuthCookieUtil;
 import com.example.plimap.global.security.OAuthFrontendRedirectCookieRepository;
 import jakarta.servlet.http.Cookie;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,14 +82,32 @@ class OAuthFailureHandlerTest {
     }
 
     @Test
-    void 벌점으로_탈퇴된_회원의_재가입_시도는_전용_에러_파라미터로_리다이렉트한다() throws Exception {
+    void 벌점으로_탈퇴된_회원의_재가입_시도는_사유_정보와_함께_전용_에러_파라미터로_리다이렉트한다() throws Exception {
         MockHttpServletRequest request = callbackRequestFor("http://localhost:5173");
         MockHttpServletResponse response = new MockHttpServletResponse();
+        Member member = withdrawnMember(ReportCategory.ABUSE_OR_HATE_SPEECH, "욕설 반복 신고 누적", 4, SuspensionPeriod.PERMANENT);
 
-        handler.onAuthenticationFailure(request, response, new WithdrawnMemberAuthenticationException());
+        handler.onAuthenticationFailure(request, response, new SanctionedMemberAuthenticationException(member));
 
         assertThat(response.getRedirectedUrl())
-                .isEqualTo("http://localhost:5173/home?error=account_permanently_banned");
+                .isEqualTo("http://localhost:5173/home?error=account_permanently_banned"
+                        + "&reasonCategory=ABUSE_OR_HATE_SPEECH&reasonDetail=%EC%9A%95%EC%84%A4%20%EB%B0%98%EB%B3%B5%20%EC%8B%A0%EA%B3%A0%20%EB%88%84%EC%A0%81"
+                        + "&period=PERMANENT&penaltyPoint=4");
+    }
+
+    @Test
+    void 정지_중인_회원의_로그인_시도는_해제일과_함께_전용_에러_파라미터로_리다이렉트한다() throws Exception {
+        MockHttpServletRequest request = callbackRequestFor("http://localhost:5173");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Instant suspendedUntil = Instant.parse("2026-08-20T00:00:00Z");
+        Member member = suspendedMember(ReportCategory.OBSCENE_OR_HARMFUL, null, suspendedUntil, 2, SuspensionPeriod.THREE_DAYS);
+
+        handler.onAuthenticationFailure(request, response, new SanctionedMemberAuthenticationException(member));
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:5173/home?error=account_suspended"
+                        + "&reasonCategory=OBSCENE_OR_HARMFUL&suspendedUntil=2026-08-20T00:00:00Z"
+                        + "&period=THREE_DAYS&penaltyPoint=2");
     }
 
     private AuthenticationException authenticationException() {
@@ -92,5 +115,28 @@ class OAuthFailureHandlerTest {
                 new OAuth2Error("invalid_grant"),
                 "invalid_grant"
         );
+    }
+
+    private Member withdrawnMember(ReportCategory reasonCategory, String reasonDetail,
+                                    int penaltyPoint, SuspensionPeriod period) {
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "status", MemberStatus.WITHDRAWN);
+        ReflectionTestUtils.setField(member, "lastPenaltyCategory", reasonCategory);
+        ReflectionTestUtils.setField(member, "lastPenaltyDetail", reasonDetail);
+        ReflectionTestUtils.setField(member, "penaltyPoint", penaltyPoint);
+        ReflectionTestUtils.setField(member, "lastPenaltyPeriod", period);
+        return member;
+    }
+
+    private Member suspendedMember(ReportCategory reasonCategory, String reasonDetail, Instant suspendedUntil,
+                                    int penaltyPoint, SuspensionPeriod period) {
+        Member member = Member.builder().build();
+        ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
+        ReflectionTestUtils.setField(member, "lastPenaltyCategory", reasonCategory);
+        ReflectionTestUtils.setField(member, "lastPenaltyDetail", reasonDetail);
+        ReflectionTestUtils.setField(member, "suspendedUntil", suspendedUntil);
+        ReflectionTestUtils.setField(member, "penaltyPoint", penaltyPoint);
+        ReflectionTestUtils.setField(member, "lastPenaltyPeriod", period);
+        return member;
     }
 }

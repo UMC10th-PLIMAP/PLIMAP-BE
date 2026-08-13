@@ -5,7 +5,7 @@ import com.example.plimap.domain.member.controller.docs.MemberControllerDocs;
 import com.example.plimap.domain.member.converter.MemberConverter;
 import com.example.plimap.domain.member.dto.Pagination;
 import com.example.plimap.domain.member.dto.request.MemberReqDTO;
-import com.example.plimap.domain.member.dto.response.MemberResDTO;
+import com.example.plimap.domain.member.dto.response.MemberResponse;
 import com.example.plimap.domain.member.enums.NicknameCheckFailReason;
 import com.example.plimap.domain.member.exception.MemberSuccessCode;
 import com.example.plimap.domain.member.service.command.MemberCommandService;
@@ -41,45 +41,45 @@ public class MemberController implements MemberControllerDocs {
 
     @Override
     @GetMapping("/nickname/check")
-    public ApiResponse<MemberResDTO.NicknameCheck> checkNickname(@RequestParam String nickname) {
+    public ApiResponse<MemberResponse.NicknameCheck> checkNickname(@RequestParam String nickname) {
         NicknameCheckFailReason reason = memberQueryService.checkNicknameFailReason(nickname);
         return ApiResponse.success(MemberSuccessCode.NICKNAME_CHECKED, MemberConverter.toNicknameCheck(nickname, reason));
     }
 
     @Override
     @GetMapping("/me")
-    public ApiResponse<MemberResDTO.MyProfile> getMyProfile(@AuthenticationPrincipal AuthMember authMember) {
-        MemberResDTO.MyProfile profile = memberQueryService.getMyProfile(authMember.getMember().getId());
+    public ApiResponse<MemberResponse.MyProfile> getMyProfile(@AuthenticationPrincipal AuthMember authMember) {
+        MemberResponse.MyProfile profile = memberQueryService.getMyProfile(authMember.getMember().getId());
         return ApiResponse.success(MemberSuccessCode.MY_PROFILE_FETCHED, profile);
     }
 
     @Override
     @GetMapping("/{memberId}")
-    public ApiResponse<MemberResDTO.OtherProfile> getOtherProfile(
+    public ApiResponse<MemberResponse.OtherProfile> getOtherProfile(
             @AuthenticationPrincipal AuthMember authMember,
             @PathVariable Long memberId
     ) {
-        MemberResDTO.OtherProfile profile = memberQueryService.getOtherProfile(authMember.getMember().getId(), memberId);
+        MemberResponse.OtherProfile profile = memberQueryService.getOtherProfile(authMember.getMember().getId(), memberId);
         return ApiResponse.success(MemberSuccessCode.OTHER_PROFILE_FETCHED, profile);
     }
 
     @Override
     @PatchMapping("/me")
-    public ApiResponse<MemberResDTO.Profile> updateProfile(
+    public ApiResponse<MemberResponse.Profile> updateProfile(
             @AuthenticationPrincipal AuthMember authMember,
             @Valid @RequestBody MemberReqDTO.UpdateProfile request
     ) {
-        MemberResDTO.Profile profile = memberCommandService.updateProfile(authMember.getMember().getId(), request);
+        MemberResponse.Profile profile = memberCommandService.updateProfile(authMember.getMember().getId(), request);
         return ApiResponse.success(MemberSuccessCode.PROFILE_UPDATED, profile);
     }
 
     @Override
     @PostMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<MemberResDTO.ProfileImage> uploadProfileImage(
+    public ApiResponse<MemberResponse.ProfileImage> uploadProfileImage(
             @AuthenticationPrincipal AuthMember authMember,
             @RequestPart("image") MultipartFile image
     ) {
-        MemberResDTO.ProfileImage result =
+        MemberResponse.ProfileImage result =
                 memberCommandService.uploadProfileImage(authMember.getMember().getId(), image);
         return ApiResponse.success(MemberSuccessCode.PROFILE_IMAGE_UPLOADED, result);
     }
@@ -113,39 +113,39 @@ public class MemberController implements MemberControllerDocs {
 
     @Override
     @GetMapping("/{memberId}/followers")
-    public ApiResponse<Pagination<MemberResDTO.FollowerItem>> getFollowers(
+    public ApiResponse<Pagination<MemberResponse.FollowerItem>> getFollowers(
             @AuthenticationPrincipal AuthMember authMember,
             @PathVariable Long memberId,
             @RequestParam(required = false, defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String cursor
     ) {
-        Pagination<MemberResDTO.FollowerItem> response =
+        Pagination<MemberResponse.FollowerItem> response =
                 memberQueryService.findFollowers(authMember.getMember().getId(), memberId, cursor, pageSize);
         return ApiResponse.success(MemberSuccessCode.FOLLOWERS_FETCHED, response);
     }
 
     @Override
     @GetMapping("/{memberId}/following")
-    public ApiResponse<Pagination<MemberResDTO.FollowingItem>> getFollowing(
+    public ApiResponse<Pagination<MemberResponse.FollowingItem>> getFollowing(
             @AuthenticationPrincipal AuthMember authMember,
             @PathVariable Long memberId,
             @RequestParam(required = false, defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String cursor
     ) {
-        Pagination<MemberResDTO.FollowingItem> response =
+        Pagination<MemberResponse.FollowingItem> response =
                 memberQueryService.findFollowing(authMember.getMember().getId(), memberId, cursor, pageSize);
         return ApiResponse.success(MemberSuccessCode.FOLLOWING_FETCHED, response);
     }
 
     @Override
     @GetMapping("/search")
-    public ApiResponse<Pagination<MemberResDTO.SearchItem>> searchMembers(
+    public ApiResponse<Pagination<MemberResponse.SearchItem>> searchMembers(
             @AuthenticationPrincipal AuthMember authMember,
             @RequestParam(required = false, defaultValue = "") String keyword,
             @RequestParam(required = false, defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String cursor
     ) {
-        Pagination<MemberResDTO.SearchItem> response =
+        Pagination<MemberResponse.SearchItem> response =
                 memberQueryService.searchActiveMembers(authMember.getMember().getId(), keyword, cursor, pageSize);
         return ApiResponse.success(MemberSuccessCode.MEMBERS_SEARCHED, response);
     }

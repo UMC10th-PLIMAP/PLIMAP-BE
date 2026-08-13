@@ -17,13 +17,13 @@ public enum PinErrorCode implements BaseErrorCode {
 
     LOCATION_DISTANCE_INVALID(
             HttpStatus.BAD_REQUEST,
-            "LOCATION_DISTANCE_INVALID",
+            "PIN_LOCATION_DISTANCE_INVALID",
                     "사용자가 장소 반경이 500m 이상에 있어 PIN을 등록할 수 없습니다."
     ),
 
     MEMBER_PIN_ALREADY_EXISTS(
-            HttpStatus.BAD_REQUEST,
-            "MEMBER_PIN_ALREADY_EXISTS",
+            HttpStatus.CONFLICT,
+            "PIN_MEMBER_PIN_ALREADY_EXISTS",
             "이미 해당 장소에 등록한 핀이 있습니다."
     ),
 
@@ -35,7 +35,7 @@ public enum PinErrorCode implements BaseErrorCode {
 
     INVALID_PIN_OWNER(
             HttpStatus.FORBIDDEN,
-            "INVALID_PIN_OWNER",
+            "PIN_INVALID_PIN_OWNER",
             "해당 PIN에 수정/삭제 권한이 없습니다."
     ),
 
@@ -46,8 +46,8 @@ public enum PinErrorCode implements BaseErrorCode {
     ),
 
     FRIEND_PIN_ACCESS_DENIED(
-            HttpStatus.BAD_REQUEST,
-            "FRIEND_PIN_ACCESS_DENIED",
+            HttpStatus.FORBIDDEN,
+            "PIN_FRIEND_PIN_ACCESS_DENIED",
             "친구가 등록한 핀이 아니므로 접근 권한을 발급할 수 없습니다."
     ),
 

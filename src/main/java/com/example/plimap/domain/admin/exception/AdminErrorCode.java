@@ -11,7 +11,7 @@ public enum AdminErrorCode implements BaseErrorCode {
 
     PENALTY_GRANT_NOT_SUPPORTED(
             HttpStatus.BAD_REQUEST,
-            "ADMIN_400_PENALTY_GRANT_NOT_SUPPORTED",
+            "ADMIN_PENALTY_GRANT_NOT_SUPPORTED",
             "벌점 부여는 이 API에서 더 이상 지원하지 않습니다. 최종 제재 API를 이용해 주세요."
     );
 

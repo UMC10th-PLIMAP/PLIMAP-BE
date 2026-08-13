@@ -3,7 +3,7 @@ package com.example.plimap.domain.auth.service.command.impl;
 import com.example.plimap.domain.auth.dto.KakaoDTO;
 import com.example.plimap.domain.auth.entity.SocialAccount;
 import com.example.plimap.domain.auth.enums.AuthProvider;
-import com.example.plimap.domain.auth.exception.WithdrawnMemberAuthenticationException;
+import com.example.plimap.domain.auth.exception.SanctionedMemberAuthenticationException;
 import com.example.plimap.domain.auth.repository.SocialAccountRepository;
 import com.example.plimap.domain.member.entity.Member;
 import com.example.plimap.domain.member.enums.MemberStatus;
@@ -11,6 +11,7 @@ import com.example.plimap.domain.member.enums.WithdrawalReason;
 import com.example.plimap.domain.member.repository.MemberRepository;
 import com.example.plimap.support.PostgisContainerConfiguration;
 import com.example.plimap.support.RedisContainerConfiguration;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -65,6 +66,36 @@ class CustomOAuthServiceIntegrationTest {
 
         assertThatThrownBy(() -> customOAuthService.resolveMember(
                 AuthProvider.KAKAO, new KakaoDTO("banned-subject", "banned@example.com", "예림")))
-                .isInstanceOf(WithdrawnMemberAuthenticationException.class);
+                .isInstanceOf(SanctionedMemberAuthenticationException.class);
+    }
+
+    @Test
+    void 정지_기간이_아직_남은_회원이_로그인하면_예외가_발생한다() {
+        Member member = memberRepository.saveAndFlush(Member.builder().build());
+        ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
+        ReflectionTestUtils.setField(member, "suspendedUntil", Instant.now().plusSeconds(3600));
+        memberRepository.saveAndFlush(member);
+        socialAccountRepository.saveAndFlush(
+                SocialAccount.create(member, AuthProvider.KAKAO, "suspended-subject", "suspended@example.com"));
+
+        assertThatThrownBy(() -> customOAuthService.resolveMember(
+                AuthProvider.KAKAO, new KakaoDTO("suspended-subject", "suspended@example.com", "예림")))
+                .isInstanceOf(SanctionedMemberAuthenticationException.class);
+    }
+
+    @Test
+    void 정지_기간이_이미_지난_회원은_로그인_시점에_자동으로_해제되고_로그인에_성공한다() {
+        Member member = memberRepository.saveAndFlush(Member.builder().build());
+        ReflectionTestUtils.setField(member, "status", MemberStatus.SUSPENDED);
+        ReflectionTestUtils.setField(member, "suspendedUntil", Instant.now().minusSeconds(1));
+        memberRepository.saveAndFlush(member);
+        socialAccountRepository.saveAndFlush(
+                SocialAccount.create(member, AuthProvider.KAKAO, "expired-suspension-subject", "expired@example.com"));
+
+        Member resolvedMember = customOAuthService.resolveMember(
+                AuthProvider.KAKAO, new KakaoDTO("expired-suspension-subject", "expired@example.com", "예림"));
+
+        assertThat(resolvedMember.getStatus()).isEqualTo(MemberStatus.ACTIVE);
+        assertThat(resolvedMember.getSuspendedUntil()).isNull();
     }
 }
