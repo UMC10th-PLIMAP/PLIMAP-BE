@@ -163,6 +163,7 @@ public class PinCommandServiceImpl implements PinCommandService {
 
     @Override
     public PinResponse.LikeCount deletePinLike(Member currentMember, Long pinId) {
+        getPin(pinId);
         int deleted = pinLikeRepository.deleteByPinIdAndMemberId(
                 pinId,
                 currentMember.getId()
