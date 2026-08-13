@@ -531,7 +531,7 @@ class PlaceControllerTest {
                         MapSelectionStatus.MAP_SELECTION_CONFIRMED,
                         new PlaceResponse.MapSelection(
                                 12L,
-                                "물빛무대 앞 광장",
+                                "영등포구 여의동로 123-4",
                                 PlaceSource.MAP_SELECTION,
                                 37.5283,
                                 126.9326
@@ -550,7 +550,8 @@ class PlaceControllerTest {
                 .andExpect(jsonPath("$.message").value("지도 선택 장소 판정에 성공했습니다."))
                 .andExpect(jsonPath("$.result.status").value("MAP_SELECTION_CONFIRMED"))
                 .andExpect(jsonPath("$.result.mapSelection.placeId").value(12))
-                .andExpect(jsonPath("$.result.mapSelection.placeName").value("물빛무대 앞 광장"))
+                .andExpect(jsonPath("$.result.mapSelection.placeName")
+                        .value("영등포구 여의동로 123-4"))
                 .andExpect(jsonPath("$.result.mapSelection.source").value("MAP_SELECTION"))
                 .andExpect(jsonPath("$.result.mapSelection.latitude").value(37.5283))
                 .andExpect(jsonPath("$.result.mapSelection.longitude").value(126.9326))
@@ -1015,9 +1016,8 @@ class PlaceControllerTest {
                 {
                   "latitude": 37.5283,
                   "longitude": 126.9326,
-                  "placeName": "물빛무대 앞 광장",
-                  "address": "서울특별시 영등포구 여의도동",
-                  "roadAddress": "서울특별시 영등포구 여의동로"
+                  "address": "서울특별시 영등포구 여의도동 123-4",
+                  "roadAddress": "서울특별시 영등포구 여의동로 123-4"
                 }
                 """;
     }

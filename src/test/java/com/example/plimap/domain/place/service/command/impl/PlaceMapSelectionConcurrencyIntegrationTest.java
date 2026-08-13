@@ -70,9 +70,8 @@ class PlaceMapSelectionConcurrencyIntegrationTest {
         PlaceRequest.MapSelection request = new PlaceRequest.MapSelection(
                 37.5283,
                 126.9326,
-                "물빛무대 앞 광장",
-                "서울특별시 영등포구 여의도동",
-                "서울특별시 영등포구 여의동로"
+                "서울특별시 영등포구 여의도동 123-4",
+                "서울특별시 영등포구 여의동로 123-4"
         );
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(REQUEST_COUNT);
@@ -101,9 +100,59 @@ class PlaceMapSelectionConcurrencyIntegrationTest {
                     """, Long.class);
             assertThat(placeIds).containsOnly(placeIds.getFirst());
             assertThat(activeMapSelectionCount).isEqualTo(1L);
+            assertThat(jdbcTemplate.queryForObject("""
+                    SELECT name
+                    FROM place
+                    WHERE id = ?
+                    """, String.class, placeIds.getFirst()))
+                    .isEqualTo("영등포구 여의동로 123-4");
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void 기존_MAP_SELECTION을_재사용하면_저장된_장문_장소명도_축약한다() {
+        Long placeId = jdbcTemplate.queryForObject("""
+                INSERT INTO place (
+                    name,
+                    address,
+                    road_address,
+                    sido,
+                    source,
+                    location,
+                    created_at,
+                    updated_at
+                )
+                VALUES (
+                    '대한민국 서울특별시 영등포구 여의동로 123-4',
+                    '대한민국 서울특별시 영등포구 여의도동 123-4',
+                    '대한민국 서울특별시 영등포구 여의동로 123-4',
+                    '서울특별시',
+                    'MAP_SELECTION',
+                    ST_SetSRID(ST_MakePoint(126.9326, 37.5283), 4326)::geography,
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, Long.class);
+
+        PlaceResponse.MapSelectionResult result = placeCommandService.confirmMapSelection(
+                new PlaceRequest.MapSelection(
+                        37.5283,
+                        126.9326,
+                        "서울특별시 영등포구 여의도동 123-4",
+                        "서울특별시 영등포구 여의동로 123-4"
+                )
+        );
+
+        assertThat(result.mapSelection().placeId()).isEqualTo(placeId);
+        assertThat(result.mapSelection().placeName()).isEqualTo("영등포구 여의동로 123-4");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT name FROM place WHERE id = ?",
+                String.class,
+                placeId
+        )).isEqualTo("영등포구 여의동로 123-4");
     }
 
     @Test
@@ -125,9 +174,8 @@ class PlaceMapSelectionConcurrencyIntegrationTest {
                 new PlaceRequest.MapSelection(
                         37.5283,
                         126.9326,
-                        "물빛무대 앞 광장",
-                        "서울특별시 영등포구 여의도동",
-                        "서울특별시 영등포구 여의동로"
+                        "서울특별시 영등포구 여의도동 123-4",
+                        "서울특별시 영등포구 여의동로 123-4"
                 )
         );
 
