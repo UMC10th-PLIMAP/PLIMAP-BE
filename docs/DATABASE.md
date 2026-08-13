@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | Local | Docker Compose `postgis/postgis:18-3.6` | `localhost:5432` 직접 연결 | 기본값 또는 `.env` |
 | Dev | Supabase PostgreSQL/PostGIS | SSL 기반 Transaction Pooler | GCP Secret Manager |
-| Prod | Cloud SQL PostgreSQL 17 / PostGIS 3.5.2 target | Private IP + Direct VPC egress | GCP Secret Manager |
+| Prod | Cloud SQL PostgreSQL 17 / PostGIS 3.5.2 | Private IP + Direct VPC egress | GCP Secret Manager |
 | Test | `postgis/postgis:17-3.5` Testcontainers | 테스트별 컨테이너 | 테스트 전용 설정 |
 
 - 스키마 관리: Flyway
@@ -99,19 +99,13 @@ Dev에서도 공통 설정에 따라 애플리케이션 시작 시 Flyway가 아
 
 ## Prod DB
 
-### Prod PostGIS initial activation
+### Prod PostGIS 운영 기준
 
-Cloud SQL PostgreSQL 18.4 temporary instances did not expose PostGIS in `pg_available_extensions`, so Prod uses PostgreSQL 17. The approved target is PostGIS 3.5.2, but Cloud SQL can change an extension's `default_version` with a maintenance release. Before creating the permanent Prod instance, a separately approved temporary PostgreSQL 17 instance must complete the PostGIS, Flyway, CRUD, and privilege checks, record the live `default_version`, confirm `3.5.2` in `pg_available_extension_versions`, and record installed `extversion=3.5.2`. A newer default alone does not change the approved baseline.
+영구 Cloud SQL은 PostgreSQL 17과 PostGIS 3.5.2로 운영 중입니다. 2026-08-06의 PostgreSQL 18.4 임시 호환성 검증에서 PostGIS가 제공되지 않아 PostgreSQL 17을 채택했으며, Cloud SQL maintenance에 따라 `default_version`이 바뀌어도 운영 확장을 자동으로 올리지 않습니다.
 
-After the validation gate passes, connect to the permanent instance as `postgres` or another account with the `cloudsqlsuperuser` role and run:
+PostGIS 최초 설치와 DB 역할 bootstrap은 관리자 계정으로 완료되었고, 애플리케이션은 runtime 계정과 분리된 `FLYWAY_USERNAME`·`FLYWAY_PASSWORD` 계정으로 Migration을 적용합니다. Prod Flyway 계정에는 `cloudsqlsuperuser`를 부여하지 않으며, 최종 Migration이 `plimap_app`의 `flyway_schema_history` 접근을 회수합니다. 재해 복구나 새 인스턴스 구축이 필요한 경우에만 [PROD_DATABASE.md](../scripts/gcp/PROD_DATABASE.md)의 승인된 순서와 SQL을 사용합니다.
 
-```sql
-CREATE EXTENSION IF NOT EXISTS postgis VERSION '3.5.2';
-```
-
-The application starts with the dedicated `FLYWAY_USERNAME` and `FLYWAY_PASSWORD` account only after the administrator bootstrap succeeds. Keep the same `IF NOT EXISTS` statement in `V1__init_schema.sql` for fresh Local, Dev, and Test databases, but do not grant `cloudsqlsuperuser` to the Prod Flyway account. The final Migration conditionally revokes every `plimap_app` privilege on `flyway_schema_history` before startup completes; it is a no-op where that Prod-only role does not exist. The account and object-grant sequence is documented in `scripts/gcp/PROD_DATABASE.md`.
-
-Before the first Prod deployment, verify the extension files and installed state in the target database:
+재구축 또는 확장 변경 전에는 권한 있는 관리 연결에서 제공 버전과 설치 버전을 읽기 전용으로 확인합니다.
 
 ```sql
 SELECT name, default_version, installed_version
@@ -133,7 +127,7 @@ Prod는 `asia-northeast3`의 Cloud SQL Enterprise `db-custom-1-3840` 단일 Zone
 Cloud Run plimap-api-prod
     → Direct VPC egress (private-ranges-only)
     → Cloud SQL private IP:5432
-    → PostgreSQL 17/PostGIS (3.5.2 target; live version gate)
+    → PostgreSQL 17/PostGIS 3.5.2
 ```
 
 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`는 애플리케이션 runtime 전용 `plimap-prod-*` Secret으로 분리하고, `FLYWAY_USERNAME`, `FLYWAY_PASSWORD`는 Migration 전용 Secret으로 분리합니다. JDBC URL에는 비밀번호를 포함하지 않습니다. HikariCP는 instance당 최대 8개 연결, minimum idle 0, connection timeout 5초를 사용하므로 Cloud Run 서비스 최대 3개 instance에서 애플리케이션 연결 상한은 24개입니다.

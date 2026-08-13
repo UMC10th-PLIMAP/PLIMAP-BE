@@ -5,11 +5,11 @@
 ## 파일 구성
 
 - `deploy-dev.ps1`: Cloud Run dev 서비스를 배포하고 health, Swagger UI, OpenAPI 응답을 검증합니다.
-- `PROD_INFRASTRUCTURE.md`: 비용 승인 경계, 고정 리소스 이름, VPC·Cloud SQL·IAM·WIF·GCS·Load Balancer 구성과 운영자 후속 작업을 정의합니다.
+- `PROD_INFRASTRUCTURE.md`: 현재 Prod 인프라 기준과 신규 프로젝트·재해 복구 시의 승인형 재구축 절차를 정의합니다.
 - `PROD_DATABASE.md`: PG17/PostGIS 검증 게이트와 Prod DB 역할 bootstrap 순서를 설명합니다.
 - `configure-prod-database-grants.sql`: `plimap_migrator`가 Flyway 전에 실행해 이후 생성 객체의 runtime 기본 권한을 설정합니다.
 - `grant-prod-database-existing-objects.sql`: 각 기존 객체 owner가 별도로 실행해 자신이 소유한 객체에 runtime 권한을 부여합니다.
-- `bootstrap-prod-cloud-run.ps1`: 관리자가 LB 전용 ingress의 Prod API Cloud Run 서비스와 공개 Invoker·서비스 단위 deployer IAM을 최초 한 번 준비합니다. 기본 실행은 plan-only이며 `-Apply`가 있어야 변경합니다.
+- `bootstrap-prod-cloud-run.ps1`: 신규 프로젝트·재해 복구 시 LB 전용 ingress와 서비스 단위 IAM을 재구축합니다. 기본 실행은 plan-only이며 승인된 `-Apply`가 있어야 변경합니다.
 - `deploy-prod.ps1`: Prod revision을 공개 traffic tag 없이 0%로 기동하고 Ready·image digest를 검증한 뒤 트래픽을 전환하며, LB 전용 상태 또는 선택적 공개 smoke 검증 실패 시 직전 revision을 복구합니다.
 - `SECRETS.md`: 환경변수, GitHub Environment Variable, Secret Manager 매핑과 값 교체 방법을 설명합니다.
 
@@ -20,7 +20,7 @@
 - 환경별 Secret Manager 항목에 활성 버전이 있어야 합니다.
 - Cloud Run runtime service account와 필요한 IAM 권한을 먼저 구성해야 합니다.
 
-환경 설정과 Secret 준비 방법은 [SECRETS.md](SECRETS.md), 영구 리소스 Apply 절차는 [PROD_INFRASTRUCTURE.md](PROD_INFRASTRUCTURE.md), 전체 구성 설명은 [Deployment Guide](../../docs/DEPLOYMENT.md)를 참고합니다.
+환경 설정과 Secret 준비 방법은 [SECRETS.md](SECRETS.md), 현재 인프라 기준과 승인형 재구축 절차는 [PROD_INFRASTRUCTURE.md](PROD_INFRASTRUCTURE.md), 전체 구성 설명은 [Deployment Guide](../../docs/DEPLOYMENT.md)를 참고합니다.
 
 ## Dev 실행
 
@@ -32,22 +32,19 @@
 
 GitHub Actions의 `Deploy Dev` 워크플로도 동일한 스크립트를 사용합니다.
 
-## Prod Cloud Run bootstrap
+## Prod Cloud Run 재구축
 
-Prod deployer는 `plimap-api-prod` 서비스 단위 `roles/run.developer`만 사용하므로 서비스 생성 권한이 없습니다. 인프라 관리자가 최초 배포 전에 다음 스크립트를 먼저 실행합니다. `-Apply`가 없으면 현재 리소스를 확인하고 계획만 출력합니다.
+`plimap-api-prod`의 최초 서비스·IAM bootstrap은 완료되어 일상 배포에서 이 스크립트를 실행하지 않습니다. 신규 프로젝트 또는 재해 복구로 서비스를 다시 만들 때만 인프라 관리자가 별도 승인을 받고 사용합니다.
+
+먼저 `-Apply` 없이 충돌과 계획만 확인합니다.
 
 ```powershell
 .\scripts\gcp\bootstrap-prod-cloud-run.ps1 `
   -VpcNetwork "<prod-vpc-network>" `
   -VpcSubnet "<prod-cloud-run-subnet>"
-
-.\scripts\gcp\bootstrap-prod-cloud-run.ps1 `
-  -VpcNetwork "<prod-vpc-network>" `
-  -VpcSubnet "<prod-cloud-run-subnet>" `
-  -Apply
 ```
 
-Cloud Run은 새 서비스의 첫 revision에 `--no-traffic`을 허용하지 않습니다. Apply는 Google 공식 sample image를 유일한 100% bootstrap revision으로 만들되 기본 `run.app` URL을 비활성화하고 ingress를 `internal-and-cloud-load-balancing`으로 제한합니다. 이어 `allUsers:roles/run.invoker`와 Prod deployer의 서비스 단위 `roles/run.developer`만 설정합니다. Prod 애플리케이션, Secret, DNS 또는 사용자 트래픽은 이 단계에서 활성화하지 않습니다. 이후 실제 애플리케이션 revision부터 `--no-traffic`으로 검증할 수 있습니다. 동명 서비스가 승인된 bootstrap 상태와 다르면 수정하지 않고 중단합니다.
+실제 `-Apply` 실행은 [PROD_INFRASTRUCTURE.md](PROD_INFRASTRUCTURE.md)의 재구축 게이트, 동명 리소스 충돌 검사와 명시적 승인을 모두 통과한 경우에만 수행합니다. 기존 운영 서비스에는 실행하지 않습니다. Cloud Run의 첫 revision 제약 때문에 재구축 시 sample bootstrap revision을 사용하되, 기본 `run.app` URL을 비활성화하고 ingress를 `internal-and-cloud-load-balancing`으로 제한합니다.
 
 ## Prod 실행
 
@@ -74,4 +71,4 @@ Prod는 GitHub Actions의 `Deploy Prod` 워크플로 사용을 원칙으로 합�
 6. `-PublicSmokeEnabled`가 켜진 경우 `https://plimap.kr`에서 프론트, CSRF 응답·cookie, Google OAuth 3xx·`Location`, Swagger/OpenAPI·Actuator 차단을 검증합니다.
 7. 실패 시 실제 트래픽 상태를 다시 조회하고 직전 revision으로 100% 복구한 뒤 트래픽과 LB 전용 상태를 재검증합니다.
 
-후보 revision에는 외부에서 호출할 수 있는 traffic tag URL을 만들지 않고 기본 URL도 계속 비활성화합니다. 최초 배포 실패 시 공식 sample bootstrap revision으로 복구합니다. Deploy health check가 후보 컨테이너를 시작하므로 Flyway는 트래픽 전환 전에도 운영 DB에 Migration을 적용할 수 있고, 애플리케이션 rollback은 적용된 Migration을 되돌리지 않습니다. DNS/TLS 활성화 전에는 공개 smoke를 끄고, 두 실제 애플리케이션 revision과 인증서가 준비된 뒤 켭니다.
+후보 revision에는 외부에서 호출할 수 있는 traffic tag URL을 만들지 않고 기본 URL도 계속 비활성화합니다. 실패 시 직전 애플리케이션 revision으로 복구합니다. Deploy health check가 후보 컨테이너를 시작하므로 Flyway는 트래픽 전환 전에도 운영 DB에 Migration을 적용할 수 있고, 애플리케이션 rollback은 적용된 Migration을 되돌리지 않습니다. 현재 DNS/TLS가 활성화되어 공개 smoke를 항상 수행하며, 재해 복구 중 DNS가 아직 연결되지 않은 예외 상황에서만 일시 비활성화합니다.
