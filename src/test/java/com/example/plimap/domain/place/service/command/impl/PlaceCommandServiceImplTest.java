@@ -130,7 +130,8 @@ class PlaceCommandServiceImplTest {
 
     @Test
     void 반경_20m_이내의_활성_PLACE_SEARCH_장소를_먼저_추천한다() {
-        PlaceRequest.MapSelection request = request("새 장소명", "도로명 주소");
+        PlaceRequest.MapSelection request =
+                request("서울특별시 영등포구 여의동로 123-4");
         Place recommendedPlace = place(
                 10L,
                 "카카오 판교아지트",
@@ -170,7 +171,8 @@ class PlaceCommandServiceImplTest {
 
     @Test
     void 추천_장소가_없고_건물명이_있으면_장소_검색을_요청한다() {
-        PlaceRequest.MapSelection request = request("새 장소명", "도로명 주소");
+        PlaceRequest.MapSelection request =
+                request("서울특별시 영등포구 여의동로 123-4");
         when(placeLocationMetadataService.getAddressDecision(37.5283, 126.9326))
                 .thenReturn(new PlaceAddressDecision(
                         "카카오 판교아지트",
@@ -193,8 +195,21 @@ class PlaceCommandServiceImplTest {
 
     @Test
     void 추천_장소와_건물명이_없으면_20m_이내의_MAP_SELECTION_장소를_재사용한다() {
-        PlaceRequest.MapSelection request = request("새 장소명", "도로명 주소");
-        Place existingPlace = place(1L, "기존 장소", 37.5283, 126.9326);
+        PlaceRequest.MapSelection request =
+                request("서울특별시 영등포구 여의동로 123-4");
+        Place existingPlace = place(
+                1L,
+                "대한민국 서울특별시 영등포구 여의동로 123-4",
+                37.5283,
+                126.9326
+        );
+        when(existingPlace.getName()).thenReturn(
+                "대한민국 서울특별시 영등포구 여의동로 123-4",
+                "영등포구 여의동로 123-4"
+        );
+        when(existingPlace.getRoadAddress())
+                .thenReturn("서울특별시 영등포구 여의동로 123-4");
+        when(placeRepository.save(existingPlace)).thenReturn(existingPlace);
         when(placeQueryRepository.findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0))
                 .thenReturn(Optional.of(existingPlace));
 
@@ -203,18 +218,20 @@ class PlaceCommandServiceImplTest {
 
         assertThat(result.status()).isEqualTo(MapSelectionStatus.MAP_SELECTION_CONFIRMED);
         assertThat(result.mapSelection().placeId()).isEqualTo(1L);
-        assertThat(result.mapSelection().placeName()).isEqualTo("기존 장소");
+        assertThat(result.mapSelection().placeName()).isEqualTo("영등포구 여의동로 123-4");
         assertThat(result.mapSelection().latitude()).isEqualTo(37.5283);
         assertThat(result.mapSelection().longitude()).isEqualTo(126.9326);
         assertThat(result.recommendedPlace()).isNull();
         assertThat(result.buildingName()).isNull();
         verify(placeLockRepository, never()).acquireMapSelectionLock();
-        verify(placeRepository, never()).save(any(Place.class));
+        verify(existingPlace).updateMapSelectionName("영등포구 여의동로 123-4");
+        verify(placeRepository).save(existingPlace);
     }
 
     @Test
     void 추천_장소와_건물명과_기존_장소가_없으면_MAP_SELECTION_장소를_생성한다() {
-        PlaceRequest.MapSelection request = request("  물빛무대 앞 광장  ", "  여의동로  ");
+        PlaceRequest.MapSelection request =
+                request("  서울특별시 영등포구 여의동로 123-4  ");
         when(placeQueryRepository.findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0))
                 .thenReturn(Optional.empty());
         when(placeLocationMetadataService.getAdministrativeRegion(37.5283, 126.9326))
@@ -242,9 +259,11 @@ class PlaceCommandServiceImplTest {
         flow.verify(placeLockRepository).acquireMapSelectionLock();
         verify(placeRepository).save(captor.capture());
         Place createdPlace = captor.getValue();
-        assertThat(createdPlace.getName()).isEqualTo("물빛무대 앞 광장");
-        assertThat(createdPlace.getAddress()).isEqualTo("지번 주소");
-        assertThat(createdPlace.getRoadAddress()).isEqualTo("여의동로");
+        assertThat(createdPlace.getName()).isEqualTo("영등포구 여의동로 123-4");
+        assertThat(createdPlace.getAddress())
+                .isEqualTo("서울특별시 영등포구 여의도동 123-4");
+        assertThat(createdPlace.getRoadAddress())
+                .isEqualTo("서울특별시 영등포구 여의동로 123-4");
         assertThat(createdPlace.getSource()).isEqualTo(PlaceSource.MAP_SELECTION);
         assertThat(createdPlace.getPlaceProvider()).isNull();
         assertThat(createdPlace.getProviderPlaceId()).isNull();
@@ -257,14 +276,16 @@ class PlaceCommandServiceImplTest {
         assertThat(createdPlace.getLocation().getX()).isEqualTo(126.9326);
         assertThat(createdPlace.getLocation().getY()).isEqualTo(37.5283);
         assertThat(result.status()).isEqualTo(MapSelectionStatus.MAP_SELECTION_CONFIRMED);
-        assertThat(result.mapSelection().placeName()).isEqualTo("물빛무대 앞 광장");
+        assertThat(result.mapSelection().placeName()).isEqualTo("영등포구 여의동로 123-4");
         assertThat(result.recommendedPlace()).isNull();
         assertThat(result.buildingName()).isNull();
     }
 
     @Test
-    void placeName이_blank이면_roadAddress를_장소명으로_사용한다() {
-        PlaceRequest.MapSelection request = request("   ", "  도로명 주소  ");
+    void 도로명_주소가_있으면_국가명과_시도명을_제외한_장소명을_사용한다() {
+        PlaceRequest.MapSelection request = request(
+                "  대한민국 서울특별시 영등포구 여의동로 123-4  "
+        );
         when(placeQueryRepository.findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any(Place.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -273,13 +294,18 @@ class PlaceCommandServiceImplTest {
         placeCommandService.confirmMapSelection(request);
 
         verify(placeRepository).save(captor.capture());
-        assertThat(captor.getValue().getName()).isEqualTo("도로명 주소");
+        assertThat(captor.getValue().getName()).isEqualTo("영등포구 여의동로 123-4");
     }
 
     @Test
-    void placeName과_roadAddress가_없으면_address를_장소명으로_사용한다() {
+    void 도로명_주소가_없으면_지번_주소로_축약_장소명을_생성한다() {
         PlaceRequest.MapSelection request =
-                new PlaceRequest.MapSelection(37.5283, 126.9326, null, "  지번 주소  ", " ");
+                new PlaceRequest.MapSelection(
+                        37.5283,
+                        126.9326,
+                        "  대한민국 서울특별시 영등포구 여의도동 123-4  ",
+                        " "
+                );
         when(placeQueryRepository.findNearestActiveMapSelectionWithin(37.5283, 126.9326, 20.0))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any(Place.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -288,7 +314,7 @@ class PlaceCommandServiceImplTest {
         placeCommandService.confirmMapSelection(request);
 
         verify(placeRepository).save(captor.capture());
-        assertThat(captor.getValue().getName()).isEqualTo("지번 주소");
+        assertThat(captor.getValue().getName()).isEqualTo("영등포구 여의도동 123-4");
     }
 
     @Test
@@ -577,12 +603,11 @@ class PlaceCommandServiceImplTest {
         );
     }
 
-    private PlaceRequest.MapSelection request(String placeName, String roadAddress) {
+    private PlaceRequest.MapSelection request(String roadAddress) {
         return new PlaceRequest.MapSelection(
                 37.5283,
                 126.9326,
-                placeName,
-                "  지번 주소  ",
+                "  서울특별시 영등포구 여의도동 123-4  ",
                 roadAddress
         );
     }

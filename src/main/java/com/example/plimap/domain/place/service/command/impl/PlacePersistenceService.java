@@ -8,6 +8,7 @@ import com.example.plimap.domain.place.repository.PlaceRepository;
 import com.example.plimap.domain.place.repository.PlaceSearchHistoryRepository;
 import com.example.plimap.domain.place.repository.lock.PlaceLockRepository;
 import com.example.plimap.domain.place.repository.query.PlaceQueryRepository;
+import com.example.plimap.domain.place.util.MapSelectionPlaceNameFormatter;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
@@ -41,7 +42,13 @@ class PlacePersistenceService {
                         request.longitude(),
                         MAP_SELECTION_REUSE_DISTANCE_METERS
                 )
+                .map(this::normalizeMapSelectionName)
                 .orElseGet(() -> createMapSelection(request, region));
+    }
+
+    @Transactional
+    public Place normalizeReusedMapSelectionName(Place place) {
+        return normalizeMapSelectionName(place);
     }
 
     @Transactional
@@ -101,7 +108,11 @@ class PlacePersistenceService {
             PlaceAdministrativeRegion region
     ) {
         Place place = Place.createMapSelection(
-                resolvePlaceName(request),
+                MapSelectionPlaceNameFormatter.format(
+                        request.address(),
+                        request.roadAddress(),
+                        region.sido()
+                ),
                 request.address(),
                 request.roadAddress(),
                 region.code(),
@@ -157,14 +168,17 @@ class PlacePersistenceService {
         return GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
     }
 
-    private String resolvePlaceName(PlaceRequest.MapSelection request) {
-        if (request.placeName() != null) {
-            return request.placeName();
+    private Place normalizeMapSelectionName(Place place) {
+        String normalizedName = MapSelectionPlaceNameFormatter.format(
+                place.getAddress(),
+                place.getRoadAddress(),
+                place.getSido()
+        );
+        if (!normalizedName.equals(place.getName())) {
+            place.updateMapSelectionName(normalizedName);
+            return placeRepository.save(place);
         }
-        if (request.roadAddress() != null) {
-            return request.roadAddress();
-        }
-        return request.address();
+        return place;
     }
 
     private String resolveAddressSearchPlaceName(PlaceRequest.Selection request) {

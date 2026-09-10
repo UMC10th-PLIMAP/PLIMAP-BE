@@ -308,12 +308,34 @@ class PlaceOpenApiIntegrationTest {
                 .path("post");
         assertThat(operation.path("description").asText())
                 .contains("PLACE_SEARCH")
-                .contains("MAP_SELECTION");
+                .contains("MAP_SELECTION")
+                .contains("PN-02-03-b")
+                .contains("국가명과 시/도명");
         assertThat(operation.path("responses").has("200")).isTrue();
         assertThat(operation.path("responses").has("400")).isTrue();
         assertThat(operation.path("responses").has("401")).isTrue();
         assertThat(operation.path("responses").has("502")).isTrue();
         assertThat(operation.path("responses").has("504")).isTrue();
+
+        JsonNode requestSchema = resolveReferencedSchema(
+                openApi,
+                operation.path("requestBody")
+                        .path("content")
+                        .path("application/json")
+                        .path("schema")
+        );
+        JsonNode requestProperties = requestSchema.path("properties");
+        assertThat(requestProperties.has("latitude")).isTrue();
+        assertThat(requestProperties.has("longitude")).isTrue();
+        assertThat(requestProperties.has("address")).isTrue();
+        assertThat(requestProperties.has("roadAddress")).isTrue();
+        assertThat(requestProperties.has("placeName")).isFalse();
+        assertThat(textValues(requestSchema.path("required")))
+                .containsExactlyInAnyOrder("latitude", "longitude", "address");
+        assertThat(requestProperties.path("address").path("description").asText())
+                .contains("전체 지번 주소");
+        assertThat(requestProperties.path("roadAddress").path("description").asText())
+                .contains("전체 도로명 주소");
 
         JsonNode decisionProperties = openApi
                 .path("components")
@@ -342,6 +364,9 @@ class PlaceOpenApiIntegrationTest {
         ).path("properties");
         assertThat(enumValues(mapSelectionProperties.path("source")))
                 .containsExactly("MAP_SELECTION");
+        assertThat(mapSelectionProperties.path("placeName").path("description").asText())
+                .contains("국가명과 시/도명")
+                .contains("축약 주소");
 
         JsonNode recommendedProperties = resolveReferencedSchema(
                 openApi,
@@ -426,6 +451,12 @@ class PlaceOpenApiIntegrationTest {
     private List<String> enumValues(JsonNode schema) {
         List<String> values = new ArrayList<>();
         schema.path("enum").forEach(value -> values.add(value.asText()));
+        return values;
+    }
+
+    private List<String> textValues(JsonNode arrayNode) {
+        List<String> values = new ArrayList<>();
+        arrayNode.forEach(value -> values.add(value.asText()));
         return values;
     }
 

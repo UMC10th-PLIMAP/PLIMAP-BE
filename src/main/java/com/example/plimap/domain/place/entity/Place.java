@@ -202,4 +202,10 @@ public class Place extends SoftDeleteEntity {
                 .build();
     }
 
+    public void updateMapSelectionName(String name) {
+        if (source == PlaceSource.MAP_SELECTION) {
+            this.name = name;
+        }
+    }
+
 }
